@@ -30,14 +30,4 @@ Está hecha a base de yt-dlp para el análisis y las descargas, y aprovecha el p
 
 - Todos los medios se guardarán automáticamente en una carpeta llamada DowP Imports dentro de tu proyecto.
 
-- Pueden encontrar los repositorios de ambos software en GitHub:
-
-
-
-
-
-DowP: https://github.com/MarckDP/DowP_Downloader
-
-
-
-DowP Importer: https://github.com/MarckDP/DowP_Importer-Adobe
+Pueden encontrar los repositorios de ambos software en GitHub: [**DowP**](https://github.com/MarckDP/DowP_Downloader) o [**DowP Importer**](https://github.com/MarckDP/DowP_Importer-Adobe), tambien puieden revisar el Manual del DowP.
