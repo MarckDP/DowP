@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Descargar DowP</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    #download-btn {
+      background: #238636;
+      color: white;
+      text-decoration: none;
+      padding: 1em 2.5em;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      transition: background 0.2s;
+      display: none;
+    }
+
+    #download-btn:hover {
+      background: #2ea043;
+    }
+
+    #status {
+      color: #999;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Descargar DowP</h1>
+  <p id="status">Buscando la versión más reciente...</p>
+  <a id="download-btn" href="#">Descargar DowP</a>
+
+  <script>
+    // Tu repositorio
+    const repo = "MarckDP/DowP_App_y_Extension";
+
+    // Consultar la última release mediante la API de GitHub
+    fetch(`https://api.github.com/repos/${repo}/releases/latest`)
+      .then(response => response.json())
+      .then(data => {
+        const asset = data.assets.find(a => a.name.endsWith(".exe"));
+        const status = document.getElementById("status");
+        const btn = document.getElementById("download-btn");
+
+        if (asset) {
+          btn.href = asset.browser_download_url;
+          btn.style.display = "inline-block";
+          status.textContent = `Versión ${data.tag_name}`;
+        } else {
+          status.textContent = "No se encontró un archivo .exe en la última versión.";
+        }
+      })
+      .catch(error => {
+        console.error(error);
+        document.getElementById("status").textContent = "Error al obtener la versión.";
+      });
+  </script>
+</body>
+</html>
