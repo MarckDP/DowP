@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DowP - Descarga y Procesa para Editores</title>
     <meta name="description" content="DowP: La herramienta definitiva para descargar, procesar e importar videos directamente a Adobe Premiere Pro y After Effects.">
-    <!-- Cargar Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configuración personalizada de Tailwind con tus colores -->
     <script>
         tailwind.config = {
             theme: {
@@ -29,7 +27,6 @@
             }
         }
     </script>
-    <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
@@ -59,7 +56,6 @@
 </head>
 <body class="font-sans retro-grid min-h-screen flex flex-col">
 
-    <!-- NAVBAR -->
     <nav class="w-full py-4 px-6 md:px-12 flex justify-between items-center border-b border-dowp-darkest/50 backdrop-blur-sm fixed top-0 z-50 bg-dowp-bg/80">
         <div class="font-mono-tech font-bold text-xl text-dowp-main tracking-wider">
             > DowP_
@@ -70,9 +66,7 @@
     </nav>
 
     <main class="flex-grow pt-24">
-        <!-- HERO -->
         <section class="max-w-4xl mx-auto px-6 py-20 text-center md:py-32">
-            <!-- Badge de versión (ahora dinámico) -->
             <div id="version-badge" class="inline-block mb-6 px-3 py-1 rounded-full bg-dowp-darkest/30 border border-dowp-dark/50 text-dowp-accent text-xs font-mono-tech">
                 v1.2.4 Stable Release
             </div>
@@ -86,9 +80,7 @@
                 La herramienta "todo en uno" para editores de video. Descarga desde cualquier sitio, recodifica a ProRes/H.264 y envía los archivos directamente a tu línea de tiempo en Premiere Pro y After Effects.
             </p>
 
-            <!-- Botones de Acción -->
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                <!-- Botón Principal (ahora dinámico) -->
                 <a id="download-btn" href="https://github.com/MarckDP/DowP_App_y_Extension/releases/latest" class="btn-dowp px-8 py-4 rounded-lg font-bold flex items-center gap-2 group" style="display: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -96,31 +88,25 @@
                     Descargar para Windows
                 </a>
 
-                <!-- Botón Secundario -->
                 <a href="#features" class="px-8 py-4 rounded-lg font-medium border border-dowp-dark text-dowp-main hover:bg-dowp-darkest/20 transition-all">
                     ¿Cómo funciona?
                 </a>
             </div>
 
-            <!-- Estado / info -->
             <p id="status" class="mt-4 text-sm text-gray-600 font-mono-tech">Buscando la versión más reciente...</p>
         </section>
 
-        <!-- CÓMO FUNCIONA / CARACTERÍSTICAS -->
         <section id="features" class="max-w-6xl mx-auto px-6 py-16 space-y-32">
             <div class="text-center mb-20">
                 <h2 class="text-3xl md:text-4xl font-bold mb-6">Flujo de trabajo optimizado</h2>
                 <div class="w-24 h-1.5 bg-dowp-main mx-auto rounded-full opacity-50"></div>
             </div>
 
-            <!-- BLOQUE 1: Imagen Izquierda, Texto Derecha -->
             <div class="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-                <!-- Imagen 897x982 -->
                 <div class="w-full md:w-1/2 relative group">
                     <div class="absolute -inset-2 bg-gradient-to-tr from-dowp-darkest to-dowp-main opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
-                    <img src="https://placehold.co/897x982/0D0D0D/04BF33?text=Captura+1\n(897x982)" alt="Paso 1" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
+                    <img src="img/DowP_Proceso_Único_01.png" alt="Captura de DowP - Proceso Único" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
                 </div>
-                <!-- Texto -->
                 <div class="w-full md:w-1/2 space-y-6">
                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
                         > Paso_01
@@ -140,9 +126,7 @@
                 </div>
             </div>
 
-            <!-- BLOQUE 2: Texto Izquierda, Imagen Derecha -->
             <div class="flex flex-col-reverse md:flex-row items-center gap-12 md:gap-20">
-                <!-- Texto -->
                 <div class="w-full md:w-1/2 space-y-6 md:text-right">
                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
                         > Paso_02
@@ -160,21 +144,17 @@
                         </li>
                     </ul>
                 </div>
-                <!-- Imagen 897x982 -->
                 <div class="w-full md:w-1/2 relative group">
                      <div class="absolute -inset-2 bg-gradient-to-tl from-dowp-darkest to-dowp-accent opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
-                    <img src="https://placehold.co/897x982/0D0D0D/03A62C?text=Captura+2\n(897x982)" alt="Paso 2" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
+                    <img src="img/DowP_Proceso_Cola_01.png" alt="Captura de DowP - Proceso en Cola" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
                 </div>
             </div>
 
-            <!-- BLOQUE 3: Imagen Pequeña Centro, Texto Abajo -->
             <div class="flex flex-col items-center text-center gap-10 pt-10">
-                <!-- Imagen Pequeña (mismo aspect ratio, max-width limitado) -->
                 <div class="w-full max-w-sm relative group">
                     <div class="absolute -inset-2 bg-dowp-main/20 blur-2xl rounded-full opacity-50 group-hover:opacity-75 transition duration-500"></div>
-                    <img src="https://placehold.co/897x982/0D0D0D/8ED943?text=Captura+3\n(Pequeña)" alt="Paso Final" class="relative w-full h-auto rounded-xl border-2 border-dowp-darkest/50 shadow-2xl z-10 mx-auto">
+                    <img src="img/DowP_Importer.png" alt="Captura de DowP - Importer" width="843" height="247" class="relative w-full h-auto rounded-xl border-2 border-dowp-darkest/50 shadow-2xl z-10 mx-auto">
                 </div>
-                <!-- Texto -->
                 <div class="max-w-2xl space-y-6">
                      <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
                         > Paso_Final
@@ -189,13 +169,11 @@
         </section>
     </main>
 
-    <!-- FOOTER -->
     <footer class="py-10 text-center text-gray-500 text-sm border-t border-dowp-darkest/30 mt-20 bg-dowp-bg/50 backdrop-blur-md">
         <p>Desarrollado con <span class="text-dowp-dark">café</span> y Python.</p>
         <p class="mt-2 font-mono-tech text-xs opacity-50">© 2025 DowP Project.</p>
     </footer>
 
-    <!-- SCRIPT: Detectar la última release y asignar descarga -->
     <script>
         (function () {
             const repo = "MarckDP/DowP_App_y_Extension";
