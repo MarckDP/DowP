@@ -26,4 +26,4 @@ Está hecha a base de yt-dlp para el análisis y las descargas, y aprovecha el p
 
 Pueden encontrar los repositorios de ambos software en GitHub: [**DowP**](https://github.com/MarckDP/DowP_Downloader) o [**DowP Importer**](https://github.com/MarckDP/DowP_Importer-Adobe), tambien puieden revisar el [**Manual del DowP**](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md)
 
-O si quieren pueden apoyer este proyecto en [PayHip](https://payhip.com/b/WXkz9)
+O si quieren pueden apoyer este proyecto en [**Ko-fi**](https://ko-fi.com/marckdbm)
