@@ -1,348 +1,533 @@
 <!DOCTYPE html>
-<html lang="es" class="scroll-smooth">
+<html lang="es" class="scroll-smooth selection:bg-[#04BF33] selection:text-black">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DowP - Descarga y Procesa para Editores</title>
-    <meta name="description" content="DowP: Descargar, Procesa e Importar videos directamente a Adobe Premiere Pro y After Effects.">
+    <title>DowP - Laboratorio Digital para Editores</title>
+    <meta name="description" content="DowP: Descarga, Procesa e Importar videos directamente a Adobe Premiere Pro y After Effects.">
+    
+    <!-- Meta Theme Color para móviles (Chrome/Firefox/Safari) -->
+    <meta name="theme-color" content="#050505">
 
+    <!-- Favicons -->
     <link rel="icon" href="img/dowp-favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="img/dowp-favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="img/apple-touch-dowp-icon.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="img/web-dowp-96x96.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="img/web-dowp-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="img/web-dowp-512x512.png">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuración Tailwind -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        dowp: {
-                            bg: '#0D0D0D',
-                            darkest: '#025920',
-                            dark: '#03A62C',
-                            main: '#04BF33',
-                            accent: '#8ED943',
-                        }
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
-                    fontFamily: {
-                        'mono-tech': ['"Fira Code"', '"Roboto Mono"', 'monospace'],
-                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
                     }
                 }
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 
     <style>
-        body { background-color: #0D0D0D; color: #e5e7eb; overflow-x: hidden; } /* overflow-x hidden vital para animaciones laterales */
-        
+        /* --- BASE & SCROLLBARS --- */
+        body { 
+            background-color: #050505; 
+            color: #e5e7eb; 
+            overflow-x: hidden; 
+        }
+
+        /* Scrollbar para Firefox */
+        html {
+            scrollbar-width: thin; /* 'auto' o 'thin' */
+            scrollbar-color: #04BF33 #141414; /* Thumb Track */
+        }
+
+        /* Scrollbar para Chrome/Edge/Safari */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #141414; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #04BF33; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8ED943; 
+        }
+
+        /* --- TYPOGRAPHY --- */
+        /* FIX FIREFOX: Eliminado el drop-shadow del texto gradiente para evitar renderizado roto */
         .text-gradient-dp {
-            background: linear-gradient(135deg, #bf3f04 0%, #d31212 100%);
+            background: linear-gradient(135deg, #ff4d00 0%, #ff0000 100%);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent; 
+            /* filter: drop-shadow(...) REMOVIDO por incompatibilidad con Firefox */
         }
         .text-gradient {
-            background: linear-gradient(135deg, #04BF33 0%, #8ED943 100%);
+            background: linear-gradient(135deg, #04BF33 0%, #ccff00 100%);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
+
+        /* --- BACKGROUNDS --- */
         .retro-grid {
-            background-image: linear-gradient(rgba(4, 191, 51, 0.05) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(4, 191, 51, 0.05) 1px, transparent 1px);
-            background-size: 30px 30px;
+            background-image: 
+                linear-gradient(rgba(4, 191, 51, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(4, 191, 51, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
         }
+
+        /* --- COMPONENTS --- */
         .btn-dowp {
-            background: linear-gradient(90deg, #03A62C 0%, #04BF33 100%);
-            box-shadow: 0 0 15px rgba(4, 191, 51, 0.3);
-            transition: all 0.3s ease;
-            color: #0D0D0D;
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
+            background: linear-gradient(92deg, #03A62C 0%, #04BF33 100%);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 1;
         }
-        .btn-dowp:hover { box-shadow: 0 0 30px rgba(4, 191, 51, 0.6); transform: translateY(-2px); }
+        .btn-dowp::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: 0.5s;
+            z-index: -1;
+        }
+        .btn-dowp:hover::before { left: 100%; }
+        .btn-dowp:hover { 
+            box-shadow: 0 0 40px rgba(4, 191, 51, 0.5); 
+            transform: scale(1.05); 
+            color: white;
+        }
+        
+        /* FIX FIREFOX: Clase específica para el badge */
+        .badge-gradient {
+            background: linear-gradient(to right, #7c3aed, #4f46e5); /* Purple 600 to Indigo 600 */
+        }
 
-        /* --- ANIMACIONES SCROLL --- */
-        .reveal {
+        /* --- ANIMATIONS CORE --- */
+        .scroll-trigger {
             opacity: 0;
-            transition: all 1s cubic-bezier(0.5, 0, 0, 1); /* Easing suave */
+            transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform, opacity;
         }
 
-        /* Estado inicial: Desplazado */
-        .reveal-left { transform: translateX(-100px); }
-        .reveal-right { transform: translateX(100px); }
-        .reveal-bottom { transform: translateY(80px); }
+        .from-left { transform: translateX(-80px); }
+        .from-right { transform: translateX(80px); }
+        .from-bottom { transform: translateY(60px); }
 
-        /* Estado final: Visible y en su sitio */
-        .reveal.active {
+        .scroll-trigger.active {
             opacity: 1;
             transform: translate(0, 0);
         }
 
-        /* Animación de entrada del Hero (sin scroll, al cargar) */
-        .hero-enter {
-            animation: fadeUpHero 1s ease-out forwards;
+        .hero-fade-up {
             opacity: 0;
-            transform: translateY(30px);
+            animation: heroFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        @keyframes fadeUpHero {
+        @keyframes heroFadeUp {
+            from { opacity: 0; transform: translateY(40px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        .hover-card {
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .hover-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Neon Glow */
+        .neon-blob {
+            position: absolute;
+            filter: blur(60px);
+            -webkit-filter: blur(60px); /* Safari/Chrome */
+            z-index: -1;
+            opacity: 0.5;
+            transition: opacity 0.5s;
+            transform: translate3d(0,0,0); /* Force hardware acceleration for FF */
+            will-change: opacity;
+        }
+        .group:hover .neon-blob { opacity: 0.8; }
+
+        .font-mono-tech { font-family: 'Fira Code', 'Roboto Mono', monospace; }
+
     </style>
 </head>
-<body class="font-sans retro-grid min-h-screen flex flex-col">
+<body class="font-sans min-h-screen flex flex-col bg-[#050505]">
 
-    <nav class="w-full py-4 px-6 md:px-12 flex justify-between items-center border-b border-dowp-darkest/50 backdrop-blur-sm fixed top-0 z-50 bg-dowp-bg/80 transition-all duration-300" id="navbar">
-        <div class="font-mono-tech font-bold text-xl text-dowp-main tracking-wider">
-            > DowP_
+    <!-- Background Grid -->
+    <div class="fixed inset-0 retro-grid pointer-events-none z-0"></div>
+
+    <!-- Navbar -->
+    <nav class="w-full py-4 px-6 md:px-12 flex justify-between items-center border-b border-white/5 backdrop-blur-md fixed top-0 z-50 bg-black/50 transition-all duration-500" id="navbar">
+        <div class="font-mono-tech font-bold text-xl text-[#04BF33] tracking-wider flex items-center gap-2 cursor-default select-none">
+            <span class="text-[#8ED943] animate-pulse">></span> DowP_
         </div>
-        <div class="flex gap-6 text-sm font-medium">
-            <a href="https://github.com/MarckDP/DowP" target="_blank" class="hover:text-dowp-main transition-colors">GitHub</a>
+        <div class="flex items-center gap-6 text-sm font-medium font-mono-tech">
+            <!-- Botón Support: Cambiado shadow por drop-shadow para evitar el "cuadro" -->
+            <a href="https://ko-fi.com/marckdbm" target="_blank" class="hidden md:flex items-center gap-2 text-pink-400 hover:text-pink-300 transition-all hover:drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                Support
+            </a>
+            <!-- Botón GitHub: Cambiado shadow por drop-shadow -->
+            <a href="https://github.com/MarckDP/DowP" target="_blank" class="text-gray-400 hover:text-[#04BF33] transition-all hover:drop-shadow-[0_0_8px_rgba(4,191,51,0.8)]">GitHub_Repo</a>
         </div>
     </nav>
 
-    <main class="flex-grow pt-24">
-        <!-- Hero Section: Animación automática al cargar (hero-enter) -->
-        <section class="max-w-4xl mx-auto px-6 py-20 text-center md:py-32 hero-enter">
-            <div id="version-badge" class="inline-block mb-6 px-3 py-1 rounded-full bg-dowp-darkest/30 border border-dowp-dark/50 text-dowp-accent text-xs font-mono-tech">
-                Cargando...
+    <main class="flex-grow pt-24 relative z-10">
+        
+        <!-- HERO SECTION -->
+        <section class="max-w-5xl mx-auto px-6 py-20 text-center md:py-32 relative">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#025920]/20 blur-[120px] rounded-full pointer-events-none animate-pulse-slow"></div>
+
+            <div class="hero-fade-up" style="animation-delay: 0.1s;">
+                <div id="version-badge" class="inline-block mb-8 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[#8ED943] text-xs font-mono-tech tracking-wide backdrop-blur-sm shadow-lg">
+                    Inicializando sistema...
+                </div>
             </div>
-            <h1 class="text-5xl md:text-8xl font-black mb-6 tracking-tight">
-                <span class="text-gradient-dp">DowP</span>
-                
+            
+            <h1 class="text-6xl md:text-8xl font-black mb-4 tracking-tight leading-tight hero-fade-up" style="animation-delay: 0.2s;">
+                <span class="text-gradient-dp block md:inline">DowP</span>
             </h1>
 
-            <h1 class="text-5xl md:text-6xl font-black mb-6 tracking-tight">
-                Descarga. Procesa. <br class="hidden md:block">
+            <h1 class="text-4xl md:text-7xl font-black mb-8 tracking-tight hero-fade-up" style="animation-delay: 0.3s;">
+                Descarga. Procesa <br class="hidden md:block">
                 <span class="text-gradient">Importa a Adobe.</span>
             </h1>
 
-            <p class="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-                Una GUI de yt-dlp y FFmpeg con la que puedes descargar, procesar e importar directamente video, imagen y audio a Adobe Premiere Pro y After Effects.
+            <p class="text-lg md:text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed hero-fade-up" style="animation-delay: 0.4s;">
+                Más que un descargador. Una GUI de <span class="text-[#04BF33] font-mono-tech">yt-dlp</span> y <span class="text-[#04BF33] font-mono-tech">FFmpeg</span> para descargar, procesar e importar assets directamente a tu timeline de Adobe.
             </p>
 
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                <a id="download-btn" href="https://github.com/MarckDP/DowP" class="btn-dowp px-8 py-4 rounded-lg font-bold flex items-center gap-2 group">
-                    Buscando versión...
+            <div class="hero-fade-up" style="animation-delay: 0.5s;">
+                <!-- FIX APLICADO: 
+                     1. Eliminé 'max-w-xs'
+                     2. Agregué 'w-fit' y 'whitespace-nowrap'
+                     3. Agregué 'px-12' para más espacio lateral
+                -->
+                <a id="download-btn" href="https://github.com/MarckDP/DowP" class="btn-dowp px-12 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 group mx-auto w-fit min-w-[250px] whitespace-nowrap text-black">
+                    <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Obtener DowP</span>
                 </a>
+                <p class="mt-4 text-xs text-gray-600 font-mono-tech">Windows 10/11 • x64 • Open Source</p>
             </div>
         </section>
 
-        <section id="features" class="max-w-6xl mx-auto px-6 py-16 space-y-32 overflow-hidden">
-            <div class="text-center mb-20 reveal reveal-bottom">
-                <h2 class="text-3xl md:text-4xl font-bold mb-6">Flujo de trabajo optimizado</h2>
-                <div class="w-24 h-1.5 bg-dowp-main mx-auto rounded-full opacity-50"></div>
+        <!-- FEATURES SECTION -->
+        <section id="features" class="max-w-7xl mx-auto px-8 py-16 space-y-40 mb-20">
+            
+            <!-- Separador -->
+            <div class="text-center scroll-trigger from-bottom">
+                <h2 class="text-sm font-mono-tech text-[#04BF33] tracking-[0.2em] uppercase mb-4">Capacidades</h2>
+                <div class="w-px h-20 bg-gradient-to-b from-transparent via-[#04BF33] to-transparent mx-auto"></div>
             </div>
 
-            <!-- Sección 1: Proceso Único 
-                 Imagen (Izquierda) -> reveal-left
-                 Texto (Derecha) -> reveal-right
-            -->
-            <div class="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 relative group reveal reveal-left">
-                    <div class="absolute -inset-2 bg-gradient-to-tr from-dowp-darkest to-dowp-main opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
-                    <img src="img/DowP_Proceso_Único_01.png" alt="Captura de DowP - Proceso Único" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
-                </div>
-                <div class="w-full md:w-1/2 space-y-6 reveal reveal-right">
-                    <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
-                        > Proceso Único
+            <!-- SECCIÓN 1: Proceso Único -->
+            <div class="flex flex-col md:flex-row items-center gap-16 md:gap-24">
+                <div class="w-full md:w-1/2 relative group scroll-trigger from-left">
+                    <div class="neon-blob -inset-4 bg-gradient-to-r from-[#025920] to-blue-900 rounded-[3rem]"></div>
+                    <!-- He quitado el 'onerror' para que use solo tu imagen local -->
+                    <img src="img/DowP_Proceso_Único_01.png" alt="DowP Proceso Único" 
+                         class="relative w-full h-auto rounded-2xl border border-white/10 shadow-2xl bg-[#111] hover-card z-10">
+                    <div class="absolute -right-6 -top-6 bg-black/80 backdrop-blur-xl border border-[#04BF33]/30 p-4 rounded-xl shadow-xl animate-float hidden md:block z-20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <span class="font-mono-tech text-xs text-white">yt-dlp active</span>
+                        </div>
                     </div>
-                    <h3 class="text-3xl font-bold text-white">Control total en cada descarga</h3>
-                    <p class="text-gray-400 text-lg leading-relaxed">
-                        Este es tu bisturí digital. Perfecto para cuando necesitas control granular sobre un solo video. En lugar de descargar a ciegas, este modo te permite inspeccionar, modificar y preparar tu archivo (ya sea de una URL o local) para que esté listo para editar en el momento en que toca tu disco.
+                </div>
+                <div class="w-full md:w-1/2 space-y-8 scroll-trigger from-right delay-100">
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-[#04BF33] animate-pulse"></div>
+                        <span class="text-[#04BF33] text-xs font-mono-tech tracking-wider uppercase">Proceso Único</span>
+                    </div>
+                    <h3 class="text-4xl md:text-5xl font-bold text-white leading-tight">
+                        Cirugía Digital <br>para tus descargas.
+                    </h3>
+                    <p class="text-gray-400 text-lg leading-relaxed border-l-2 border-[#04BF33]/30 pl-6">
+                        No descargues a ciegas. Inspecciona los metadatos, selecciona el códec exacto y recorta solo el fragmento que necesitas antes de que el archivo toque tu disco duro.
                     </p>
-                    <ul class="space-y-2 text-gray-500 font-mono-tech text-sm">
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Analiza y selecciona pistas individuales de video y audio.
+                    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-400 font-mono-tech">
+                        <li class="flex items-center gap-3 p-2 rounded hover:bg-white/5 transition-colors">
+                            <span class="text-[#04BF33]">>></span> Selector de Pistas
                         </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Guarda las miniaturas facilmente.
+                        <li class="flex items-center gap-3 p-2 rounded hover:bg-white/5 transition-colors">
+                            <span class="text-[#04BF33]">>></span> Crop de Video/Audio
                         </li>
-                         <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Descarga solo fragmentos de tus  videos.
+                        <li class="flex items-center gap-3 p-2 rounded hover:bg-white/5 transition-colors">
+                            <span class="text-[#04BF33]">>></span> Extractor de Subs
                         </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Descarga y convierte los subtitulos.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Recodifica a formatos de edición con presets.
-                        </li>
-                         <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Importa y procesa tus archivos locales existentes.
+                        <li class="flex items-center gap-3 p-2 rounded hover:bg-white/5 transition-colors">
+                            <span class="text-[#04BF33]">>></span> Miniaturas HD
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Sección 2: Proceso por Lotes 
-                 Texto (Izquierda en Desktop) -> reveal-left
-                 Imagen (Derecha en Desktop) -> reveal-right
-            -->
-            <div class="flex flex-col-reverse md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 space-y-6 md:text-right reveal reveal-left">
-                    <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
-                        > Proceso por Lotes
+            <!-- SECCIÓN 2: Proceso por Lotes -->
+            <div class="flex flex-col-reverse md:flex-row items-center gap-16 md:gap-24">
+                <div class="w-full md:w-1/2 space-y-8 md:text-right scroll-trigger from-left">
+                    <div class="flex justify-end">
+                        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                            <span class="text-[#8ED943] text-xs font-mono-tech tracking-wider uppercase">Proceso por Lotes</span>
+                            <div class="w-2 h-2 rounded-full bg-[#8ED943] animate-pulse"></div>
+                        </div>
                     </div>
-                    <h3 class="text-3xl font-bold text-white">Automatiza tu flujo de trabajo</h3>
-                    <p class="text-gray-400 text-lg leading-relaxed">
-                        Este modo está diseñado para la eficiencia. Ya sea que estés importando una playlist completa o procesando una carpeta de archivos de tu cámara, la cola de lotes te permite configurar todo una vez y dejar que DowP trabaje por ti.
+                    <h3 class="text-4xl md:text-5xl font-bold text-white leading-tight">
+                        La potencia del <br>Procesamiento en Cola.
+                    </h3>
+                    <p class="text-gray-400 text-lg leading-relaxed border-r-2 border-[#8ED943]/30 pr-6 ml-auto">
+                        Importa playlists de YouTube, grupos de videos o carpetas locales gigantescas. Configura un preset global y deja que DowP normalice todo tu material mientras tomas un café.
                     </p>
-                     <ul class="space-y-2 text-gray-500 font-mono-tech text-sm inline-block text-left">
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Analiza playlists o colecciones completas en cola.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Importa múltiples archivos locales para recodificar.
-                        </li>
-                         <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Aplica un preset global a toda la cola para consistencia.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Auto-descarga tus URL's sin configurar nada más.
-                        </li>
-                    </ul>
+                    <div class="flex flex-wrap gap-3 justify-end font-mono-tech text-xs">
+                        <span class="px-3 py-1 bg-[#025920]/20 border border-[#03A62C]/30 rounded text-[#04BF33]">Multihilo</span>
+                        <span class="px-3 py-1 bg-[#025920]/20 border border-[#03A62C]/30 rounded text-[#04BF33]">Auto-Descarga</span>
+                        <span class="px-3 py-1 bg-[#025920]/20 border border-[#03A62C]/30 rounded text-[#04BF33]">Smart-Skip</span>
+                    </div>
                 </div>
-                <div class="w-full md:w-1/2 relative group reveal reveal-right">
-                     <div class="absolute -inset-2 bg-gradient-to-tl from-dowp-darkest to-dowp-accent opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
-                    <img src="img/DowP_Proceso_Cola_01.png" alt="Captura de DowP - Proceso en Cola" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
+                <div class="w-full md:w-1/2 relative group scroll-trigger from-right delay-100">
+                    <div class="neon-blob -inset-4 bg-gradient-to-tl from-[#8ED943] to-green-900 rounded-[3rem]"></div>
+                    <img src="img/DowP_Proceso_Cola_01.png" alt="DowP Cola" 
+                         class="relative w-full h-auto rounded-2xl border border-white/10 shadow-2xl bg-[#111] hover-card z-10">
+                    <div class="absolute -left-8 bottom-12 bg-black/80 backdrop-blur-xl border border-white/10 p-4 rounded-xl shadow-xl animate-float hidden md:block z-20" style="animation-delay: 1s;">
+                        <div class="font-mono-tech text-xs text-gray-400 mb-1">Status:</div>
+                        <div class="text-[#8ED943] font-bold text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Processing Batch...
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Sección 3: Laboratorio de Imágenes (NUEVO)
-                 Imagen (Izquierda) -> reveal-left
-                 Texto (Derecha) -> reveal-right
-            -->
-            <div class="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 relative group reveal reveal-left">
-                    <div class="absolute -inset-2 bg-gradient-to-tr from-dowp-darkest to-dowp-main opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
-                    <img src="img/DowP_Herramientas_Imagen.png" alt="Captura de DowP - Laboratorio de Imágenes" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
+            <!-- SECCIÓN 3: Laboratorio de Imágenes -->
+            <div class="flex flex-col md:flex-row items-center gap-16 md:gap-24">
+                <div class="w-full md:w-1/2 relative group scroll-trigger from-left">
+                    <div class="neon-blob -inset-4 bg-gradient-to-br from-purple-900 to-[#04BF33] rounded-[3rem] opacity-30"></div>
+                    <img src="img/DowP_Herramientas_Imagen.png" alt="Laboratorio de Imágenes" 
+                         class="relative w-full h-auto rounded-2xl border border-white/10 shadow-2xl bg-[#111] hover-card z-10">
+                     
+                     <!-- FIX FIREFOX: Reemplazado bg-gradient-to-r de Tailwind por clase .badge-gradient estándar -->
+                     <div class="absolute -right-4 -bottom-4 badge-gradient text-white px-4 py-2 rounded-lg shadow-lg font-bold text-sm rotate-3 transform hover:rotate-0 transition-transform z-20 hidden md:block">
+                        AI Powered ✨
+                     </div>
+
                 </div>
-                <div class="w-full md:w-1/2 space-y-6 reveal reveal-right">
-                    <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
-                        > Laboratorio de Imágenes
+                <div class="w-full md:w-1/2 space-y-8 scroll-trigger from-right delay-100">
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+                        <span class="text-purple-400 text-xs font-mono-tech tracking-wider uppercase">Herramientas de Imagen</span>
                     </div>
-                    <h3 class="text-3xl font-bold text-white">Procesamiento gráfico avanzado</h3>
-                    <p class="text-gray-400 text-lg leading-relaxed">
-                        Un motor completo para preparar tus assets gráficos. Convierte vectores (.ai, .eps, .svg) a imágenes editables, elimina fondos con IA, ajusta lienzos y estandariza resoluciones antes de importar.
+                    <h3 class="text-4xl md:text-5xl font-bold text-white leading-tight">
+                        Tus assets gráficos <br>listos para producción.
+                    </h3>
+                    <p class="text-gray-400 text-lg leading-relaxed border-l-2 border-purple-500/30 pl-6">
+                        Convierte multiples archivos de imagen. DowP escala y rasteriza vectores, elimina fondos con Inteligencia Artificial y prepara tus imágenes para video.
                     </p>
-                    <ul class="space-y-2 text-gray-500 font-mono-tech text-sm">
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Renders de vectores (AI, EPS, SVG) a PNG/JPG.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Eliminación de fondo automática con IA (Rembg).
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Ajuste de Canvas, Márgenes y posición.
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Conversión de imágenes a Video (MP4, MOV).
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-dowp-main">></span> Importación directa a Premiere y After Effects.
-                        </li>
-                    </ul>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="p-2 rounded bg-purple-500/20 text-purple-400"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+                                <h4 class="font-bold text-white">Vector a Raster</h4>
+                            </div>
+                            <p class="text-sm text-gray-500">Convierte y escala .AI, .EPS y .SVG a PNG/JPG instantáneamente (Poppler/Ghostscript).</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/50 transition-colors group">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="p-2 rounded bg-purple-500/20 text-purple-400"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
+                                <h4 class="font-bold text-white">IA Background Remover</h4>
+                            </div>
+                            <p class="text-sm text-gray-500">Motor Rembg integrado (ONNX Models) para siluetear elementos en segundos.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Sección 4: Extensión de Adobe 
-                 Todo el bloque entra desde abajo -> reveal-bottom
-            -->
-            <div class="flex flex-col items-center text-center gap-10 pt-10 reveal reveal-bottom">
-                <div class="w-full max-w-sm relative group">
-                    <div class="absolute -inset-2 bg-dowp-main/20 blur-2xl rounded-full opacity-50 group-hover:opacity-75 transition duration-500"></div>
-                    <img src="img/DowP_Importer.png" alt="Captura de DowP - Importer" width="843" height="247" class="relative w-full h-auto rounded-xl border-2 border-dowp-darkest/50 shadow-2xl z-10 mx-auto">
-                </div>
-                <div class="max-w-2xl space-y-6">
-                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
-                        > Extensión de Adobe
-                </div>
-                <h3 class="text-3xl font-bold text-white">Del navegador a tu timeline</h3>
-                <p class="text-gray-400 text-lg leading-relaxed mt-6">
-                    El panel "DowP Importer" se instala en Premiere Pro y After Effects, conectando la aplicación de escritorio directamente con tu proyecto. Olvídate de buscar archivos y arrastrarlos: tu contenido va de la web a tu línea de tiempo en un solo clic.
-                </p>
+        <!-- SECCIÓN 4: ADOBE EXTENSION -->
+        <section class="w-full relative py-24 z-10">
+            
+            <!-- FONDO GLOW INFINITO -->
+            <div class="absolute bottom-[-200px] left-1/2 -translate-x-1/2 w-[150%] h-[800px] bg-[#04BF33]/10 blur-[120px] rounded-[100%] pointer-events-none z-0"></div>
+            
+            <div class="relative z-10 max-w-5xl mx-auto px-6 flex flex-col items-center text-center gap-16 scroll-trigger from-bottom">
                 
-            </div>
+                <!-- IMAGEN -->
+                <div class="w-full max-w-md relative group">
+                    <!-- Glow interno de la imagen -->
+                    <div class="absolute -inset-10 bg-gradient-to-r from-[#025920] via-[#04BF33] to-[#025920] opacity-20 blur-[60px] group-hover:opacity-30 transition duration-700"></div>
+                    
+                    <img src="img/DowP_Importer.png" alt="DowP Importer Extension" 
+                         class="relative w-full h-auto rounded-xl border-2 border-white/10 shadow-2xl mx-auto transform group-hover:scale-[1.01] transition-transform duration-500">
+                </div>
 
+                <div class="max-w-3xl space-y-8">
+                    <div class="inline-block px-4 py-1.5 bg-[#111] border border-[#04BF33]/50 rounded-full text-[#04BF33] text-sm font-mono-tech shadow-[0_0_15px_rgba(4,191,51,0.3)]">
+                        > Panel Nativo Adobe (CEP)
+                    </div>
+                    
+                    <h3 class="text-4xl md:text-6xl font-black text-white">
+                        Del Navegador a tu <br> Timeline en un Click.
+                    </h3>
+                    
+                    <p class="text-gray-400 text-xl leading-relaxed">
+                        Sin arrastrar archivos. Sin buscar en la carpeta de descargas. <br>
+                        El panel de DowP vive dentro de Premiere y After Effects.
+                    </p>
+
+                    <div class="flex justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                        <div class="w-16 h-16 rounded-lg bg-[#00005B] text-[#9999FF] flex items-center justify-center font-black text-2xl border border-[#9999FF]/30">Pr</div>
+                        <div class="w-16 h-16 rounded-lg bg-[#00005B] text-[#D8A1FF] flex items-center justify-center font-black text-2xl border border-[#D8A1FF]/30">Ae</div>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
-    <footer class="py-10 text-center text-gray-500 text-sm border-t border-dowp-darkest/30 mt-20 bg-dowp-bg/50 backdrop-blur-md">
-        <p class="mt-2 font-mono-tech text-xs opacity-50">© 2025 DowP Project.</p>
+    <!-- FOOTER -->
+    <footer class="py-12 text-gray-500 text-sm border-t border-white/5 relative z-20 bg-black/60 backdrop-blur-xl">
+        <div class="max-w-6xl mx-auto px-6">
+            
+            <!-- TECH STACK & LICENSE INFO -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 border-b border-white/5 pb-8">
+                <div class="text-center md:text-left">
+                    <h5 class="font-bold text-white mb-2 font-mono-tech">Licencia</h5>
+                    <p class="text-xs leading-relaxed">
+                        Este proyecto es Software Libre. <br>
+                        Distribuido bajo los términos de la licencia <br>
+                        <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" class="text-[#04BF33] hover:underline">GNU GPLv3</a>.
+                    </p>
+                </div>
+                <div class="text-center">
+                    <h5 class="font-bold text-white mb-2 font-mono-tech">Tecnologías Open Source</h5>
+                    <div class="flex flex-wrap justify-center gap-2 text-[10px] font-mono-tech text-gray-400">
+                        <span class="bg-white/5 px-2 py-1 rounded">Python</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">yt-dlp</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">FFmpeg</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">Poppler</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">Ghostscript</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">Inkscape</span>
+                        <span class="bg-white/5 px-2 py-1 rounded">Rembg (ONNX)</span>
+                    </div>
+                </div>
+                <div class="text-center md:text-right">
+                    <h5 class="font-bold text-white mb-2 font-mono-tech">Apoya el Proyecto</h5>
+                    <a href="https://ko-fi.com/" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-[#29abe0]/10 text-[#29abe0] rounded hover:bg-[#29abe0]/20 transition-colors font-bold text-xs">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor" fill-opacity="0.2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Comprar un Café (Ko-fi)
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="font-mono-tech text-xs opacity-50">© 2025 DowP Project.</p>
+                <!-- He actualizado esta sección para mostrar los 3 repositorios claramente -->
+                <div class="flex flex-wrap justify-center gap-6 text-xs font-mono-tech opacity-50">
+                    <a href="https://github.com/MarckDP/DowP" target="_blank" class="hover:text-white transition-colors flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        Main Repo
+                    </a>
+                    
+                    <span class="hidden md:inline text-gray-700">|</span>
+                    
+                    <a href="https://github.com/MarckDP/DowP_Downloader" target="_blank" class="hover:text-[#04BF33] transition-colors" title="Código fuente de la aplicación Python">
+                        Source: App (Python)
+                    </a>
+                    
+                    <a href="https://github.com/MarckDP/DowP_Importer-Adobe" target="_blank" class="hover:text-purple-400 transition-colors" title="Código fuente de la extensión Adobe CEP">
+                        Source: Extension (CEP)
+                    </a>
+
+                    <span class="hidden md:inline text-gray-700">|</span>
+
+                    <a href="https://github.com/MarckDP/DowP/issues" target="_blank" class="hover:text-red-400 transition-colors">Reportar Bug</a>
+                </div>
+            </div>
+        </div>
     </footer>
 
     <script>
         (function () {
-            // 1. Lógica de Releases (GitHub)
+            // Lógica GitHub
             const repo = "MarckDP/DowP";
-            const releasesPage = `https://github.com/${repo}/releases/latest`;
             const btn = document.getElementById('download-btn');
             const badge = document.getElementById('version-badge');
 
             function pickBestExe(assets) {
                 if (!assets || assets.length === 0) return null;
                 const exeAssets = assets.filter(a => a.name && a.name.toLowerCase().endsWith('.exe'));
-                if (exeAssets.length === 0) return null;
+                if (!exeAssets.length) return null;
                 let found = exeAssets.find(a => /dowp/i.test(a.name));
                 if (found) return found;
                 found = exeAssets.find(a => /setup/i.test(a.name));
-                if (found) return found;
-                return exeAssets[0];
+                return found || exeAssets[0];
             }
 
             fetch(`https://api.github.com/repos/${repo}/releases/latest`, { cache: "no-store" })
-                .then(response => {
-                    if (!response.ok) throw new Error("GitHub API response not OK: " + response.status);
-                    return response.json();
-                })
+                .then(res => { if (!res.ok) throw new Error(); return res.json(); })
                 .then(data => {
-                    if (badge && data.tag_name) {
-                        badge.textContent = `${data.tag_name} • Release`;
-                    }
+                    if (badge && data.tag_name) badge.textContent = `Stable Release: ${data.tag_name}`;
                     const asset = pickBestExe(data.assets || []);
                     if (asset) {
                         btn.href = asset.browser_download_url;
-                        btn.innerHTML = `
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Descargar para Windows
-                        `;
+                        btn.querySelector('span').textContent = "Descargar para Windows";
+                        // El download attribute está bien, aunque para cross-origin a veces se ignora, el href funciona igual.
                         btn.setAttribute('download', '');
                     } else {
-                        btn.href = releasesPage;
-                        btn.textContent = "Ver releases";
+                        btn.textContent = "Ver Releases en GitHub";
                     }
                 })
-                .catch(err => {
-                    console.error("Error fetch GitHub releases:", err);
-                    btn.href = releasesPage;
-                    btn.textContent = "Ir a releases";
+                .catch(() => {
+                    if (badge) badge.textContent = "Offline Mode";
+                    btn.textContent = "Ir a GitHub";
                 });
 
-            // 2. Lógica de Animaciones Scroll (Intersection Observer)
+            // Intersection Observer
             const observerOptions = {
                 root: null,
                 rootMargin: '0px',
-                threshold: 0.15 // El elemento debe ser 15% visible para disparar
+                threshold: 0.2
             };
 
             const observer = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('active');
-                        observer.unobserve(entry.target); // Solo animar una vez
+                        observer.unobserve(entry.target);
                     }
                 });
             }, observerOptions);
 
-            document.querySelectorAll('.reveal').forEach(el => {
+            document.querySelectorAll('.scroll-trigger').forEach(el => {
                 observer.observe(el);
+            });
+
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const grid = document.querySelector('.retro-grid');
+                if(grid) grid.style.backgroundPositionY = -(scrolled * 0.2) + 'px';
             });
         })();
     </script>
