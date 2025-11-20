@@ -37,7 +37,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body { background-color: #0D0D0D; color: #e5e7eb; }
+        body { background-color: #0D0D0D; color: #e5e7eb; overflow-x: hidden; } /* overflow-x hidden vital para animaciones laterales */
+        
         .text-gradient-dp {
             background: linear-gradient(135deg, #bf3f04 0%, #d31212 100%);
             -webkit-background-clip: text;
@@ -65,11 +66,38 @@
             gap: .5rem;
         }
         .btn-dowp:hover { box-shadow: 0 0 30px rgba(4, 191, 51, 0.6); transform: translateY(-2px); }
+
+        /* --- ANIMACIONES SCROLL --- */
+        .reveal {
+            opacity: 0;
+            transition: all 1s cubic-bezier(0.5, 0, 0, 1); /* Easing suave */
+        }
+
+        /* Estado inicial: Desplazado */
+        .reveal-left { transform: translateX(-100px); }
+        .reveal-right { transform: translateX(100px); }
+        .reveal-bottom { transform: translateY(80px); }
+
+        /* Estado final: Visible y en su sitio */
+        .reveal.active {
+            opacity: 1;
+            transform: translate(0, 0);
+        }
+
+        /* Animación de entrada del Hero (sin scroll, al cargar) */
+        .hero-enter {
+            animation: fadeUpHero 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        @keyframes fadeUpHero {
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="font-sans retro-grid min-h-screen flex flex-col">
 
-    <nav class="w-full py-4 px-6 md:px-12 flex justify-between items-center border-b border-dowp-darkest/50 backdrop-blur-sm fixed top-0 z-50 bg-dowp-bg/80">
+    <nav class="w-full py-4 px-6 md:px-12 flex justify-between items-center border-b border-dowp-darkest/50 backdrop-blur-sm fixed top-0 z-50 bg-dowp-bg/80 transition-all duration-300" id="navbar">
         <div class="font-mono-tech font-bold text-xl text-dowp-main tracking-wider">
             > DowP_
         </div>
@@ -79,7 +107,8 @@
     </nav>
 
     <main class="flex-grow pt-24">
-        <section class="max-w-4xl mx-auto px-6 py-20 text-center md:py-32">
+        <!-- Hero Section: Animación automática al cargar (hero-enter) -->
+        <section class="max-w-4xl mx-auto px-6 py-20 text-center md:py-32 hero-enter">
             <div id="version-badge" class="inline-block mb-6 px-3 py-1 rounded-full bg-dowp-darkest/30 border border-dowp-dark/50 text-dowp-accent text-xs font-mono-tech">
                 Cargando...
             </div>
@@ -104,19 +133,22 @@
             </div>
         </section>
 
-        <section id="features" class="max-w-6xl mx-auto px-6 py-16 space-y-32">
-            <div class="text-center mb-20">
+        <section id="features" class="max-w-6xl mx-auto px-6 py-16 space-y-32 overflow-hidden">
+            <div class="text-center mb-20 reveal reveal-bottom">
                 <h2 class="text-3xl md:text-4xl font-bold mb-6">Flujo de trabajo optimizado</h2>
                 <div class="w-24 h-1.5 bg-dowp-main mx-auto rounded-full opacity-50"></div>
             </div>
 
-            <!-- Sección 1: Proceso Único -->
+            <!-- Sección 1: Proceso Único 
+                 Imagen (Izquierda) -> reveal-left
+                 Texto (Derecha) -> reveal-right
+            -->
             <div class="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 relative group">
+                <div class="w-full md:w-1/2 relative group reveal reveal-left">
                     <div class="absolute -inset-2 bg-gradient-to-tr from-dowp-darkest to-dowp-main opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
                     <img src="img/DowP_Proceso_Único_01.png" alt="Captura de DowP - Proceso Único" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
                 </div>
-                <div class="w-full md:w-1/2 space-y-6">
+                <div class="w-full md:w-1/2 space-y-6 reveal reveal-right">
                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
                         > Proceso Único
                     </div>
@@ -147,9 +179,12 @@
                 </div>
             </div>
 
-            <!-- Sección 2: Proceso por Lotes -->
+            <!-- Sección 2: Proceso por Lotes 
+                 Texto (Izquierda en Desktop) -> reveal-left
+                 Imagen (Derecha en Desktop) -> reveal-right
+            -->
             <div class="flex flex-col-reverse md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 space-y-6 md:text-right">
+                <div class="w-full md:w-1/2 space-y-6 md:text-right reveal reveal-left">
                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
                         > Proceso por Lotes
                     </div>
@@ -172,23 +207,26 @@
                         </li>
                     </ul>
                 </div>
-                <div class="w-full md:w-1/2 relative group">
+                <div class="w-full md:w-1/2 relative group reveal reveal-right">
                      <div class="absolute -inset-2 bg-gradient-to-tl from-dowp-darkest to-dowp-accent opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
                     <img src="img/DowP_Proceso_Cola_01.png" alt="Captura de DowP - Proceso en Cola" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
                 </div>
             </div>
 
-            <!-- Sección 3: Laboratorio de Imágenes (NUEVO) -->
+            <!-- Sección 3: Laboratorio de Imágenes (NUEVO)
+                 Imagen (Izquierda) -> reveal-left
+                 Texto (Derecha) -> reveal-right
+            -->
             <div class="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-                <div class="w-full md:w-1/2 relative group">
+                <div class="w-full md:w-1/2 relative group reveal reveal-left">
                     <div class="absolute -inset-2 bg-gradient-to-tr from-dowp-darkest to-dowp-main opacity-20 blur-xl rounded-[2rem] group-hover:opacity-30 transition duration-500"></div>
                     <img src="img/DowP_Herramientas_Imagen.png" alt="Captura de DowP - Laboratorio de Imágenes" width="835" height="982" class="relative w-full h-auto rounded-2xl border-2 border-dowp-darkest/50 shadow-2xl z-10">
                 </div>
-                <div class="w-full md:w-1/2 space-y-6">
+                <div class="w-full md:w-1/2 space-y-6 reveal reveal-right">
                     <div class="inline-block px-3 py-1 bg-dowp-darkest/30 border border-dowp-main/30 rounded-full text-dowp-main text-sm font-mono-tech mb-2">
-                        > Herramientas de Imagen
+                        > Laboratorio de Imágenes
                     </div>
-                    <h3 class="text-3xl font-bold text-white">Laboratorio de Imágenes</h3>
+                    <h3 class="text-3xl font-bold text-white">Procesamiento gráfico avanzado</h3>
                     <p class="text-gray-400 text-lg leading-relaxed">
                         Un motor completo para preparar tus assets gráficos. Convierte vectores (.ai, .eps, .svg) a imágenes editables, elimina fondos con IA, ajusta lienzos y estandariza resoluciones antes de importar.
                     </p>
@@ -212,8 +250,10 @@
                 </div>
             </div>
 
-            <!-- Sección 4: Extensión de Adobe -->
-            <div class="flex flex-col items-center text-center gap-10 pt-10">
+            <!-- Sección 4: Extensión de Adobe 
+                 Todo el bloque entra desde abajo -> reveal-bottom
+            -->
+            <div class="flex flex-col items-center text-center gap-10 pt-10 reveal reveal-bottom">
                 <div class="w-full max-w-sm relative group">
                     <div class="absolute -inset-2 bg-dowp-main/20 blur-2xl rounded-full opacity-50 group-hover:opacity-75 transition duration-500"></div>
                     <img src="img/DowP_Importer.png" alt="Captura de DowP - Importer" width="843" height="247" class="relative w-full h-auto rounded-xl border-2 border-dowp-darkest/50 shadow-2xl z-10 mx-auto">
@@ -238,13 +278,12 @@
 
     <script>
         (function () {
+            // 1. Lógica de Releases (GitHub)
             const repo = "MarckDP/DowP";
             const releasesPage = `https://github.com/${repo}/releases/latest`;
-            const statusEl = document.getElementById('status');
             const btn = document.getElementById('download-btn');
             const badge = document.getElementById('version-badge');
 
-            // Helpers de selección
             function pickBestExe(assets) {
                 if (!assets || assets.length === 0) return null;
                 const exeAssets = assets.filter(a => a.name && a.name.toLowerCase().endsWith('.exe'));
@@ -268,14 +307,12 @@
                     const asset = pickBestExe(data.assets || []);
                     if (asset) {
                         btn.href = asset.browser_download_url;
-
                         btn.innerHTML = `
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             Descargar para Windows
                         `;
-                        
                         btn.setAttribute('download', '');
                     } else {
                         btn.href = releasesPage;
@@ -287,6 +324,26 @@
                     btn.href = releasesPage;
                     btn.textContent = "Ir a releases";
                 });
+
+            // 2. Lógica de Animaciones Scroll (Intersection Observer)
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // El elemento debe ser 15% visible para disparar
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        observer.unobserve(entry.target); // Solo animar una vez
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal').forEach(el => {
+                observer.observe(el);
+            });
         })();
     </script>
 
