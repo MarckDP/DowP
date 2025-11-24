@@ -1,5 +1,5 @@
-# 🚀 DowP Installer
 
+# 🚀 DowP Installer
 <div align="center">
   <img width="1500" height="500" alt="DowP Banner" src="https://github.com/user-attachments/assets/2ad61b9d-a3c5-4268-a603-a19596b41f13" />
 </div>
@@ -15,6 +15,7 @@
 [📥 Descargar](#) • [📖 Manual](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md) • [☕ Apoyar](https://ko-fi.com/marckdbm)
 
 </div>
+
 ---
 
 ## 📥 Instalación
