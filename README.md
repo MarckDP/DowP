@@ -114,7 +114,6 @@ La extensión se conecta mediante WebSocket a la aplicación principal:
 
 #### ⏱️ **Integración con Timeline**
 - Envía medios directamente a la línea de tiempo
-- Respeta puntos de entrada y duración
 - Compatible con ambas aplicaciones:
   - ✅ Adobe Premiere Pro
   - ✅ Adobe After Effects
@@ -122,8 +121,7 @@ La extensión se conecta mediante WebSocket a la aplicación principal:
 #### 🔄 **Comunicación Bidireccional**
 - Exporta clips de tu timeline a DowP para procesarlos
 - Re-importa automáticamente después del procesamiento
-- Sincronización en tiempo real
-
+  
 ---
 
 ## 💾 Requisitos del Sistema
