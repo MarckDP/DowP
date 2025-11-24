@@ -15,7 +15,23 @@
 [📥 Descargar](#) • [📖 Manual](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md) • [☕ Apoyar](https://ko-fi.com/marckdbm)
 
 </div>
+---
 
+## 📥 Instalación
+
+1. **Descarga** el instalador desde [Releases](#)
+2. **Ejecuta** el archivo `.exe`
+3. **Sigue** el asistente de instalación
+4. **Listo** - DowP se configurará automáticamente
+
+### 🔧 **El instalador se encarga de:**
+- ✅ Instalar la aplicación principal
+- ✅ Configurar todas las herramientas necesarias
+- ✅ Instalar la extensión de Adobe (opcional)
+- ✅ Descargar modelos de IA básicos
+- ✅ Crear accesos directos
+
+> **Nota:** Los modelos de IA adicionales se descargan automáticamente la primera vez que los uses.
 ---
 
 ## 📦 ¿Qué incluye este instalador?
@@ -80,12 +96,6 @@ Todas las dependencias necesarias pre-configuradas:
 - ✅ **PostScript/EPS** → PDF o imágenes
 - ✅ Conversión masiva con configuración personalizada
 
-### 🎨 **Procesamiento de Color**
-- ✅ Ajuste de brillo, contraste y saturación
-- ✅ Conversión entre espacios de color
-- ✅ Aplicación de filtros
-- ✅ Vista previa en tiempo real
-
 ---
 
 ## 🔌 Integración con Adobe (DowP Importer)
@@ -127,24 +137,6 @@ La extensión se conecta mediante WebSocket a la aplicación principal:
 
 ---
 
-## 📥 Instalación
-
-1. **Descarga** el instalador desde [Releases](#)
-2. **Ejecuta** el archivo `.exe`
-3. **Sigue** el asistente de instalación
-4. **Listo** - DowP se configurará automáticamente
-
-### 🔧 **El instalador se encarga de:**
-- ✅ Instalar la aplicación principal
-- ✅ Configurar todas las herramientas necesarias
-- ✅ Instalar la extensión de Adobe (opcional)
-- ✅ Descargar modelos de IA básicos
-- ✅ Crear accesos directos
-
-> **Nota:** Los modelos de IA adicionales se descargan automáticamente la primera vez que los uses.
-
----
-
 ## 📖 Documentación
 
 - 📘 **Manual Completo:** [Manual del DowP](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md)
@@ -177,66 +169,6 @@ Si DowP te resulta útil, considera apoyar su desarrollo:
 - **Script del Instalador:** GPL v3
 
 Para información detallada sobre todas las licencias de componentes de terceros, consulta [CREDITS.md](CREDITS.md).
-
----
-
-## 🌟 Características Destacadas
-
-<table>
-<tr>
-<td width="50%">
-
-### 🎯 **Fácil de Usar**
-Interfaz intuitiva con guías visuales y tooltips explicativos.
-
-### ⚡ **Rápido y Eficiente**
-Procesamiento multihilo optimizado para máximo rendimiento.
-
-</td>
-<td width="50%">
-
-### 🤖 **IA Integrada**
-Múltiples modelos de IA para eliminación de fondo y upscaling.
-
-### 🔓 **100% Gratis**
-Software libre y de código abierto sin restricciones.
-
-</td>
-</tr>
-</table>
-
----
-
-## 📊 Comparación de Modelos de IA
-
-### **Eliminación de Fondo**
-| Modelo | Velocidad | Calidad | Mejor Para |
-|--------|-----------|---------|------------|
-| U2NetP | ⚡⚡⚡ | ⭐⭐⭐ | Procesamiento rápido |
-| U2Net | ⚡⚡ | ⭐⭐⭐⭐ | Balance velocidad/calidad |
-| ISNet | ⚡⚡ | ⭐⭐⭐⭐ | Alta precisión |
-| BiRefNet | ⚡ | ⭐⭐⭐⭐⭐ | Bordes perfectos |
-| RMBG 2.0 | ⚡ | ⭐⭐⭐⭐⭐ | Calidad profesional |
-
-### **Upscaling**
-| Modelo | Velocidad | Calidad | Mejor Para |
-|--------|-----------|---------|------------|
-| Waifu2x | ⚡⚡⚡ | ⭐⭐⭐⭐ | Anime/ilustraciones |
-| RealSR | ⚡⚡ | ⭐⭐⭐⭐ | Fotografías reales |
-| SRMD | ⚡⚡ | ⭐⭐⭐⭐ | Imágenes comprimidas |
-| Real-ESRGAN | ⚡ | ⭐⭐⭐⭐⭐ | Propósito general |
-
----
-
-## 🔄 Actualizaciones
-
-El instalador se actualiza regularmente con:
-- Nuevas versiones de DowP
-- Mejoras en la extensión
-- Modelos de IA actualizados
-- Correcciones de bugs
-
-**Última versión:** [Consultar Releases](#)
 
 ---
 
