@@ -482,11 +482,21 @@
 
             function pickBestExe(assets) {
                 if (!assets || assets.length === 0) return null;
+                
+                // 1. Filtramos solo los archivos .exe
                 const exeAssets = assets.filter(a => a.name && a.name.toLowerCase().endsWith('.exe'));
                 if (!exeAssets.length) return null;
-                let found = exeAssets.find(a => /dowp/i.test(a.name));
-                if (found) return found;
-                found = exeAssets.find(a => /setup/i.test(a.name));
+
+                // 2. NUEVA LÓGICA: Buscar específicamente "DowP_v..._Full_setup.exe"
+                // El regex busca: DowP, seguido de _v, cualquier cosa en medio, y termina en _Full_setup.exe
+                let found = exeAssets.find(a => /DowP_v.*_Full_setup\.exe$/i.test(a.name));
+
+                // 3. Fallback: Si por alguna razón no subiste el "Full_setup", busca el estándar
+                if (!found) {
+                    found = exeAssets.find(a => /dowp/i.test(a.name));
+                }
+                
+                // Si aun así no encuentra nada específico, devuelve el primer exe que encuentre
                 return found || exeAssets[0];
             }
 
@@ -540,3 +550,4 @@
 </body>
 
 </html>
+
