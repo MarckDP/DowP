@@ -1,5 +1,5 @@
 
-# 🚀 DowP Installer
+# 🚀 DowP: Laboratorio Digital para Editores
 <div align="center">
   <img width="1500" height="500" alt="DowP Banner" src="https://github.com/user-attachments/assets/2ad61b9d-a3c5-4268-a603-a19596b41f13" />
 </div>
@@ -10,219 +10,92 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![Status](https://img.shields.io/badge/status-Active-success.svg)
 
-**Instalador oficial de DowP y su extensión para Adobe**
+**La suite definitiva para descargar, procesar e importar contenido multimedia directamente a Adobe Premiere Pro y After Effects.**
 
-[📥 Descargar](#) • [📖 Manual](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md) • [☕ Apoyar](https://ko-fi.com/marckdbm)
+[📥 Descargar Instalador](https://github.com/MarckDP/DowP/releases) • [📖 Manual del Usuario](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md) • [☕ Apoyar en Ko-fi](https://ko-fi.com/marckdbm)
 
 </div>
 
 ---
 
-## 📥 Instalación
+## ✨ ¿Qué es DowP?
 
-1. **Descarga** el instalador desde [Releases](#)
-2. **Ejecuta** el archivo `.exe`
-3. **Sigue** el asistente de instalación
-4. **Listo** - DowP se configurará automáticamente
+DowP no es solo un descargador; es un **Laboratorio Digital** diseñado por y para editores. Combina la potencia de herramientas industriales como `yt-dlp` y `FFmpeg` con una interfaz intuitiva y funciones de Inteligencia Artificial de vanguardia para acelerar tu flujo de trabajo creativo.
 
-### 🔧 **El instalador se encarga de:**
-- ✅ Instalar la aplicación principal
-- ✅ Configurar todas las herramientas necesarias
-- ✅ Instalar la extensión de Adobe (opcional)
-- ✅ Descargar modelos de IA básicos
-- ✅ Crear accesos directos
-
-> **Nota:** Los modelos de IA adicionales se descargan automáticamente la primera vez que los uses.
----
-
-## 📦 ¿Qué incluye este instalador?
-
-Este setup instala de forma automática y sin complicaciones:
-
-### 🐍 **DowP** - Aplicación Principal
-Programa gratuito y de código abierto para descargar, procesar y mejorar contenido multimedia.
-
-**Repositorio:** [github.com/MarckDP/DowP_Downloader](https://github.com/MarckDP/DowP_Downloader)
-
-### 🔌 **DowP Importer** - Extensión para Adobe
-Extensión que conecta DowP con Premiere Pro y After Effects para importar automáticamente tus descargas.
-
-**Repositorio:** [github.com/MarckDP/DowP_Importer-Adobe](https://github.com/MarckDP/DowP_Importer-Adobe)
-
-### 🛠️ **Herramientas de Procesamiento**
-Todas las dependencias necesarias pre-configuradas:
-- **FFmpeg** - Conversión multimedia
-- **yt-dlp** - Motor de descarga
-- **Poppler** - Procesamiento de PDF
-- **Inkscape** - Manejo de vectores SVG
-- **Ghostscript** - PostScript y PDF
-- **Deno** - Runtime JavaScript
+### 🧪 El Ecosistema DowP
+El proyecto se divide en tres pilares fundamentales que este instalador configura automáticamente:
+1. **DowP App (Python):** El motor principal de descarga y procesamiento.
+2. **DowP Importer (CEP):** La extensión nativa que vive dentro de Premiere y After Effects.
+3. **DowP Toolchain:** Un conjunto de dependencias pre-configuradas (FFmpeg, Deno, Poppler, etc.) que hacen posible la magia.
 
 ---
 
-## ✨ Características Principales de DowP
+## 🎨 Características Principales
 
-### 📥 **Descarga Multimedia**
-- ✅ Videos y audio de múltiples plataformas web
-- ✅ Selección de calidad y formato personalizado
-- ✅ Descarga por lotes
-- ✅ Extracción de subtítulos
-- ✅ Descarga de miniaturas y metadatos
+### 📥 Descarga de "Cirugía Digital"
+- **Selección Precisa:** Analiza metadatos, elige códecs específicos y descarga solo el fragmento que necesitas.
+- **Calidades Inteligentes:** Indicadores visuales (✨) para archivos listos para edición sin necesidad de recodificar.
+- **Cookies y Login:** Soporte nativo para descargar contenido privado o con restricción de edad mediante sesiones de navegador.
 
-### 🎬 **Procesamiento de Video**
-- ✅ Recodificación con control total de parámetros
-- ✅ Conversión entre formatos (MP4, WebM, MKV, AVI, MOV, etc.)
-- ✅ Ajuste de resolución y bitrate
-- ✅ Extracción y conversión de audio
-- ✅ Procesamiento de archivos locales
+### 🛠️ Procesamiento y Recodificación
+- **Normalización de Media:** Convierte cualquier archivo a formatos profesionales (ProRes, DNxHD) para evitar lag en el timeline.
+- **FPS Constantes (CFR):** Olvida los problemas de sincronización de audio para siempre.
+- **Procesamiento por Lotes:** Normaliza carpetas enteras o playlists con un solo clic usando presets globales.
 
-### 🎨 **Procesamiento de Imágenes con IA**
-- ✅ **Eliminación de fondos** con múltiples modelos:
-  - U2Net / U2NetP (rápido y ligero)
-  - ISNet (alta precisión)
-  - BiRefNet (bordes definidos)
-  - RMBG 2.0 (calidad profesional)
-- ✅ **Reescalado inteligente (Upscaling)** con IA:
-  - Real-ESRGAN (uso general)
-  - Waifu2x (optimizado para anime)
-  - RealSR (fotografías reales)
-  - SRMD (degradaciones múltiples)
-- ✅ Conversión entre formatos de imagen
-- ✅ Procesamiento por lotes
+### 🧠 Laboratorio de Imágenes con IA
+- **Background Remover 2.0:** Elimina fondos con modelos profesionales (RMBG, ISNet, BiRefNet). Ahora con sliders de **Suavizado** y **Expansión/Contracción** para bordes perfectos.
+- **Upscaling Inteligente:** Mejora la resolución de fotos y videos usando motores Real-ESRGAN, Waifu2x y RealSR.
+- **Visores Interactivos:** Compara el "Antes y Después" en tiempo real con zoom a nivel de píxel.
 
-### 📄 **Conversión de Documentos**
-- ✅ **PDF** → Imágenes (PNG, JPG, TIFF, BMP)
-- ✅ **Imágenes RAW** → Formatos estándar
-- ✅ **SVG** → Formatos rasterizados
-- ✅ **PostScript/EPS** → PDF o imágenes
-- ✅ Conversión masiva con configuración personalizada
+### 🔌 Integración con Adobe (CEP Extension)
+- **Importación Directa:** Envía descargas automáticamente a tu proyecto y línea de tiempo.
+- **Flujo Bidireccional:** Exporta clips de tu timeline directamente a DowP para procesarlos y gestiónalos de vuelta al instante.
+- **Sincronización WebSocket:** Comunicación en tiempo real entre la App y Adobe.
 
 ---
 
-## 🔌 Integración con Adobe (DowP Importer)
-
-La extensión se conecta mediante WebSocket a la aplicación principal:
-
-### ✨ **Características de la Extensión**
-
-#### 📥 **Importación Automática**
-- Importa directamente a tu proyecto todo lo descargado:
-  - Videos, audios, imágenes
-  - Subtítulos, miniaturas
-  - Documentos convertidos
-- Organización automática en carpeta `DowP Imports`
-
-#### ⏱️ **Integración con Timeline**
-- Envía medios directamente a la línea de tiempo
-- Compatible con ambas aplicaciones:
-  - ✅ Adobe Premiere Pro
-  - ✅ Adobe After Effects
-
-#### 🔄 **Comunicación Bidireccional**
-- Exporta clips de tu timeline a DowP para procesarlos
-- Re-importa automáticamente después del procesamiento
-  
----
-
-## 💾 Requisitos del Sistema
-- Windows 10/11 (64-bit)
-- 8 GB RAM o más
-- GPU compatible con Vulkan (para upscaling acelerado)
-- Conexión a internet (para descargas y modelos de IA)
-
-### **Para la Extensión**
-- Adobe Premiere Pro 2020 o superior
-- Adobe After Effects 2020 o superior
+## 🗃️ Herramientas Incluidas
+El instalador se encarga de configurar este potente toolchain por ti:
+- **yt-dlp:** El motor de descarga más avanzado.
+- **FFmpeg:** El estándar de oro en procesamiento multimedia.
+- **Poppler & Inkscape:** Para rasterizar PDF y vectores (AI, EPS, SVG) con precisión quirúrgica.
+- **Ghostscript:** Manejo avanzado de postscript y archivos RAW.
+- **Deno:** Runtime para procesos de backend ligeros.
 
 ---
 
-## 📖 Documentación
-
-- 📘 **Manual Completo:** [Manual del DowP](https://github.com/MarckDP/DowP_App_y_Extension/blob/main/Manual%20del%20DowP.md)
-- 🔧 **DowP App:** [Repositorio y documentación](https://github.com/MarckDP/DowP_Downloader)
-- 🔌 **Extensión:** [Repositorio y documentación](https://github.com/MarckDP/DowP_Importer-Adobe)
-- 📄 **Licencias:** [CREDITS.md](CREDITS.md)
-
----
-
-## 🤝 Contribuir y Soporte
-
-### 💖 Apoya el Proyecto
-Si DowP te resulta útil, considera apoyar su desarrollo:
-
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/marckdbm)
-
-### 🐛 Reportar Problemas
-¿Encontraste un bug o tienes una sugerencia?
-- App principal: [Issues de DowP](https://github.com/MarckDP/DowP_Downloader/issues)
-- Extensión: [Issues de DowP Importer](https://github.com/MarckDP/DowP_Importer-Adobe/issues)
-- Instalador: [Issues de este repo](https://github.com/MarckDP/DowP_App_y_Extension/issues)
+## 📝 Requisitos del Sistema
+- **SO:** Windows 10/11 (64-bit).
+- **RAM:** 8 GB mínimo (16 GB recomendado para IA).
+- **GPU:** Compatible con Vulkan/Nvidia para aceleración de IA (opcional pero recomendado).
+- **Adobe:** Premiere Pro o After Effects 2020 o superior para la extensión.
 
 ---
 
-## 📜 Licencias
+## 🏗️ Estructura del Proyecto
+DowP es un ecosistema de código abierto dividido en varios repositorios:
 
-### **Componentes del Instalador**
-- **DowP:** GPL v3 (incluye FFmpeg, Poppler, Inkscape, Ghostscript)
-- **DowP Importer:** MIT
-- **Script del Instalador:** GPL v3
-
-Para información detallada sobre todas las licencias de componentes de terceros, consulta [CREDITS.md](CREDITS.md).
-
----
-
-## ❓ Preguntas Frecuentes
-
-<details>
-<summary><b>¿Necesito instalar FFmpeg o yt-dlp por separado?</b></summary>
-
-No, el instalador incluye todas las herramientas necesarias pre-configuradas.
-</details>
-
-<details>
-<summary><b>¿Los modelos de IA requieren GPU?</b></summary>
-
-No son obligatorios, pero los modelos de upscaling NCNN pueden aprovechar GPU Vulkan para acelerar el procesamiento.
-</details>
-
-<details>
-<summary><b>¿Funciona sin conexión a internet?</b></summary>
-
-Una vez instalado, puedes usar las funciones de procesamiento local sin internet. Las descargas web obviamente requieren conexión.
-</details>
-
-<details>
-<summary><b>¿Puedo usar solo la app sin la extensión?</b></summary>
-
-Sí, la extensión es completamente opcional. DowP funciona perfectamente de forma independiente.
-</details>
-
-<details>
-<summary><b>¿Qué formatos de video soporta?</b></summary>
-
-Todos los formatos que soporta FFmpeg: MP4, MKV, WebM, AVI, MOV, FLV, M4V, y muchos más.
-</details>
+| Componente | Función | Repositorio |
+|------------|---------|-------------|
+| 🐍 **DowP App** | Aplicación de escritorio (Python/PyQt6) | [DowP_Downloader](https://github.com/MarckDP/DowP_Downloader) |
+| 🔌 **Extensión** | Panel nativo para Adobe (JS/CEP) | [DowP_Importer-Adobe](https://github.com/MarckDP/DowP_Importer-Adobe) |
+| 📦 **Instalador** | Setup y Web (este repo) | [DowP](https://github.com/MarckDP/DowP) |
 
 ---
 
-## 🏗️ Repositorios del Proyecto
-
-| Componente | Repositorio | Licencia |
-|------------|-------------|----------|
-| 🐍 **App Principal** | [DowP_Downloader](https://github.com/MarckDP/DowP_Downloader) | GPL v3 |
-| 🔌 **Extensión Adobe** | [DowP_Importer-Adobe](https://github.com/MarckDP/DowP_Importer-Adobe) | MIT |
-| 📦 **Instalador (este repo)** | [DowP_App_y_Extension](https://github.com/MarckDP/DowP_App_y_Extension) | GPL v3 |
+## 📖 Documentación y Soporte
+- 📘 **[Manual Completo](https://github.com/MarckDP/DowP/blob/main/Manual%20del%20DowP.md):** Guía paso a paso de todas las funciones.
+- 💬 **[Reportar Problemas](https://github.com/MarckDP/DowP/issues):** ¿Encontraste un bug? Avísanos aquí.
+- 📜 **[Licencias y Créditos](CREDITS.md):** Información sobre componentes de terceros.
 
 ---
 
 <div align="center">
 
-**Hecho con ❤️ por la comunidad**
+**Hecho con ❤️ por MarckDBM y la comunidad.**
 
-[⭐ Star en GitHub](https://github.com/MarckDP/DowP_App_y_Extension) • [🐛 Reportar Bug](#) • [💡 Sugerir Feature](#)
+[⭐ Star en GitHub](https://github.com/MarckDP/DowP_App_y_Extension) • [☕ Ko-fi](https://ko-fi.com/marckdbm)
 
----
-
-*DowP es software libre. Si te resulta útil, considera [apoyar el proyecto](https://ko-fi.com/marckdbm).*
+*Este proyecto es Software Libre bajo licencia GPL v3. Úsalo, mejóralo y compártelo.*
 
 </div>
