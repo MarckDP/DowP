@@ -75,3 +75,5 @@ tools/updater/.staging/
 # criterio que tools/updater/secrets/ -- no es secreto, pero no hace falta
 # versionarlo. output/ ademas es el .exe del instalador ya compilado.
 installer/
+
+PRUEBAS_PENDIENTES.md

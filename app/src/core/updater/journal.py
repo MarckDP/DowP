@@ -12,8 +12,15 @@ persiste la estructura, no toca archivos de la instalacion.
 """
 import json
 import os
+import time
 
 JOURNAL_FILENAME = "journal.json"
+
+# os.replace sobre journal.json falla en Windows con WinError 5 si otro proceso lo
+# tiene abierto en ese instante: un antivirus escaneando el archivo recien escrito,
+# el indexador... Es transitorio, y sin reintento abortaba el swap entero en la
+# primera coincidencia (reproducido). ~4,5 s en total antes de rendirse.
+_REPLACE_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8, 1.0, 1.0, 1.0)
 
 STATUS_PENDING = "pending"
 STATUS_SWAPPING = "swapping"
@@ -58,6 +65,9 @@ def build_journal(update_info, install_dir: str, staging_dir: str, state_dir: st
         "status": STATUS_PENDING,
         "install_dir": install_dir,
         "relaunch_exe": relaunch_exe,
+        # Para que el helper pueda vaciar el staging tras confirmar el swap (ver
+        # swap_executor.purge_staging).
+        "staging_dir": staging_dir,
         "operations": operations,
     }
 
@@ -72,7 +82,13 @@ def write_journal(journal: dict, state_dir: str) -> None:
         json.dump(journal, f, indent=2)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(tmp_path, path)
+    for delay in _REPLACE_RETRY_DELAYS:
+        try:
+            os.replace(tmp_path, path)
+            return
+        except PermissionError:
+            time.sleep(delay)
+    os.replace(tmp_path, path)  # ultimo intento: si sigue bloqueado, que llegue a quien llama
 
 
 def read_journal(state_dir: str) -> dict | None:

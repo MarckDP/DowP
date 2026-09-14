@@ -7728,68 +7728,78 @@ You can download it again whenever you want.</translation>
 <context>
     <name>SettingsTab</name>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="73"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="74"/>
         <source>Opciones</source>
         <translation>Options</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="86"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="87"/>
         <source>General</source>
         <translation>General</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="87"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="88"/>
         <source>Memoria y Caché</source>
         <translation>Memory and Cache</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="88"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="89"/>
         <source>Descargas</source>
         <translation>Downloads</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="89"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="90"/>
         <source>Cookies</source>
         <translation>Cookies</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="90"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="91"/>
         <source>Dependencias</source>
         <translation>Dependencies</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="91"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="92"/>
         <source>Etiquetas</source>
         <translation>Labels</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="92"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="93"/>
         <source>Integraciones</source>
         <translation>Integrations</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="93"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="94"/>
         <source>Acerca de</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="94"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="95"/>
         <source>Modelos</source>
         <translation>Models</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="95"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="96"/>
         <source>Consola</source>
         <translation>Console</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="129"/>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="279"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="130"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="280"/>
         <source>Buscar actualizaciones</source>
         <translation>Check for updates</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="285"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="291"/>
+        <source>Descargar instalador</source>
+        <translation>Download installer</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="293"/>
+        <source>Esta versión no puede actualizarse sola: descarga e instala la nueva versión desde la página de releases.</source>
+        <translation>This version can't update itself: download and install the new version from the releases page.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="301"/>
         <source>Actualizar</source>
         <translation>Update</translation>
     </message>

@@ -12,6 +12,7 @@ marca para descargar. files_to_download sigue siendo un dict archivo->entry
 no necesiten saber nada de chunks -- solo downloader.py necesita
 chunks_to_download para saber que URLs bajar."""
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 
@@ -20,6 +21,17 @@ from core.updater.hash_tree import hash_tree
 from core.updater.platform_key import get_platform_key
 
 SUPPORTED_FORMAT = 2
+
+# Archivos que NO son de la app sino del instalador: Inno Setup deja su desinstalador
+# en la misma carpeta que DowP.exe ({app}). No estan en el manifiesto (se publica desde
+# app/dist/DowP), asi que sin esta excepcion el diff los trataba como sobrantes y el
+# swap los BORRABA -- "Desinstalar DowP" dejaba de funcionar tras la primera
+# actualizacion (verificado con un swap real sobre una instalacion 1.9.0).
+_INSTALLER_OWNED = re.compile(r"^unins\d{3}\.(exe|dat|msg)$", re.IGNORECASE)
+
+
+def _is_installer_owned(relpath: str) -> bool:
+    return bool(_INSTALLER_OWNED.match(relpath))
 
 
 @dataclass
@@ -114,7 +126,10 @@ def compute_diff(manifest: dict, install_dir: str | None = None,
             entry = manifest_files[relpath]
             files_to_download[relpath] = {"hash": entry["hash"], "size": entry["size"], "chunk": chunk_id}
 
-    extra_local_files = sorted(set(local_files) - set(manifest_files))
+    extra_local_files = sorted(
+        relpath for relpath in set(local_files) - set(manifest_files)
+        if not _is_installer_owned(relpath)
+    )
 
     return UpdateInfo(
         available=True, must_full_install=False,

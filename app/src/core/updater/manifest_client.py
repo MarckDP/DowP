@@ -6,17 +6,16 @@ token (mismo patron ya usado en core/setup/ffmpeg_setup.py contra la API de
 GitHub para las releases de FFmpeg).
 """
 import json
-import os
 
 import requests
 from Cryptodome.PublicKey import ECC
 from Cryptodome.Signature import eddsa
 
 from core.logger.logger_manager import logger
+from core.updater.public_key import UPDATER_PUBLIC_KEY_PEM
 
 API_BASE = "https://api.github.com"
 TIMEOUT = 30
-PUBLIC_KEY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "updater_public_key.pem")
 
 
 class ManifestVerificationError(Exception):
@@ -28,8 +27,7 @@ class ManifestVerificationError(Exception):
 
 
 def _verify_signature(data: bytes, signature: bytes) -> bool:
-    with open(PUBLIC_KEY_PATH, "rt", encoding="utf-8") as f:
-        key = ECC.import_key(f.read())
+    key = ECC.import_key(UPDATER_PUBLIC_KEY_PEM)
     verifier = eddsa.new(key, mode="rfc8032")
     try:
         verifier.verify(data, signature)

@@ -73,6 +73,7 @@ def main() -> int:
         if launcher.is_process_alive(new_pid):
             logger.info("Updater helper: la nueva version sigue viva -- swap confirmado.")
             swap_executor.purge_backups(state_dir)
+            swap_executor.purge_staging(journal)
             journal_mod.clear_journal(state_dir)
             return 0
 

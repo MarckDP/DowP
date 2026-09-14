@@ -3,11 +3,12 @@ import sys
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                  QStackedWidget, QButtonGroup, QPushButton, QFrame, QApplication)
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtGui import QDesktopServices
 from core.utils.i18n import logger
 
 from core.updater.update_service import UpdateCheckWorker, UpdateDownloadWorker
-from core.version import get_display_version
+from core.version import UPDATE_REPO, get_display_version
 from gui.widgets.circular_progress import CircularProgress
 
 from .pages.general_page import GeneralPage
@@ -277,12 +278,28 @@ class SettingsTab(QWidget):
         if update_info is None:
             self._update_state = "idle"
             self.update_button.setText(self.tr("Buscar actualizaciones"))
+            self.update_button.setToolTip("")
             self._apply_update_button_style(gradient=False)
             self.version_label.setText(f"v{get_display_version()}")
             self.update_status_changed.emit(False)
+        elif update_info.must_full_install:
+            # Version por debajo de min_updatable_version, o formato de manifiesto que
+            # este cliente no entiende: el swap no puede expresar esta actualizacion.
+            # Ofrecer "Actualizar" igual aplicaba un journal vacio, relanzaba la MISMA
+            # version y la volvia a ofrecer en bucle -- aqui se manda al instalador.
+            self._update_state = "full_install"
+            self.update_button.setText(self.tr("Descargar instalador"))
+            self.update_button.setToolTip(self.tr(
+                "Esta versión no puede actualizarse sola: descarga e instala la nueva "
+                "versión desde la página de releases."
+            ))
+            self._apply_update_button_style(gradient=True)
+            self.version_label.setText(f"{update_info.current_version} - <b><i>{update_info.remote_version}</i></b>")
+            self.update_status_changed.emit(True)
         else:
             self._update_state = "available"
             self.update_button.setText(self.tr("Actualizar"))
+            self.update_button.setToolTip("")
             self._apply_update_button_style(gradient=True)
             self.version_label.setText(f"{update_info.current_version} - <b><i>{update_info.remote_version}</i></b>")
             self.update_status_changed.emit(True)
@@ -290,6 +307,8 @@ class SettingsTab(QWidget):
     def _on_update_button_clicked(self):
         if self._update_state == "available":
             self.start_update_download()
+        elif self._update_state == "full_install":
+            QDesktopServices.openUrl(QUrl(f"https://github.com/{UPDATE_REPO}/releases"))
         elif self._update_state == "idle":
             self.start_update_check()
         # "checking"/"downloading": el boton esta deshabilitado u oculto, no deberia poder llegar aqui
@@ -297,6 +316,8 @@ class SettingsTab(QWidget):
     def start_update_download(self):
         from core.utils.paths import get_update_staging_dir
 
+        if self._update_info is None or self._update_info.must_full_install:
+            return
         self._update_state = "downloading"
         self.update_button.hide()
         self.update_progress.setValue(0)
@@ -326,10 +347,17 @@ class SettingsTab(QWidget):
         de swap (pieza 3) y cierra la app para que pueda aplicarlo. Sin paso de
         confirmacion intermedio, tal como se acordó."""
         from core.updater import journal as journal_mod
-        from core.updater.launcher import hand_off_to_helper
+        from core.updater.launcher import hand_off_to_helper, install_dir_from_executable
         from core.utils.paths import get_update_staging_dir, get_updater_state_dir
 
-        install_dir = os.path.dirname(sys.executable)
+        # La MISMA raiz con la que compute_diff calculo las rutas del journal. En
+        # Windows/Linux es la carpeta del .exe; en macOS es el .app entero, no
+        # Contents/MacOS -- con dirname(sys.executable) los archivos acababan en
+        # DowP.app/Contents/MacOS/Contents/... y la app real no cambiaba nunca.
+        # relaunch_exe sigue siendo sys.executable a proposito: relanzar el .app via
+        # 'open -n' le daria al helper el PID de 'open', que termina enseguida, y el
+        # chequeo de arranque haria un rollback falso (ver launcher.spawn_detached).
+        install_dir = install_dir_from_executable(sys.executable)
         state_dir = get_updater_state_dir()
         staging_dir = get_update_staging_dir()
 

@@ -62,6 +62,25 @@ MAX_CONCURRENT_UPLOADS = 15
 sys.path.insert(0, os.path.join(REPO_ROOT, "app", "src"))
 from core.updater.chunking import chunk_id_for, compute_chunk_hash  # noqa: E402
 from core.updater.platform_key import get_platform_key  # noqa: E402
+from core.updater.public_key import UPDATER_PUBLIC_KEY_PEM  # noqa: E402
+
+
+def check_private_key_matches_client(private_key_path: str) -> None:
+    """Aborta si la clave privada no corresponde a la publica embebida en la app.
+
+    Un manifiesto firmado con otra clave no lo acepta NINGUN cliente, y el cliente
+    lo reporta en silencio como "sin actualizaciones" -- publicar asi pasaria por
+    exito aqui y fallaria para todo el mundo alla. Mejor fallar ruidosamente antes
+    de subir nada (clave rotada a medias, secrets/ equivocado, etc.)."""
+    from Cryptodome.PublicKey import ECC
+
+    with open(private_key_path, "rt", encoding="utf-8") as f:
+        derived = ECC.import_key(f.read()).public_key().export_key(format="DER")
+    embedded = ECC.import_key(UPDATER_PUBLIC_KEY_PEM).export_key(format="DER")
+    if derived != embedded:
+        print("ERROR: la clave privada no corresponde a la clave publica embebida en "
+              "app/src/core/updater/public_key.py. Ningun cliente aceptaria este manifiesto.")
+        sys.exit(1)
 
 
 def read_version_module() -> dict:
@@ -214,6 +233,8 @@ def main():
     if not os.path.isdir(args.dist):
         print(f"ERROR: no existe la carpeta de build {args.dist}")
         sys.exit(1)
+
+    check_private_key_matches_client(args.private_key)
 
     platform_key = args.platform or get_platform_key()
 

@@ -164,6 +164,12 @@ def build_updater_helper(dist_root, work_root):
         "--workpath", os.path.join(work_root, "helper"),
         "--specpath", os.path.join(work_root, "helper"),
         "--paths", SRC_DIR,
+        # launcher.resume_pending_swap() importa core.utils.paths DENTRO de la funcion,
+        # y paths.py importa PySide6: PyInstaller sigue ese import y metia Qt en el
+        # helper (8,6 MB -> 28 MB). El helper nunca llama a esa funcion (verificado:
+        # sus imports cargan con PySide6 bloqueado), asi que se excluye.
+        "--exclude-module", "PySide6",
+        "--exclude-module", "shiboken6",
     ]
     if HELPER_ICON_FILE and os.path.exists(HELPER_ICON_FILE):
         helper_args.extend(["--icon", HELPER_ICON_FILE])
