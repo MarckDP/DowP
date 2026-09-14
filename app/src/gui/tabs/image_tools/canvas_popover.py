@@ -1,4 +1,5 @@
 # src/gui/tabs/image_tools/canvas_popover.py
+from PySide6.QtCore import QCoreApplication
 """Contenido del popover "Canvas" del Editor de Imagen -- mismos valores y misma
 matemática que usaba DowP 1 (image_tools_tab.pyc, canvas_master_frame, líneas
 736-782 y 1162-1185; image_converter.pyc, _apply_canvas_by_option/
@@ -21,7 +22,7 @@ from core.constants import (
     CANVAS_OPTIONS, CANVAS_PRESET_SIZES, CANVAS_POSITIONS, CANVAS_OVERFLOW_MODES,
 )
 
-_MARGIN_MODES = ("Añadir Margen Externo",)
+_MARGIN_MODES = ("Añadir Margen Externo", "Add External Margin")
 _NONE_OPTION = "Sin ajuste"
 _CUSTOM_OPTION = "Personalizado..."
 
@@ -35,6 +36,15 @@ _POSITION_ALIGN = {
     "Abajo Izquierda": ("left", "bottom"),
     "Abajo Centro": ("center", "bottom"),
     "Abajo Derecha": ("right", "bottom"),
+    "Center": ("center", "center"),
+    "Top Left": ("left", "top"),
+    "Top Center": ("center", "top"),
+    "Top Right": ("right", "top"),
+    "Center Left": ("left", "center"),
+    "Center Right": ("right", "center"),
+    "Bottom Left": ("left", "bottom"),
+    "Bottom Center": ("center", "bottom"),
+    "Bottom Right": ("right", "bottom"),
 }
 
 
@@ -91,23 +101,18 @@ class CanvasPopoverContent(QFrame):
         layout.addWidget(title)
 
         option_row = QHBoxLayout()
-        option_row.addWidget(self._label("Ajuste:"))
+        option_row.addWidget(self._label(self.tr("Ajuste:")))
         self.combo_option = AutoPopupComboBox(fit_contents=True)
-        self.combo_option.addItems(CANVAS_OPTIONS)
-        # textActivated (no currentTextChanged): dispara SIEMPRE que el usuario
-        # elige algo del desplegable, incluso si re-elige la opción que ya estaba
-        # mostrada -- necesario para poder "deshacer" un ajuste manual de Canvas
-        # (arrastre de handle, Fase 3) reseleccionando "Sin ajuste" cuando el combo
-        # ya decía "Sin ajuste" de entrada (el arrastre nunca toca este combo, ver
-        # ZoomableImageViewer.canvas_edited); currentTextChanged no emite nada ahí
-        # porque el valor no "cambia" -- ver ImageToolsTab._on_canvas_state_changed,
-        # que es quien realmente descarta el override guardado.
-        self.combo_option.textActivated.connect(self._on_option_changed)
+        for opt in CANVAS_OPTIONS:
+            self.combo_option.addItem(self._translated_option(opt), opt)
+        # activated: dispara SIEMPRE que el usuario elige algo del desplegable, incluso
+        # si re-elige la opción que ya estaba mostrada
+        self.combo_option.activated.connect(self._on_combo_option_activated)
         option_row.addWidget(self.combo_option, 1)
         layout.addLayout(option_row)
 
         self.margin_row = QHBoxLayout()
-        self.margin_row.addWidget(self._label("Margen:"))
+        self.margin_row.addWidget(self._label(self.tr("Margen:")))
         self.entry_margin = QLineEdit("100")
         self.entry_margin.setFixedWidth(70)
         self.entry_margin.editingFinished.connect(self._on_fields_edited)
@@ -117,7 +122,7 @@ class CanvasPopoverContent(QFrame):
         layout.addLayout(self.margin_row)
 
         self.size_row = QHBoxLayout()
-        self.size_row.addWidget(self._label("Ancho:"))
+        self.size_row.addWidget(self._label(self.tr("Ancho:")))
         self.entry_width = QLineEdit()
         self.entry_width.setFixedWidth(70)
         self.entry_width.editingFinished.connect(self._on_fields_edited)
@@ -131,23 +136,58 @@ class CanvasPopoverContent(QFrame):
         layout.addLayout(self.size_row)
 
         self.position_row = QHBoxLayout()
-        self.position_row.addWidget(self._label("Posición:"))
+        self.position_row.addWidget(self._label(self.tr("Posición:")))
         self.combo_position = AutoPopupComboBox(fit_contents=True)
-        self.combo_position.addItems(CANVAS_POSITIONS)
-        self.combo_position.currentTextChanged.connect(self._on_fields_edited)
+        for pos in CANVAS_POSITIONS:
+            self.combo_position.addItem(self._translated_option(pos), pos)
+        self.combo_position.currentIndexChanged.connect(self._on_fields_edited)
         self.position_row.addWidget(self.combo_position, 1)
         layout.addLayout(self.position_row)
 
         self.overflow_row = QHBoxLayout()
-        self.overflow_row.addWidget(self._label("Si excede:"))
+        self.overflow_row.addWidget(self._label(self.tr("Si excede:")))
         self.combo_overflow = AutoPopupComboBox(fit_contents=True)
-        self.combo_overflow.addItems(CANVAS_OVERFLOW_MODES)
-        self.combo_overflow.setCurrentText("Centrar (puede recortar)")
+        for mode in CANVAS_OVERFLOW_MODES:
+            self.combo_overflow.addItem(self._translated_option(mode), mode)
+        idx_def = self.combo_overflow.findData("Centrar (puede recortar)")
+        if idx_def >= 0:
+            self.combo_overflow.setCurrentIndex(idx_def)
+        self.combo_overflow.currentIndexChanged.connect(self._on_fields_edited)
         self.overflow_row.addWidget(self.combo_overflow, 1)
         layout.addLayout(self.overflow_row)
 
         self._resize_label_column()
         self._update_rows_visibility(_NONE_OPTION)
+
+    def _translated_option(self, value: str) -> str:
+        """Traduce los valores de Ajuste/Posición/Si excede que vienen de CANVAS_OPTIONS/
+        CANVAS_POSITIONS/CANVAS_OVERFLOW_MODES (core/constants.py). Esas listas deben
+        seguir siendo texto crudo en español (son el valor canónico usado en
+        image_converter.py) -- por eso la traducción se hace acá, explícita valor por
+        valor, y no envolviendo la lista ni haciendo self.tr(variable) en el loop de
+        abajo (pyside6-lupdate no puede extraer un self.tr() con argumento variable)."""
+        table = {
+            "Sin ajuste": self.tr("Sin ajuste"),
+            "Añadir Margen Externo": self.tr("Añadir Margen Externo"),
+            "Añadir Margen Interno": self.tr("Añadir Margen Interno"),
+            "Personalizado...": self.tr("Personalizado..."),
+            "Centro": self.tr("Centro"),
+            "Arriba Izquierda": self.tr("Arriba Izquierda"),
+            "Arriba Centro": self.tr("Arriba Centro"),
+            "Arriba Derecha": self.tr("Arriba Derecha"),
+            "Centro Izquierda": self.tr("Centro Izquierda"),
+            "Centro Derecha": self.tr("Centro Derecha"),
+            "Abajo Izquierda": self.tr("Abajo Izquierda"),
+            "Abajo Centro": self.tr("Abajo Centro"),
+            "Abajo Derecha": self.tr("Abajo Derecha"),
+            "Reducir hasta que quepa": self.tr("Reducir hasta que quepa"),
+            "Centrar (puede recortar)": self.tr("Centrar (puede recortar)"),
+            "Recortar al canvas": self.tr("Recortar al canvas"),
+            "Advertir y no procesar": self.tr("Advertir y no procesar"),
+        }
+        # Los presets con nombre propio (Instagram Post, YouTube Thumbnail, etc.) no
+        # están en la tabla a propósito -- quedan igual en cualquier idioma.
+        return table.get(value, value)
 
     def _label(self, text: str) -> QLabel:
         lbl = QLabel(self.tr(text))
@@ -159,6 +199,16 @@ class CanvasPopoverContent(QFrame):
         width = max(fm.horizontalAdvance(w.text()) for w in self._label_widgets) + 6
         for w in self._label_widgets:
             w.setFixedWidth(width)
+
+    def _current_canonical_option(self) -> str:
+        idx = self.combo_option.currentIndex()
+        if idx >= 0:
+            return self.combo_option.itemData(idx) or self.combo_option.itemText(idx)
+        return _NONE_OPTION
+
+    def _on_combo_option_activated(self, index: int):
+        opt = self.combo_option.itemData(index) or self.combo_option.itemText(index)
+        self._on_option_changed(opt)
 
     def set_reference_image_size(self, w: int, h: int):
         """Tamaño nativo de la imagen actual -- usado como default de Ancho/Alto en
@@ -173,17 +223,21 @@ class CanvasPopoverContent(QFrame):
         imagen nueva y reinicialice el canvas solo (a su tamaño nativo, ver
         _reset_edit_state ahí); empujar aquí usaría el `_ref_w/_ref_h` todavía viejo."""
         self.combo_option.blockSignals(True)
-        self.combo_option.setCurrentText(_NONE_OPTION)
+        idx = self.combo_option.findData(_NONE_OPTION)
+        if idx >= 0:
+            self.combo_option.setCurrentIndex(idx)
+        else:
+            self.combo_option.setCurrentText(self.tr(_NONE_OPTION))
         self.combo_option.blockSignals(False)
         self._update_rows_visibility(_NONE_OPTION)
         self.selection_changed.emit(_NONE_OPTION, False)
 
     def is_valid_selection(self) -> bool:
-        return self.combo_option.currentText() != _NONE_OPTION
+        return self._current_canonical_option() not in (_NONE_OPTION, "Sin ajuste", "No adjustment")
 
     def _update_rows_visibility(self, option: str):
         is_margin = option in _MARGIN_MODES
-        is_sized = option in CANVAS_PRESET_SIZES or option == _CUSTOM_OPTION
+        is_sized = option in CANVAS_PRESET_SIZES or option in (_CUSTOM_OPTION, "Custom...")
         for i in range(self.margin_row.count()):
             w = self.margin_row.itemAt(i).widget()
             if w:
@@ -195,29 +249,30 @@ class CanvasPopoverContent(QFrame):
         for i in range(self.position_row.count()):
             w = self.position_row.itemAt(i).widget()
             if w:
-                w.setVisible(option != _NONE_OPTION)
+                w.setVisible(option not in (_NONE_OPTION, "Sin ajuste", "No adjustment"))
         for i in range(self.overflow_row.count()):
             w = self.overflow_row.itemAt(i).widget()
             if w:
                 w.setVisible(is_sized)
-        editable = option == _CUSTOM_OPTION
+        editable = option in (_CUSTOM_OPTION, "Custom...")
         self.entry_width.setReadOnly(not editable)
         self.entry_height.setReadOnly(not editable)
 
     def _on_option_changed(self, option: str):
         self._update_rows_visibility(option)
-        if option == _CUSTOM_OPTION:
+        if option in (_CUSTOM_OPTION, "Custom..."):
             self.entry_width.setText(str(self._ref_w))
             self.entry_height.setText(str(self._ref_h))
         elif option in CANVAS_PRESET_SIZES:
             w, h = CANVAS_PRESET_SIZES[option]
             self.entry_width.setText(str(w))
             self.entry_height.setText(str(h))
-        self.selection_changed.emit(option, option != _NONE_OPTION)
+        is_valid = option not in (_NONE_OPTION, "Sin ajuste", "No adjustment")
+        self.selection_changed.emit(option, is_valid)
         self._push_state(option)
 
     def _on_fields_edited(self):
-        self._push_state(self.combo_option.currentText())
+        self._push_state(self._current_canonical_option())
 
     def _int_or(self, text: str, default: int) -> int:
         try:
@@ -233,7 +288,7 @@ class CanvasPopoverContent(QFrame):
 
     def _build_canvas_params(self, option: str):
         native_w, native_h = self._ref_w, self._ref_h
-        if option == _NONE_OPTION:
+        if option in (_NONE_OPTION, "Sin ajuste", "No adjustment"):
             # El canvas se ve y se puede arrastrar SIEMPRE (ver zoomable_image_viewer.
             # _reset_edit_state) -- "Sin ajuste" ya no oculta el overlay, solo lo
             # resetea al tamaño nativo de la imagen (equivalente a lo que ya hace
@@ -242,7 +297,7 @@ class CanvasPopoverContent(QFrame):
             img_w, img_h = native_w, native_h
             scale = (1.0, 1.0)
             mode, resizable = "free", True
-        elif option == "Añadir Margen Externo":
+        elif option in _MARGIN_MODES:
             margin = self._int_or(self.entry_margin.text(), 100)
             canvas_w, canvas_h = native_w + margin * 2, native_h + margin * 2
             img_w, img_h = native_w, native_h
@@ -256,7 +311,7 @@ class CanvasPopoverContent(QFrame):
             # usuario pidió poder seguir ajustándolos a mano después de elegirlos, no
             # que queden fijos.
             mode, resizable = "free", True
-        elif option == _CUSTOM_OPTION:
+        elif option in (_CUSTOM_OPTION, "Custom..."):
             canvas_w = self._int_or(self.entry_width.text(), native_w)
             canvas_h = self._int_or(self.entry_height.text(), native_h)
             img_w, img_h = native_w, native_h
@@ -265,7 +320,8 @@ class CanvasPopoverContent(QFrame):
         else:
             return None
 
-        position = self.combo_position.currentText()
+        pos_idx = self.combo_position.currentIndex()
+        position = self.combo_position.itemData(pos_idx) if pos_idx >= 0 else self.combo_position.currentText()
         pos_x, pos_y = calc_position(canvas_w, canvas_h, img_w, img_h, position)
         return {
             "canvas_rect": QRectF(0, 0, canvas_w, canvas_h),
@@ -294,21 +350,26 @@ class CanvasPopoverContent(QFrame):
         aplique a cada archivo al convertir -- ver _apply_canvas() en
         core/tabs/image_tools/image_converter.py. La edición visual en vivo
         (state_changed/apply_canvas_state) es un concepto aparte, sin cambios aquí."""
+        canonical_option = self._current_canonical_option()
+        pos_idx = self.combo_position.currentIndex()
+        pos = self.combo_position.itemData(pos_idx) if pos_idx >= 0 else self.combo_position.currentText()
+        over_idx = self.combo_overflow.currentIndex()
+        over = self.combo_overflow.itemData(over_idx) if over_idx >= 0 else self.combo_overflow.currentText()
         return {
             "canvas_enabled": self.is_valid_selection(),
-            "canvas_option": self.combo_option.currentText(),
+            "canvas_option": canonical_option,
             "canvas_margin": self._int_or(self.entry_margin.text(), 100),
             "canvas_width": self._int_or(self.entry_width.text(), self._ref_w),
             "canvas_height": self._int_or(self.entry_height.text(), self._ref_h),
-            "canvas_position": self.combo_position.currentText(),
-            "canvas_overflow_mode": self.combo_overflow.currentText(),
+            "canvas_position": pos,
+            "canvas_overflow_mode": over,
         }
 
     def sync(self):
         """Reemite el estado actual -- llamar al reabrir el popover, por si cambió el
         tamaño de referencia de la imagen desde la última vez."""
-        option = self.combo_option.currentText()
-        if option == _CUSTOM_OPTION and not self.entry_width.isModified():
+        option = self._current_canonical_option()
+        if option in (_CUSTOM_OPTION, "Custom...") and not self.entry_width.isModified():
             self.entry_width.setText(str(self._ref_w))
             self.entry_height.setText(str(self._ref_h))
         self._push_state(option)

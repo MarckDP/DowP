@@ -1,4 +1,5 @@
 # src/gui/tabs/video_tools/media_queue_widget.py
+from PySide6.QtCore import QCoreApplication
 import os
 import mimetypes
 from PySide6.QtWidgets import (
@@ -80,7 +81,7 @@ _AUDIO_ICON_COLOR = "#3498db"
 _ROW_THUMB_SIZE = 18  # px, cuadrado (miniatura de video)
 _ROW_WAVEFORM_SIZE = QSize(32, 18)  # icono de waveform rápida (audio)
 
-_HEADERS = ("Nombre", "Tipo", "Tamaño", "Estado")
+_HEADERS = (QCoreApplication.translate("media_queue_widget", "Nombre"), QCoreApplication.translate("media_queue_widget", "Tipo"), QCoreApplication.translate("media_queue_widget", "Tamaño"), QCoreApplication.translate("media_queue_widget", "Estado"))
 
 # Una fila de la cola se identifica por una CLAVE, no por su ruta: el mismo archivo puede
 # estar varias veces con recortes distintos (ej. dos clips del mismo medio enviados desde
@@ -474,7 +475,7 @@ class MediaQueueWidget(QFrame):
 
     def _on_add_files_clicked(self):
         from PySide6.QtWidgets import QFileDialog
-        filter_str = "Archivos Multimedia (*.mp4 *.mkv *.mov *.avi *.webm *.mp3 *.wav *.aac *.flac *.ogg);;Todos los archivos (*.*)"
+        filter_str = self.tr("Archivos Multimedia (*.mp4 *.mkv *.mov *.avi *.webm *.mp3 *.wav *.aac *.flac *.ogg);;Todos los archivos (*.*)")
         files, _ = QFileDialog.getOpenFileNames(self, self.tr("Seleccionar Archivos Multimedia"), "", filter_str)
         if files:
             self.add_files(files)
@@ -584,7 +585,7 @@ class MediaQueueWidget(QFrame):
 
     def _update_counter(self):
         count = len(self.files_list)
-        self.lbl_count.setText(f"{count} {self.tr('archivos')}")
+        self.lbl_count.setText(self.tr("{0} archivos").format(count))
         self.queue_updated.emit(count)
         self.lbl_drop_hint.setVisible(count == 0)
 

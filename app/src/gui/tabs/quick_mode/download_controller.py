@@ -116,7 +116,7 @@ class QuickDownloadController(QObject):
             
             if error:
                 self.busy_state_changed.emit(False, "")
-                self.progress_updated.emit(0, self.tr(f"Error: {error}") if hasattr(self, "tr") else f"Error: {error}", "error")
+                self.progress_updated.emit(0, self.tr("Error: {0}").format(error) if hasattr(self, "tr") else f"Error: {error}", "error")
                 return
 
             entries = data.get("entries") or []
@@ -180,7 +180,7 @@ class QuickDownloadController(QObject):
             
             if error:
                 self.busy_state_changed.emit(False, "")
-                self.progress_updated.emit(0, self.tr(f"Error al analizar: {error}") if hasattr(self, "tr") else f"Error al analizar: {error}", "error")
+                self.progress_updated.emit(0, self.tr("Error al analizar: {0}").format(error) if hasattr(self, "tr") else f"Error al analizar: {error}", "error")
                 return
                 
             self.open_cut_dialog_and_download(url, data, mode, quality, output_path, speed_limit_val,

@@ -1,4 +1,5 @@
 # src/gui/tabs/image_tools/rembg_popover.py
+from PySide6.QtCore import QCoreApplication
 """Contenido del popover "Eliminar Fondo (IA)" del Editor de Imagen -- misma cascada y
 mismos controles que usaba DowP 1 (image_tools_tab.pyc, rembg_master_frame/
 rembg_options_frame, líneas 784-847): Aceleración GPU (checkbox, encendida por
@@ -69,7 +70,8 @@ from core.setup.models_setup import (
     delete_custom_rembg_model, CUSTOM_REMBG_FAMILY,
 )
 
-_GPU_MACOS_WARNING = (
+_GPU_MACOS_WARNING = QCoreApplication.translate(
+    "RembgPopoverContent",
     "En macOS, la aceleración por GPU (CoreML) no es confiable con todos los "
     "modelos -- hay bugs conocidos y todavía sin arreglar de Apple (macOS 26.x) "
     "que pueden hacer que la app se cierre de golpe sin aviso al usar GPU con "
@@ -79,7 +81,8 @@ _GPU_MACOS_WARNING = (
     "sola o se cuelga, vuelve a desmarcar esta opción."
 )
 
-_GPU_TOOLTIP = (
+_GPU_TOOLTIP = QCoreApplication.translate(
+    "RembgPopoverContent",
     "Si está activo, usa la tarjeta gráfica (GPU).\n"
     "Si se desactiva, usará el procesador (CPU) a máxima potencia.\n"
     "Desactívalo si tienes problemas de drivers o cuelgues.\n\n"
@@ -89,11 +92,13 @@ _GPU_TOOLTIP = (
     "En Ajustes > Modelos puedes marcar \"Mantener los modelos de IA cargados en "
     "memoria\" para pagar ese costo una sola vez por sesión en vez de en cada lote."
 )
-_SMOOTH_TOOLTIP = (
+_SMOOTH_TOOLTIP = QCoreApplication.translate(
+    "RembgPopoverContent",
     "Difumina el borde del recorte para una transición más suave.\n"
     "0 = sin suavizado, 20 = máximo difuminado."
 )
-_EXPAND_TOOLTIP = (
+_EXPAND_TOOLTIP = QCoreApplication.translate(
+    "RembgPopoverContent",
     "Valores negativos contraen el recorte (elimina halos).\n"
     "Valores positivos expanden el recorte (recupera bordes cortados)."
 )
@@ -147,7 +152,7 @@ class RembgPopoverContent(QFrame):
 
         # Motor (familia del modelo)
         family_row = QHBoxLayout()
-        family_row.addWidget(self._label("Motor:"))
+        family_row.addWidget(self._label(self.tr("Motor:")))
         self.combo_family = AutoPopupComboBox(fit_contents=True)
         self.combo_family.addItem(AI_ENGINE_HOLDER, None)
         self.combo_family.currentIndexChanged.connect(self._on_family_changed)
@@ -156,7 +161,7 @@ class RembgPopoverContent(QFrame):
 
         # Modelo
         model_row = QHBoxLayout()
-        model_row.addWidget(self._label("Modelo:"))
+        model_row.addWidget(self._label(self.tr("Modelo:")))
         self.combo_model = AutoPopupComboBox(fit_contents=True)
         self.combo_model.addItem(AI_MODEL_HOLDER, None)
         self.combo_model.currentIndexChanged.connect(self._on_model_changed)
@@ -187,7 +192,7 @@ class RembgPopoverContent(QFrame):
 
         # Suavizado (feather del borde)
         smooth_row = QHBoxLayout()
-        smooth_row.addWidget(self._label("Suavizado:"))
+        smooth_row.addWidget(self._label(self.tr("Suavizado:")))
         self.slider_smooth = QSlider(Qt.Horizontal)
         self.slider_smooth.setRange(0, 20)
         self.slider_smooth.setValue(0)
@@ -204,7 +209,7 @@ class RembgPopoverContent(QFrame):
 
         # Exp/Contr (contrae o expande el recorte)
         expand_row = QHBoxLayout()
-        expand_row.addWidget(self._label("Exp/Contr:"))
+        expand_row.addWidget(self._label(self.tr("Exp/Contr:")))
         self.slider_expand = QSlider(Qt.Horizontal)
         self.slider_expand.setRange(-10, 10)
         self.slider_expand.setValue(0)

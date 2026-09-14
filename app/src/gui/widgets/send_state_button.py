@@ -45,7 +45,7 @@ class SendButtonState(QObject):
     def finish(self, success: bool, message: str = None, hold_ms: int = 1800):
         """Detiene la animación y muestra el resultado final por `hold_ms` antes de restaurar."""
         self._dots_timer.stop()
-        text = message if message else ("Éxito" if success else "Error")
+        text = message if message else (self.tr("Éxito") if success else "Error")
         self.button.setText(text)
         self._restore_timer.start(hold_ms)
 

@@ -37,6 +37,19 @@ def _apply_dialog_styles(msg_box):
     except Exception as e:
         logger.error(f"Error cargando estilos para el diálogo: {e}")
 
+def _translate_dialog_text(parent, text: str) -> str:
+    if not isinstance(text, str) or not text:
+        return text
+    if parent and hasattr(parent, "tr"):
+        res = parent.tr(text)
+        if res != text:
+            return res
+    from PySide6.QtCore import QCoreApplication
+    res = QCoreApplication.translate("dialogs", text)
+    if res != text:
+        return res
+    return text
+
 def show_warning_confirm(parent, title, text):
     """
     Muestra un diálogo de advertencia con botones Sí/No (Yes/No).
@@ -44,8 +57,8 @@ def show_warning_confirm(parent, title, text):
     """
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Warning)
-    msg.setWindowTitle(title)
-    msg.setText(text)
+    msg.setWindowTitle(_translate_dialog_text(parent, title))
+    msg.setText(_translate_dialog_text(parent, text))
     msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
     msg.setDefaultButton(QMessageBox.StandardButton.No)
     _apply_dialog_styles(msg)
@@ -58,8 +71,8 @@ def show_info(parent, title, text):
     """
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Information)
-    msg.setWindowTitle(title)
-    msg.setText(text)
+    msg.setWindowTitle(_translate_dialog_text(parent, title))
+    msg.setText(_translate_dialog_text(parent, text))
     msg.setStandardButtons(QMessageBox.StandardButton.Ok)
     _apply_dialog_styles(msg)
     msg.exec()
@@ -70,8 +83,8 @@ def show_warning(parent, title, text):
     """
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Warning)
-    msg.setWindowTitle(title)
-    msg.setText(text)
+    msg.setWindowTitle(_translate_dialog_text(parent, title))
+    msg.setText(_translate_dialog_text(parent, text))
     msg.setStandardButtons(QMessageBox.StandardButton.Ok)
     _apply_dialog_styles(msg)
     msg.exec()
@@ -422,7 +435,7 @@ class SavePresetDialog(QDialog):
         self.combo_function = QComboBox()
         self.combo_function.setCursor(Qt.PointingHandCursor)
         for func_id, label in PRESET_FUNCTIONS.items():
-            self.combo_function.addItem(label, func_id)
+            self.combo_function.addItem(QCoreApplication.translate("preset_manager", label), func_id)
         if self._default_function:
             idx = self.combo_function.findData(self._default_function)
             if idx >= 0:

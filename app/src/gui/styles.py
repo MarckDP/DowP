@@ -17,6 +17,7 @@ import json
 import tempfile
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
+from PySide6.QtCore import QCoreApplication
 
 # Directorio base de temas
 _THEMES_DIR = os.path.join(get_src_dir(), "gui", "themes")
@@ -603,7 +604,7 @@ def apply_edit_subclip_button_style(btn, has_subclips: bool = False, icon_size: 
 
     if has_subclips:
         btn.setIcon(get_colored_svg_icon("edit.svg", "#000000", size=icon_size))
-        btn.setToolTip("Editar / Recortar Subclips (In/Out) — hay subclips guardados")
+        btn.setToolTip(QCoreApplication.translate("styles", "Editar / Recortar Subclips (In/Out) — hay subclips guardados"))
         btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_secundario', '#1DC038')};
@@ -620,7 +621,7 @@ def apply_edit_subclip_button_style(btn, has_subclips: bool = False, icon_size: 
         """)
     else:
         btn.setIcon(get_colored_svg_icon("edit.svg", "#6c7086", size=icon_size))
-        btn.setToolTip("Editar / Recortar Subclips (In/Out)")
+        btn.setToolTip(QCoreApplication.translate("styles", "Editar / Recortar Subclips (In/Out)"))
         btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};

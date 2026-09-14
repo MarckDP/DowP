@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFrame, QSizePolicy, QScrollArea, QSlider, QGraphicsView, QGraphicsScene,
     QToolButton, QMenu, QCheckBox, QGraphicsObject
 )
-from PySide6.QtCore import Qt, QUrl, QSize, QSizeF, QPointF, QTimer, Signal, QEvent, QRectF
+from PySide6.QtCore import Qt, QUrl, QSize, QSizeF, QPointF, QTimer, Signal, QEvent, QRectF, QT_TRANSLATE_NOOP
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QPixmap, QImage, QFont, QFontMetricsF
 from PySide6.QtMultimedia import (
     QMediaPlayer, QAudioOutput, QMediaMetaData, QAudioBufferOutput, QAudioFormat
@@ -28,8 +28,8 @@ from core.logger.logger_manager import logger
 # modo "auto" recalcula el divisor según la resolución nativa real del video (ver
 # _compute_auto_divisor); modo "manual" fuerza el divisor elegido por el usuario.
 _QUALITY_OPTIONS = [
-    ("Auto", "auto", None),
-    ("Completa", "manual", 1),
+    (QT_TRANSLATE_NOOP("MediaTrimPlayerWidget", "Auto"), "auto", None),
+    (QT_TRANSLATE_NOOP("MediaTrimPlayerWidget", "Completa"), "manual", 1),
     ("1/2", "manual", 2),
     ("1/4", "manual", 4),
     ("1/8", "manual", 8),
@@ -428,13 +428,13 @@ class TrimWaveformWidget(QWidget):
             painter.fillRect(sweep_x, bar_y, sweep_w, bar_h, QColor(get_theme_token('acento_primario', '#B9E640')))
 
             painter.setPen(QPen(QColor('#cdd6f4')))
-            painter.drawText(self.rect(), Qt.AlignCenter, "Descargando medio en alta calidad...")
+            painter.drawText(self.rect(), Qt.AlignCenter, self.tr("Descargando medio en alta calidad..."))
         elif self.is_error:
             painter.setPen(QPen(QColor('#FF5555'), 1))
             painter.drawLine(0, int(mid_y), w, int(mid_y))
             painter.setPen(QPen(QColor('#FF8888')))
-            msg = self.error_message or "Error al descargar el medio en alta calidad."
-            painter.drawText(self.rect(), Qt.AlignCenter, f"Error al descargar el medio en alta calidad.\n{msg}" if self.error_message else msg)
+            msg = self.error_message or self.tr("Error al descargar el medio en alta calidad.")
+            painter.drawText(self.rect(), Qt.AlignCenter, self.tr("Error al descargar el medio en alta calidad.\n{0}").format(msg) if self.error_message else msg)
         elif self.is_loading:
             # Animación de carga: onda sinusoidal
             pen = QPen(QColor(get_theme_token('acento_primario', '#B9E640')))
@@ -1866,7 +1866,7 @@ class MediaTrimPlayerWidget(QWidget):
 
         if is_audio:
             filename = os.path.basename(self.media_path)
-            self.lbl_audio_art.setText(f"{self.tr('Pista de Audio')}: {filename}" if filename else self.tr("Vista Previa de Audio"))
+            self.lbl_audio_art.setText(self.tr("Pista de Audio") + f": {filename}" if filename else self.tr("Vista Previa de Audio"))
         self.btn_quality.setVisible(is_video)
         self._update_quality_button_text()
 
@@ -2330,7 +2330,7 @@ class MediaTrimPlayerWidget(QWidget):
 
         track_changed = active != self._active_audio_track
         self._active_audio_track = active
-        self.btn_audio_track.setText(f"{self.tr('Pista')} {active + 1} ▾")
+        self.btn_audio_track.setText(self.tr("Pista {0} ▾").format(active + 1))
         self.btn_audio_track.adjustSize()
         self.btn_audio_track.setVisible(True)
         # blockSignals: esto es una restauración interna, no una elección del usuario -
@@ -2355,7 +2355,7 @@ class MediaTrimPlayerWidget(QWidget):
         lang = str(meta.stringValue(QMediaMetaData.Key.Language) or "").strip()
         codec = str(meta.stringValue(QMediaMetaData.Key.AudioCodec) or "").strip()
 
-        label = f"{self.tr('Pista')} {index + 1}"
+        label = self.tr("Pista {0}").format(index + 1)
         extra = title or lang
         if extra:
             label += f" — {extra}"
@@ -2368,7 +2368,7 @@ class MediaTrimPlayerWidget(QWidget):
             return
         self.media_player.setActiveAudioTrack(index)
         self._active_audio_track = index
-        self.btn_audio_track.setText(f"{self.tr('Pista')} {index + 1} ▾")
+        self.btn_audio_track.setText(self.tr("Pista {0} ▾").format(index + 1))
         self.btn_audio_track.adjustSize()
         for i, action in enumerate(self.audio_track_menu.actions()):
             action.setChecked(i == index)

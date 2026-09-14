@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QScrollArea,
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QT_TRANSLATE_NOOP
 
 from gui.styles import get_theme_token
 from gui.widgets.mode_selector import ModeSelector
@@ -35,12 +35,11 @@ _EDIT_CODEC_IDS = ["prores", "dnxhd", "cfhd"]
 _EDIT_CODEC_LABELS = {"prores": "Apple ProRes", "dnxhd": "Avid DNxHR", "cfhd": "GoPro CineForm"}
 _EDIT_CODEC_DEFAULT_ENCODER = {"prores": "prores_ks", "dnxhd": "dnxhd", "cfhd": "cfhd"}
 
-# Pista textual para encontrar el perfil "proxy" (el mas liviano) de cada familia dentro
-# de su tabla completa de codec_profiles.py, para el modo Rápido - un substring del label
-# real en vez de un índice fijo, para no romperse si esa tabla cambia de orden algún día.
-_QUICK_PROXY_LABEL_HINT = {"prores": "proxy", "dnxhd": "lb", "cfhd": "low"}
-
-_RESOLUTION_LABELS = {"completa": "Completa", "mitad": "Mitad", "cuarto": "Cuarto"}
+_RESOLUTION_LABELS = {
+    "completa": QT_TRANSLATE_NOOP("EditingPanel", "Completa"),
+    "mitad": QT_TRANSLATE_NOOP("EditingPanel", "Mitad"),
+    "cuarto": QT_TRANSLATE_NOOP("EditingPanel", "Cuarto"),
+}
 _RESOLUTION_SCALES = {"completa": None, "mitad": 0.5, "cuarto": 0.25}
 
 # Único contenedor ofrecido: .mov (id "qtff") - el matrix real confirma que es el ÚNICO
@@ -65,14 +64,15 @@ def _encoder_for(codec_id: str) -> str:
 
 def _quick_proxy_profile(codec_id: str, encoder: str) -> dict:
     """El perfil mas liviano/proxy de la tabla real de codec_profiles.py para este
-    encoder - buscado por substring del label (ver _QUICK_PROXY_LABEL_HINT), nunca un
-    perfil "proxy" inventado aparte: son los mismos valores que ya usa Manual/Avanzado."""
+    encoder - identificado por el flag "quick_proxy" de esa tabla (ver codec_profiles.py),
+    nunca un perfil "proxy" inventado aparte: son los mismos valores que ya usa
+    Manual/Avanzado. Antes se buscaba por substring del label (ej. "lb", "low"), pero eso
+    se rompía si el label traducido dejaba de contener esas letras."""
     profiles = get_profiles("video", encoder)
     if not profiles:
         return {"label": "Predeterminado", "args": ["-c:v", encoder]}
-    hint = _QUICK_PROXY_LABEL_HINT.get(codec_id, "")
     for profile in profiles:
-        if hint and hint in profile["label"].lower():
+        if profile.get("quick_proxy"):
             return profile
     return profiles[0]
 
@@ -102,7 +102,7 @@ class EditingPanel(QWidget):
     entiende por "proxy").
 
     Rápido: 1 click por familia de códec (siempre a su perfil más liviano/proxy real, ver
-    _QUICK_PROXY_LABEL_HINT) + escala de resolución.
+    el flag "quick_proxy" en codec_profiles.py) + escala de resolución.
     Manual: códec + calidad completa (misma tabla que ya usa Avanzado, ver
     codec_profiles.py) + escala de resolución.
 

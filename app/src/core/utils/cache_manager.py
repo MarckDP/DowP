@@ -1,5 +1,6 @@
 # src/core/utils/cache_manager.py
 import os
+from PySide6.QtCore import QCoreApplication
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any
 from core.logger.logger_manager import logger
@@ -95,11 +96,11 @@ class ImageThumbnailCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Imágenes y Miniaturas"
+        return QCoreApplication.translate("ImageThumbnailCacheProvider", "Caché de Imágenes y Miniaturas")
 
     @property
     def description(self) -> str:
-        return "Miniaturas en disco generadas para previas rápidas de imágenes, videos y audios."
+        return QCoreApplication.translate("ImageThumbnailCacheProvider", "Miniaturas en disco generadas para previas rápidas de imágenes, videos y audios.")
 
     def get_stats(self) -> Dict[str, Any]:
         thumb_dir = get_thumbnail_cache_dir()
@@ -143,11 +144,11 @@ class IndexingMetadataCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Indexación y Metadatos"
+        return QCoreApplication.translate("IndexingMetadataCacheProvider", "Caché de Indexación y Metadatos")
 
     @property
     def description(self) -> str:
-        return "Base de datos y caché de metadatos multimedia extraídos para optimizar la carga del árbol."
+        return QCoreApplication.translate("IndexingMetadataCacheProvider", "Base de datos y caché de metadatos multimedia extraídos para optimizar la carga del árbol.")
 
     def get_stats(self) -> Dict[str, Any]:
         cache_dir = get_cache_dir()
@@ -203,12 +204,12 @@ class FreesoundPreviewCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Previsualización Web"
+        return QCoreApplication.translate("FreesoundPreviewCacheProvider", "Caché de Previsualización Web")
 
     @property
     def description(self) -> str:
         from core.tabs.editing_media.freesound_preview_cache import MAX_FREESOUND_CACHE_FILES
-        return f"Audios/videos en caché local para preescucha instantánea al explorar medios web (Freesound, Wikimedia, máx {MAX_FREESOUND_CACHE_FILES} archivos)."
+        return QCoreApplication.translate("FreesoundPreviewCacheProvider", "Audios/videos en caché local para preescucha instantánea al explorar medios web (Freesound, Wikimedia, máx {0} archivos).").format(MAX_FREESOUND_CACHE_FILES)
 
     def get_stats(self) -> Dict[str, Any]:
         from core.utils.paths import get_freesound_cache_dir
@@ -253,11 +254,11 @@ class WaveformCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Ondas de Audio"
+        return QCoreApplication.translate("WaveformCacheProvider", "Caché de Ondas de Audio")
 
     @property
     def description(self) -> str:
-        return "Formas de onda (waveforms) cacheadas para visualización instantánea en la cuadrícula y reproductor."
+        return QCoreApplication.translate("WaveformCacheProvider", "Formas de onda (waveforms) cacheadas para visualización instantánea en la cuadrícula y reproductor.")
 
     def get_stats(self) -> Dict[str, Any]:
         from core.utils.paths import get_waveform_cache_dir
@@ -303,11 +304,11 @@ class ProxyCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Proxies de Previsualización"
+        return QCoreApplication.translate("ProxyCacheProvider", "Caché de Proxies de Previsualización")
 
     @property
     def description(self) -> str:
-        return "Copias de video en baja resolución generadas para reproducir fluido medios pesados/RAW. Con límite de tamaño automático."
+        return QCoreApplication.translate("ProxyCacheProvider", "Copias de video en baja resolución generadas para reproducir fluido medios pesados/RAW. Con límite de tamaño automático.")
 
     def get_stats(self) -> Dict[str, Any]:
         from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager
@@ -344,12 +345,12 @@ class RemoteThumbnailCacheProvider(BaseCacheProvider):
 
     @property
     def name(self) -> str:
-        return "Caché de Miniaturas Web"
+        return QCoreApplication.translate("RemoteThumbnailCacheProvider", "Caché de Miniaturas Web")
 
     @property
     def description(self) -> str:
         from core.tabs.editing_media.remote_thumbnail_cache_manager import MAX_REMOTE_THUMBNAIL_FILES
-        return f"Miniaturas de imagen/video de orígenes web (ej. Wikimedia) cacheadas localmente (máx {MAX_REMOTE_THUMBNAIL_FILES} archivos)."
+        return QCoreApplication.translate("RemoteThumbnailCacheProvider", "Miniaturas de imagen/video de orígenes web (ej. Wikimedia) cacheadas localmente (máx {0} archivos).").format(MAX_REMOTE_THUMBNAIL_FILES)
 
     def get_stats(self) -> Dict[str, Any]:
         from core.utils.paths import get_remote_thumbnail_cache_dir

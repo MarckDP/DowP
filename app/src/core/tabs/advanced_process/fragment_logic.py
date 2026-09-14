@@ -1,5 +1,6 @@
 # src/core/tabs/single_process/fragment_logic.py
 import re
+from PySide6.QtCore import QCoreApplication
 
 class FragmentManager:
     """
@@ -44,15 +45,15 @@ class FragmentManager:
     def validate_range(start_ms, end_ms, duration_ms=None):
         """Valida que el rango de inicio sea menor que el de fin y esté dentro de la duración."""
         if start_ms is None or end_ms is None:
-            return False, "Valores de tiempo inválidos."
+            return False, QCoreApplication.translate("FragmentManager", "Valores de tiempo inválidos.")
         
         if start_ms >= end_ms:
-            return False, "El tiempo de inicio debe ser menor al fin."
+            return False, QCoreApplication.translate("FragmentManager", "El tiempo de inicio debe ser menor al fin.")
         
         if duration_ms is not None and end_ms > duration_ms:
             # Tolerancia pequeña para errores de redondeo o duración de stream
             if end_ms > duration_ms + 1000:
-                return False, "El tiempo de fin excede la duración del video."
+                return False, QCoreApplication.translate("FragmentManager", "El tiempo de fin excede la duración del video.")
         
         return True, ""
 

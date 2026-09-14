@@ -6,6 +6,7 @@ import time
 from core.logger.logger_manager import logger
 from core.setup.setup_manager import get_dependency_env
 from core.utils.config_manager import get_config, save_config
+from PySide6.QtCore import QCoreApplication, QT_TRANSLATE_NOOP
 
 
 def _get_os_name() -> str:
@@ -279,12 +280,12 @@ def _summarize_codec_status(codec_support: dict) -> dict:
                 "status": "full",
                 "encoder": info["encoder"],
                 "backend": backend,
-                "note": "Codificación acelerada por hardware, confirmada en este equipo.",
+                "note": QT_TRANSLATE_NOOP("HardwareDetector", "Codificación acelerada por hardware, confirmada en este equipo."),
             }
         elif sw_ok:
-            note = "Solo disponible por software (CPU): funcional pero más lento."
+            note = QT_TRANSLATE_NOOP("HardwareDetector", "Solo disponible por software (CPU): funcional pero más lento.")
             if hw_listed_but_failed:
-                note = "El hardware detectado no confirmó aceleración; se usará software (CPU), más lento."
+                note = QT_TRANSLATE_NOOP("HardwareDetector", "El hardware detectado no confirmó aceleración; se usará software (CPU), más lento.")
             summary[codec] = {
                 "status": "partial",
                 "encoder": sw_info["encoder"],
@@ -295,8 +296,8 @@ def _summarize_codec_status(codec_support: dict) -> dict:
             summary[codec] = {
                 "status": "none",
                 "encoder": None,
-                "backend": None,
-                "note": "Este build de ffmpeg no trae ningún encoder funcional para este códec.",
+                "backend": "none",
+                "note": QT_TRANSLATE_NOOP("HardwareDetector", "Este build de ffmpeg no trae ningún encoder funcional para este códec."),
             }
 
     return summary
@@ -326,10 +327,13 @@ def _get_ram_info() -> str:
                 gb = stat.ullTotalPhys / (1024 ** 3)
                 return f"{gb:.1f} GB"
         elif os_system == "Darwin":
-            res = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=3)
-            bytes_val = int(res.stdout.strip())
-            gb = bytes_val / (1024 ** 3)
-            return f"{gb:.1f} GB"
+            try:
+                res = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=3)
+                if res.returncode == 0 and res.stdout.strip().isdigit():
+                    gb = int(res.stdout.strip()) / (1024 ** 3)
+                    return f"{gb:.1f} GB"
+            except Exception as e:
+                logger.error(f"HardwareDetector: Error al obtener RAM en macOS: {e}")
         elif os_system == "Linux":
             with open("/proc/meminfo", "r", encoding="utf-8") as f:
                 for line in f:
@@ -389,7 +393,7 @@ def _generate_ffmpeg_log_files(codec_support: dict, codec_status: dict, supporte
 
     # 2. Generar JSON completo de capacidades
     full_log_data = {
-        "app_info": "DowP 2.0 - Informe Completo de Capacidades de FFmpeg",
+        "app_info": QCoreApplication.translate("hardware_detector", "DowP 2.0 - Informe Completo de Capacidades de FFmpeg"),
         "diagnostic_date": time.strftime('%Y-%m-%d %H:%M:%S'),
         "detected_preferred_encoder": preferred_encoder,
         "supported_encoders_summary": supported_encoders,

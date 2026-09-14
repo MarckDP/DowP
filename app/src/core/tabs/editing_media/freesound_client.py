@@ -3,6 +3,7 @@ import os
 import re
 import requests
 from core.logger.logger_manager import logger
+from PySide6.QtCore import QCoreApplication
 
 BASE_URL = "https://freesound.org/apiv2"
 
@@ -29,7 +30,7 @@ class FreesoundClient:
             token: Access token OAuth2 (Bearer) o API key legacy (Token).
         """
         if not token:
-            raise ValueError("Token de Freesound API requerido.")
+            raise ValueError(QCoreApplication.translate("FreesoundClient", "Token de Freesound API requerido."))
 
         if not query or query.strip() == "":
             query = ""
@@ -79,8 +80,8 @@ class FreesoundClient:
         # Mapear ordenamiento
         sort_mapping = {
             "Relevancia": "score",
-            "Duración (Largo primero)": "duration_desc",
-            "Duración (Corto primero)": "duration_asc",
+            QCoreApplication.translate("FreesoundClient", "Duración (Largo primero)"): "duration_desc",
+            QCoreApplication.translate("FreesoundClient", "Duración (Corto primero)"): "duration_asc",
             "Más nuevos": "created_desc",
             "Más descargados": "downloads_desc",
             "Mejor calificados": "rating_desc"
@@ -92,12 +93,12 @@ class FreesoundClient:
             logger.debug(f"FreesoundClient: Realizando búsqueda con parámetros: {params}")
             response = self.session.get(url, params=params, headers=headers, timeout=10)
             if response.status_code == 401:
-                raise ValueError("Token expirado o inválido. Inicie sesión de nuevo en Freesound.")
+                raise ValueError(QCoreApplication.translate("FreesoundClient", "Token expirado o inválido. Inicie sesión de nuevo en Freesound."))
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"FreesoundClient: Error en la petición de búsqueda: {e}")
-            raise IOError(f"Error de red al conectar con Freesound: {e}")
+            raise IOError(QCoreApplication.translate("FreesoundClient", "Error de red al conectar con Freesound: {0}").format(e))
 
     def download_file(self, url: str, dest_path: str, token: str = None, progress_callback=None) -> bool:
         """Descarga un archivo remoto (ej. vista previa o archivo original si está autorizado)."""
@@ -145,7 +146,7 @@ class FreesoundClient:
         `fallback_name` según lo que Freesound indique en Content-Disposition).
         """
         if not token:
-            raise PermissionError("Se requiere iniciar sesión con Freesound (OAuth2) para descargar el archivo original en alta calidad.")
+            raise PermissionError(QCoreApplication.translate("FreesoundClient", "Se requiere iniciar sesión con Freesound (OAuth2) para descargar el archivo original en alta calidad."))
 
         url = f"{BASE_URL}/sounds/{sound_id}/download/"
         os.makedirs(dest_dir, exist_ok=True)
@@ -158,7 +159,7 @@ class FreesoundClient:
         logger.debug(f"FreesoundClient: Descargando archivo original del sonido {sound_id}...")
         response = self.session.get(url, headers=headers, stream=True, timeout=30)
         if response.status_code in (401, 403):
-            raise PermissionError("Freesound rechazó la descarga del original (sesión expirada o sin permisos). Inicia sesión de nuevo.")
+            raise PermissionError(QCoreApplication.translate("FreesoundClient", "Freesound rechazó la descarga del original (sesión expirada o sin permisos). Inicia sesión de nuevo."))
         response.raise_for_status()
 
         # Determinar el nombre de archivo real desde Content-Disposition, si Freesound lo envía

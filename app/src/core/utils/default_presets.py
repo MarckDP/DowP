@@ -19,6 +19,7 @@ cada uno (ver preset_manager.PRESET_FUNCTIONS), no el namespace.
 """
 from core.tabs.video_tools.codec_profiles import get_profiles, build_custom_audio_bitrate_args, recommend_audio_codec
 from core.utils.audio_filter_builder import build_loudnorm_filter
+from PySide6.QtCore import QCoreApplication
 
 _NAMESPACE = "video_tools/avanzado"
 

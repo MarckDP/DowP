@@ -6,6 +6,10 @@ ante bloqueos temporales de YouTube (HTTP 403, HTTP 429, bot-check).
 import copy
 from core.logger.logger_manager import logger
 
+# Marcadores de deteccion: se comparan contra el texto de error crudo de yt-dlp/red, que
+# SIEMPRE esta en ingles (nunca pasa por el sistema de traduccion de la UI) - no envolver
+# en QCoreApplication.translate() aca, o la deteccion se rompe en cuanto se traduzca
+# alguna de estas frases a otro idioma.
 YOUTUBE_ACCESS_MARKERS = (
     "http error 403",
     "403: forbidden",

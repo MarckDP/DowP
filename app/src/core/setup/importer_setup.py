@@ -27,6 +27,7 @@ import xml.etree.ElementTree as ET
 from core.logger.logger_manager import logger
 from core.utils.paths import get_bundled_importer_dir
 from core.version import APP_VERSION
+from PySide6.QtCore import QCoreApplication
 
 # Identidad de la extensión. Es el ancla de toda la detección: el nombre de la carpeta
 # da igual (CEP lee el manifiesto de dentro), y de hecho las instalaciones manuales
@@ -278,9 +279,9 @@ def enable_player_debug_mode():
             except OSError as e:
                 failed.append(f"CSXS.{n}: {e}")
         if not done:
-            return False, "No se pudo activar el modo de depuración de CEP: " + "; ".join(failed)
+            return False, QCoreApplication.translate("importer_setup", "No se pudo activar el modo de depuración de CEP: ") + "; ".join(failed)
         logger.info(f"Importer: PlayerDebugMode activado en CSXS.{done[0]}-CSXS.{done[-1]}")
-        return True, f"Modo de depuración de CEP activado ({len(done)} versiones)."
+        return True, QCoreApplication.translate("importer_setup", "Modo de depuración de CEP activado ({0} versiones).").format(len(done))
 
     if _IS_MACOS:
         done, failed = [], []
@@ -294,11 +295,11 @@ def enable_player_debug_mode():
             except Exception as e:
                 failed.append(f"CSXS.{n}: {e}")
         if not done:
-            return False, "No se pudo activar el modo de depuración de CEP: " + "; ".join(failed)
+            return False, QCoreApplication.translate("importer_setup", "No se pudo activar el modo de depuración de CEP: ") + "; ".join(failed)
         logger.info(f"Importer: PlayerDebugMode activado en com.adobe.CSXS.{done[0]}-{done[-1]}")
-        return True, f"Modo de depuración de CEP activado ({len(done)} versiones)."
+        return True, QCoreApplication.translate("importer_setup", "Modo de depuración de CEP activado ({0} versiones).").format(len(done))
 
-    return False, "Esta plataforma no usa extensiones CEP."
+    return False, QCoreApplication.translate("importer_setup", "Esta plataforma no usa extensiones CEP.")
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -312,11 +313,11 @@ def install():
     La copia va a un directorio hermano y solo se intercambia al final, para que un
     fallo a media copia no deje al usuario sin el panel que ya tenía funcionando."""
     if not is_supported():
-        return False, "Esta plataforma no usa extensiones CEP."
+        return False, QCoreApplication.translate("importer_setup", "Esta plataforma no usa extensiones CEP.")
 
     source = get_bundled_importer_dir()
     if not _read_manifest(source):
-        return False, f"No se encontró el panel incluido en la app ({source})."
+        return False, QCoreApplication.translate("importer_setup", "No se encontró el panel incluido en la app ({0}).").format(source)
 
     target = get_install_dir()
     staging = target + ".new"
@@ -344,23 +345,26 @@ def install():
     except Exception as e:
         shutil.rmtree(staging, ignore_errors=True)
         logger.error(f"Importer: fallo instalando el panel en {target}: {e}", exc_info=True)
-        return False, f"No se pudo instalar el panel: {e}"
+        return False, QCoreApplication.translate("importer_setup", "No se pudo instalar el panel: {0}").format(e)
 
     version = get_bundled_version()
     logger.info(f"Importer: panel {version} instalado en {target}")
 
     debug_ok, debug_msg = enable_player_debug_mode()
     if not debug_ok:
-        return True, (f"Panel {version} instalado, pero no se pudo activar el modo de "
-                      f"depuración de CEP ({debug_msg}). El panel podría no aparecer.")
-    return True, f"Panel {version} instalado. Reinicia Adobe para verlo en el menú."
+        return True, QCoreApplication.translate(
+            "importer_setup",
+            "Panel {0} instalado, pero no se pudo activar el modo de "
+            "depuración de CEP ({1}). El panel podría no aparecer."
+        ).format(version, debug_msg)
+    return True, QCoreApplication.translate("importer_setup", "Panel {0} instalado. Reinicia Adobe para verlo en el menú.").format(version)
 
 
 def uninstall():
     """Elimina el panel del perfil del usuario. No toca las copias de sistema: para eso
     está remove_system_install_elevated()."""
     if not is_supported():
-        return False, "Esta plataforma no usa extensiones CEP."
+        return False, QCoreApplication.translate("importer_setup", "Esta plataforma no usa extensiones CEP.")
 
     removed = []
     for install_info in find_installed():
@@ -371,12 +375,12 @@ def uninstall():
             removed.append(install_info["path"])
         except Exception as e:
             logger.error(f"Importer: no se pudo eliminar {install_info['path']}: {e}")
-            return False, f"No se pudo eliminar el panel: {e}"
+            return False, QCoreApplication.translate("importer_setup", "No se pudo eliminar el panel: {0}").format(e)
 
     if not removed:
-        return False, "No hay ningún panel instalado en tu perfil de usuario."
+        return False, QCoreApplication.translate("importer_setup", "No hay ningún panel instalado en tu perfil de usuario.")
     logger.info(f"Importer: panel desinstalado de {removed}")
-    return True, "Panel desinstalado. Reinicia Adobe para que desaparezca del menú."
+    return True, QCoreApplication.translate("importer_setup", "Panel desinstalado. Reinicia Adobe para que desaparezca del menú.")
 
 
 def sync_if_installed() -> bool:
@@ -434,7 +438,7 @@ def remove_system_install_elevated(path: str):
     Es la única operación de todo DowP que muestra un diálogo de administrador, y solo la
     ve quien instaló el panel a mano en su día. Una instalación nueva nunca llega aquí."""
     if not _validate_system_install_path(path):
-        return False, "La ruta no corresponde a una instalación de DowP Importer del sistema."
+        return False, QCoreApplication.translate("importer_setup", "La ruta no corresponde a una instalación de DowP Importer del sistema.")
 
     logger.info(f"Importer: solicitando permisos para eliminar la copia de sistema {path}")
 
@@ -442,7 +446,7 @@ def remove_system_install_elevated(path: str):
         return _remove_elevated_windows(path)
     if _IS_MACOS:
         return _remove_elevated_macos(path)
-    return False, "Esta plataforma no usa extensiones CEP."
+    return False, QCoreApplication.translate("importer_setup", "Esta plataforma no usa extensiones CEP.")
 
 
 def _remove_elevated_windows(path: str):
@@ -493,8 +497,8 @@ def _remove_elevated_windows(path: str):
     if not ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(info)):
         code = ctypes.windll.kernel32.GetLastError()
         if code == ERROR_CANCELLED:
-            return False, "Se canceló la solicitud de permisos de administrador."
-        return False, f"No se pudo solicitar permisos de administrador (error {code})."
+            return False, QCoreApplication.translate("importer_setup", "Se canceló la solicitud de permisos de administrador.")
+        return False, QCoreApplication.translate("importer_setup", "No se pudo solicitar permisos de administrador (error {0}).").format(code)
 
     try:
         ctypes.windll.kernel32.WaitForSingleObject(info.hProcess, 120000)
@@ -505,7 +509,7 @@ def _remove_elevated_windows(path: str):
         ctypes.windll.kernel32.CloseHandle(info.hProcess)
 
     if os.path.exists(path):
-        return False, f"La carpeta sigue ahí tras el intento de borrado (código {rc})."
+        return False, QCoreApplication.translate("importer_setup", "La carpeta sigue ahí tras el intento de borrado (código {0}).").format(rc)
     logger.info(f"Importer: copia de sistema eliminada: {path}")
     return True, "Copia antigua eliminada. Reinicia Adobe."
 
@@ -520,12 +524,12 @@ def _remove_elevated_macos(path: str):
     except subprocess.CalledProcessError as e:
         stderr = (e.stderr or b"").decode("utf-8", errors="ignore")
         if "-128" in stderr or "User canceled" in stderr:
-            return False, "Se canceló la solicitud de permisos de administrador."
-        return False, f"No se pudo eliminar la copia antigua: {stderr.strip() or e}"
+            return False, QCoreApplication.translate("importer_setup", "Se canceló la solicitud de permisos de administrador.")
+        return False, QCoreApplication.translate("importer_setup", "No se pudo eliminar la copia antigua: {0}").format(stderr.strip() or e)
     except Exception as e:
-        return False, f"No se pudo eliminar la copia antigua: {e}"
+        return False, QCoreApplication.translate("importer_setup", "No se pudo eliminar la copia antigua: {0}").format(e)
 
     if os.path.exists(path):
-        return False, "La carpeta sigue ahí tras el intento de borrado."
+        return False, QCoreApplication.translate("importer_setup", "La carpeta sigue ahí tras el intento de borrado.")
     logger.info(f"Importer: copia de sistema eliminada: {path}")
     return True, "Copia antigua eliminada. Reinicia Adobe."

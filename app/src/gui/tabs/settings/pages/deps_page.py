@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QRadioButton, QButtonGroup, QFileDialog, QLineEdit, QToolButton,
     QSizePolicy, QGroupBox, QCheckBox, QApplication
 )
-from PySide6.QtCore import Qt, Signal, QThread, QUrl, QTimer
+from PySide6.QtCore import Qt, Signal, QThread, QUrl, QTimer, QCoreApplication
 from PySide6.QtGui import QDesktopServices, QIcon
 from core.utils.i18n import logger
 from gui.styles import get_theme_token, set_button_variant, apply_folder_browse_button_style, apply_folder_open_button_style
@@ -158,7 +158,7 @@ class FFmpegDownloadWorker(QThread):
 
     def run(self):
         try:
-            self.progress_signal.emit("Iniciando descarga de FFmpeg...")
+            self.progress_signal.emit(self.tr("Iniciando descarga de FFmpeg..."))
             def cb(pct):
                 self.numeric_progress_signal.emit(pct)
             success, msg = download_ffmpeg(
@@ -182,14 +182,15 @@ class FFmpegOptionsPanel(QFrame):
     """
     ffmpeg_changed = Signal()
 
-    _TOOLTIP_FFMPEG = (
+    _TOOLTIP_FFMPEG = QCoreApplication.translate(
+        "FFmpegOptionsPanel",
         "FFmpeg es el motor multimedia que DowP utiliza para unir video y audio de alta\n"
         "resolución, extraer pistas de audio, generar ondas de sonido y recodificar medios.\n\n"
-        f"  • Versión Recomendada ({FFMPEG_RECOMMENDED_VERSION}): Probada a fondo para máxima estabilidad con yt-dlp y fragmentos.\n"
+        "  • Versión Recomendada ({0}): Probada a fondo para máxima estabilidad con yt-dlp y fragmentos.\n"
         "  • Variante Essentials: Más ligera (~30 MB) con códecs y aceleración por hardware estándar.\n"
         "  • Variante Full: Incluye códecs adicionales (SVT-AV1, libvpx, libplacebo, filtros avanzados).\n"
         "  • Personalizado: Usa un FFmpeg existente instalado en tu sistema."
-    )
+    ).format(FFMPEG_RECOMMENDED_VERSION)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -466,30 +467,30 @@ class FFmpegOptionsPanel(QFrame):
             path = self._custom_field.text().strip()
             ok, ver, msg = validate_custom_ffmpeg(path)
             if ok:
-                self._status_badge.setText("✓ Instalado (Personalizado)")
+                self._status_badge.setText(self.tr("✓ Instalado (Personalizado)"))
                 self._status_badge.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: bold;")
-                self._version_summary.setText(f"Versión: {ver}")
-                self._custom_status_lbl.setText(f"✓ {msg} (Versión: {ver})")
+                self._version_summary.setText(self.tr("Versión: {0}").format(ver))
+                self._custom_status_lbl.setText(self.tr("✓ {0} (Versión: {1})").format(msg, ver))
                 self._custom_status_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
             else:
-                self._status_badge.setText("✗ Inválido")
+                self._status_badge.setText(self.tr("✗ Inválido"))
                 self._status_badge.setStyleSheet("color: #F44336; font-size: 12px; font-weight: bold;")
-                self._version_summary.setText("No disponible")
+                self._version_summary.setText(self.tr("No disponible"))
                 self._custom_status_lbl.setText(f"⚠ {msg}")
                 self._custom_status_lbl.setStyleSheet("color: #FFC107; font-size: 11px;")
         else:
             if is_installed:
                 ver = ffmpeg_local() or "?"
                 variant_tag = "Full" if "full" in ver.lower() else "Essentials"
-                self._status_badge.setText("✓ Instalado")
+                self._status_badge.setText(self.tr("✓ Instalado"))
                 self._status_badge.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: bold;")
-                self._version_summary.setText(f"Versión: {ver} ({variant_tag})")
+                self._version_summary.setText(self.tr("Versión: {0} ({1})").format(ver, variant_tag))
                 self._btn_download.setText(self.tr("Reinstalar"))
                 set_button_variant(self._btn_download, "secondary")
             else:
                 self._status_badge.setText("✗ Falta")
                 self._status_badge.setStyleSheet("color: #F44336; font-size: 12px; font-weight: bold;")
-                self._version_summary.setText("No instalado")
+                self._version_summary.setText(self.tr("No instalado"))
                 self._btn_download.setText(self.tr("Descargar"))
                 set_button_variant(self._btn_download, "accent-blue")
 
@@ -556,8 +557,8 @@ class FFmpegOptionsPanel(QFrame):
             self,
             self.tr("Seleccionar ejecutable de FFmpeg"),
             "",
-            "Ejecutables (*.exe);;Todos los archivos (*)" if platform.system() == "Windows"
-            else "Todos los archivos (*)"
+            self.tr("Ejecutables (*.exe);;Todos los archivos (*)") if platform.system() == "Windows"
+            else self.tr("Todos los archivos (*)")
         )
         if path:
             self._custom_field.setText(path)
@@ -623,7 +624,7 @@ class FFmpegOptionsPanel(QFrame):
             QMessageBox.information(self, self.tr("FFmpeg Configurado"), self.tr("FFmpeg se ha instalado y configurado correctamente."))
         else:
             logger.error(f"FFmpeg: Error durante el proceso de instalación/cambio de versión: {msg}")
-            QMessageBox.warning(self, self.tr("Error de Descarga"), f"{self.tr('No se pudo completar la instalación de FFmpeg:')}\n{msg}")
+            QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr("No se pudo completar la instalación de FFmpeg:\n{0}").format(msg))
 
     def check_updates(self):
         """Comprueba si hay actualizaciones disponibles para el canal actual."""
@@ -655,7 +656,7 @@ class FFmpegOptionsPanel(QFrame):
         l_ver = str(local_ver).strip().lstrip('v')
 
         if r_ver != l_ver and r_ver not in l_ver:
-            self._version_summary.setText(f"Versión: {local_ver} (Nueva: {remote_ver})")
+            self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(local_ver, remote_ver))
             self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
             self._btn_download.setText(self.tr("Actualizar"))
             set_button_variant(self._btn_download, "accent-blue")
@@ -685,14 +686,16 @@ class YTDLPAndPOTPanel(QFrame):
     ytdlp_download_requested = Signal(str, object)  # "ytdlp", channel
     provider_changed = Signal(str)
 
-    _TOOLTIP_YTDLP = (
+    _TOOLTIP_YTDLP = QCoreApplication.translate(
+        "YTDLPAndPOTPanel",
         "yt-dlp es el motor central de DowP para la extracción de metadatos, análisis de formatos\n"
         "y descarga de transmisiones de video y audio desde YouTube y más de 1000 sitios soportados.\n\n"
         "  • Canal Estable: Compilación oficial probada y validada de yt-dlp.\n"
         "  • Canal Nightly: Compilación diaria automática con los últimos parches y correcciones anti-bot de YouTube."
     )
 
-    _TOOLTIP_POT = (
+    _TOOLTIP_POT = QCoreApplication.translate(
+        "YTDLPAndPOTPanel",
         "El PO Token es requerido por YouTube para autenticar descargas y prevenir bloqueos anti-bot.\n"
         "DowP permite elegir entre:\n\n"
         "  • bgutil-pot (Recomendado): Binario nativo en Rust, rápido y automático.\n"
@@ -700,7 +703,8 @@ class YTDLPAndPOTPanel(QFrame):
         "  • Ninguno: Sin token (puede fallar con error HTTP 429 / bot-check en YouTube)."
     )
 
-    _TOOLTIP_WPC_BROWSER = (
+    _TOOLTIP_WPC_BROWSER = QCoreApplication.translate(
+        "YTDLPAndPOTPanel",
         "WPC (WebPoClient) usa un navegador real basado en Chromium para generar\n"
         "los PO Tokens que YouTube requiere. Cualquier navegador Chromium funciona:\n\n"
         "  •  Google Chrome\n"
@@ -1000,7 +1004,7 @@ class YTDLPAndPOTPanel(QFrame):
         if self.is_ytdlp_installed:
             self._ytdlp_status_badge.setText(self.tr("✓ Instalado"))
             self._ytdlp_status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
-            v_text = f"Versión: {self.ytdlp_local_ver}" if self.ytdlp_local_ver else self.tr("Versión: Desconocida")
+            v_text = self.tr("Versión: {0}").format(self.ytdlp_local_ver) if self.ytdlp_local_ver else self.tr("Versión: Desconocida")
             self._ytdlp_version_summary.setText(v_text)
             self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             self._ytdlp_btn_action.setText(self.tr("Reinstalar"))
@@ -1017,13 +1021,13 @@ class YTDLPAndPOTPanel(QFrame):
 
     def set_ytdlp_searching_updates(self):
         if self.is_ytdlp_installed:
-            self._ytdlp_version_summary.setText(f"Versión: {self.ytdlp_local_ver} (Buscando...)")
+            self._ytdlp_version_summary.setText(self.tr("Versión: {0} (Buscando...)").format(self.ytdlp_local_ver))
 
     def set_ytdlp_update_available(self, remote_ver):
         if not self.is_ytdlp_installed:
             return
         if not remote_ver:
-            self._ytdlp_version_summary.setText(f"Versión: {self.ytdlp_local_ver}")
+            self._ytdlp_version_summary.setText(self.tr("Versión: {0}").format(self.ytdlp_local_ver))
             self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             return
 
@@ -1034,7 +1038,7 @@ class YTDLPAndPOTPanel(QFrame):
         channel = cfg.get("ytdlp_channel", "stable")
 
         if r_ver != l_ver and r_ver not in l_ver:
-            self._ytdlp_version_summary.setText(f"Versión: {self.ytdlp_local_ver} (Nueva: {remote_ver})")
+            self._ytdlp_version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.ytdlp_local_ver, remote_ver))
             self._ytdlp_version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
             
             # Texto descriptivo según el canal
@@ -1049,7 +1053,7 @@ class YTDLPAndPOTPanel(QFrame):
             self._ytdlp_btn_action.setDisabled(False)
             set_button_variant(self._ytdlp_btn_action, "accent-blue")
         else:
-            self._ytdlp_version_summary.setText(f"Versión: {self.ytdlp_local_ver}")
+            self._ytdlp_version_summary.setText(self.tr("Versión: {0}").format(self.ytdlp_local_ver))
             self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             self._ytdlp_btn_action.setText(self.tr("Reinstalar"))
             self._ytdlp_btn_action.setDisabled(False)
@@ -1123,11 +1127,11 @@ class YTDLPAndPOTPanel(QFrame):
     def _update_detected_label(self):
         configured = self._browser_field.text().strip()
         if configured and os.path.isfile(configured):
-            self._browser_detected_lbl.setText(f"✓ Ruta configurada: {os.path.basename(configured)}")
+            self._browser_detected_lbl.setText(self.tr("✓ Ruta configurada: {0}").format(os.path.basename(configured)))
         else:
             name = get_browser_display_name()
             if name and name != "No detectado":
-                self._browser_detected_lbl.setText(f"Auto-detectado: {name}")
+                self._browser_detected_lbl.setText(self.tr("Auto-detectado: {0}").format(name))
                 self._browser_detected_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
             else:
                 self._browser_detected_lbl.setText(
@@ -1155,8 +1159,8 @@ class YTDLPAndPOTPanel(QFrame):
             self,
             self.tr("Seleccionar ejecutable del navegador"),
             "",
-            "Ejecutables (*.exe);;Todos los archivos (*)" if platform.system() == "Windows"
-            else "Todos los archivos (*)"
+            self.tr("Ejecutables (*.exe);;Todos los archivos (*)") if platform.system() == "Windows"
+            else self.tr("Todos los archivos (*)")
         )
         if path:
             self._browser_field.setText(path)
@@ -1173,7 +1177,7 @@ class YTDLPAndPOTPanel(QFrame):
         l_ver = str(local_ver).strip().lstrip('v')
 
         if r_ver != l_ver and r_ver not in l_ver:
-            self._bgutil_status.setText(f"✓ Instalado  v{local_ver} (Nueva: {remote_ver})")
+            self._bgutil_status.setText(self.tr("✓ Instalado  v{0} (Nueva: {1})").format(local_ver, remote_ver))
             self._bgutil_status.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 11px;")
             self._bgutil_btn.setText(self.tr("Actualizar"))
             self._bgutil_btn.setDisabled(False)
@@ -1210,7 +1214,7 @@ class YTDLPAndPOTPanel(QFrame):
         self._bgutil_btn.setDisabled(False)
         self._refresh_pot_status()
         if not ok:
-            QMessageBox.warning(self, self.tr("Error"), f"{self.tr('No se pudo descargar bgutil-pot:')}\n{msg}")
+            QMessageBox.warning(self, self.tr("Error"), self.tr("No se pudo descargar bgutil-pot:\n{0}").format(msg))
 
     def set_wpc_update_available(self, remote_ver):
         if not check_wpc():
@@ -1224,7 +1228,7 @@ class YTDLPAndPOTPanel(QFrame):
         l_ver = str(local_ver).strip().lstrip('v')
 
         if r_ver != l_ver and r_ver not in l_ver:
-            self._wpc_status.setText(f"✓ Instalado  v{local_ver} (Nueva: {remote_ver})")
+            self._wpc_status.setText(self.tr("✓ Instalado  v{0} (Nueva: {1})").format(local_ver, remote_ver))
             self._wpc_status.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 11px;")
             self._wpc_btn.setText(self.tr("Actualizar"))
             self._wpc_btn.setDisabled(False)
@@ -1265,7 +1269,8 @@ class DenoCardPanel(QFrame):
     """Tarjeta dedicada para el entorno de ejecución Deno."""
     download_requested = Signal(str, object)  # "deno", version
 
-    _TOOLTIP_DENO = (
+    _TOOLTIP_DENO = QCoreApplication.translate(
+        "DenoCardPanel",
         "Deno es un entorno de ejecución de JavaScript de alto rendimiento y seguro.\n"
         "yt-dlp lo utiliza para interpretar y resolver los challenges criptográficos (EJS)\n"
         "que YouTube aplica dinámicamente en sus transmisiones."
@@ -1369,7 +1374,7 @@ class DenoCardPanel(QFrame):
         if self.is_installed:
             self._status_badge.setText(self.tr("✓ Instalado"))
             self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
-            v_text = f"Versión: {self.local_ver}" if self.local_ver else self.tr("Versión: Desconocida")
+            v_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
             self._version_summary.setText(v_text)
             self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
@@ -1386,25 +1391,25 @@ class DenoCardPanel(QFrame):
 
     def set_searching_updates(self):
         if self.is_installed:
-            self._version_summary.setText(f"Versión: {self.local_ver} (Buscando...)")
+            self._version_summary.setText(self.tr("Versión: {0} (Buscando...)").format(self.local_ver))
 
     def set_update_available(self, remote_ver):
         if not self.is_installed:
             return
         if not remote_ver:
-            self._version_summary.setText(f"Versión: {self.local_ver}")
+            self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
             self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             return
         r_ver = str(remote_ver).strip().lstrip('v')
         l_ver = str(self.local_ver).strip().lstrip('v')
         if r_ver != l_ver and r_ver not in l_ver:
-            self._version_summary.setText(f"Versión: {self.local_ver} (Nueva: {remote_ver})")
+            self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
             self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
             self._btn_action.setText(self.tr("Actualizar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
         else:
-            self._version_summary.setText(f"Versión: {self.local_ver}")
+            self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
             self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
@@ -1458,7 +1463,8 @@ class GhostscriptCardPanel(QFrame):
     con un botón para copiarlo y otro para re-verificar tras instalarlo a mano."""
     download_requested = Signal(str, object)  # "ghostscript", None
 
-    _TOOLTIP_GS = (
+    _TOOLTIP_GS = QCoreApplication.translate(
+        "GhostscriptCardPanel",
         "Ghostscript es el intérprete de PostScript que permite convertir archivos\n"
         "EPS/PS en el Editor de Imagen -- ningún formato más de DowP lo necesita.\n\n"
         "Es opcional: si no lo instalas, todo lo demás sigue funcionando igual,\n"
@@ -1626,7 +1632,7 @@ class GhostscriptCardPanel(QFrame):
             if self.is_installed:
                 self._status_badge.setText(self.tr("✓ Instalado (Sistema)"))
                 self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
-                ver_text = f"Versión: {self.local_ver}" if self.local_ver else self.tr("Versión: Desconocida")
+                ver_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
                 self._version_summary.setText(ver_text)
                 self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
                 self._system_hint_lbl.setText(self.tr(
@@ -1652,7 +1658,7 @@ class GhostscriptCardPanel(QFrame):
             # (`gs --version`), asi que puede no llegar, y "Versión: None" no informa
             # de nada.
             self._version_summary.setText(
-                f"Versión: {self.local_ver}" if self.local_ver else self.tr("Versión: Desconocida"))
+                self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida"))
             self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
@@ -1671,7 +1677,7 @@ class GhostscriptCardPanel(QFrame):
         actualiza el gestor de paquetes del sistema, no DowP, asi que no hay ninguna
         actualizacion que buscar aqui: la tarjeta ya remite al comando del gestor."""
         if self._is_windows and self.is_installed:
-            self._version_summary.setText(f"Versión: {self.local_ver} (Buscando...)")
+            self._version_summary.setText(self.tr("Versión: {0} (Buscando...)").format(self.local_ver))
 
     def set_update_available(self, remote_ver):
         """Resultado del chequeo. `remote_ver` a None significa que la consulta no
@@ -1691,14 +1697,14 @@ class GhostscriptCardPanel(QFrame):
                           and str(remote_ver).strip() != str(self.local_ver).strip())
 
         if has_update:
-            self._version_summary.setText(f"Versión: {self.local_ver} (Nueva: {remote_ver})")
+            self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
             self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
             self._btn_action.setText(self.tr("Actualizar"))
             self._btn_action.setStyleSheet(
                 "background-color: #007BFF; color: white; border: none; font-weight: bold;")
         else:
             self._version_summary.setText(
-                f"Versión: {self.local_ver}" if self.local_ver else self.tr("Versión: Desconocida"))
+                self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida"))
             self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
             # Se mantiene "Reinstalar" habilitado, a diferencia del resto de las
             # tarjetas, que pasan a un "Actualizado" desactivado: reinstalar es la
@@ -1984,6 +1990,6 @@ class DependenciesPage(QWidget):
             self.gs_panel.set_downloading_state(False)
 
         if not success:
-            QMessageBox.warning(self, self.tr("Error de Descarga"), f"{self.tr('Fallo al descargar')} {dep_id}:\n{msg}")
+            QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr("Fallo al descargar {0}:\n{1}").format(dep_id, msg))
         else:
             logger.info(f"Dependency {dep_id} downloaded successfully.")

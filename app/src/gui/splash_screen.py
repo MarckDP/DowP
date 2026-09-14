@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import (
     Qt, Signal, Slot, QThread, QTimer, QPropertyAnimation,
-    QEasingCurve, QSize
+    QEasingCurve, QSize, QCoreApplication
 )
 from PySide6.QtGui import QFont, QPixmap, QIcon
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -115,7 +115,7 @@ class DependencyCheckWorker(QThread):
 
                     if not success:
                         self.dependency_finished.emit(dep_id, False, msg)
-                        self.failed.emit(f"Error al instalar {name}: {msg}")
+                        self.failed.emit(QCoreApplication.translate("SplashScreen", "Error al instalar {0}: {1}").format(name, msg))
                         return
 
                     version = version_fn(force_check=True) or "OK"
@@ -151,7 +151,7 @@ class DependencyCheckWorker(QThread):
             except Exception as update_err:
                 logger.debug(f"SplashScreen: Verificación de actualización de yt-dlp omitida ({update_err})")
 
-            self.status_update.emit("Todo listo")
+            self.status_update.emit(QCoreApplication.translate("SplashScreen", "Todo listo"))
             self.all_ready.emit()
 
         except Exception as e:
@@ -476,7 +476,7 @@ class SplashScreen(QWidget):
         self._ensure_dep_row(dep_id, name)
         row = self.dep_rows[dep_id]
         row["dot"].setStyleSheet(f"color: {self._colors['warning']}; font-size: 10px;")
-        row["status"].setText("Descargando... 0%")
+        row["status"].setText(self.tr("Descargando... 0%"))
         row["status"].setStyleSheet(f"""
             color: {self._colors['warning']};
             font-family: {self._font_family};
@@ -520,7 +520,7 @@ class SplashScreen(QWidget):
             """)
         else:
             row["dot"].setStyleSheet(f"color: {self._colors['error']}; font-size: 10px;")
-            row["status"].setText("Error")
+            row["status"].setText(self.tr("Error"))
             row["status"].setStyleSheet(f"""
                 color: {self._colors['error']};
                 font-family: {self._font_family};
@@ -530,7 +530,7 @@ class SplashScreen(QWidget):
     @Slot()
     def _on_all_ready(self):
         """Dependencias listas → construir MainWindow ANTES de desvanecer."""
-        self.status_label.setText("Iniciando aplicación...")
+        self.status_label.setText(self.tr("Iniciando aplicación..."))
         self.status_label.setStyleSheet(f"""
             color: {self._colors['text_sec']};
             font-family: {self._font_family};
@@ -557,7 +557,7 @@ class SplashScreen(QWidget):
     def _on_failed(self, msg):
         self.loading_bar.setRange(0, 100)
         self.loading_bar.setValue(0)
-        self.status_label.setText(f"Error: {msg}")
+        self.status_label.setText(self.tr("Error: {0}").format(msg))
         self.status_label.setStyleSheet(f"""
             color: {self._colors['error']};
             font-family: {self._font_family};

@@ -31,12 +31,14 @@ solo campo:
   - hardware_detector.codec_status: verificado por probe-encode real en ESTE equipo.
     Responde "¿hay un encoder que funcione (hardware o software) para este codec aca?".
 """
+from PySide6.QtCore import QT_TRANSLATE_NOOP
 import json
 import os
 
 from core.logger.logger_manager import logger
 from core.utils.hardware_detector import detect_hardware
 from core.utils.paths import get_src_dir
+from PySide6.QtCore import QCoreApplication
 
 _DATA_DIR = os.path.join(get_src_dir(), "assets", "data")
 _MATRIX_PATH = os.path.join(_DATA_DIR, "ffmpeg_codec_matrix.json")
@@ -105,26 +107,41 @@ def normalize_container(container: str) -> str:
 
 
 
+# Etiquetas de categoria traducidas UNA sola vez cada una y reutilizadas como valor en
+# *_CATEGORIES y como clave en *_CATEGORY_ORDER (se muestran tal cual como encabezado de
+# grupo en el combo, ver advanced_recode_panel.py::_reload_codec_lists). Traducir cada
+# aparicion por separado (como estaba antes) permite que dos codecs de la misma categoria
+# terminen con textos distintos si solo se edita una de las traducciones.
+_CAT_WEB = QCoreApplication.translate("recode_guard", "Distribución / Web")
+_CAT_PROFESIONAL = QCoreApplication.translate("recode_guard", "Edición Profesional")
+_CAT_LOSSLESS = QCoreApplication.translate("recode_guard", "Sin Pérdida (Lossless)")
+_CAT_ANTIGUOS_VIDEO = QCoreApplication.translate("recode_guard", "Formatos Antiguos")
+_CAT_ANIMACIONES = QCoreApplication.translate("recode_guard", "Animaciones")
+_CAT_ALTA_CALIDAD = QCoreApplication.translate("recode_guard", "Alta Calidad (Sin pérdida)")
+_CAT_SURROUND = QCoreApplication.translate("recode_guard", "Cine / TV (Surround)")
+_CAT_ANTIGUOS_AUDIO = QCoreApplication.translate("recode_guard", "Antiguos")
+_CAT_OTROS = QCoreApplication.translate("recode_guard", "Otros")
+
 VIDEO_CATEGORIES = {
-    "h264": "Distribución / Web", "hevc": "Distribución / Web", "av1": "Distribución / Web", "vp9": "Distribución / Web",
-    "prores": "Edición Profesional", "dnxhd": "Edición Profesional", "cfhd": "Edición Profesional",
-    "ffv1": "Sin Pérdida (Lossless)", "utvideo": "Sin Pérdida (Lossless)", "huffyuv": "Sin Pérdida (Lossless)",
-    "mpeg4": "Formatos Antiguos", "mpeg2video": "Formatos Antiguos", "msmpeg4v3": "Formatos Antiguos",
-    "wmv2": "Formatos Antiguos", "wmv1": "Formatos Antiguos", "theora": "Formatos Antiguos", "vp8": "Formatos Antiguos",
-    "gif": "Animaciones", "apng": "Animaciones", "webp": "Animaciones",
+    "h264": _CAT_WEB, "hevc": _CAT_WEB, "av1": _CAT_WEB, "vp9": _CAT_WEB,
+    "prores": _CAT_PROFESIONAL, "dnxhd": _CAT_PROFESIONAL, "cfhd": _CAT_PROFESIONAL,
+    "ffv1": _CAT_LOSSLESS, "utvideo": _CAT_LOSSLESS, "huffyuv": _CAT_LOSSLESS,
+    "mpeg4": _CAT_ANTIGUOS_VIDEO, "mpeg2video": _CAT_ANTIGUOS_VIDEO, "msmpeg4v3": _CAT_ANTIGUOS_VIDEO,
+    "wmv2": _CAT_ANTIGUOS_VIDEO, "wmv1": _CAT_ANTIGUOS_VIDEO, "theora": _CAT_ANTIGUOS_VIDEO, "vp8": _CAT_ANTIGUOS_VIDEO,
+    "gif": _CAT_ANIMACIONES, "apng": _CAT_ANIMACIONES, "webp": _CAT_ANIMACIONES,
 }
-VIDEO_CATEGORY_ORDER = {"Distribución / Web": 1, "Edición Profesional": 2, "Sin Pérdida (Lossless)": 3, "Animaciones": 4, "Formatos Antiguos": 5, "Otros": 6}
+VIDEO_CATEGORY_ORDER = {_CAT_WEB: 1, _CAT_PROFESIONAL: 2, _CAT_LOSSLESS: 3, _CAT_ANIMACIONES: 4, _CAT_ANTIGUOS_VIDEO: 5, _CAT_OTROS: 6}
 
 AUDIO_CATEGORIES = {
-    "aac": "Distribución / Web", "libopus": "Distribución / Web", "opus": "Distribución / Web",
-    "mp3": "Distribución / Web", "libmp3lame": "Distribución / Web", "vorbis": "Distribución / Web",
-    "flac": "Alta Calidad (Sin pérdida)", "alac": "Alta Calidad (Sin pérdida)",
-    "pcm_s16le": "Alta Calidad (Sin pérdida)", "pcm_s24le": "Alta Calidad (Sin pérdida)", "pcm_s32le": "Alta Calidad (Sin pérdida)",
-    "wavpack": "Alta Calidad (Sin pérdida)",
-    "ac3": "Cine / TV (Surround)", "eac3": "Cine / TV (Surround)", "dts": "Cine / TV (Surround)", "truehd": "Cine / TV (Surround)",
-    "wmav2": "Antiguos", "mp2": "Antiguos",
+    "aac": _CAT_WEB, "libopus": _CAT_WEB, "opus": _CAT_WEB,
+    "mp3": _CAT_WEB, "libmp3lame": _CAT_WEB, "vorbis": _CAT_WEB,
+    "flac": _CAT_ALTA_CALIDAD, "alac": _CAT_ALTA_CALIDAD,
+    "pcm_s16le": _CAT_ALTA_CALIDAD, "pcm_s24le": _CAT_ALTA_CALIDAD, "pcm_s32le": _CAT_ALTA_CALIDAD,
+    "wavpack": _CAT_ALTA_CALIDAD,
+    "ac3": _CAT_SURROUND, "eac3": _CAT_SURROUND, "dts": _CAT_SURROUND, "truehd": _CAT_SURROUND,
+    "wmav2": _CAT_ANTIGUOS_AUDIO, "mp2": _CAT_ANTIGUOS_AUDIO,
 }
-AUDIO_CATEGORY_ORDER = {"Distribución / Web": 1, "Alta Calidad (Sin pérdida)": 2, "Cine / TV (Surround)": 3, "Antiguos": 4, "Otros": 5}
+AUDIO_CATEGORY_ORDER = {_CAT_WEB: 1, _CAT_ALTA_CALIDAD: 2, _CAT_SURROUND: 3, _CAT_ANTIGUOS_AUDIO: 4, _CAT_OTROS: 5}
 
 def get_video_codecs(only_verified: bool = True) -> list[dict]:
     matrix = _load_matrix()
@@ -132,7 +149,7 @@ def get_video_codecs(only_verified: bool = True) -> list[dict]:
     for codec_id, entry in matrix.get("codecs", {}).items():
         if entry.get("kind") != "video": continue
         if only_verified and not entry.get("verified"): continue
-        cat = VIDEO_CATEGORIES.get(codec_id, "Otros")
+        cat = VIDEO_CATEGORIES.get(codec_id, _CAT_OTROS)
         out.append({
             "codec_id": codec_id, 
             "display_name": entry.get("display_name", codec_id), 
@@ -148,7 +165,7 @@ def get_audio_codecs(only_verified: bool = True) -> list[dict]:
     for codec_id, entry in matrix.get("codecs", {}).items():
         if entry.get("kind") != "audio": continue
         if only_verified and not entry.get("verified"): continue
-        cat = AUDIO_CATEGORIES.get(codec_id, "Otros")
+        cat = AUDIO_CATEGORIES.get(codec_id, _CAT_OTROS)
         out.append({
             "codec_id": codec_id, 
             "display_name": entry.get("display_name", codec_id), 
@@ -419,10 +436,10 @@ def _check_container_support(codec_id: str) -> dict:
     matrix = _load_matrix()
     codec_entry = matrix.get("codecs", {}).get(codec_id)
     if codec_entry is None:
-        return {"level": "unverified", "reason": f"'{codec_id}' no esta en la matriz verificada."}
+        return {"level": "unverified", "message": QT_TRANSLATE_NOOP("RecodeMessages", "'%1' no esta en la matriz verificada."), "message_args": [codec_id]}
     if not codec_entry.get("verified"):
-        return {"level": "unverified", "reason": codec_entry.get("skip_reason") or "No se pudo verificar empiricamente con este ffmpeg."}
-    return {"level": "verified", "reason": None, "entry": codec_entry}
+        return {"level": "unverified", "message": codec_entry.get("skip_reason") or QT_TRANSLATE_NOOP("RecodeMessages", "No se pudo verificar empiricamente con este ffmpeg.")}
+    return {"level": "verified", "message": None, "entry": codec_entry}
 
 
 def _check_playback_risk(codec_entry: dict, container_id: str) -> dict | None:
@@ -472,7 +489,7 @@ def _check_hardware_support(codec_id: str) -> dict:
     hw_info = detect_hardware()
     status = hw_info.get("codec_status", {}).get(codec_id)
     if status is None:
-        return {"level": "unverified", "reason": "Sin datos de hardware para este codec (correr deteccion de hardware)."}
+        return {"level": "unverified", "reason": QCoreApplication.translate("recode_guard", "Sin datos de hardware para este codec (correr deteccion de hardware).")}
 
     if status["status"] == "none":
         return {"level": "blocked", "reason": status["note"]}
@@ -522,16 +539,16 @@ def evaluate_recode(video_codec: str | None, audio_codec: str | None, container:
 
         container_check = _check_container_support(codec_id)
         if container_check["level"] == "unverified":
-            issues.append({"scope": scope, "check": "container", "severity": "unverified", "message": container_check["reason"]})
+            issues.append({"scope": scope, "check": "container", "severity": "unverified", "message": container_check["message"], "message_args": container_check.get("message_args", [])})
         else:
             codec_entry = container_check["entry"]
             cont_info = codec_entry["containers"].get(container_id)
             if cont_info is None:
                 issues.append({"scope": scope, "check": "container", "severity": "unverified",
-                                "message": f"Contenedor '{container_id}' no evaluado para '{codec_id}'."})
+                                "message": QT_TRANSLATE_NOOP("RecodeMessages", "Contenedor '%1' no evaluado para '%2'."), "message_args": [container_id, codec_id]})
             elif not cont_info["supported"]:
                 issues.append({"scope": scope, "check": "container", "severity": "blocked",
-                                "message": cont_info.get("ffmpeg_error") or "Este contenedor no acepta este codec en el ffmpeg instalado."})
+                                "message": cont_info.get("ffmpeg_error") or QT_TRANSLATE_NOOP("RecodeMessages", "Este contenedor no acepta este codec en el ffmpeg instalado.")})
             else:
                 risk = _check_playback_risk(codec_entry, container_id)
                 if risk:

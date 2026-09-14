@@ -12,7 +12,6 @@ from gui.widgets.circular_progress import CircularProgress
 
 from .pages.general_page import GeneralPage
 from .pages.memory_cache_page import MemoryCachePage
-from .pages.network_page import NetworkPage
 from .pages.downloads_page import DownloadsPage
 from .pages.cookies_page import CookiesPage
 from .pages.deps_page import DependenciesPage
@@ -28,7 +27,7 @@ from .pages.console_page import ConsolePage
 # gui/widgets/model_download_prompt.py::open_models_settings, que es lo que hay
 # detrás del botón "Administrar" de los popovers del Editor de Imagen. Si se
 # reordenan las páginas hay que actualizar esto.
-SETTINGS_PAGE_MODELS = 9
+SETTINGS_PAGE_MODELS = 8
 
 
 class SidebarButton(QPushButton):
@@ -86,7 +85,6 @@ class SettingsTab(QWidget):
         # Buttons
         self.btn_general = SidebarButton(self.tr("General"))
         self.btn_memory_cache = SidebarButton(self.tr("Memoria y Caché"))
-        self.btn_network = SidebarButton(self.tr("Conexión y Red"))
         self.btn_downloads = SidebarButton(self.tr("Descargas"))
         self.btn_cookies = SidebarButton(self.tr("Cookies"))
         self.btn_deps = SidebarButton(self.tr("Dependencias"))
@@ -98,19 +96,17 @@ class SettingsTab(QWidget):
 
         self.btn_group.addButton(self.btn_general, 0)
         self.btn_group.addButton(self.btn_memory_cache, 1)
-        self.btn_group.addButton(self.btn_network, 2)
-        self.btn_group.addButton(self.btn_downloads, 3)
-        self.btn_group.addButton(self.btn_cookies, 4)
-        self.btn_group.addButton(self.btn_deps, 5)
-        self.btn_group.addButton(self.btn_labels, 6)
-        self.btn_group.addButton(self.btn_integrations, 7)
-        self.btn_group.addButton(self.btn_system, 8)
-        self.btn_group.addButton(self.btn_models, 9)
-        self.btn_group.addButton(self.btn_console, 10)
+        self.btn_group.addButton(self.btn_downloads, 2)
+        self.btn_group.addButton(self.btn_cookies, 3)
+        self.btn_group.addButton(self.btn_deps, 4)
+        self.btn_group.addButton(self.btn_labels, 5)
+        self.btn_group.addButton(self.btn_integrations, 6)
+        self.btn_group.addButton(self.btn_system, 7)
+        self.btn_group.addButton(self.btn_models, 8)
+        self.btn_group.addButton(self.btn_console, 9)
 
         sidebar_layout.addWidget(self.btn_general)
         sidebar_layout.addWidget(self.btn_memory_cache)
-        sidebar_layout.addWidget(self.btn_network)
         sidebar_layout.addWidget(self.btn_downloads)
         sidebar_layout.addWidget(self.btn_cookies)
         sidebar_layout.addWidget(self.btn_deps)
@@ -156,7 +152,6 @@ class SettingsTab(QWidget):
         # Pages
         self.page_general = GeneralPage()
         self.page_memory_cache = MemoryCachePage()
-        self.page_network = NetworkPage()
         self.page_downloads = DownloadsPage()
         self.page_cookies = CookiesPage()
         self.page_deps = DependenciesPage()
@@ -168,15 +163,14 @@ class SettingsTab(QWidget):
 
         self.stacked_widget.addWidget(self.page_general)            # 0
         self.stacked_widget.addWidget(self.page_memory_cache)       # 1
-        self.stacked_widget.addWidget(self.page_network)            # 2
-        self.stacked_widget.addWidget(self.page_downloads)          # 3
-        self.stacked_widget.addWidget(self.page_cookies)            # 4
-        self.stacked_widget.addWidget(self.page_deps)               # 5
-        self.stacked_widget.addWidget(self.page_labels)             # 6
-        self.stacked_widget.addWidget(self.page_integrations)       # 7
-        self.stacked_widget.addWidget(self.page_system)             # 8
-        self.stacked_widget.addWidget(self.page_models)               # 9
-        self.stacked_widget.addWidget(self.page_console)             # 10
+        self.stacked_widget.addWidget(self.page_downloads)          # 2
+        self.stacked_widget.addWidget(self.page_cookies)            # 3
+        self.stacked_widget.addWidget(self.page_deps)               # 4
+        self.stacked_widget.addWidget(self.page_labels)             # 5
+        self.stacked_widget.addWidget(self.page_integrations)       # 6
+        self.stacked_widget.addWidget(self.page_system)             # 7
+        self.stacked_widget.addWidget(self.page_models)             # 8
+        self.stacked_widget.addWidget(self.page_console)            # 9
 
         content_layout.addWidget(self.stacked_widget)
         self.main_layout.addWidget(self.content_area, 1)

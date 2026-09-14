@@ -3,7 +3,7 @@ import os
 import json
 import datetime
 import subprocess
-from PySide6.QtCore import QObject, Signal, QRunnable, QThreadPool, QMutex, QMutexLocker, QTimer
+from PySide6.QtCore import QObject, Signal, QRunnable, QThreadPool, QMutex, QMutexLocker, QTimer, QCoreApplication
 from core.logger.logger_manager import logger
 from core.utils.paths import get_cache_dir
 from core.setup.ffmpeg_setup import get_ffprobe_path, get_ffmpeg_dir, get_platform_info, check_ffmpeg
@@ -244,7 +244,9 @@ class FFprobeMetadataManager(QObject):
                     pages = doc.pageCount()
                     if pages > 0:
                         sz = doc.pagePointSize(0)
-                        pag_txt = f"{pages} {'pág' if pages == 1 else 'págs'}"
+                        pag_txt = (QCoreApplication.translate("ffprobe_metadata_manager", "{0} pág").format(pages)
+                                   if pages == 1 else
+                                   QCoreApplication.translate("ffprobe_metadata_manager", "{0} págs").format(pages))
                         if sz.isValid() and sz.width() > 0 and sz.height() > 0:
                             meta["resolución"] = f"{int(sz.width())}x{int(sz.height())} ({pag_txt})"
                         else:

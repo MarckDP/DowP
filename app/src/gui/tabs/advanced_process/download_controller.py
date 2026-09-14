@@ -4,7 +4,7 @@ import time
 import threading
 import platform
 import subprocess
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QCoreApplication
 from core.logger.logger_manager import logger
 from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config
@@ -112,7 +112,7 @@ class DownloadController(QObject):
         self.queue_mgr.start_queue()
         
         self.tab.output_options.btn_start_download.setEnabled(True)
-        self.tab.output_options.set_download_state("pause_queue", self.tab.tr("Pausar cola"))
+        self.tab.output_options.set_download_state("pause_queue", QCoreApplication.translate("AdvancedProcessTab", "Pausar cola"))
         self.is_downloading = True
         self.tab.url_bar.solo_btn.setEnabled(False)
         self.update_queue_main_progress()
@@ -136,8 +136,8 @@ class DownloadController(QObject):
 
         self.is_downloading = True
         self.tab.url_bar.solo_btn.setEnabled(False)
-        self.tab.output_options.set_download_state("cancelling", self.tab.tr("Cancelar"))
-        self.tab.output_options.set_progress(0, self.tab.tr("Iniciando descarga..."), "running")
+        self.tab.output_options.set_download_state("cancelling", QCoreApplication.translate("AdvancedProcessTab", "Cancelar"))
+        self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Iniciando descarga..."), "running")
         if self.tab.taskbar_manager:
             self.tab.taskbar_manager.set_state("indeterminate")
 
@@ -147,8 +147,8 @@ class DownloadController(QObject):
             if d.get("status") == "fragment_progress":
                 idx = d.get("fragment_index")
                 total = d.get("fragment_count")
-                verb = self.tab.tr("Cortando") if d.get("phase") == "cutting" else self.tab.tr("Descargando")
-                msg = f"{verb} {self.tab.tr('fragmento')} {idx} {self.tab.tr('de')} {total}"
+                verb = QCoreApplication.translate("AdvancedProcessTab", "Cortando") if d.get("phase") == "cutting" else QCoreApplication.translate("AdvancedProcessTab", "Descargando")
+                msg = QCoreApplication.translate("AdvancedProcessTab", "{0} fragmento {1} de {2}").format(verb, idx, total)
                 self.tab.output_options.set_progress(-1, msg, "running")
                 if self.tab.taskbar_manager:
                     self.tab.taskbar_manager.set_state("indeterminate")
@@ -181,7 +181,7 @@ class DownloadController(QObject):
                     # se registra igual porque de él cuelga el nombre base del que se
                     # barren los hermanos al arrastrar (ver output_artifacts).
                     self._init_solo_artifacts().add([d.get("filename")])
-                self.tab.output_options.set_progress(100, self.tab.tr("Procesando descarga..."), "downloading")
+                self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Procesando descarga..."), "downloading")
 
         def on_solo_finished(success, message):
             self.is_downloading = False
@@ -236,11 +236,11 @@ class DownloadController(QObject):
                             actual_path=actual_path,
                             request_data=self.solo_request_data,
                             video_data=self.tab._current_video_data,
-                            title=title or self.tab.tr("Descarga"),
+                            title=title or QCoreApplication.translate("AdvancedProcessTab", "Descarga"),
                             download_key=_SOLO_RECODE_KEY,
                         )
                 else:
-                    self.tab.output_options.set_progress(100, self.tab.tr("Descarga completada con éxito"), "done")
+                    self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Descarga completada con éxito"), "done")
                     actual_path = self._resolve_final_download_path(resolved_request_data, self.last_downloaded_filepath)
                     # Sin recodificación pedida, el proceso terminó aquí: ya se puede
                     # arrastrar el resultado. Con recodificación, el botón se habilita
@@ -252,7 +252,7 @@ class DownloadController(QObject):
                     self._set_solo_drag_ready(True)
                     self._send_to_editor_if_enabled(actual_path or self.last_downloaded_filepath, self.solo_request_data)
             else:
-                self.tab.output_options.set_progress(0, self.tab.tr(f"Error: {message}"), "wait")
+                self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error: {0}").format(message), "wait")
                 logger.error(f"AdvancedProcessTab: Error en descarga directa SOLO: {message}")
                 
             self.solo_worker = None
@@ -268,7 +268,7 @@ class DownloadController(QObject):
             self.cancellation_event.set()
             self.is_downloading = False
             self.tab.output_options.set_download_state("idle")
-            self.tab.output_options.set_progress(0, self.tab.tr("Descarga cancelada"), "wait")
+            self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Descarga cancelada"), "wait")
             self.tab.url_bar.solo_btn.setEnabled(True)
 
     def pause_download(self):
@@ -284,11 +284,11 @@ class DownloadController(QObject):
                     self.paused_job_ids.add(job.job_id)
                     self.queue_mgr.cancel_job(job.job_id)
                 
-                self.tab.output_options.set_download_state("paused", self.tab.tr("Pausando..."))
+                self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Pausando..."))
                 self.tab.output_options.btn_start_download.setEnabled(False)
             else:
                 self.is_downloading = False
-                self.tab.output_options.set_download_state("paused", self.tab.tr("Reanudar cola"))
+                self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Reanudar cola"))
                 self.tab.output_options.btn_start_download.setEnabled(True)
 
     def _own_jobs(self):
@@ -365,7 +365,7 @@ class DownloadController(QObject):
             taskbar_state = "indeterminate"
 
         elif analyzing_count:
-            msg = self.tab.tr("Analizando...")
+            msg = QCoreApplication.translate("AdvancedProcessTab", "Analizando...")
             percent = 0
             state = "running"
             taskbar_state = "indeterminate"
@@ -403,7 +403,7 @@ class DownloadController(QObject):
         jobs = self._own_jobs()
         has_pending = any(j.status == "PENDING" for j in jobs)
         if has_pending:
-            self.tab.output_options.set_download_state("paused", self.tab.tr("Reanudar cola"))
+            self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Reanudar cola"))
         else:
             self.tab.output_options.set_download_state("idle")
         self.tab.output_options.btn_start_download.setEnabled(True)
@@ -424,13 +424,13 @@ class DownloadController(QObject):
             self.tab._current_video_data = None
             self.tab.video_details.reset_ui()
             self.tab.subtitle_controller.clear_subtitles()
-            self.tab.output_options.set_progress(0, self.tab.tr("En espera"), "wait")
+            self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "En espera"), "wait")
         else:
             if action == "reset":
                 self.is_downloading = False
                 has_pending = any(j.status == "PENDING" for j in jobs)
                 if has_pending:
-                    self.tab.output_options.set_download_state("paused", self.tab.tr("Reanudar cola"))
+                    self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Reanudar cola"))
                     self.tab.output_options.btn_start_download.setEnabled(True)
                 else:
                     self.tab.output_options.set_download_state("idle")
@@ -522,7 +522,7 @@ class DownloadController(QObject):
             jobs = self._own_jobs()
             if not any(j.status == "RUNNING" for j in jobs):
                 self.is_downloading = False
-                self.tab.output_options.set_download_state("paused", self.tab.tr("Reanudar cola"))
+                self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Reanudar cola"))
                 self.tab.output_options.btn_start_download.setEnabled(True)
                 self.tab.subtitle_options.btn_download_subtitles.setEnabled(True)
                 self.tab.url_bar.solo_btn.setEnabled(True)
@@ -563,8 +563,8 @@ class DownloadController(QObject):
 
     def _recode_status_text(self, position, total):
         if total and total > 1 and position:
-            return self.tab.tr("Recodificando {0} de {1}...").format(position, total)
-        return self.tab.tr("Recodificando...")
+            return QCoreApplication.translate("AdvancedProcessTab", "Recodificando {0} de {1}...").format(position, total)
+        return QCoreApplication.translate("AdvancedProcessTab", "Recodificando...")
 
     def _finalize_group(self, download_key):
         """Resuelve el estado final (Completado/Error) de un grupo de recodificaciones
@@ -579,13 +579,13 @@ class DownloadController(QObject):
             if final_path:
                 self.last_downloaded_filepath = final_path
             if results["all_ok"]:
-                self.tab.output_options.set_progress(100, self.tab.tr("Descarga completada con éxito"), "done")
+                self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Descarga completada con éxito"), "done")
             else:
-                self.tab.output_options.set_progress(0, self.tab.tr("Error al recodificar (original conservado)"), "wait")
+                self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar (original conservado)"), "wait")
         else:
             card = self.tab.queue_panel.cards.get(download_key)
             if card:
-                text = self.tab.tr("Completado") if results["all_ok"] else self.tab.tr("Error al recodificar")
+                text = QCoreApplication.translate("AdvancedProcessTab", "Completado") if results["all_ok"] else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")
                 card.update_progress(100, speed_text="", status_text=text)
 
     def _register_recode_outputs(self, download_key, paths, succeeded=True):
@@ -821,17 +821,17 @@ class DownloadController(QObject):
             if final_path:
                 self.last_downloaded_filepath = final_path
             if status == "COMPLETED":
-                self.tab.output_options.set_progress(100, self.tab.tr("Descarga completada con éxito"), "done")
+                self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Descarga completada con éxito"), "done")
             else:
-                text = self.tab.tr("Recodificación cancelada (original conservado)") if status == "CANCELLED" \
-                    else self.tab.tr("Error al recodificar (original conservado)")
+                text = QCoreApplication.translate("AdvancedProcessTab", "Recodificación cancelada (original conservado)") if status == "CANCELLED" \
+                    else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar (original conservado)")
                 self.tab.output_options.set_progress(0, text, "wait")
             self._send_to_editor_if_enabled(final_path, request_data)
         else:
             card = self.tab.queue_panel.cards.get(target)
             if card:
-                text = self.tab.tr("Completado") if status == "COMPLETED" else (
-                    self.tab.tr("Recodificación cancelada") if status == "CANCELLED" else self.tab.tr("Error al recodificar")
+                text = QCoreApplication.translate("AdvancedProcessTab", "Completado") if status == "COMPLETED" else (
+                    QCoreApplication.translate("AdvancedProcessTab", "Recodificación cancelada") if status == "CANCELLED" else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")
                 )
                 card.update_progress(100, speed_text="", status_text=text)
             

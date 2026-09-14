@@ -85,6 +85,24 @@ class ConvertPanel(QWidget):
             v.addWidget(lbl)
         return frame, v
 
+    def _translated_fixed_option(self, value: str) -> str:
+        """Traduce las opciones de JPG_SUBSAMPLING_OPTIONS/TIFF_COMPRESSION_OPTIONS
+        (core/tabs/image_tools/convert_options.py) para mostrarlas -- esas listas deben
+        seguir siendo texto crudo en español porque image_converter.py las usa como
+        clave de un dict local (subsampling_map/compression_map) con las mismas claves en
+        español; traducirlas en la lista rompería ese lookup. Por eso la traducción es
+        solo de display, acá, valor por valor (self.tr() con argumento variable no lo
+        puede extraer pyside6-lupdate)."""
+        table = {
+            "4:2:0 (Estándar)": self.tr("4:2:0 (Estándar)"),
+            "4:2:2 (Alta)": self.tr("4:2:2 (Alta)"),
+            "4:4:4 (Máxima)": self.tr("4:4:4 (Máxima)"),
+            "Ninguna": self.tr("Ninguna"),
+            "LZW (Recomendada)": self.tr("LZW (Recomendada)"),
+            "Deflate (ZIP)": self.tr("Deflate (ZIP)"),
+        }
+        return table.get(value, value)  # "PackBits" no tiene palabras en español, queda igual
+
     def _setup_fixed_combo(self, combo: QComboBox):
         combo.setMaxVisibleItems(_MAX_VISIBLE_COMBO_ITEMS)
         combo.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
@@ -97,7 +115,7 @@ class ConvertPanel(QWidget):
 
     def _build_format_pages(self, parent):
         pages = {
-            "No Convertir": self._build_passthrough_page(parent),
+            self.tr("No Convertir"): self._build_passthrough_page(parent),
             "PNG": self._build_png_page(parent),
             "JPG": self._build_jpg_page(parent),
             "WEBP": self._build_webp_page(parent),
@@ -153,7 +171,7 @@ class ConvertPanel(QWidget):
         self.combo_jpg_subsampling = AutoPopupComboBox(page)
         self._setup_fixed_combo(self.combo_jpg_subsampling)
         for opt in JPG_SUBSAMPLING_OPTIONS:
-            self.combo_jpg_subsampling.addItem(opt, opt)
+            self.combo_jpg_subsampling.addItem(self._translated_fixed_option(opt), opt)
         v.addWidget(self.combo_jpg_subsampling)
         self.chk_jpg_progressive = QCheckBox(self.tr("Escaneo progresivo (web)"), page)
         v.addWidget(self.chk_jpg_progressive)
@@ -202,7 +220,7 @@ class ConvertPanel(QWidget):
         self.combo_tiff_compression = AutoPopupComboBox(page)
         self._setup_fixed_combo(self.combo_tiff_compression)
         for opt in TIFF_COMPRESSION_OPTIONS:
-            self.combo_tiff_compression.addItem(opt, opt)
+            self.combo_tiff_compression.addItem(self._translated_fixed_option(opt), opt)
         self.combo_tiff_compression.setCurrentIndex(1)  # LZW (Recomendada)
         v.addWidget(self.combo_tiff_compression)
         self.chk_tiff_transparency = QCheckBox(self.tr("Mantener transparencia"), page)
@@ -252,7 +270,7 @@ class ConvertPanel(QWidget):
         return page
 
     def _on_format_changed(self, *_args):
-        fmt = self.combo_format.currentData() or "No Convertir"
+        fmt = self.combo_format.currentData() or self.tr("No Convertir")
         self.format_stack.setCurrentIndex(self._format_page_index.get(fmt, 0))
         self._emit_validity()
 
@@ -278,7 +296,7 @@ class ConvertPanel(QWidget):
         """No incluye resize_*/interpolation_method (eso lo aporta
         ResizePopoverContent) ni destino/conflicto (eso lo aporta el panel
         inferior de salida)."""
-        fmt = self.combo_format.currentData() or "No Convertir"
+        fmt = self.combo_format.currentData() or self.tr("No Convertir")
         settings = {"format": fmt}
         settings.update(default_options_for_format(fmt))
 

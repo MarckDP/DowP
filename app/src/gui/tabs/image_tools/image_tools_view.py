@@ -750,7 +750,7 @@ class ImageToolsTab(QWidget):
 
     def _on_raster_layer_created(self, item):
         n = sum(1 for l in self.layer_stack.layers if l.kind == "raster") + 1
-        self.layer_stack.add_layer(Layer(f"{self.tr('Pincel')} {n}", "raster", item))
+        self.layer_stack.add_layer(Layer(self.tr("Pincel {0}").format(n), "raster", item))
 
     def _on_shape_selected(self, item):
         layer = self.layer_stack.layer_for_item(item) if item is not None else None
@@ -800,7 +800,7 @@ class ImageToolsTab(QWidget):
         viewer.add_scene_item(item)
         n = sum(1 for l in self.layer_stack.layers if l.kind == "fill") + 1
         # index=0: un Fondo siempre va al fondo del stack, debajo de todo lo demás.
-        self.layer_stack.add_layer(Layer(f"{self.tr('Fondo')} {n}", "fill", item), index=0)
+        self.layer_stack.add_layer(Layer(self.tr("Fondo {0}").format(n), "fill", item), index=0)
 
     def _on_layer_delete(self, layer_id: int):
         layer = self._find_layer(layer_id)

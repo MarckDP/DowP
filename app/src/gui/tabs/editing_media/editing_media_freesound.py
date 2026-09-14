@@ -1,8 +1,10 @@
 # src/gui/tabs/editing_media/editing_media_freesound.py
+from PySide6.QtCore import QCoreApplication
 import os
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 from PySide6.QtWidgets import QMessageBox
 from core.logger.logger_manager import logger
+from core.tabs.editing_media.editing_media_logic import resolve_filter_type
 from gui.tabs.editing_media.editing_media_icons import get_svg_icon
 
 class WebSourceSearchThread(QThread):
@@ -83,13 +85,13 @@ class FreesoundMixin:
         source_id = item_data.get("source_id")
         provider = getattr(self, "web_providers", {}).get(source_id) if source_id else None
         if provider is None:
-            msg = "No se pudo determinar el origen del medio web."
+            msg = QCoreApplication.translate("FreesoundMixin", "No se pudo determinar el origen del medio web.")
             logger.error(f"[EditingMedia] {msg} ('{item_data.get('nombre')}')")
             on_error(msg)
             return
 
         if provider.requires_auth and not provider.is_authenticated():
-            msg = f"Debes iniciar sesión con {provider.display_name} para descargar el archivo original en alta calidad."
+            msg = QCoreApplication.translate("FreesoundMixin", "Debes iniciar sesión con {0} para descargar el archivo original en alta calidad.").format(provider.display_name)
             logger.error(f"[EditingMedia] {msg} ('{item_data.get('nombre')}')")
             on_error(msg)
             return
@@ -113,7 +115,7 @@ class FreesoundMixin:
             _cleanup()
             if not success or not resolved_path:
                 logger.error(f"[EditingMedia] La descarga en alta calidad de '{item_data.get('nombre')}' no tuvo éxito.")
-                on_error("La descarga no tuvo éxito.")
+                on_error(QCoreApplication.translate("FreesoundMixin", "La descarga no tuvo éxito."))
                 return
 
             item_data["dest_path"] = resolved_path
@@ -241,10 +243,10 @@ class FreesoundMixin:
         if self.controller.is_freesound_authenticated:
             username = self.controller.freesound_username or "usuario"
             self.btn_freesound_login.setIcon(get_svg_icon("person.svg"))
-            self.btn_freesound_login.setToolTip(self.tr(f"Conectado como: {username} (clic para cerrar sesión)"))
+            self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Conectado como: {0} (clic para cerrar sesión)").format(username))
         else:
             self.btn_freesound_login.setIcon(get_svg_icon("login.svg"))
-            self.btn_freesound_login.setToolTip(self.tr("Iniciar sesión con Freesound"))
+            self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Iniciar sesión con Freesound"))
 
     def _on_freesound_login_clicked(self):
         """Maneja el clic en el botón de login/logout de Freesound."""
@@ -252,8 +254,8 @@ class FreesoundMixin:
             # Ya autenticado → preguntar si desea cerrar sesión
             reply = QMessageBox.question(
                 self,
-                self.tr("Cerrar Sesión"),
-                self.tr(f"¿Desea cerrar la sesión de Freesound ({self.controller.freesound_username})?"),
+                QCoreApplication.translate("FreesoundMixin", "Cerrar Sesión"),
+                QCoreApplication.translate("FreesoundMixin", "¿Desea cerrar la sesión de Freesound ({0})?").format(self.controller.freesound_username),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
@@ -279,8 +281,8 @@ class FreesoundMixin:
         # Mostrar feedback visual al usuario
         QMessageBox.information(
             self,
-            self.tr("Iniciar Sesión en Freesound"),
-            self.tr("Se ha abierto tu navegador para iniciar sesión en Freesound.\n\n"
+            QCoreApplication.translate("FreesoundMixin", "Iniciar Sesión en Freesound"),
+            QCoreApplication.translate("FreesoundMixin", "Se ha abierto tu navegador para iniciar sesión en Freesound.\n\n"
                     "Inicia sesión y autoriza la aplicación. "
                     "Esta ventana se actualizará automáticamente cuando completes el proceso.")
         )
@@ -300,8 +302,8 @@ class FreesoundMixin:
         logger.error(f"EditingMediaTab: Error OAuth2: {error_msg}")
         QMessageBox.warning(
             self,
-            self.tr("Error de Autenticación"),
-            self.tr(f"No se pudo completar la autenticación con Freesound:\n{error_msg}")
+            QCoreApplication.translate("FreesoundMixin", "Error de Autenticación"),
+            QCoreApplication.translate("FreesoundMixin", "No se pudo completar la autenticación con Freesound:\n{0}").format(error_msg)
         )
 
     def _prompt_freesound_login_if_needed(self, item_data: dict) -> bool:
@@ -329,11 +331,11 @@ class FreesoundMixin:
             if not provider.is_authenticated():
                 msg_box = QMessageBox(self)
                 msg_box.setIcon(QMessageBox.Information)
-                msg_box.setWindowTitle(self.tr("Sesión de Freesound requerida"))
-                msg_box.setText(self.tr("Para acceder o descargar este medio web de Freesound debes iniciar sesión."))
-                msg_box.setInformativeText(self.tr("¿Deseas iniciar sesión en Freesound ahora?"))
-                btn_login = msg_box.addButton(self.tr("Iniciar Sesión"), QMessageBox.AcceptRole)
-                msg_box.addButton(self.tr("Cancelar"), QMessageBox.RejectRole)
+                msg_box.setWindowTitle(QCoreApplication.translate("FreesoundMixin", "Sesión de Freesound requerida"))
+                msg_box.setText(QCoreApplication.translate("FreesoundMixin", "Para acceder o descargar este medio web de Freesound debes iniciar sesión."))
+                msg_box.setInformativeText(QCoreApplication.translate("FreesoundMixin", "¿Deseas iniciar sesión en Freesound ahora?"))
+                btn_login = msg_box.addButton(QCoreApplication.translate("FreesoundMixin", "Iniciar Sesión"), QMessageBox.AcceptRole)
+                msg_box.addButton(QCoreApplication.translate("FreesoundMixin", "Cancelar"), QMessageBox.RejectRole)
                 msg_box.exec()
                 if msg_box.clickedButton() == btn_login:
                     if hasattr(self, "_start_freesound_oauth"):
@@ -358,8 +360,7 @@ class FreesoundMixin:
         # nota en _on_filter_button_clicked sobre por qué no alcanza con filtrar la página ya
         # traída client-side.
         if len(getattr(provider, "supported_media_types", set())) > 1:
-            type_map = {"Imágenes": "imagen", "Videos": "video", "Audios": "audio"}
-            media_type = type_map.get(getattr(self, "active_filter", "Todos"))
+            media_type = resolve_filter_type(getattr(self, "active_filter", "Todos"))
             if media_type:
                 filters["media_type"] = media_type
 
@@ -433,8 +434,8 @@ class FreesoundMixin:
             self.online_results = []
         self._update_media_list()
         provider = getattr(self, "web_providers", {}).get(getattr(self, "active_web_source_id", None))
-        source_name = provider.display_name if provider else self.tr("el origen web")
-        QMessageBox.warning(self, self.tr("Error de Búsqueda"), self.tr(f"No se pudo completar la búsqueda en {source_name}:\n{error_msg}"))
+        source_name = provider.display_name if provider else QCoreApplication.translate("FreesoundMixin", "el origen web")
+        QMessageBox.warning(self, QCoreApplication.translate("FreesoundMixin", "Error de Búsqueda"), QCoreApplication.translate("FreesoundMixin", "No se pudo completar la búsqueda en {0}:\n{1}").format(source_name, error_msg))
 
     def _on_list_scroll(self, value):
         selected = self.tree_folders.currentItem()
@@ -469,7 +470,7 @@ class FreesoundMixin:
         source_id = item_data.get("source_id")
         provider = getattr(self, "web_providers", {}).get(source_id) if source_id else None
         if provider is None:
-            QMessageBox.warning(self, self.tr("Error"), self.tr("No se pudo determinar el origen del medio web."))
+            QMessageBox.warning(self, QCoreApplication.translate("FreesoundMixin", "Error"), QCoreApplication.translate("FreesoundMixin", "No se pudo determinar el origen del medio web."))
             return
 
         fallback_path = self._resolve_web_dest_path(item_data)
@@ -477,7 +478,7 @@ class FreesoundMixin:
         fallback_name = os.path.basename(fallback_path)
 
         from PySide6.QtWidgets import QProgressDialog
-        progress_dialog = QProgressDialog(self.tr(f"Descargando medio original de {provider.display_name}..."), self.tr("Cancelar"), 0, 100, self)
+        progress_dialog = QProgressDialog(QCoreApplication.translate("FreesoundMixin", "Descargando medio original de {0}...").format(provider.display_name), QCoreApplication.translate("FreesoundMixin", "Cancelar"), 0, 100, self)
         progress_dialog.setWindowModality(Qt.WindowModal)
         progress_dialog.setValue(0)
         progress_dialog.show()
@@ -504,18 +505,18 @@ class FreesoundMixin:
 
                 self.btn_download.setVisible(True)
                 self.btn_download.setEnabled(False)
-                self.btn_download.setToolTip(self.tr("En Disco"))
+                self.btn_download.setToolTip(QCoreApplication.translate("FreesoundMixin", "En Disco"))
                 self.metadata_labels["ruta"].setText(resolved_path)
 
                 logger.info(f"[EditingMedia] Descarga manual del original en alta calidad completada: {resolved_path}")
-                QMessageBox.information(self, self.tr("Descarga Completada"), self.tr(f"El medio original ha sido guardado exitosamente en:\n{resolved_path}"))
+                QMessageBox.information(self, QCoreApplication.translate("FreesoundMixin", "Descarga Completada"), QCoreApplication.translate("FreesoundMixin", "El medio original ha sido guardado exitosamente en:\n{0}").format(resolved_path))
             else:
                 logger.error(f"[EditingMedia] La descarga manual del original de '{item_data.get('nombre')}' no tuvo éxito.")
 
         def on_error(err):
             progress_dialog.close()
             logger.error(f"[EditingMedia] Error en descarga manual del original de '{item_data.get('nombre')}': {err}")
-            QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr(f"No se pudo descargar el archivo original:\n{err}"))
+            QMessageBox.warning(self, QCoreApplication.translate("FreesoundMixin", "Error de Descarga"), QCoreApplication.translate("FreesoundMixin", "No se pudo descargar el archivo original:\n{0}").format(err))
 
         self.dl_thread.finished.connect(on_finished)
         self.dl_thread.error.connect(on_error)

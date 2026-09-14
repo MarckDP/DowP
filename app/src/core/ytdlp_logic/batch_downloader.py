@@ -1,4 +1,5 @@
 # src/core/ytdlp_logic/batch_downloader.py
+from PySide6.QtCore import QCoreApplication
 from core.ytdlp_logic.analyzer import get_video_info
 from core.logger.logger_manager import logger
 
@@ -30,7 +31,7 @@ class BatchDownloader:
             return [], error
             
         if not info_dict:
-            return [], "No se pudo extraer información de la URL proporcionada."
+            return [], QCoreApplication.translate("BatchDownloader", "No se pudo extraer información de la URL proporcionada.")
             
         entries = []
         # Comprobar si realmente es una playlist / contiene múltiples entradas

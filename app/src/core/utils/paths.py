@@ -4,6 +4,7 @@ import sys
 import shutil
 import platform
 from core.logger.logger_manager import logger
+from PySide6.QtCore import QCoreApplication
 
 
 def get_src_dir() -> str:
@@ -321,7 +322,7 @@ def migrate_bin_to_local_appdata(status_callback=None) -> bool:
 
         logger.info(f"Paths: migrando bin/ de {legacy_bin} -> {new_bin}")
         if status_callback:
-            status_callback("Moviendo dependencias a la nueva ubicación...")
+            status_callback(QCoreApplication.translate("paths", "Moviendo dependencias a la nueva ubicación..."))
 
         # Mismo caso que arriba, del otro lado: si el destino solo tiene el esqueleto
         # de carpetas vacías, se borra para poder usar el rename de golpe.

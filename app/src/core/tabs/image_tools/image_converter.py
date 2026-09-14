@@ -1,4 +1,5 @@
 # src/core/tabs/image_tools/image_converter.py
+from PySide6.QtCore import QCoreApplication
 """Motor de conversión de formatos de imagen para "Convertir" (Editor de Imagen).
 
 Reemplaza los binarios externos que usaba DowP1 (Ghostscript/Poppler/Inkscape) por
@@ -16,6 +17,7 @@ from PIL import Image, ImageOps
 from core.logger.logger_manager import logger
 from core.tabs.editing_media.editing_media_logic import RAW_EXTS
 from core.constants import INTERPOLATION_METHODS, CANVAS_PRESET_SIZES
+from core.tabs.image_tools.convert_options import OUTPUT_FORMATS
 
 # Registro de plugins de Pillow -- opcionales a propósito (mismo criterio que
 # CAN_SVG/CAN_PDF en el image_converter.py de DowP1): si faltan, solo se
@@ -76,10 +78,10 @@ class ImageConverter:
         try:
             report(5, "loading")
             if cancellation_event and cancellation_event.is_set():
-                return False, "Cancelado por el usuario."
+                return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
             input_ext = os.path.splitext(input_path)[1].lower()
-            output_format = options.get("format", "No Convertir").upper()
+            output_format = options.get("format", OUTPUT_FORMATS[0]).upper()
 
             resize_enabled = options.get("resize_enabled", False)
             target_size = None
@@ -93,7 +95,7 @@ class ImageConverter:
             try:
                 report(40, "loading")
                 if cancellation_event and cancellation_event.is_set():
-                    return False, "Cancelado por el usuario."
+                    return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
                 # Los formatos vectoriales ya se renderizaron directo al tamaño objetivo
                 # dentro de _load_image (DPI/escala calculados ahí) -- un resize posterior
@@ -103,7 +105,7 @@ class ImageConverter:
                     img = self._resize_raster_image(img, target_size, maintain_aspect, options)
                     report(55, "resize")
                 if cancellation_event and cancellation_event.is_set():
-                    return False, "Cancelado por el usuario."
+                    return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
                 # Eliminar Fondo IA -- mismo orden que usaba DowP1 (Redimensionar ->
                 # Eliminar Fondo -> Reescalar IA): se corta el fondo ANTES de reescalar,
@@ -114,7 +116,7 @@ class ImageConverter:
                     img = self._apply_rembg(img, options, report)
                     report(70, "rembg")
                 if cancellation_event and cancellation_event.is_set():
-                    return False, "Cancelado por el usuario."
+                    return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
                 # Reescalar IA -- son ejes independientes de Eliminar Fondo, no se
                 # descartan entre sí (se puede recortar Y reescalar en el mismo lote).
@@ -131,13 +133,13 @@ class ImageConverter:
                     report(92, "canvas")
 
                 report(93, "saving")
-                if output_format == "NO CONVERTIR":
+                if output_format == OUTPUT_FORMATS[0].upper():
                     self._save_passthrough(img, input_ext, output_path, options)
                 else:
                     self._save_as(img, output_format, output_path, options)
 
                 report(100, "saving")
-                return True, "Conversión completada."
+                return True, QCoreApplication.translate("image_converter", "Conversión completada.")
             finally:
                 # Cerrar la imagen PIL explícitamente para liberar file handles y buffers
                 # mapeados en memoria (decodificadores HEIC/RAW/PSD retienen bloques
@@ -211,8 +213,11 @@ class ImageConverter:
             pdf = pdfium.PdfDocument(filepath)
         except Exception as e:
             raise UnsupportedFormatError(
-                f"No se pudo abrir como PDF ({os.path.basename(filepath)}): {e}. "
-                "Los .ai muy antiguos (pre-PDF, PostScript puro) no están soportados."
+                QCoreApplication.translate(
+                    "image_converter",
+                    "No se pudo abrir como PDF ({0}): {1}. "
+                    "Los .ai muy antiguos (pre-PDF, PostScript puro) no están soportados."
+                ).format(os.path.basename(filepath), e)
             )
         try:
             page = pdf[0]
@@ -241,10 +246,10 @@ class ImageConverter:
         if not check_ghostscript():
             import platform as _platform
             if _platform.system() == "Windows":
-                hint = "instálalo desde Ajustes > Dependencias, o acepta la descarga que te ofrece Convertir."
+                hint = QCoreApplication.translate("ImageConverter", "instálalo desde Ajustes > Dependencias, o acepta la descarga que te ofrece Convertir.")
             else:
                 label, cmd = get_install_info()
-                hint = f"instálalo desde tu terminal vía {label}: {cmd}"
+                hint = QCoreApplication.translate("image_converter", "instálalo desde tu terminal vía {0}: {1}").format(label, cmd)
             raise UnsupportedFormatError(
                 f"{os.path.splitext(filepath)[1].upper()} necesita Ghostscript -- {hint}"
             )
@@ -265,8 +270,10 @@ class ImageConverter:
             )
             if result.returncode != 0 or not os.path.exists(temp_pdf):
                 raise UnsupportedFormatError(
-                    f"Ghostscript no pudo convertir {os.path.basename(filepath)}: "
-                    f"{result.stderr[:300]}"
+                    QCoreApplication.translate(
+                        "image_converter",
+                        "Ghostscript no pudo convertir {0}: {1}"
+                    ).format(os.path.basename(filepath), result.stderr[:300])
                 )
             return self._load_pdf_like(temp_pdf, target_size, maintain_aspect, options)
 
@@ -392,10 +399,10 @@ class ImageConverter:
             img = img.convert("RGBA")
 
         canvas_option = options.get("canvas_option", "Sin ajuste")
-        if canvas_option == "Añadir Margen Externo":
+        if canvas_option in ("Añadir Margen Externo", "Add External Margin", QCoreApplication.translate("ImageConverter", "Añadir Margen Externo")):
             margin = int(options.get("canvas_margin", 100))
             canvas_width, canvas_height = img_width + margin * 2, img_height + margin * 2
-        elif canvas_option == "Añadir Margen Interno":
+        elif canvas_option in ("Añadir Margen Interno", "Add Internal Margin", QCoreApplication.translate("ImageConverter", "Añadir Margen Interno")):
             margin = int(options.get("canvas_margin", 100))
             canvas_width, canvas_height = img_width, img_height
             new_width, new_height = max(1, img_width - margin * 2), max(1, img_height - margin * 2)
@@ -404,25 +411,37 @@ class ImageConverter:
                 img_width, img_height = new_width, new_height
         elif canvas_option in CANVAS_PRESET_SIZES:
             canvas_width, canvas_height = CANVAS_PRESET_SIZES[canvas_option]
-        elif canvas_option == "Personalizado...":
+        elif canvas_option in ("Personalizado...", "Custom..."):
             canvas_width = int(options.get("canvas_width", img_width))
             canvas_height = int(options.get("canvas_height", img_height))
         else:
             return img
 
-        if canvas_option not in ("Añadir Margen Externo", "Añadir Margen Interno"):
+        if canvas_option not in (
+            "Añadir Margen Externo", "Add External Margin", QCoreApplication.translate("ImageConverter", "Añadir Margen Externo"),
+            "Añadir Margen Interno", "Add Internal Margin", QCoreApplication.translate("ImageConverter", "Añadir Margen Interno"),
+        ):
             if img_width > canvas_width or img_height > canvas_height:
                 overflow_mode = options.get("canvas_overflow_mode", "Centrar (puede recortar)")
-                if overflow_mode == "Advertir y no procesar":
+                if overflow_mode in ("Advertir y no procesar", "Warn and do not process"):
                     raise Exception(
-                        f"La imagen ({img_width}×{img_height}) excede el canvas "
-                        f"({canvas_width}×{canvas_height})."
+                        QCoreApplication.translate(
+                            "image_converter",
+                            "La imagen ({0}×{1}) excede el canvas ({2}×{3})."
+                        ).format(img_width, img_height, canvas_width, canvas_height)
                     )
-                elif overflow_mode == "Reducir hasta que quepa":
+                elif overflow_mode in (
+                    "Reducir hasta que quepa", "Scale to fit", "Reduce until it fits",
+                    QCoreApplication.translate("ImageConverter", "Reducir hasta que quepa")
+                ):
                     scale = min(canvas_width / img_width, canvas_height / img_height)
                     img = img.resize((int(img_width * scale), int(img_height * scale)), Image.Resampling.LANCZOS)
                     img_width, img_height = img.size
-                elif overflow_mode in ("Recortar al canvas", "Centrar (puede recortar)"):
+                elif overflow_mode in (
+                    "Recortar al canvas", "Crop to canvas",
+                    "Centrar (puede recortar)", "Center (may crop)",
+                    QCoreApplication.translate("ImageConverter", "Recortar al canvas")
+                ):
                     left = max(0, (img_width - canvas_width) // 2)
                     top = max(0, (img_height - canvas_height) // 2)
                     img = img.crop((left, top, left + canvas_width, top + canvas_height))
@@ -443,6 +462,11 @@ class ImageConverter:
             "Centro Izquierda": ("left", "center"), "Centro Derecha": ("right", "center"),
             "Abajo Izquierda": ("left", "bottom"), "Abajo Centro": ("center", "bottom"),
             "Abajo Derecha": ("right", "bottom"),
+            "Center": ("center", "center"), "Top Left": ("left", "top"),
+            "Top Center": ("center", "top"), "Top Right": ("right", "top"),
+            "Center Left": ("left", "center"), "Center Right": ("right", "center"),
+            "Bottom Left": ("left", "bottom"), "Bottom Center": ("center", "bottom"),
+            "Bottom Right": ("right", "bottom"),
         }
         h_align, v_align = position_map.get(position, ("center", "center"))
         x = 0 if h_align == "left" else (canvas_w - img_w) // 2 if h_align == "center" else canvas_w - img_w
@@ -468,7 +492,7 @@ class ImageConverter:
         }
         writer = writers.get(output_format)
         if not writer:
-            raise Exception(f"Formato de salida no soportado: {output_format}")
+            raise Exception(QCoreApplication.translate("image_converter", "Formato de salida no soportado: {0}").format(output_format))
         writer(img, output_path, options)
 
     def _save_as_png(self, img, output_path, options):
@@ -509,7 +533,7 @@ class ImageConverter:
 
     def _save_as_avif(self, img, output_path, options):
         if not CAN_AVIF:
-            raise Exception("No se puede guardar como AVIF -- falta instalar 'pillow-avif-plugin'.")
+            raise Exception(QCoreApplication.translate("ImageConverter", "No se puede guardar como AVIF -- falta instalar 'pillow-avif-plugin'."))
         save_img = img if img.mode in ("RGBA", "RGB") else img.convert("RGBA" if "A" in img.mode else "RGB")
         save_img.save(output_path, "AVIF", quality=options.get("avif_quality", 80))
 

@@ -1,4 +1,5 @@
 # src/gui/tabs/image_tools/upscale_popover.py
+from PySide6.QtCore import QCoreApplication
 """Contenido del popover "Reescalar IA" del Editor de Imagen: elegir motor (Waifu2x/
 SRMD/Upscayl) y sus parámetros -- misma cascada y mismos controles que usaba DowP 1
 (image_tools_tab.pyc, upscale_options_frame, líneas 854-900 y 1298-1410): Motor,
@@ -52,17 +53,20 @@ from core.setup.models_setup import (
     delete_upscaling_engine,
 )
 
-_TILE_TOOLTIP = (
+_TILE_TOOLTIP = QCoreApplication.translate(
+    "UpscalePopoverContent",
     "Tamaño del bloque de procesamiento (VRAM).\n"
     "0 = Automático (Recomendado).\n"
     "Prueba 128 o 256 si tienes errores de GPU."
 )
-_POWER_TOOLTIP = (
+_POWER_TOOLTIP = QCoreApplication.translate(
+    "UpscalePopoverContent",
     "Control de hilos (concurrencia).\n"
     "'Seguro' evita crashes en GPUs modestas.\n"
     "'Máximo' usa toda la potencia pero puede colgar el PC."
 )
-_SCALE_TOOLTIP = (
+_SCALE_TOOLTIP = QCoreApplication.translate(
+    "UpscalePopoverContent",
     "Cuánto se agranda la imagen.\n"
     "La lista cambia según el motor y el modelo: cada binario acepta\n"
     "un juego distinto de escalas y aquí solo se ofrecen las que ese\n"
@@ -107,7 +111,7 @@ class UpscalePopoverContent(QFrame):
 
         # Motor
         engine_row = QHBoxLayout()
-        engine_row.addWidget(self._label("Motor:"))
+        engine_row.addWidget(self._label(self.tr("Motor:")))
         self.combo_engine = AutoPopupComboBox(fit_contents=True)
         self.combo_engine.currentIndexChanged.connect(self._on_engine_changed)
         engine_row.addWidget(self.combo_engine, 1)
@@ -116,7 +120,7 @@ class UpscalePopoverContent(QFrame):
 
         # Modelo
         model_row = QHBoxLayout()
-        model_row.addWidget(self._label("Modelo:"))
+        model_row.addWidget(self._label(self.tr("Modelo:")))
         self.combo_model = AutoPopupComboBox(fit_contents=True)
         self.combo_model.addItem(AI_MODEL_HOLDER, None)
         self.combo_model.currentIndexChanged.connect(self._on_model_changed)
@@ -127,7 +131,7 @@ class UpscalePopoverContent(QFrame):
         # Antes era un 2x/3x/4x fijo para los tres motores, que además de dejar
         # escalas afuera ofrecía un 3x que Waifu2x rechaza en el acto.
         scale_row = QHBoxLayout()
-        scale_row.addWidget(self._label("Escala:"))
+        scale_row.addWidget(self._label(self.tr("Escala:")))
         self.combo_scale = AutoPopupComboBox(fit_contents=True)
         self.combo_scale.addItems(_FALLBACK_SCALES)
         self.combo_scale.setCurrentText("4x")
@@ -143,15 +147,19 @@ class UpscalePopoverContent(QFrame):
 
         # Potencia (concurrencia)
         power_row = QHBoxLayout()
-        power_row.addWidget(self._label("Potencia:"))
+        power_row.addWidget(self._label(self.tr("Potencia:")))
         self.combo_power = AutoPopupComboBox(fit_contents=True)
-        self.combo_power.addItems(["Automático", "Seguro (Estabilidad)", "Equilibrado", "Máximo (Potente)"])
+        for _pw_label, _pw_key in ((self.tr("Automático"), "Automático"),
+                                  (self.tr("Seguro (Estabilidad)"), "Seguro (Estabilidad)"),
+                                  (self.tr("Equilibrado"), "Equilibrado"),
+                                  (self.tr("Máximo (Potente)"), "Máximo (Potente)")):
+            self.combo_power.addItem(_pw_label, _pw_key)
         self.combo_power.setToolTip(_POWER_TOOLTIP)
         power_row.addWidget(self.combo_power, 1)
         layout.addLayout(power_row)
 
         # Reducir Ruido -- visibilidad/label cambia según el motor (ver _on_engine_changed)
-        self.lbl_denoise = self._label("Reducir Ruido:")
+        self.lbl_denoise = self._label(self.tr("Reducir Ruido:"))
         self.combo_denoise = AutoPopupComboBox(fit_contents=True)
         # Los niveles también cambian por motor (ver _refresh_denoise_items):
         # Waifu2x llega hasta 3, SRMD hasta 10.
@@ -274,7 +282,7 @@ class UpscalePopoverContent(QFrame):
             # Sin modelo elegido todavía: la intersección de los tres, para no
             # ofrecer un 1x que solo vale con CU-Net.
             return list(info["scales"]) if info else [
-                s for s in WAIFU2X_MODELS["CU-Net (Alta Calidad)"]["scales"] if s != "1x"]
+                s for s in WAIFU2X_MODELS[self.tr("CU-Net (Alta Calidad)")]["scales"] if s != "1x"]
         if engine_key == "SRMD":
             info = SRMD_MODELS.get(self.combo_model.currentData())
             return list(info["scales"]) if info else list(SRMD_SCALES)
@@ -498,7 +506,7 @@ class UpscalePopoverContent(QFrame):
             "upscale_model": self.combo_model.currentData(),
             "upscale_scale": self.combo_scale.currentText(),
             "upscale_tile": self.entry_tile.text(),
-            "upscale_power": self.combo_power.currentText(),
+            "upscale_power": self.combo_power.currentData() or self.combo_power.currentText(),
             "upscale_denoise": self.combo_denoise.currentText(),
             "upscale_tta": self.check_tta.isChecked(),
         }

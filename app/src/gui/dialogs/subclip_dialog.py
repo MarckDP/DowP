@@ -97,7 +97,7 @@ class SubclipItemWidget(QWidget):
         btn_del.setIcon(get_svg_icon("delete.svg"))
         btn_del.setIconSize(QSize(15, 15))
         btn_del.setFixedSize(22, 22)
-        btn_del.setToolTip("Eliminar subclip")
+        btn_del.setToolTip(self.tr("Eliminar subclip"))
         btn_del.setStyleSheet("""
             QPushButton { background: transparent; border: none; border-radius: 6px; }
             QPushButton:hover { background: rgba(229,57,53,160); }
@@ -192,7 +192,7 @@ class SubclipEditorDialog(QDialog):
         self.subclips = list(existing_subclips) if existing_subclips else []
         # Modo "pendiente": el medio es remoto y aún se está descargando en alta calidad en segundo plano.
         self.pending_download = pending_download
-        self._display_name = display_name or os.path.basename(media_path) or "Medio remoto"
+        self._display_name = display_name or os.path.basename(media_path) or self.tr("Medio remoto")
 
     def __init__(self, media_path: str, media_type: str = "video", duration_sec: float = 0.0, fps: float = 30.0, existing_subclips: list = None, initial_in_sec: float = None, initial_out_sec: float = None, pending_download: bool = False, display_name: str = None, parent=None):
         super().__init__(parent)
@@ -204,12 +204,12 @@ class SubclipEditorDialog(QDialog):
         self.out_sec = initial_out_sec if initial_out_sec is not None else self.duration_sec
         self.subclips = list(existing_subclips) if existing_subclips else []
         self.pending_download = pending_download
-        self._display_name = display_name or os.path.basename(media_path) or "Medio remoto"
+        self._display_name = display_name or os.path.basename(media_path) or self.tr("Medio remoto")
 
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setWindowTitle(f"Edición de Subclips - {self._display_name}")
+        self.setWindowTitle(self.tr("Edición de Subclips - %1").replace("%1", str(self._display_name)))
         self.setObjectName("subclipDialogOverlay")
 
         self.init_ui()
@@ -315,7 +315,7 @@ class SubclipEditorDialog(QDialog):
         tb_layout = QHBoxLayout(title_bar)
         tb_layout.setContentsMargins(16, 0, 10, 0)
 
-        self.title_lbl = QLabel(f"Edición de Subclips (In/Out) — {self._display_name}")
+        self.title_lbl = QLabel(self.tr("Edición de Subclips (In/Out) — %1").replace("%1", str(self._display_name)))
         self.title_lbl.setObjectName("subclipTitleLabel")
         tb_layout.addWidget(self.title_lbl)
         tb_layout.addStretch()
@@ -510,9 +510,9 @@ class SubclipEditorDialog(QDialog):
         logger.info(f"[SubclipDialog] Medio resuelto en alta calidad: {local_path}")
         self.media_path = local_path
         self._display_name = os.path.basename(local_path) or self._display_name
-        self.setWindowTitle(f"Edición de Subclips - {self._display_name}")
+        self.setWindowTitle(self.tr("Edición de Subclips - %1").replace("%1", str(self._display_name)))
         if hasattr(self, "title_lbl"):
-            self.title_lbl.setText(f"Edición de Subclips (In/Out) — {self._display_name}")
+            self.title_lbl.setText(self.tr("Edición de Subclips (In/Out) — %1").replace("%1", str(self._display_name)))
 
         try:
             from core.tabs.editing_media.ffprobe_metadata_manager import FFprobeMetadataManager
@@ -614,9 +614,9 @@ class SubclipEditorDialog(QDialog):
 
         count = len(self.subclips)
         if count > 0:
-            self.btn_send.setText(f"Enviar ({count}) subclips")
+            self.btn_send.setText(self.tr("Enviar ({0}) subclips").format(count))
         else:
-            self.btn_send.setText(f"Enviar rango actual")
+            self.btn_send.setText(self.tr("Enviar rango actual"))
 
         icon = get_svg_icon(icon_file)
         if not icon.isNull():
@@ -713,7 +713,7 @@ class SubclipEditorDialog(QDialog):
         else:
             logger.error("[SubclipDialog] Error al enviar los subclips al editor.")
 
-        self._send_state.finish(ok, "Éxito" if ok else "Error")
+        self._send_state.finish(ok, self.tr("Éxito") if ok else "Error")
         if ok:
             QTimer.singleShot(1200, self.accept)
 
@@ -738,7 +738,7 @@ class SubclipEditorDialog(QDialog):
                 "out": self.out_sec
             }]
         }
-        self._send_subclip_payload(payload, "Enviando rango actual como subclip")
+        self._send_subclip_payload(payload, self.tr("Enviando rango actual como subclip"))
 
     def _cleanup_and_reactivate(self):
         try:

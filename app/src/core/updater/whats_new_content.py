@@ -15,6 +15,7 @@ no lo detecta -- confirmado empiricamente, ver ACTUALIZACIONES.md.
 from PySide6.QtCore import QCoreApplication
 
 from core.version import IS_BETA
+from PySide6.QtCore import QCoreApplication
 
 
 def get_whats_new_items(version: str) -> list:

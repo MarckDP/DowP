@@ -10,14 +10,20 @@ MP3, AAC, OPUS, etc.), aplicando factores y estimaciones acordes a la naturaleza
 from core.tabs.video_tools.size_estimator import parse_duration_to_seconds, parse_kbps_from_label, estimate_size_mb
 from core.tabs.video_tools.codec_profiles import build_custom_bitrate_args, build_custom_audio_bitrate_args
 from core.utils.recode_guard import resolve_encoder
+from PySide6.QtCore import QCoreApplication, QT_TRANSLATE_NOOP
 
 LEVELS = ("ligero", "equilibrado", "agresivo")
 
 LEVEL_LABELS = {
-    "ligero": "Ligero",
-    "equilibrado": "Equilibrado",
-    "agresivo": "Agresivo",
+    "ligero": QT_TRANSLATE_NOOP("compress_advisor", "Ligero"),
+    "equilibrado": QT_TRANSLATE_NOOP("compress_advisor", "Equilibrado"),
+    "agresivo": QT_TRANSLATE_NOOP("compress_advisor", "Agresivo"),
 }
+
+def get_level_label(level: str) -> str:
+    raw = LEVEL_LABELS.get(level, level)
+    return QCoreApplication.translate("compress_advisor", raw)
+
 
 # Fraccion del bitrate de video de origen (o de referencia) que apunta cada nivel.
 LEVEL_FACTOR = {
@@ -202,24 +208,24 @@ def analyze_source(meta: dict) -> dict:
             return {
                 "known": False,
                 "recommended_level": "equilibrado",
-                "note": "Archivo de solo audio. Equilibrado (128 kbps) es la opción recomendada para distribución.",
+                "note": QCoreApplication.translate("compress_advisor", "Archivo de solo audio. Equilibrado (128 kbps) es la opción recomendada para distribución."),
             }
         if known_kbps >= 500:
             return {
                 "known": True,
                 "recommended_level": "equilibrado",
-                "note": f"Audio sin comprimir o lossless (~{int(known_kbps)} kbps). Equilibrado (128 kbps) reducirá hasta un 90% del tamaño sin pérdida perceptible.",
+                "note": QCoreApplication.translate("compress_advisor", "Audio sin comprimir o lossless (~{0} kbps). Equilibrado (128 kbps) reducirá hasta un 90% del tamaño sin pérdida perceptible.").format(int(known_kbps)),
             }
         if known_kbps <= 128:
             return {
                 "known": True,
                 "recommended_level": "ligero",
-                "note": f"El audio ya está a bitrate bajo (~{int(known_kbps)} kbps). Se sugiere Ligero para evitar artefactos de recodificación.",
+                "note": QCoreApplication.translate("compress_advisor", "El audio ya está a bitrate bajo (~{0} kbps). Se sugiere Ligero para evitar artefactos de recodificación.").format(int(known_kbps)),
             }
         return {
             "known": True,
             "recommended_level": "equilibrado",
-            "note": f"Bitrate de audio de origen (~{int(known_kbps)} kbps). Equilibrado ofrece una excelente relación calidad/tamaño.",
+            "note": QCoreApplication.translate("compress_advisor", "Bitrate de audio de origen (~{0} kbps). Equilibrado ofrece una excelente relación calidad/tamaño.").format(int(known_kbps)),
         }
 
     known_kbps = source_video_kbps(meta)
@@ -231,7 +237,7 @@ def analyze_source(meta: dict) -> dict:
         return {
             "known": False,
             "recommended_level": "equilibrado",
-            "note": "No se pudo leer el bitrate de origen todavía; se sugiere Equilibrado por defecto.",
+            "note": QCoreApplication.translate("compress_advisor", "No se pudo leer el bitrate de origen todavía; se sugiere Equilibrado por defecto."),
         }
 
     equilibrado_target = reference * LEVEL_FACTOR["equilibrado"]
@@ -239,7 +245,8 @@ def analyze_source(meta: dict) -> dict:
         return {
             "known": True,
             "recommended_level": "ligero",
-            "note": (
+            "note": QCoreApplication.translate(
+                "compress_advisor",
                 "Este archivo ya está eficientemente comprimido para su resolución: "
                 "recomprimirlo agresivamente ahorraría poco y perdería calidad. Se sugiere Ligero."
             ),
@@ -248,7 +255,8 @@ def analyze_source(meta: dict) -> dict:
         return {
             "known": True,
             "recommended_level": "agresivo",
-            "note": (
+            "note": QCoreApplication.translate(
+                "compress_advisor",
                 "El bitrate de origen está bastante por encima de lo necesario para su "
                 "resolución: hay margen grande de ahorro. Se sugiere Agresivo."
             ),
@@ -256,7 +264,7 @@ def analyze_source(meta: dict) -> dict:
     return {
         "known": True,
         "recommended_level": "equilibrado",
-        "note": "El bitrate de origen es razonable para su resolución. Equilibrado da un buen balance de ahorro/calidad.",
+        "note": QCoreApplication.translate("compress_advisor", "El bitrate de origen es razonable para su resolución. Equilibrado da un buen balance de ahorro/calidad."),
     }
 
 

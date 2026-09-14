@@ -186,7 +186,7 @@ class ActivityPanel(QFrame):
             self.group_rows.append(group)
 
         for idx, entry in enumerate(entries):
-            title = entry.get("title") or entry.get("id") or entry.get("url") or (self.tr(f"Item {idx + 1}") if hasattr(self, "tr") else f"Item {idx + 1}")
+            title = entry.get("title") or entry.get("id") or entry.get("url") or (self.tr("Item {0}").format(idx + 1) if hasattr(self, "tr") else f"Item {idx + 1}")
             playlist_idx = entry.get("playlist_index") or (selected_indices[idx] + 1 if idx < len(selected_indices) else idx + 1)
             new_keys.append(playlist_idx)
 

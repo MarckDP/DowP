@@ -18,6 +18,14 @@ from gui.styles import get_theme_token
 from gui.dialogs.dialogs import AdobeColorPickerDialog
 from core.constants import BACKGROUND_TYPES, GRADIENT_DIRECTIONS
 
+# BACKGROUND_TYPES/GRADIENT_DIRECTIONS ya vienen traducidos desde constants.py (evaluado
+# una sola vez al importar, ver i18n.py) -- comparar contra estos alias en vez de volver a
+# llamar self.tr() sobre el literal en español evita mantener la misma traducción
+# duplicada en dos contextos distintos (constants + BackgroundDialog) que podrían
+# desincronizarse.
+_TYPE_SOLID, _TYPE_GRADIENT, _TYPE_IMAGE = BACKGROUND_TYPES
+_DIR_HORIZONTAL, _DIR_VERTICAL, _DIR_DIAG_DOWN, _DIR_DIAG_UP, _DIR_RADIAL = GRADIENT_DIRECTIONS
+
 
 class BackgroundDialog(QDialog):
     def __init__(self, canvas_width: int, canvas_height: int, parent=None):
@@ -124,16 +132,16 @@ class BackgroundDialog(QDialog):
             self._update_preview()
 
     def _pick_image(self):
-        path, _ = QFileDialog.getOpenFileName(self, self.tr("Elegir imagen de fondo"), "", "Imágenes (*.png *.jpg *.jpeg *.webp *.bmp)")
+        path, _ = QFileDialog.getOpenFileName(self, self.tr("Elegir imagen de fondo"), "", self.tr("Imágenes (*.png *.jpg *.jpeg *.webp *.bmp)"))
         if path:
             self._image_path = path
             self.lbl_image_name.setText(os.path.basename(path))
             self._update_preview()
 
     def _on_type_changed(self, kind: str):
-        is_solid = kind == "Color Sólido"
-        is_gradient = kind == "Degradado"
-        is_image = kind == "Imagen de Fondo"
+        is_solid = kind == _TYPE_SOLID
+        is_gradient = kind == _TYPE_GRADIENT
+        is_image = kind == _TYPE_IMAGE
         for i in range(self.color1_row.count()):
             w = self.color1_row.itemAt(i).widget()
             if w:
@@ -154,20 +162,20 @@ class BackgroundDialog(QDialog):
 
     def _build_brush(self) -> QBrush:
         kind = self.combo_type.currentText()
-        if kind == "Color Sólido":
+        if kind == _TYPE_SOLID:
             return QBrush(self._color1)
-        if kind == "Degradado":
+        if kind == _TYPE_GRADIENT:
             direction = self.combo_direction.currentText()
             w, h = self._w, self._h
-            if direction == "Horizontal (Izq → Der)":
+            if direction == _DIR_HORIZONTAL:
                 grad = QLinearGradient(0, 0, w, 0)
-            elif direction == "Vertical (Arr → Aba)":
+            elif direction == _DIR_VERTICAL:
                 grad = QLinearGradient(0, 0, 0, h)
-            elif direction == "Diagonal (↘)":
+            elif direction == _DIR_DIAG_DOWN:
                 grad = QLinearGradient(0, 0, w, h)
-            elif direction == "Diagonal (↙)":
+            elif direction == _DIR_DIAG_UP:
                 grad = QLinearGradient(w, 0, 0, h)
-            else:  # "Radial (Centro)"
+            else:  # _DIR_RADIAL
                 grad = QRadialGradient(w / 2, h / 2, max(w, h) / 2)
             grad.setColorAt(0.0, self._color1)
             grad.setColorAt(1.0, self._color2)
@@ -176,7 +184,7 @@ class BackgroundDialog(QDialog):
 
     def _update_preview(self):
         kind = self.combo_type.currentText()
-        if kind == "Imagen de Fondo" and self._image_path:
+        if kind == _TYPE_IMAGE and self._image_path:
             path_css = self._image_path.replace("\\", "/")
             self.preview.setStyleSheet(
                 f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px; "
@@ -187,11 +195,11 @@ class BackgroundDialog(QDialog):
         # aproxima con qlineargradient CSS (suficiente para la previsualización; el
         # resultado real que se aplica a la capa usa el QBrush nativo, no esta
         # aproximación, ver _build_brush()/build_layer_item()).
-        if kind == "Color Sólido":
+        if kind == _TYPE_SOLID:
             self.preview.setStyleSheet(
                 f"background-color: {self._color1.name()}; border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;"
             )
-        elif kind == "Degradado":
+        elif kind == _TYPE_GRADIENT:
             self.preview.setStyleSheet(
                 f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {self._color1.name()}, stop:1 {self._color2.name()});"
                 f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;"
@@ -203,7 +211,7 @@ class BackgroundDialog(QDialog):
         """Devuelve el QGraphicsItem ya armado para insertar como capa de fondo."""
         from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem
         kind = self.combo_type.currentText()
-        if kind == "Imagen de Fondo" and self._image_path and os.path.exists(self._image_path):
+        if kind == _TYPE_IMAGE and self._image_path and os.path.exists(self._image_path):
             pix = QPixmap(self._image_path)
             if not pix.isNull():
                 # Estirado exacto al canvas, sin recorte -- mismo criterio que

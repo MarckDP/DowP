@@ -1,4 +1,5 @@
 # src/core/tabs/image_tools/convert_options.py
+from PySide6.QtCore import QCoreApplication
 """Constantes y valores por defecto para "Convertir" (Editor de Imagen) -- sin Qt,
 mismo rol que core/tabs/video_tools/convert_advisor.py para su propio Convertir,
 pero sin lógica de "plan" (aquí no hay copy-vs-recode: cada archivo simplemente se
@@ -7,7 +8,7 @@ Valores por defecto tomados 1:1 de los que usaba DowP1 (image_converter.pyc
 decompilado) -- único agregado: avif_quality, que DowP1 no exponía en su UI pese a
 que el motor ya lo soportaba."""
 
-OUTPUT_FORMATS = ["No Convertir", "PNG", "JPG", "WEBP", "AVIF", "PDF", "TIFF", "ICO", "ICNS", "BMP"]
+OUTPUT_FORMATS = [QCoreApplication.translate("convert_options", "No Convertir"), "PNG", "JPG", "WEBP", "AVIF", "PDF", "TIFF", "ICO", "ICNS", "BMP"]
 
 JPG_SUBSAMPLING_OPTIONS = ["4:2:0 (Estándar)", "4:2:2 (Alta)", "4:4:4 (Máxima)"]
 TIFF_COMPRESSION_OPTIONS = ["Ninguna", "LZW (Recomendada)", "Deflate (ZIP)", "PackBits"]

@@ -234,14 +234,14 @@ class SystemPage(QWidget):
 
     def _pretty_encoder_name(self, encoder_code: str) -> str:
         names = {
-            "h264_nvenc": "NVIDIA NVENC (Acelerado por GPU)",
-            "hevc_nvenc": "NVIDIA NVENC HEVC (Acelerado por GPU)",
-            "h264_videotoolbox": "Apple VideoToolbox (Acelerado por Hardware)",
-            "hevc_videotoolbox": "Apple VideoToolbox HEVC (Acelerado por Hardware)",
-            "h264_qsv": "Intel QuickSync (Acelerado por GPU)",
-            "h264_amf": "AMD AMF (Acelerado por GPU)",
-            "h264_vaapi": "Linux VA-API (Acelerado por Hardware)",
-            "libx264": "CPU Software - x264 (Estándar)",
+            "h264_nvenc": self.tr("NVIDIA NVENC (Acelerado por GPU)"),
+            "hevc_nvenc": self.tr("NVIDIA NVENC HEVC (Acelerado por GPU)"),
+            "h264_videotoolbox": self.tr("Apple VideoToolbox (Acelerado por Hardware)"),
+            "hevc_videotoolbox": self.tr("Apple VideoToolbox HEVC (Acelerado por Hardware)"),
+            "h264_qsv": self.tr("Intel QuickSync (Acelerado por GPU)"),
+            "h264_amf": self.tr("AMD AMF (Acelerado por GPU)"),
+            "h264_vaapi": self.tr("Linux VA-API (Acelerado por Hardware)"),
+            "libx264": self.tr("CPU Software - x264 (Estándar)"),
         }
         return names.get(encoder_code, f"{encoder_code} (Soportado)")
 
@@ -284,7 +284,7 @@ class SystemPage(QWidget):
         self.btn_redetect.setEnabled(True)
         self.btn_redetect.setText(self.tr("Redetectar hardware"))
         sec = info.get("scan_duration_sec", 0.5)
-        self.lbl_status.setText(self.tr(f"Actualizado en {sec}s"))
+        self.lbl_status.setText(self.tr("Actualizado en {0}s").format(sec))
         
         if self.scan_thread:
             self.scan_thread.deleteLater()

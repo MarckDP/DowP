@@ -12,6 +12,7 @@ advanced_recode_panel.py::_build_vf_expression_with_crop): esto es lo que permit
 la marca de agua funcione bien guardada en un preajuste y aplicada a toda la cola.
 """
 import os
+from PySide6.QtCore import QCoreApplication
 
 
 def check_watermark_file(settings: dict) -> str | None:
@@ -24,7 +25,7 @@ def check_watermark_file(settings: dict) -> str | None:
         return None
     if os.path.exists(path):
         return None
-    return f"La imagen de marca de agua de este ajuste ya no existe: {path}"
+    return QCoreApplication.translate("watermark_builder", "La imagen de marca de agua de este ajuste ya no existe: %1").replace("%1", path)
 
 
 def _escape_drawtext_text(text: str) -> str:

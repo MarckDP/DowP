@@ -1,5 +1,6 @@
 # src/core/tabs/editing_media/web_sources/freesound_provider.py
 from core.tabs.editing_media.web_sources.base import WebSourceProvider
+from PySide6.QtCore import QCoreApplication
 
 
 class FreesoundProvider(WebSourceProvider):
@@ -16,9 +17,9 @@ class FreesoundProvider(WebSourceProvider):
     # sigue siendo 100% server-side (ver search()), esto solo describe las opciones para que
     # la UI pueda armar el combo genéricamente para cualquier provider.
     license_filter_options = [
-        ("CC0", "CC0 (Sin Copyright)"),
-        ("Attribution", "CC-BY (Atribución)"),
-        ("Attribution NonCommercial", "CC-BY-NC (No Comercial)"),
+        ("CC0", QCoreApplication.translate("FreesoundProvider", "CC0 (Sin Copyright)")),
+        ("Attribution", QCoreApplication.translate("FreesoundProvider", "CC-BY (Atribución)")),
+        ("Attribution NonCommercial", QCoreApplication.translate("FreesoundProvider", "CC-BY-NC (No Comercial)")),
     ]
 
     def __init__(self, client, controller):
@@ -75,7 +76,7 @@ class FreesoundProvider(WebSourceProvider):
         else:
             size_str = f"{size_kb:.1f} KB"
 
-        sound_name = r.get("name", "Sonido sin nombre").strip()
+        sound_name = r.get("name", QCoreApplication.translate("FreesoundProvider", "Sonido sin nombre")).strip()
         sound_type = r.get("type", "").strip().lower()
         if sound_type and not any(sound_name.lower().endswith(f".{ext}") for ext in ["wav", "mp3", "flac", "ogg", "aiff", "m4a", "aac"]):
             sound_name = f"{sound_name}.{sound_type}"
@@ -128,8 +129,8 @@ class FreesoundProvider(WebSourceProvider):
     def download(self, item_data: dict, dest_dir: str, fallback_name: str, progress_callback=None) -> str:
         token = self.controller.freesound_token
         if not token:
-            raise PermissionError("Debes iniciar sesión con Freesound para descargar el archivo original en alta calidad.")
+            raise PermissionError(QCoreApplication.translate("FreesoundProvider", "Debes iniciar sesión con Freesound para descargar el archivo original en alta calidad."))
         sound_id = item_data.get("id")
         if not sound_id:
-            raise ValueError("No se pudo determinar el ID del sonido de Freesound.")
+            raise ValueError(QCoreApplication.translate("FreesoundProvider", "No se pudo determinar el ID del sonido de Freesound."))
         return self.client.download_original(sound_id, dest_dir, fallback_name, token, progress_callback=progress_callback)

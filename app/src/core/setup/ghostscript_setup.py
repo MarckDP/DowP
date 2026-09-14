@@ -35,6 +35,7 @@ import requests
 
 from core.logger.logger_manager import logger
 from core.utils.paths import get_bin_root_dir
+from PySide6.QtCore import QCoreApplication
 
 # Version y URL de respaldo: es lo que se instala si la consulta a GitHub falla
 # (sin red, API caida o con el limite de peticiones agotado). El camino normal ya
@@ -270,12 +271,12 @@ def download_ghostscript(progress_callback=None) -> tuple[bool, str]:
     get_managed_ghostscript_dir()."""
     if platform.system() != "Windows":
         label, cmd = get_install_info()
-        return False, f"En este SO, instala Ghostscript vía {label}: {cmd}"
+        return False, QCoreApplication.translate("ghostscript_setup", "En este SO, instala Ghostscript vía {0}: {1}").format(label, cmd)
 
     try:
         seven_zip = _ensure_7zip_tool(progress_callback)
         if not seven_zip:
-            return False, "No se pudo preparar la herramienta de extracción (7-Zip)."
+            return False, QCoreApplication.translate("ghostscript_setup", "No se pudo preparar la herramienta de extracción (7-Zip).")
 
         # Se instala el ultimo release publicado; si GitHub no responde se cae al
         # instalador fijado en _GS_INSTALLER_URL, que sigue siendo una version
@@ -318,11 +319,11 @@ def download_ghostscript(progress_callback=None) -> tuple[bool, str]:
                 progress_callback(90)
             if result.returncode != 0:
                 logger.error(f"Ghostscript: 7-Zip falló extrayendo el instalador: {result.stderr}")
-                return False, f"No se pudo extraer el instalador: {result.stderr[:300]}"
+                return False, QCoreApplication.translate("ghostscript_setup", "No se pudo extraer el instalador: {0}").format(result.stderr[:300])
 
             extracted_bin = os.path.join(extract_dir, "bin", "gswin64c.exe")
             if not os.path.isfile(extracted_bin):
-                return False, "El instalador se extrajo pero no se encontró gswin64c.exe."
+                return False, QCoreApplication.translate("ghostscript_setup", "El instalador se extrajo pero no se encontró gswin64c.exe.")
 
             dest_dir = get_managed_ghostscript_dir()
             if os.path.isdir(dest_dir):
@@ -337,7 +338,7 @@ def download_ghostscript(progress_callback=None) -> tuple[bool, str]:
             progress_callback(100)
 
         if not check_ghostscript():
-            return False, "La instalación terminó pero Ghostscript no quedó detectable."
+            return False, QCoreApplication.translate("ghostscript_setup", "La instalación terminó pero Ghostscript no quedó detectable.")
 
         logger.info(f"Ghostscript: instalación completada en {get_managed_ghostscript_dir()}")
         return True, f"Ghostscript {GS_VERSION} instalado correctamente."

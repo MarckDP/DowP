@@ -1,4 +1,5 @@
 # src/gui/tabs/video_tools/advanced_recode_panel.py
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QSlider,
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QT_TRANSLATE_NOOP
 from PySide6.QtGui import QColor, QPixmap
 import math
 
@@ -55,11 +56,13 @@ _PRESET_NAMESPACE = "video_tools/avanzado"
 # empaquetado cuando se amplíe tools/codec_matrix con soporte multi-pista (ver charla).
 _SINGLE_AUDIO_STREAM_CONTAINERS = {"mp3", "wav", "flac"}
 
+from PySide6.QtCore import QT_TR_NOOP, QT_TRANSLATE_NOOP
+
 _SEVERITY_LABELS = {
-    "ok": "Compatible",
-    "warning": "Advertencia",
-    "unverified": "No verificado",
-    "blocked": "No compatible",
+    "ok": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Compatible"),
+    "warning": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Advertencia"),
+    "unverified": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "No verificado"),
+    "blocked": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "No compatible"),
 }
 _SEVERITY_TOKENS = {
     "ok": "estado_exito",
@@ -82,27 +85,27 @@ _ENGINE_LABELS = {
 # ejecución (con iw/ih) si ese lado es el ancho o el alto, sin que DowP necesite saber la
 # orientación del fuente de antemano.
 _RESOLUTION_PRESETS = [
-    ("original", "Original", None),
+    ("original", QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Original"), None),
     ("4k", "4K (2160p)", 3840),
     ("2k", "2K (1440p)", 2560),
     ("1080p", "1080p (Full HD)", 1920),
     ("720p", "720p (HD)", 1280),
     ("480p", "480p (SD)", 854),
-    ("custom", "Personalizado", None),
+    ("custom", QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Personalizado"), None),
 ]
 
 # Framerates estándar de broadcast/cine para forzar CFR.
 _CFR_FPS_OPTIONS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60]
 
 _FIT_MODE_LABELS = {
-    "deformar": "Deformar",
-    "ajustar": "Ajustar",
-    "crop": "Recortar",
+    "deformar": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Deformar"),
+    "ajustar": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Ajustar"),
+    "crop": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Recortar"),
 }
 _FIT_MODE_TOOLTIPS = {
-    "deformar": "Estira la imagen al tamaño exacto elegido, sin respetar su relación de aspecto original.",
-    "ajustar": "Encoge la imagen para que quepa entera en el tamaño elegido y rellena el sobrante con barras negras.",
-    "crop": "Agranda la imagen para cubrir todo el tamaño elegido y recorta lo que sobre por los bordes.",
+    "deformar": QCoreApplication.translate("advanced_recode_panel", "Estira la imagen al tamaño exacto elegido, sin respetar su relación de aspecto original."),
+    "ajustar": QCoreApplication.translate("advanced_recode_panel", "Encoge la imagen para que quepa entera en el tamaño elegido y rellena el sobrante con barras negras."),
+    "crop": QCoreApplication.translate("advanced_recode_panel", "Agranda la imagen para cubrir todo el tamaño elegido y recorta lo que sobre por los bordes."),
 }
 
 _PREFERRED_CONTAINER_BY_CODEC = {
@@ -1313,7 +1316,7 @@ class AdvancedRecodePanel(QWidget):
                         item.setFont(font)
                         item.setTextAlignment(Qt.AlignCenter)
                         
-                    label = c["display_name"] if c["verified"] else f"{c['display_name']} (sin verificar)"
+                    label = c["display_name"] if c["verified"] else self.tr("{0} (sin verificar)").format(c["display_name"])
                     combo.addItem(f"  {label}", c["codec_id"])
                     
                 # Seleccionar el primer elemento que esté habilitado (saltando las cabeceras)
@@ -2131,9 +2134,20 @@ class AdvancedRecodePanel(QWidget):
                 child.widget().hide()
                 child.widget().deleteLater()
 
+    def _translate_issue_message(self, text: str) -> str:
+        if not text:
+            return ""
+        for ctx in ("AdvancedRecodePanel", "HardwareDetector", "RecodeMessages", "recode_guard", "watermark_builder", ""):
+            trans = QCoreApplication.translate(ctx, text)
+            if trans and trans != text:
+                return trans
+        return text
+
     def _add_message(self, severity: str, text: str, compact: bool = False):
         color = get_theme_token(_SEVERITY_TOKENS[severity], "#aaaaaa")
-        label_text = f"● {text}" if compact else f"● {_SEVERITY_LABELS[severity]}: {text}"
+        raw_sev = _SEVERITY_LABELS.get(severity, severity)
+        sev_label = self._translate_issue_message(raw_sev)
+        label_text = f"● {text}" if compact else f"● {sev_label}: {text}"
         lbl = QLabel(label_text)
         lbl.setWordWrap(True)
         lbl.setStyleSheet(f"color: {color}; font-size: {'13px' if compact else '12px'}; font-weight: {'bold' if compact else 'normal'};")
@@ -2193,7 +2207,11 @@ class AdvancedRecodePanel(QWidget):
                 if issue["check"] == "playback_risk":
                     message = self._format_playback_risk_message(issue["risk"])
                 else:
-                    message = issue["message"]
+                    message = self._translate_issue_message(issue["message"])
+                    if "message_args" in issue:
+                        for i, arg in enumerate(issue["message_args"], 1):
+                            message = message.replace(f"%{i}", str(arg))
+                
                 self._add_message(issue["severity"], message)
 
         self._last_valid = result["verdict"] != "blocked"
@@ -2201,10 +2219,11 @@ class AdvancedRecodePanel(QWidget):
 
         watermark_issue = self._check_watermark_issues()
         if watermark_issue:
-            self._add_message(watermark_issue["severity"], watermark_issue["message"])
+            wm_msg = self._translate_issue_message(watermark_issue["message"])
+            self._add_message(watermark_issue["severity"], wm_msg)
             if watermark_issue["severity"] == "blocked":
                 self._last_valid = False
-                self._invalid_reason = watermark_issue["message"]
+                self._invalid_reason = wm_msg
 
         self.validity_changed.emit(self._last_valid)
 

@@ -11,6 +11,7 @@ import re
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_bin_root_dir
+from PySide6.QtCore import QCoreApplication
 
 # Versión fija recomendada de FFmpeg para DowP (máxima estabilidad con yt-dlp)
 FFMPEG_RECOMMENDED_VERSION = "9.0.1"
@@ -111,7 +112,7 @@ def validate_custom_ffmpeg(path: str) -> tuple[bool, str, str]:
     Retorna: (es_valido: bool, version_str: str, mensaje_detalle: str).
     """
     if not path or not path.strip():
-        return False, "", "Ruta vacía."
+        return False, "", QCoreApplication.translate("ffmpeg_setup", "Ruta vacía.")
 
     path = path.strip()
     exe_name = "ffmpeg.exe" if platform.system().lower() == "windows" else "ffmpeg"
@@ -121,7 +122,7 @@ def validate_custom_ffmpeg(path: str) -> tuple[bool, str, str]:
         candidate = os.path.join(candidate, exe_name)
 
     if not os.path.isfile(candidate):
-        return False, "", f"No se encontró el ejecutable '{exe_name}' en la ruta especificada."
+        return False, "", QCoreApplication.translate("ffmpeg_setup", "No se encontró el ejecutable '{0}' en la ruta especificada.").format(exe_name)
 
     try:
         flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -130,7 +131,7 @@ def validate_custom_ffmpeg(path: str) -> tuple[bool, str, str]:
             capture_output=True, text=True, timeout=6, creationflags=flags
         )
         if result.returncode != 0:
-            err_msg = f"El ejecutable falló con código de salida {result.returncode}."
+            err_msg = QCoreApplication.translate("ffmpeg_setup", "El ejecutable falló con código de salida {0}.").format(result.returncode)
             logger.warning(f"FFmpeg: Validación de ruta personalizada falló en '{candidate}': {err_msg}")
             return False, "", err_msg
 
@@ -138,10 +139,10 @@ def validate_custom_ffmpeg(path: str) -> tuple[bool, str, str]:
         match = re.search(r'version\s+([^\s]+)', first_line)
         version = match.group(1) if match else first_line.split()[2]
         logger.info(f"FFmpeg: Ejecutable personalizado validado exitosamente en '{candidate}' (Versión detectada: {version})")
-        return True, version, "Ejecutable válido y funcional."
+        return True, version, QCoreApplication.translate("ffmpeg_setup", "Ejecutable válido y funcional.")
     except Exception as e:
         logger.error(f"FFmpeg: Error ejecutando/validando ejecutable en '{candidate}': {e}")
-        return False, "", f"Error ejecutando FFmpeg: {e}"
+        return False, "", QCoreApplication.translate("ffmpeg_setup", "Error ejecutando FFmpeg: {0}").format(e)
 
 
 def get_platform_info(variant="essentials", channel="recommended", version=None):
@@ -271,7 +272,7 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
 
         if not download_url:
             logger.error("No se pudo resolver la URL de descarga para FFmpeg.")
-            return False, "No se encontró el enlace de descarga de FFmpeg."
+            return False, QCoreApplication.translate("ffmpeg_setup", "No se encontró el enlace de descarga de FFmpeg.")
 
         ffmpeg_dir = get_managed_ffmpeg_dir()
         is_tar = download_url.endswith(".tar.xz")
@@ -372,7 +373,7 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
 
         if not exe_found:
             logger.error("No se encontró el ejecutable de FFmpeg en el paquete descargado.")
-            return False, "No se encontró el ejecutable en el paquete de FFmpeg."
+            return False, QCoreApplication.translate("ffmpeg_setup", "No se encontró el ejecutable en el paquete de FFmpeg.")
 
         # 6. Actualizar versión en config
         new_ver = get_local_version(force_check=True)

@@ -14,6 +14,7 @@ import requests
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_bin_root_dir
+from PySide6.QtCore import QCoreApplication
 
 POTPROVIDER_API_URL = "https://api.github.com/repos/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest"
 PLUGIN_ZIP_ASSET = "bgutil-ytdlp-pot-provider-rs.zip"
@@ -144,11 +145,11 @@ def download_potprovider(progress_callback=None):
 
         if not binary_url:
             logger.error(f"PotProvider: asset '{asset_name}' no encontrado en el release")
-            return False, f"Asset del binario '{asset_name}' no encontrado."
+            return False, QCoreApplication.translate("potprovider_setup", "Asset del binario '{0}' no encontrado.").format(asset_name)
 
         if not plugin_url:
             logger.error(f"PotProvider: asset '{PLUGIN_ZIP_ASSET}' no encontrado en el release")
-            return False, f"Asset del plugin '{PLUGIN_ZIP_ASSET}' no encontrado."
+            return False, QCoreApplication.translate("potprovider_setup", "Asset del plugin '{0}' no encontrado.").format(PLUGIN_ZIP_ASSET)
 
         pot_dir = get_potprovider_dir()
         plugin_dir = get_plugin_dir()
@@ -179,7 +180,7 @@ def download_potprovider(progress_callback=None):
             os.chmod(binary_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
         if not check_potprovider():
-            return False, f"El binario '{binary_name}' no se encontró después de la descarga."
+            return False, QCoreApplication.translate("potprovider_setup", "El binario '{0}' no se encontró después de la descarga.").format(binary_name)
 
         logger.info("PotProvider: binario descargado correctamente.")
 
@@ -209,7 +210,7 @@ def download_potprovider(progress_callback=None):
         os.remove(temp_plugin_zip)
 
         if not check_plugin():
-            return False, "Plugin Python no encontrado después de la extracción."
+            return False, QCoreApplication.translate("potprovider_setup", "Plugin Python no encontrado después de la extracción.")
 
         logger.info("PotProvider: setup completo (binario + plugin).")
         return True, "PO Token Provider descargado y configurado."

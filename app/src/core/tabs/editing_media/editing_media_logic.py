@@ -39,6 +39,27 @@ VALID_AUDIO_EXTS = {
 }
 VALID_EXTS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS | VALID_VIDEO_EXTS | VALID_AUDIO_EXTS
 
+FILTER_TYPE_MAP = {
+    "todos": None,
+    "all": None,
+    "imágenes": "imagen",
+    "imagenes": "imagen",
+    "images": "imagen",
+    "image": "imagen",
+    "videos": "video",
+    "video": "video",
+    "audios": "audio",
+    "audio": "audio",
+}
+
+
+def resolve_filter_type(filter_name: str | None) -> str | None:
+    """Retorna el tipo interno ('imagen', 'video', 'audio' o None para Todos)
+    a partir del identificador de filtro en cualquier idioma o capitalización."""
+    if not filter_name:
+        return None
+    return FILTER_TYPE_MAP.get(str(filter_name).strip().lower())
+
 
 def get_media_type(ext: str) -> str:
     if ext in VALID_IMAGE_EXTS or ext in VALID_VECTOR_EXTS:

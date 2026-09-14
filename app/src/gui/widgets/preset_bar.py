@@ -1,5 +1,4 @@
-# src/gui/widgets/preset_bar.py
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QCoreApplication
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -175,9 +174,13 @@ class PresetBar(QWidget):
             names = by_function.get(func_id)
             if not names:
                 continue
-            self._add_group_header(self.tr(label))
+            header_text = QCoreApplication.translate("preset_manager", label)
+            self._add_group_header(header_text)
             for name in names:
-                self.combo.addItem(f"  {name}", name)
+                display_name = QCoreApplication.translate("default_presets", name)
+                if display_name == name:
+                    display_name = self.tr(name)
+                self.combo.addItem(f"  {display_name}", name)
 
         if target:
             idx = self.combo.findData(target)

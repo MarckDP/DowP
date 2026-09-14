@@ -93,7 +93,7 @@ class ModelActionsRow(QWidget):
         # deja al botón con mínimo > máximo -- Qt lo dibuja con el alto del estilo
         # dentro del hueco más chico del layout y se le corta el borde de abajo.
         # Dejándolo libre, estos botones miden lo mismo que los del resto de la app.
-        self.btn_delete = QPushButton(_tr("Eliminar"))
+        self.btn_delete = QPushButton(QCoreApplication.translate("ModelDownloadPrompt", "Eliminar"))
         self.btn_delete.setCursor(Qt.PointingHandCursor)
         set_button_variant(self.btn_delete, "danger")
         if delete_tooltip:
@@ -101,10 +101,10 @@ class ModelActionsRow(QWidget):
         self.btn_delete.clicked.connect(self.delete_requested.emit)
         layout.addWidget(self.btn_delete, 1)
 
-        self.btn_manage = QPushButton(_tr("Administrar"))
+        self.btn_manage = QPushButton(QCoreApplication.translate("ModelDownloadPrompt", "Administrar"))
         self.btn_manage.setCursor(Qt.PointingHandCursor)
         set_button_variant(self.btn_manage, "secondary")
-        self.btn_manage.setToolTip(_tr("Abrir Ajustes > Modelos para descargar, reinstalar o importar modelos"))
+        self.btn_manage.setToolTip(QCoreApplication.translate("ModelDownloadPrompt", "Abrir Ajustes > Modelos para descargar, reinstalar o importar modelos"))
         self.btn_manage.clicked.connect(self.manage_requested.emit)
         layout.addWidget(self.btn_manage, 1)
 
@@ -161,23 +161,23 @@ def confirm_model_download(parent, display_name: str, size_bytes: int,
     `subject` es cómo llamar a lo que se baja en el título/texto ("modelo",
     "motor"); `extra_note` permite sumar una aclaración propia de quien pregunta
     (ej. que el motor de upscaling trae sus modelos adentro)."""
-    subject = subject or _tr("modelo")
+    subject = subject or QCoreApplication.translate("ModelDownloadPrompt", "modelo")
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Question)
-    box.setWindowTitle(_tr("Descargar {0}").format(subject))
-    box.setText(_tr("'{0}' no está descargado todavía.").format(display_name))
+    box.setWindowTitle(QCoreApplication.translate("ModelDownloadPrompt", "Descargar {0}").format(subject))
+    box.setText(QCoreApplication.translate("ModelDownloadPrompt", "'{0}' no está descargado todavía.").format(display_name))
 
     if size_bytes > 0:
-        note = _tr("Tamaño de la descarga: {0}").format(format_bytes(size_bytes))
+        note = QCoreApplication.translate("ModelDownloadPrompt", "Tamaño de la descarga: {0}").format(format_bytes(size_bytes))
     else:
-        note = _tr("No se pudo calcular el tamaño de la descarga por adelantado.")
-    note += _tr("\nSe guarda una sola vez: la próxima vez ya estará listo para usar.")
+        note = QCoreApplication.translate("ModelDownloadPrompt", "No se pudo calcular el tamaño de la descarga por adelantado.")
+    note += QCoreApplication.translate("ModelDownloadPrompt", "\nSe guarda una sola vez: la próxima vez ya estará listo para usar.")
     if extra_note:
         note += "\n\n" + extra_note
     box.setInformativeText(note)
 
-    btn_download = box.addButton(_tr("Descargar"), QMessageBox.AcceptRole)
-    box.addButton(_tr("Cancelar"), QMessageBox.RejectRole)
+    btn_download = box.addButton(QCoreApplication.translate("ModelDownloadPrompt", "Descargar"), QMessageBox.AcceptRole)
+    box.addButton(QCoreApplication.translate("ModelDownloadPrompt", "Cancelar"), QMessageBox.RejectRole)
     box.setDefaultButton(btn_download)
     box.exec()
     return box.clickedButton() is btn_download
@@ -292,7 +292,7 @@ class ModelStatusRow(QWidget):
     def _paint_progress(self):
         self._painted_pct = self._pending_pct
         self._set("download.svg", "estado_progreso", "#3498db",
-                  _tr("Descargando... {0}%").format(self._painted_pct))
+                  QCoreApplication.translate("ModelDownloadPrompt", "Descargando... {0}%").format(self._painted_pct))
 
     def _stop_progress(self):
         """Corta el limitador al pasar a cualquier otro estado -- si no, un

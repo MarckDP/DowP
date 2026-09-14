@@ -1,6 +1,6 @@
 # src/gui/widgets/mode_selector.py
 from PySide6.QtWidgets import QFrame, QWidget, QHBoxLayout, QPushButton
-from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve, QRect
+from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve, QRect, QT_TRANSLATE_NOOP
 from core.logger.logger_manager import logger
 
 class ModeSelector(QFrame):
@@ -8,7 +8,7 @@ class ModeSelector(QFrame):
 
     # Etiquetas por defecto: preserva 1:1 el selector de 3 botones que ya usa la pestaña
     # Avanzado (Video+Audio/Solo Audio/Solo Video) para quien no pase `labels` explicito.
-    _DEFAULT_LABELS = ("Video + Audio", "Solo Audio", "Solo Video")
+    _DEFAULT_LABELS = (QT_TRANSLATE_NOOP("ModeSelector", "Video + Audio"), QT_TRANSLATE_NOOP("ModeSelector", "Solo Audio"), QT_TRANSLATE_NOOP("ModeSelector", "Solo Video"))
     _DEFAULT_COMPACT_LABELS = ("V + A", "A", "V")
 
     def __init__(self, parent=None, labels: list[str] | None = None, compact_labels: list[str] | None = None):

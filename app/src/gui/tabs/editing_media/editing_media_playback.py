@@ -1,4 +1,5 @@
 # src/gui/tabs/editing_media/editing_media_playback.py
+from PySide6.QtCore import QCoreApplication
 import os
 import re
 import datetime
@@ -120,7 +121,7 @@ class PlaybackMixin:
 
     def _update_carousel_ui(self):
         if hasattr(self, "_selected_indexes") and len(self._selected_indexes) > 1:
-            self.lbl_carousel_status.setText(f"{self._carousel_index + 1} de {len(self._selected_indexes)}")
+            self.lbl_carousel_status.setText(QCoreApplication.translate("PlaybackMixin", "{0} de {1}").format(self._carousel_index + 1, len(self._selected_indexes)))
             self._update_send_button_state()
 
     def _update_send_button_state(self, editor_name=None):
@@ -136,7 +137,7 @@ class PlaybackMixin:
         from PySide6.QtCore import QSize
         editor_mgr = EditorIntegrationManager.get_instance()
         if not editor_mgr or not editor_mgr.active_editor:
-            self.btn_send_editor.setText(self.tr("Ningún editor conectado"))
+            self.btn_send_editor.setText(QCoreApplication.translate("PlaybackMixin", "Ningún editor conectado"))
             self.btn_send_editor.setIcon(QIcon())
             self.btn_send_editor.setEnabled(False)
             return
@@ -157,9 +158,9 @@ class PlaybackMixin:
 
         count = len(getattr(self, "_selected_indexes", []))
         if count > 1:
-            self.btn_send_editor.setText(self.tr(f"Enviar ({count})"))
+            self.btn_send_editor.setText(QCoreApplication.translate("PlaybackMixin", "Enviar ({0})").format(count))
         else:
-            self.btn_send_editor.setText(self.tr(f"Enviar"))
+            self.btn_send_editor.setText(QCoreApplication.translate("PlaybackMixin", "Enviar"))
             
         if not icon.isNull():
             self.btn_send_editor.setIcon(icon)
@@ -345,7 +346,7 @@ class PlaybackMixin:
             logger.error(f"[EditingMedia] Excepción enviando subclip al editor: {e}")
             ok = False
         if hasattr(self, "_send_editor_state"):
-            self._send_editor_state.finish(bool(ok), "Éxito" if ok else "Error")
+            self._send_editor_state.finish(bool(ok), QCoreApplication.translate("PlaybackMixin", "Éxito") if ok else "Error")
 
     def _build_send_package(self, item_data, local_path, captured_subs=None):
         """Construye el paquete a enviar al editor usando el archivo local ya resuelto en alta calidad."""
@@ -422,7 +423,7 @@ class PlaybackMixin:
             logger.error("[EditingMedia] Uno o más medios no pudieron descargarse en alta calidad y fueron omitidos del envío.")
 
         success = bool(ok) and not any_failed
-        state.finish(success, "Éxito" if success else "Error")
+        state.finish(success, QCoreApplication.translate("PlaybackMixin", "Éxito") if success else "Error")
 
     def _on_send_editor_clicked(self):
         selected_indexes = getattr(self, "_selected_indexes", [])
@@ -505,7 +506,7 @@ class PlaybackMixin:
             else:
                 main_win.tab_video.queue_widget.add_files(paths)
                 main_win.tabs.setCurrentWidget(main_win.tab_video)
-            destino = "Editor de Imagen" if target == "image" else "Herramientas Multimedia"
+            destino = QCoreApplication.translate("PlaybackMixin", "Editor de Imagen") if target == "image" else "Herramientas Multimedia"
             logger.info(f"[EditingMedia] {len(paths)} archivo(s) enviados a {destino}.")
 
         self._resolve_items_then_send(item_datas, on_done=_on_all_resolved)
@@ -866,11 +867,11 @@ class PlaybackMixin:
         if is_remote and dest_exists:
             self.btn_download.setVisible(True)
             self.btn_download.setEnabled(False)
-            self.btn_download.setToolTip(self.tr("En Disco"))
+            self.btn_download.setToolTip(QCoreApplication.translate("PlaybackMixin", "En Disco"))
         else:
             self.btn_download.setVisible(is_remote)
             self.btn_download.setEnabled(is_remote)
-            self.btn_download.setToolTip(self.tr("Descargar Medio"))
+            self.btn_download.setToolTip(QCoreApplication.translate("PlaybackMixin", "Descargar Medio"))
 
         if hasattr(self, "_update_edit_subclip_button_state"):
             has_subclips = bool(getattr(self, "_saved_subclips_cache", {}).get(path))
@@ -884,8 +885,8 @@ class PlaybackMixin:
             bucket = provider.normalize_license(raw_license) if provider else ""
 
             # Construir texto TASL
-            title = item_data.get("nombre", "Medio")
-            author = item_data.get("username", "Autor Desconocido")
+            title = item_data.get("nombre") or QCoreApplication.translate("PlaybackMixin", "Medio")
+            author = item_data.get("username") or QCoreApplication.translate("PlaybackMixin", "Autor Desconocido")
             item_id = item_data.get("id", "")
             source_url = item_data.get("url") or (f"https://freesound.org/s/{item_id}/" if item_id else "https://freesound.org")
             # El patrón de URL de perfil solo existe para Freesound; Commons no tiene un
@@ -893,45 +894,45 @@ class PlaybackMixin:
             author_url = f"https://freesound.org/people/{author}/" if source_id == "freesound" and author != "Autor Desconocido" else ""
 
             if bucket == "cc0":
-                lic_title = self.tr("Dominio Público (CC0)")
-                lic_desc = self.tr("Puedes usar este medio para cualquier propósito (incluso comercial) sin necesidad de dar créditos.")
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Dominio Público (CC0)")
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "Puedes usar este medio para cualquier propósito (incluso comercial) sin necesidad de dar créditos.")
                 lic_color = "#1DC038" # Green
                 tasl = ""
                 icon_name = "check_circle.svg"
             elif bucket == "attribution_nc":
-                lic_title = self.tr("Uso No Comercial (CC-BY-NC)")
-                lic_desc = self.tr("No puedes usar este medio en videos monetizados o proyectos comerciales. Es obligatorio dar crédito al autor.")
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Uso No Comercial (CC-BY-NC)")
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "No puedes usar este medio en videos monetizados o proyectos comerciales. Es obligatorio dar crédito al autor.")
                 lic_color = "#E67E22" # Orange
                 cc_url = "https://creativecommons.org/licenses/by-nc/4.0/"
-                tasl = self.tr('"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
+                tasl = QCoreApplication.translate("PlaybackMixin", '"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
                     title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
                 )
                 icon_name = "warning.svg"
             elif bucket == "attribution":
-                lic_title = self.tr("Requiere Atribución")
-                lic_desc = self.tr("Uso comercial y modificaciones permitidas, pero es obligatorio dar crédito al autor copiando el texto TASL.")
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Requiere Atribución")
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "Uso comercial y modificaciones permitidas, pero es obligatorio dar crédito al autor copiando el texto TASL.")
                 lic_color = "#40A9E6" # Blue
                 # Freesound normaliza todas sus variantes de Atribución a CC-BY 4.0 exacto; en
                 # Wikimedia el bucket agrupa BY/BY-SA/GFDL/FAL de varias versiones, así que en
                 # vez de asumir una URL de licencia específica (podría ser incorrecta) se enlaza
                 # a la página del archivo en Commons, que es la fuente autoritativa real.
                 cc_url = "https://creativecommons.org/licenses/by/4.0/" if source_id == "freesound" else source_url
-                tasl = self.tr('"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
+                tasl = QCoreApplication.translate("PlaybackMixin", '"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
                     title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
                 )
                 icon_name = "attribution.svg"
             else:
-                lic_title = self.tr("Licencia Desconocida")
-                lic_desc = self.tr("Revisa la licencia original antes de usar este medio.")
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Licencia Desconocida")
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "Revisa la licencia original antes de usar este medio.")
                 lic_color = "#A6ADC8" # Gray
                 tasl = ""
                 icon_name = "error.svg"
 
             self.set_license_info(lic_title, lic_desc, lic_color, tasl, icon_name)
 
-            self.metadata_header_labels["video_codec"].setText(self.tr("Usuario:"))
-            self.metadata_header_labels["video_profile"].setText(self.tr("Licencia:"))
-            self.metadata_header_labels["aspecto"].setText(self.tr("Estadísticas:"))
+            self.metadata_header_labels["video_codec"].setText(QCoreApplication.translate("PlaybackMixin", "Usuario:"))
+            self.metadata_header_labels["video_profile"].setText(QCoreApplication.translate("PlaybackMixin", "Licencia:"))
+            self.metadata_header_labels["aspecto"].setText(QCoreApplication.translate("PlaybackMixin", "Estadísticas:"))
 
             self.metadata_labels["creado"].setText("-")
             self.metadata_labels["modificado"].setText("-")
@@ -949,9 +950,9 @@ class PlaybackMixin:
             self.metadata_labels["bitrate_audio"].setText("-")
         else:
             self.license_panel.setVisible(False)
-            self.metadata_header_labels["video_codec"].setText(self.tr("Códec Video:"))
-            self.metadata_header_labels["video_profile"].setText(self.tr("Perfil Video:"))
-            self.metadata_header_labels["aspecto"].setText(self.tr("Rel. Aspecto:"))
+            self.metadata_header_labels["video_codec"].setText(QCoreApplication.translate("PlaybackMixin", "Códec Video:"))
+            self.metadata_header_labels["video_profile"].setText(QCoreApplication.translate("PlaybackMixin", "Perfil Video:"))
+            self.metadata_header_labels["aspecto"].setText(QCoreApplication.translate("PlaybackMixin", "Rel. Aspecto:"))
             
             # Obtener metadatos ricos de la cache o extraerlos
             if path not in self._metadata_cache:

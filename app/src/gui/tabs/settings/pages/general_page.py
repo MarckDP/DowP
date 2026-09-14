@@ -126,6 +126,7 @@ class GeneralPage(QWidget):
         self.lang_combo.setFixedWidth(180)
         self.lang_combo.addItem("Español", "es")
         self.lang_combo.addItem("English", "en")
+        self.lang_combo.addItem("Português (Brasil)", "pt_BR")
         
         self.lang_row.addWidget(self.lang_label)
         self.lang_row.addStretch()
@@ -367,6 +368,45 @@ class GeneralPage(QWidget):
             save_config(config)
             logger.info(f"GeneralPage: Idioma guardado: {lang_code}. Reinicio requerido.")
             self.language_changed.emit(lang_code)
+            self._prompt_language_restart()
+
+    def _prompt_language_restart(self):
+        """El idioma solo se aplica entero al arrancar: el .qm se instala una vez
+        (core/utils/i18n.py) y muchos textos son constantes de módulo ya resueltas
+        en el import, así que sin reiniciar la UI quedaría mitad en un idioma y
+        mitad en el otro. Se ofrece reiniciar en el momento."""
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(self.tr("Reinicio necesario"))
+        box.setText(self.tr("El idioma cambia al reiniciar DowP."))
+        box.setInformativeText(self.tr(
+            "La preferencia ya quedó guardada. Si sigues sin reiniciar, la interfaz "
+            "se queda en el idioma actual hasta la próxima vez que abras la aplicación."
+        ))
+        btn_restart = box.addButton(self.tr("Reiniciar ahora"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(self.tr("Más tarde"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(btn_restart)
+        try:
+            from gui.dialogs.dialogs import _apply_dialog_styles
+            _apply_dialog_styles(box)
+        except Exception as e:
+            logger.error(f"GeneralPage: no se pudieron aplicar estilos al diálogo de reinicio: {e}")
+        box.exec()
+
+        if box.clickedButton() is not btn_restart:
+            logger.info("GeneralPage: reinicio pospuesto por el usuario tras cambiar de idioma.")
+            return
+
+        from core.utils.app_restart import restart_app
+        if restart_app():
+            from PySide6.QtWidgets import QApplication
+            QApplication.instance().quit()
+        else:
+            QMessageBox.warning(
+                self,
+                self.tr("No se pudo reiniciar"),
+                self.tr("Cierra y vuelve a abrir DowP a mano para aplicar el idioma nuevo."),
+            )
 
     def on_theme_selection(self, index):
         if self._is_loading: return

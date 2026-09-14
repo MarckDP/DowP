@@ -699,7 +699,7 @@ class IntegrationsPage(QWidget):
         icon_lbl.setFixedSize(32, 32)
         self.set_icon(icon_lbl, icon_name, opacity=1.0 if is_enabled else 0.3)
         
-        checkbox = QCheckBox(f"Activar acceso directo a {app_name}")
+        checkbox = QCheckBox(self.tr("Activar acceso directo a {0}").format(app_name))
         checkbox.setChecked(is_enabled)
         checkbox.setStyleSheet("font-weight: bold; font-size: 14px;")
         
@@ -730,7 +730,7 @@ class IntegrationsPage(QWidget):
         apply_folder_browse_button_style(btn_browse, self.tr("Seleccionar ejecutable"))
         btn_browse.clicked.connect(lambda: self._browse_exe(app_id, path_input))
         
-        path_row.addWidget(QLabel("Ruta:"))
+        path_row.addWidget(QLabel(self.tr("Ruta:")))
         path_row.addWidget(path_input, 1)
         path_row.addWidget(btn_browse)
         layout.addLayout(path_row)
@@ -749,13 +749,13 @@ class IntegrationsPage(QWidget):
         sys_name = platform.system()
         if sys_name == "Darwin":
             start_dir = "/Applications"
-            filter_str = "Aplicaciones (*.app);;Todos los archivos (*)"
+            filter_str = self.tr("Aplicaciones (*.app);;Todos los archivos (*)")
         elif sys_name == "Linux":
             start_dir = "/opt/resolve/bin" if os.path.exists("/opt/resolve/bin") else "/opt"
-            filter_str = "Todos los archivos (*)"
+            filter_str = self.tr("Todos los archivos (*)")
         else:
             start_dir = "C:\\Program Files"
-            filter_str = "Ejecutables (*.exe);;Todos los archivos (*.*)"
+            filter_str = self.tr("Ejecutables (*.exe);;Todos los archivos (*.*)")
         file_path, _ = QFileDialog.getOpenFileName(self, self.tr("Seleccionar Ejecutable"), start_dir, filter_str)
         if file_path:
             file_path = os.path.normpath(file_path)
@@ -829,5 +829,5 @@ class IntegrationsPage(QWidget):
         if self.editor_mgr:
             success = self.editor_mgr.force_adobe_target(target_app)
             if not success:
-                show_info(self, self.tr("DowP Importer"), self.tr(f"No se detecta conexión con {target_app}. Asegúrate de tener la extensión abierta."))
+                show_info(self, self.tr("DowP Importer"), self.tr("No se detecta conexión con {0}. Asegúrate de tener la extensión abierta.").format(target_app))
 

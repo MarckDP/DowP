@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 
 from core.logger.logger_manager import logger
 from core.utils.paths import get_app_data_dir
+from PySide6.QtCore import QCoreApplication, QT_TRANSLATE_NOOP
 
 
 def _get_presets_path() -> str:
@@ -20,19 +21,19 @@ def _get_presets_path() -> str:
 # propósito: agregar una función nueva (ej. "gif", "ia_reescalar", "extraer_fotogramas"
 # el día que existan) es sumar una entrada aquí, no reestructurar nada de lo guardado.
 PRESET_FUNCTIONS = {
-    "convertir": "Convertir",
-    "comprimir": "Comprimir",
-    "edicion": "Edición / Proxy",
-    "gif": "GIF",
-    "audio": "Normalizar Audio",
-    "otro": "Otro",
+    "convertir": QT_TRANSLATE_NOOP("preset_manager", "Convertir"),
+    "comprimir": QT_TRANSLATE_NOOP("preset_manager", "Comprimir"),
+    "edicion": QT_TRANSLATE_NOOP("preset_manager", "Edición / Proxy"),
+    "gif": QT_TRANSLATE_NOOP("preset_manager", "GIF"),
+    "audio": QT_TRANSLATE_NOOP("preset_manager", "Normalizar Audio"),
+    "otro": QT_TRANSLATE_NOOP("preset_manager", "Otro"),
 }
 
 # Grupo (dentro del mismo combo, no un filtro aparte - ver conversación) para presets sin
 # función asignada: migrados de antes de que este campo existiera, o importados de un
 # .json que no lo traía. Nunca es algo que se elija al GUARDAR (no está en
 # PRESET_FUNCTIONS) - solo un encabezado más en el combo picker (ver PresetBar.refresh).
-UNSPECIFIED_FUNCTION_LABEL = "Preajustes de Usuario"
+UNSPECIFIED_FUNCTION_LABEL = QT_TRANSLATE_NOOP("preset_manager", "Preajustes de Usuario")
 
 
 class PresetManager(QObject):
@@ -266,7 +267,7 @@ class PresetManager(QObject):
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
-                raise ValueError("El archivo no contiene un objeto JSON")
+                raise ValueError(self.tr("El archivo no contiene un objeto JSON"))
             if "ajustes" in data and isinstance(data["ajustes"], dict):
                 name = str(data.get("nombre") or os.path.splitext(os.path.basename(file_path))[0])
                 settings = data["ajustes"]

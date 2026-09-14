@@ -1,4 +1,5 @@
 import queue
+from PySide6.QtCore import QCoreApplication
 import concurrent.futures
 import requests
 import threading
@@ -22,26 +23,26 @@ from gui.widgets.title_bar import CustomTitleBar
 from gui.tabs.advanced_process.video_details_components import RichComboBox, RichTextDelegate
 
 PLAYLIST_MODE_OPTIONS = [
-    ("Video + Audio", "video+audio"),
-    ("Solo Audio", "audio_only"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Video + Audio"), "video+audio"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Solo Audio"), "audio_only"),
 ]
 
 PLAYLIST_QUALITY_OPTIONS = [
-    ("Mejor compatible", "best_compatible"),
-    ("Mejor Calidad", "best"),
-    ("Hasta 2160p", "2160"),
-    ("Hasta 1440p", "1440"),
-    ("Hasta 1080p", "1080"),
-    ("Hasta 720p", "720"),
-    ("Hasta 480p", "480"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Mejor compatible"), "best_compatible"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Mejor Calidad"), "best"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Hasta 2160p"), "2160"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Hasta 1440p"), "1440"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Hasta 1080p"), "1080"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Hasta 720p"), "720"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Hasta 480p"), "480"),
 ]
 
 AUDIO_QUALITY_OPTIONS = [
-    ("Mejor compatible", "best_compatible"),
-    ("Mejor Calidad", "best"),
-    ("Alta (320kbps)", "320"),
-    ("Media (192kbps)", "192"),
-    ("Baja (128kbps)", "128")
+    (QCoreApplication.translate("playlist_selection_dialog", "Mejor compatible"), "best_compatible"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Mejor Calidad"), "best"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Alta (320kbps)"), "320"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Media (192kbps)"), "192"),
+    (QCoreApplication.translate("playlist_selection_dialog", "Baja (128kbps)"), "128"),
 ]
 
 
@@ -345,15 +346,11 @@ class PlaylistSelectionDialog(QDialog):
         self.quality_combo.clear()
         if mode == "video+audio":
             for label, value in PLAYLIST_QUALITY_OPTIONS:
-                display_text = self.tr(label)
-                if value == "best_compatible":
-                    display_text += " ✨"
+                display_text = label + " ✨" if value == "best_compatible" else label
                 self.quality_combo.addItem(display_text, value)
         else:
             for label, value in AUDIO_QUALITY_OPTIONS:
-                display_text = self.tr(label)
-                if value == "best_compatible":
-                    display_text += " ✨"
+                display_text = label + " ✨" if value == "best_compatible" else label
                 self.quality_combo.addItem(display_text, value)
 
     def _restore_initial_state(self):
@@ -443,7 +440,7 @@ class PlaylistSelectionDialog(QDialog):
 
     def _update_count(self):
         selected = sum(1 for v in self.check_vars.values() if v)
-        self.count_label.setText(self.tr(f"{selected} de {len(self.entries)} seleccionados"))
+        self.count_label.setText(self.tr("{0} de {1} seleccionados").format(selected, len(self.entries)))
 
     def _get_thumbnail_cache(self):
         """Devuelve el caché actual de miniaturas del worker."""

@@ -230,7 +230,7 @@ class ModelRow(QFrame):
 
         if self.is_installed():
             size = get_folder_size(self.path_for_size)
-            self.lbl_status.setText(f"{self.tr('Instalado')} ({format_bytes(size)})")
+            self.lbl_status.setText(self.tr("Instalado ({0})").format(format_bytes(size)))
             self.lbl_status.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
             if not self.no_download:
                 self.btn_download.setIcon(get_colored_svg_icon("check_circle.svg", "#000000", size=18, disabled_color_hex=dis_color))

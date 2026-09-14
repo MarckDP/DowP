@@ -93,7 +93,7 @@ class VolumeControlWidget(QWidget):
         # 1. Botón Mute / Alternador de Volumen
         self.btn_mute = QPushButton(self)
         self.btn_mute.setFixedSize(24, 24)
-        self.btn_mute.setToolTip("Silenciar / Activar sonido")
+        self.btn_mute.setToolTip(self.tr("Silenciar / Activar sonido"))
         self.btn_mute.clicked.connect(self.toggle_mute)
         self.btn_mute.installEventFilter(self)
         layout.addWidget(self.btn_mute)

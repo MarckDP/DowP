@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtCore import Qt, QSize, Signal, QT_TRANSLATE_NOOP
 from PySide6.QtGui import QImage, QPixmap, QIcon, QColor
 from PySide6.QtWidgets import QApplication
 
@@ -352,7 +352,7 @@ class QuickDownloadRow(QFrame):
         if self.is_draggable():
             self.setToolTip(self.tr("Arrastra este elemento a otra aplicación para importar todos sus archivos")
                             if hasattr(self, "tr") else
-                            "Arrastra este elemento a otra aplicación para importar todos sus archivos")
+                            self.tr("Arrastra este elemento a otra aplicación para importar todos sus archivos"))
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -435,17 +435,17 @@ class QuickDownloadRow(QFrame):
     # Mismo mapeo estado -> token de tema que usa QueueItemCard en queue_panel.py,
     # para que Modo Rápido y LOTES se vean consistentes.
     _STATUS_TOKENS = {
-        "Completado": ("estado_exito", "#40d66b"),
-        "Error": ("estado_error", "#ff6b5f"),
-        "Cancelado": ("estado_error", "#ff6b5f"),
-        "Omitido": ("estado_aviso", "#d8c94a"),
-        "Descargando": ("estado_progreso", "#3498db"),
-        "Analizando": ("estado_progreso", "#3498db"),
-        "Procesando": ("estado_progreso", "#3498db"),
-        "Preparando": ("estado_progreso", "#3498db"),
-        "Recodificando": ("estado_progreso", "#3498db"),
-        "En espera": ("estado_espera", "#aaaaaa"),
-        "En cola": ("estado_espera", "#aaaaaa"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Completado"): ("estado_exito", "#40d66b"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Error"): ("estado_error", "#ff6b5f"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Cancelado"): ("estado_error", "#ff6b5f"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Omitido"): ("estado_aviso", "#d8c94a"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Descargando"): ("estado_progreso", "#3498db"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Analizando"): ("estado_progreso", "#3498db"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Procesando"): ("estado_progreso", "#3498db"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Preparando"): ("estado_progreso", "#3498db"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "Recodificando"): ("estado_progreso", "#3498db"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "En espera"): ("estado_espera", "#aaaaaa"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "En cola"): ("estado_espera", "#aaaaaa"),
     }
 
     @staticmethod
@@ -603,7 +603,7 @@ class QuickDownloadRow(QFrame):
         self.progress_bar.setRange(0, 0)
         self.percent_lbl.setText("")
         verb = self.tr("Cortando") if phase == "cutting" else self.tr("Descargando")
-        msg = f"{verb} {self.tr('fragmento')} {fragment_index} {self.tr('de')} {fragment_count}"
+        msg = self.tr("{0} fragmento {1} de {2}").format(verb, fragment_index, fragment_count)
         self.info_lbl.setText(msg)
         self.info_lbl.setToolTip(msg)
         self.status_lbl.setText(self.tr("Procesando"))
@@ -757,7 +757,7 @@ class PlaylistGroupRow(QFrame):
         self.title_lbl.setToolTip(title)
         self.title_lbl.setStyleSheet(
             f"color: {get_theme_token('texto_principal', '#dddddd')}; font-weight: bold;")
-        self.status_lbl = QLabel(f"0 {self.tr('de')} {item_count}")
+        self.status_lbl = QLabel(self.tr("{0} de {1}").format(0, item_count))
         self.status_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.status_lbl.setStyleSheet(
             f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
@@ -862,7 +862,7 @@ class PlaylistGroupRow(QFrame):
         self.setToolTip(
             (self.tr("Arrastra la playlist a otra aplicación para importar sus archivos")
              if hasattr(self, "tr") else
-             "Arrastra la playlist a otra aplicación para importar sus archivos")
+             self.tr("Arrastra la playlist a otra aplicación para importar sus archivos"))
             if arrastrable else "")
 
     def mousePressEvent(self, event):
@@ -946,9 +946,9 @@ class PlaylistGroupRow(QFrame):
             completados = sum(1 for r in self._rows if getattr(r, "_is_completed", False))
             con_error = sum(1 for r in self._rows if getattr(r, "_is_error", False))
 
-            texto = f"{completados} {self.tr('de')} {total}"
+            texto = self.tr("{0} de {1}").format(completados, total)
             if con_error:
-                texto += f" · {con_error} {self.tr('con error')}"
+                texto += self.tr(" · {0} con error").format(con_error)
             self.status_lbl.setText(texto)
 
             self._update_drag_affordance()

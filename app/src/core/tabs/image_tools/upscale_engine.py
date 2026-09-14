@@ -1,4 +1,5 @@
 # src/core/tabs/image_tools/upscale_engine.py
+from PySide6.QtCore import QCoreApplication
 """Motor de ejecución de "Reescalar IA" -- corre los binarios NCNN-Vulkan (Waifu2x/
 SRMD/Upscayl) ya descargados vía Ajustes > Modelos (ver core/setup/models_setup.py).
 Comandos exactos portados de DowP1 (video_upscaler.pyc decompilado, método
@@ -67,7 +68,7 @@ def _valid_scales(engine: str, model_key: str) -> list[int]:
     """Escalas que el binario acepta de verdad para esta combinación (ver el bloque
     de escalas en core/constants.py). Vacío = sin lista cerrada (Upscayl)."""
     if engine == "Waifu2x":
-        info = WAIFU2X_MODELS.get(model_key) or WAIFU2X_MODELS["CU-Net (Alta Calidad)"]
+        info = WAIFU2X_MODELS.get(model_key) or next(iter(WAIFU2X_MODELS.values()))
         return [_scale_int(s) for s in info["scales"]]
     if engine == "SRMD":
         info = SRMD_MODELS.get(model_key)
@@ -174,11 +175,11 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
     engine = options.get("upscale_engine")
     tool_info = UPSCALING_TOOLS.get(engine)
     if tool_info is None:
-        return False, f"Motor de reescalado desconocido: {engine}"
+        return False, QCoreApplication.translate("upscale_engine", "Motor de reescalado desconocido: {0}").format(engine)
 
     exe = get_engine_exe_path(tool_info)
     if not exe or not os.path.exists(exe):
-        return False, f"'{tool_info['name']}' no está instalado -- ve a Ajustes > Modelos para descargarlo."
+        return False, QCoreApplication.translate("upscale_engine", "'{0}' no está instalado -- ve a Ajustes > Modelos para descargarlo.").format(tool_info["name"])
 
     cmd = _build_cmd(exe, input_path, output_path, options)
     logger.info(f"Reescalar IA: {' '.join(cmd)}")
@@ -196,7 +197,7 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
     except Exception as e:
-        return False, f"No se pudo iniciar el motor '{tool_info['name']}': {e}"
+        return False, QCoreApplication.translate("upscale_engine", "No se pudo iniciar el motor '{0}': {1}").format(tool_info["name"], e)
 
     if progress_callback:
         progress_callback(0.0 if reports_progress else None)
@@ -230,11 +231,11 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
             if cancellation_event and cancellation_event.is_set():
                 proc.kill()
                 proc.wait(timeout=2.0)
-                return False, "Cancelado por el usuario."
+                return False, QCoreApplication.translate("upscale_engine", "Cancelado por el usuario.")
             time.sleep(_POLL_INTERVAL_SEC)
     except Exception as e:
         proc.kill()
-        return False, f"Error esperando al motor '{tool_info['name']}': {e}"
+        return False, QCoreApplication.translate("upscale_engine", "Error esperando al motor '{0}': {1}").format(tool_info["name"], e)
 
     proc.wait()
     reader_thread.join(timeout=2.0)
@@ -243,16 +244,17 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
     if proc.returncode != 0:
         tail = stderr_output[-500:]
         if any(hint in stderr_output for hint in _VULKAN_OOM_HINTS):
-            return False, (
-                f"'{tool_info['name']}' se quedó sin memoria de GPU -- prueba bajar el "
-                f"Tile Size a 128 o 64. Detalle: {tail}"
-            )
-        return False, f"'{tool_info['name']}' falló (código {proc.returncode}): {tail}"
+            return False, QCoreApplication.translate(
+                "upscale_engine",
+                "'{0}' se quedó sin memoria de GPU -- prueba bajar el "
+                "Tile Size a 128 o 64. Detalle: {1}"
+            ).format(tool_info["name"], tail)
+        return False, QCoreApplication.translate("upscale_engine", "'{0}' falló (código {1}): {2}").format(tool_info["name"], proc.returncode, tail)
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) < 100:
-        return False, f"'{tool_info['name']}' no generó una salida válida."
+        return False, QCoreApplication.translate("upscale_engine", "'{0}' no generó una salida válida.").format(tool_info["name"])
 
     if progress_callback and reports_progress:
         progress_callback(100.0)
 
-    return True, "Reescalado completado."
+    return True, QCoreApplication.translate("upscale_engine", "Reescalado completado.")

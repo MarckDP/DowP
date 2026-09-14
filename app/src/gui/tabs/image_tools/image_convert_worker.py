@@ -57,7 +57,7 @@ class ImageConvertWorker(QThread):
     def _desired_output_path(self, input_path: str) -> str:
         fmt = self.options.get("format", "No Convertir")
         input_ext = os.path.splitext(input_path)[1].lower()
-        if fmt == "No Convertir":
+        if fmt == self.tr("No Convertir"):
             ext = input_ext if input_ext in _PASSTHROUGH_KEEP_EXTS else ".png"
         else:
             ext = _EXT_BY_FORMAT.get(fmt, ".png")

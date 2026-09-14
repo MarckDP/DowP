@@ -18,6 +18,7 @@ import requests
 from core.constants import REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES
 from core.logger.logger_manager import logger
 from core.utils.paths import get_models_dir
+from PySide6.QtCore import QCoreApplication
 
 
 def _current_platform() -> str:
@@ -114,9 +115,9 @@ def download_rembg_model(model_info: dict, progress_callback=None) -> tuple[bool
         os.rename(part_path, target_path)
 
         if not is_rembg_model_installed(model_info):
-            return False, "El archivo descargado quedó vacío o incompleto."
+            return False, QCoreApplication.translate("models_setup", "El archivo descargado quedó vacío o incompleto.")
         logger.info(f"Modelo rembg instalado en {target_path}")
-        return True, "Modelo descargado correctamente."
+        return True, QCoreApplication.translate("models_setup", "Modelo descargado correctamente.")
     except Exception as e:
         logger.error(f"Error descargando modelo rembg '{model_info.get('file')}': {e}")
         try:
@@ -211,11 +212,11 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
 
     display_name = (display_name or "").strip()
     if not display_name:
-        return False, "El modelo necesita un nombre."
+        return False, QCoreApplication.translate("models_setup", "El modelo necesita un nombre.")
     if not source_path or not os.path.isfile(source_path):
-        return False, f"No se encontró el archivo: {source_path}"
+        return False, QCoreApplication.translate("models_setup", "No se encontró el archivo: {0}").format(source_path)
     if not source_path.lower().endswith(".onnx"):
-        return False, "El archivo elegido no es un .onnx."
+        return False, QCoreApplication.translate("models_setup", "El archivo elegido no es un .onnx.")
 
     target_dir = os.path.join(get_models_dir(), _CUSTOM_REMBG_FOLDER)
     os.makedirs(target_dir, exist_ok=True)
@@ -237,7 +238,7 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
             shutil.copy2(source_path, target_path)
     except Exception as e:
         logger.error(f"Modelos IA: no se pudo copiar el modelo personalizado: {e}")
-        return False, f"No se pudo copiar el archivo: {e}"
+        return False, QCoreApplication.translate("models_setup", "No se pudo copiar el archivo: {0}").format(e)
 
     height, width = input_size
     cfg = get_config()
@@ -251,7 +252,7 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
     cfg[_CUSTOM_REMBG_CONFIG_KEY] = custom
     save_config(cfg)
     logger.info(f"Modelos IA: modelo personalizado importado '{display_name}' ({filename}, input_size={input_size})")
-    return True, "Modelo importado correctamente."
+    return True, QCoreApplication.translate("models_setup", "Modelo importado correctamente.")
 
 
 def delete_custom_rembg_model(display_name: str) -> bool:
@@ -438,7 +439,7 @@ def download_upscaling_engine(tool_info: dict, progress_callback=None) -> tuple[
     try:
         url = _platform_value(tool_info["url"])
         if not url:
-            return False, f"'{tool_info['name']}' no tiene una build disponible para este sistema operativo."
+            return False, QCoreApplication.translate("models_setup", "'{0}' no tiene una build disponible para este sistema operativo.").format(tool_info["name"])
 
         dest_dir = _engine_dir(tool_info)
         has_models_zip = bool(tool_info.get("models_url"))
@@ -457,7 +458,7 @@ def download_upscaling_engine(tool_info: dict, progress_callback=None) -> tuple[
             _download_upscayl_legacy_models(os.path.join(dest_dir, "models"), progress_callback)
 
         if not is_upscaling_engine_installed(tool_info):
-            return False, f"No se encontró {_platform_value(tool_info['exe'])} tras la instalación."
+            return False, QCoreApplication.translate("models_setup", "No se encontró {0} tras la instalación.").format(_platform_value(tool_info["exe"]))
 
         if _current_platform() != "windows":
             # Los binarios de macOS/Linux necesitan el bit +x -- zipfile no siempre
@@ -467,7 +468,7 @@ def download_upscaling_engine(tool_info: dict, progress_callback=None) -> tuple[
             os.chmod(exe_path, 0o755)
 
         logger.info(f"Motor '{tool_info['name']}' instalado en {dest_dir}")
-        return True, "Motor instalado correctamente."
+        return True, QCoreApplication.translate("models_setup", "Motor instalado correctamente.")
     except Exception as e:
         logger.error(f"Error instalando motor de upscaling '{tool_info.get('name')}': {e}")
         return False, str(e)

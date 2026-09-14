@@ -220,13 +220,13 @@ class EditorAppWidget(QWidget):
 
     def _update_tooltip(self):
         if self._is_launching:
-            self.setToolTip(f"{self.app_name} (Iniciando...)")
+            self.setToolTip(self.tr("{0} (Iniciando...)").format(self.app_name))
         elif self._state == 3:
-            self.setToolTip(f"{self.app_name} (Conectado y Vinculado)")
+            self.setToolTip(self.tr("{0} (Conectado y Vinculado)").format(self.app_name))
         elif self._state == 2:
-            self.setToolTip(f"{self.app_name} (Abierto - Sin vincular)")
+            self.setToolTip(self.tr("{0} (Abierto - Sin vincular)").format(self.app_name))
         else:
-            self.setToolTip(f"{self.app_name} (Cerrado - Clic para abrir)")
+            self.setToolTip(self.tr("{0} (Cerrado - Clic para abrir)").format(self.app_name))
 
     def enterEvent(self, event):
         self._is_hovered = True
@@ -308,13 +308,13 @@ class EditorStatusCornerWidget(QWidget):
         self.btn_toggle.setCheckable(True)
         self.btn_toggle.setChecked(True)
         self.btn_toggle.setFixedSize(QSize(20, 20))
-        self.btn_toggle.setToolTip("Auto-enviar")
+        self.btn_toggle.setToolTip(self.tr("Auto-enviar"))
 
         # 2. Botón de Ajustes (más grande, separado a la derecha)
         self.btn_settings = HoverIconButton(normal_size=(25, 25), hover_size=(29, 29))
         self.btn_settings.setFixedSize(QSize(38, 38))
         self.btn_settings.setIcon(QIcon(os.path.join(self.icons_dir, "settings.svg")))
-        self.btn_settings.setToolTip("Ajustes")
+        self.btn_settings.setToolTip(self.tr("Ajustes"))
 
         # Punto rojo de "hay una actualización" -- hijo del propio botón para no
         # necesitar reposicionarlo si el layout cambia; oculto hasta que
@@ -436,7 +436,7 @@ class EditorStatusCornerWidget(QWidget):
         else:
             if self._active_editor:
                 self.btn_toggle.setIcon(self._led_green)
-                self.btn_toggle.setToolTip(self.tr(f"Auto-enviar a {self._active_editor}: ACTIVO Y CONECTADO"))
+                self.btn_toggle.setToolTip(self.tr("Auto-enviar a {0}: ACTIVO Y CONECTADO").format(self._active_editor))
             elif any(self._process_status.values()):
                 self.btn_toggle.setIcon(self._led_yellow)
                 self.btn_toggle.setToolTip(self.tr("Auto-enviar: Editor detectado (sin vincular)"))
@@ -458,7 +458,7 @@ class EditorStatusCornerWidget(QWidget):
         menu.exec(global_pos)
 
     def _open_integration_settings(self):
-        self.main_window.settings_overlay.open_page(7)
+        self.main_window.settings_overlay.open_page(6)
 
     def on_app_icon_clicked(self, widget):
         import subprocess
@@ -491,13 +491,13 @@ class EditorStatusCornerWidget(QWidget):
                     widget.stop_launching_animation()
             else:
                 from gui.dialogs.dialogs import show_warning
-                show_warning(self.main_window, "Ruta no encontrada", f"No se encontró el ejecutable en:\n{exe_path}\nConfigura la ruta en Ajustes -> Integraciones.")
+                show_warning(self.main_window, self.tr("Ruta no encontrada"), self.tr("No se encontró el ejecutable en:\n{0}\nConfigura la ruta en Ajustes -> Integraciones.").format(exe_path))
         elif state == 2:
             if hasattr(self, 'editor_manager') and self.editor_manager:
                 success = self.editor_manager.force_adobe_target(app_id)
                 if not success:
                     from gui.dialogs.dialogs import show_info
-                    show_info(self.main_window, "DowP Importer", "La extensión no está respondiendo. Abre el panel de DowP en tu editor para conectar.")
+                    show_info(self.main_window, "DowP Importer", self.tr("La extensión no está respondiendo. Abre el panel de DowP en tu editor para conectar."))
         elif state == 3:
             if hasattr(self, 'editor_manager') and self.editor_manager:
                 self.editor_manager.force_adobe_target(None)
@@ -568,7 +568,6 @@ class SettingsModalOverlay(QWidget):
         buttons = [
             self.settings_tab.btn_general,
             self.settings_tab.btn_memory_cache,
-            self.settings_tab.btn_network,
             self.settings_tab.btn_downloads,
             self.settings_tab.btn_cookies,
             self.settings_tab.btn_deps,
@@ -639,7 +638,7 @@ class MainWindow(QMainWindow):
         initial_theme = config.get("theme", "dark")
 
         version = QApplication.instance().applicationVersion()
-        self.setWindowTitle(self.tr(f"DowP {version}"))
+        self.setWindowTitle(f"DowP {version}")
         self.setMinimumSize(800, 600)
         self.resize(1100, 750)
         self.setStyleSheet(load_stylesheet(initial_theme))

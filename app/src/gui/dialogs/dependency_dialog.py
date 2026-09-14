@@ -335,13 +335,13 @@ class DependencyDialog(QDialog):
         widgets["progress_bar"].setValue(0)
         widgets["progress_bar"].show()
         
-        self.status_message.setText(self.tr(f"Descargando {widgets['name']}..."))
+        self.status_message.setText(self.tr("Descargando {0}...").format(widgets["name"]))
 
     @Slot(str, int)
     def on_dep_progress(self, dep_id, percent):
         """Se activa al recibir progreso de la descarga."""
         widgets = self.dep_widgets[dep_id]
-        widgets["status_lbl"].setText(self.tr(f"Descargando... {percent}%"))
+        widgets["status_lbl"].setText(self.tr("Descargando... {0}%").format(percent))
         widgets["progress_bar"].setValue(percent)
 
     @Slot(str, bool, str)
@@ -351,7 +351,7 @@ class DependencyDialog(QDialog):
         widgets["progress_bar"].hide()
         
         if success:
-            widgets["status_lbl"].setText(self.tr(f"Instalada (v{version_or_msg})"))
+            widgets["status_lbl"].setText(self.tr("Instalada (v{0})").format(version_or_msg))
             widgets["status_lbl"].setStyleSheet(f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px; font-weight: bold;")
         else:
             widgets["status_lbl"].setText(self.tr("Error al instalar"))

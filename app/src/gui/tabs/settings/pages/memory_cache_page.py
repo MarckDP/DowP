@@ -59,7 +59,7 @@ class CacheCard(QFrame):
 
     def update_stats(self, file_count: int, size_bytes: int):
         formatted_size = format_bytes(size_bytes)
-        self.lbl_stats.setText(f"{file_count} archivos  |  Tamaño: {formatted_size}")
+        self.lbl_stats.setText(self.tr("{0} archivos  |  Tamaño: {1}").format(file_count, formatted_size))
 
 
 class FutureCacheCard(QFrame):
@@ -387,7 +387,7 @@ class MemoryCachePage(QWidget):
 
         self.lbl_total_size.setText(formatted_total)
         self.lbl_total_details.setText(
-            self.tr(f"Archivos acumulados en caché: {total_files}  •  Almacenamiento total: {formatted_total}")
+            self.tr("Archivos acumulados en caché: {0}  •  Almacenamiento total: {1}").format(total_files, formatted_total)
         )
 
         # Actualizar medidor (barra visual)
@@ -427,7 +427,7 @@ class MemoryCachePage(QWidget):
         reply = QMessageBox.question(
             self,
             self.tr("Confirmar Limpieza"),
-            self.tr(f"¿Estás seguro de que deseas vaciar la '{name}'?"),
+            self.tr("¿Estás seguro de que deseas vaciar la '{0}'?").format(name),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
@@ -437,7 +437,7 @@ class MemoryCachePage(QWidget):
             QMessageBox.information(
                 self,
                 self.tr("Caché Limpiada"),
-                self.tr(f"Se ha limpiado la '{name}' correctamente.\nSe eliminaron {res.get('files_removed', 0)} archivos y se liberaron {freed_str}.")
+                self.tr("Se ha limpiado la '{0}' correctamente.\nSe eliminaron {1} archivos y se liberaron {2}.").format(name, res.get('files_removed', 0), freed_str)
             )
             self.refresh_stats()
 
@@ -456,7 +456,7 @@ class MemoryCachePage(QWidget):
                 QMessageBox.information(
                     self,
                     self.tr("Caché Total Limpiada"),
-                    self.tr(f"Limpieza total completada con éxito.\nSe eliminaron {res.get('files_removed', 0)} archivos y se liberaron {res.get('formatted_freed', '0 B')}.")
+                    self.tr("Limpieza total completada con éxito.\nSe eliminaron {0} archivos y se liberaron {1}.").format(res.get('files_removed', 0), res.get('formatted_freed', '0 B'))
                 )
                 self.refresh_stats()
 
@@ -472,7 +472,7 @@ class MemoryCachePage(QWidget):
         from core.utils.config_manager import get_config
         current_dir = get_config().get("default_web_download_dir", "")
         default_placeholder = os.path.expanduser("~/Downloads")
-        self.download_dir_input.setPlaceholderText(self.tr(f"(Por defecto: {default_placeholder})"))
+        self.download_dir_input.setPlaceholderText(self.tr("(Por defecto: {0})").format(default_placeholder))
         if self.download_dir_input.text() != current_dir:
             self.download_dir_input.setText(current_dir)
 
@@ -502,7 +502,7 @@ class MemoryCachePage(QWidget):
         from core.utils.paths import get_subclips_dir
         current_dir = get_config().get("default_subclip_dir", "")
         default_path = get_subclips_dir()
-        self.subclip_dir_input.setPlaceholderText(self.tr(f"(Por defecto: {default_path})"))
+        self.subclip_dir_input.setPlaceholderText(self.tr("(Por defecto: {0})").format(default_path))
         if self.subclip_dir_input.text() != current_dir:
             self.subclip_dir_input.setText(current_dir)
         self._compute_subclip_dir_stats()
@@ -530,7 +530,7 @@ class MemoryCachePage(QWidget):
             except Exception as e:
                 logger.error(f"MemoryCachePage: Error calculando tamaño de la carpeta de subclips: {e}")
 
-        self.lbl_subclip_stats.setText(f"{file_count} archivos  |  Tamaño: {format_bytes(total_size)}")
+        self.lbl_subclip_stats.setText(self.tr("{0} archivos  |  Tamaño: {1}").format(file_count, format_bytes(total_size)))
         self.btn_clear_subclips.setEnabled(file_count > 0)
 
     def on_clear_subclips_clicked(self):
@@ -564,12 +564,12 @@ class MemoryCachePage(QWidget):
             self,
             self.tr("Borrar subclips físicos"),
             self.tr(
-                f"Vas a eliminar permanentemente {file_count} subclips guardados en esta carpeta ({formatted_size}).\n\n"
+                "Vas a eliminar permanentemente {0} subclips guardados en esta carpeta ({1}).\n\n"
                 "Estos son archivos de medios reales, no una caché regenerable: si ya usaste alguno en un "
                 "proyecto de edición (Premiere, DaVinci, etc.) que no esté conectado en vivo a DowP en este "
                 "momento, ese proyecto se quedará con el enlace roto al perder el archivo.\n\n"
                 "¿Deseas continuar?"
-            ),
+            ).format(file_count, formatted_size),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
@@ -592,7 +592,7 @@ class MemoryCachePage(QWidget):
         QMessageBox.information(
             self,
             self.tr("Subclips Borrados"),
-            self.tr(f"Se eliminaron {removed} archivos y se liberaron {format_bytes(freed)}.")
+            self.tr("Se eliminaron {0} archivos y se liberaron {1}.").format(removed, format_bytes(freed))
         )
         self._compute_subclip_dir_stats()
 

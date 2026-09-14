@@ -3,7 +3,7 @@ import os
 import glob
 import re
 import threading
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QCoreApplication
 from PySide6.QtWidgets import QFileDialog
 from core.logger.logger_manager import logger
 from core.constants import LANGUAGE_ORDER, DEFAULT_PRIORITY
@@ -47,7 +47,7 @@ class SubtitleController(QObject):
         
         file_path, selected_filter = QFileDialog.getSaveFileName(
             self.tab,
-            self.tab.tr("Guardar subtítulo como"),
+            QCoreApplication.translate("AdvancedProcessTab", "Guardar subtítulo como"),
             os.path.join(self.tab.output_options.output_path_input.text(), default_filename),
             f"Subtitles (*.{output_ext});;All Files (*)",
             options=QFileDialog.Option(0) # Usar opciones por defecto que incluyen confirmación
@@ -84,7 +84,7 @@ class SubtitleController(QObject):
         }
 
         self.tab.subtitle_options.btn_download_subtitles.setEnabled(False)
-        self.tab.output_options.set_progress(0, self.tab.tr("Bajando subtítulos..."), "running")
+        self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Bajando subtítulos..."), "running")
         if self.tab.taskbar_manager:
             self.tab.taskbar_manager.set_state("indeterminate")
             
@@ -102,14 +102,14 @@ class SubtitleController(QObject):
                     val = float(p_str)
                     speed = strip_ansi_codes(d.get('_speed_str', '')).strip() or '...'
                     eta = strip_ansi_codes(d.get('_eta_str', '')).strip() or '...'
-                    msg = f"Bajando subtítulos... {int(val)}% — {speed} — ETA: {eta}"
+                    msg = QCoreApplication.translate("AdvancedProcessTab", "Bajando subtítulos... {0}% — {1} — ETA: {2}").format(int(val), speed, eta)
                     self.tab.output_options.set_progress(int(val), msg, "downloading")
                     if self.tab.taskbar_manager:
                         self.tab.taskbar_manager.set_value(int(val))
                 except Exception:
                     pass
             elif d.get("status") == "finished":
-                self.tab.output_options.set_progress(100, self.tab.tr("Procesando subtítulos..."), "downloading")
+                self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Procesando subtítulos..."), "downloading")
 
         def on_sub_finished(success, message):
             self.tab._is_downloading = False
@@ -119,10 +119,10 @@ class SubtitleController(QObject):
                 
             if success:
                 self.process_downloaded_subtitles(output_dir, self._subtitle_request_data)
-                self.tab.output_options.set_progress(100, self.tab.tr("Subtítulos descargados con éxito"), "done")
+                self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Subtítulos descargados con éxito"), "done")
                 logger.info("AdvancedProcessTab: Descarga de subtítulos directa finalizada con éxito.")
             else:
-                self.tab.output_options.set_progress(0, self.tab.tr(f"Error al bajar subtítulos: {message}"), "wait")
+                self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error al bajar subtítulos: {0}").format(message), "wait")
                 logger.error(f"AdvancedProcessTab: Error en descarga de subtítulos: {message}")
                 self._subtitle_target_path = None
                 self._subtitle_request_data = None
@@ -273,14 +273,14 @@ class SubtitleController(QObject):
         auto_subs = data.get('automatic_captions') or {}
         
         if not subs and not auto_subs:
-            sub_combo.addItem(self.tab.tr("Sin subtítulos disponibles"))
+            sub_combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "Sin subtítulos disponibles"))
             sub_combo.setEnabled(False)
             self.tab.subtitle_options.btn_download_subtitles.setEnabled(False)
             return
             
         sub_combo.setEnabled(True)
         self.tab.subtitle_options.btn_download_subtitles.setEnabled(True)
-        sub_combo.addItem(self.tab.tr("Seleccionar idioma..."), None)
+        sub_combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "Seleccionar idioma..."), None)
         
         # Merge unique languages
         all_langs = {}
@@ -395,12 +395,14 @@ class SubtitleController(QObject):
         restore_idx = -1
         
         for e in manual_exts:
-            fmt_combo.addItem(f"{e.upper()} (Manual)", {"ext": e, "auto": False})
+            manual_label = QCoreApplication.translate("AdvancedProcessTab", "{0} (Manual)").format(e.upper())
+            fmt_combo.addItem(manual_label, {"ext": e, "auto": False})
             if e == current_ext and current_is_auto is False:
                 restore_idx = fmt_combo.count() - 1
             
         for e in auto_exts:
-            fmt_combo.addItem(f"{e.upper()} (Automático)", {"ext": e, "auto": True})
+            auto_label = QCoreApplication.translate("AdvancedProcessTab", "{0} (Automático)").format(e.upper())
+            fmt_combo.addItem(auto_label, {"ext": e, "auto": True})
             if e == current_ext and current_is_auto is True:
                 restore_idx = fmt_combo.count() - 1
 
@@ -409,7 +411,7 @@ class SubtitleController(QObject):
             has_auto_srt = any(e.lower() == "srt" for e in auto_exts)
             if not has_manual_srt and source_manual_exts:
                 source_ext = source_manual_exts[0]
-                fmt_combo.addItem(self.tab.tr("Convertir a SRT (Manual)"), {
+                fmt_combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "Convertir a SRT (Manual)"), {
                     "ext": source_ext,
                     "output_ext": "srt",
                     "auto": False
@@ -418,7 +420,7 @@ class SubtitleController(QObject):
                     restore_idx = fmt_combo.count() - 1
             if not has_auto_srt and source_auto_exts:
                 source_ext = source_auto_exts[0]
-                fmt_combo.addItem(self.tab.tr("Convertir a SRT (Automático)"), {
+                fmt_combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "Convertir a SRT (Automático)"), {
                     "ext": source_ext,
                     "output_ext": "srt",
                     "auto": True
@@ -434,7 +436,7 @@ class SubtitleController(QObject):
             
         # Si no quedan formatos tras el filtrado (ej: modo recorte activo pero no hay srt/vtt)
         if fmt_combo.count() == 0:
-            fmt_combo.addItem(self.tab.tr("No compatible con corte"))
+            fmt_combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "No compatible con corte"))
             fmt_combo.setEnabled(False)
         else:
             fmt_combo.setEnabled(True)

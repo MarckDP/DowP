@@ -7,7 +7,7 @@ salida + sus opciones + destino) porque Redimensionar es una operación de tama�
 no de codificación -- mismo criterio que Canvas/Reescalar IA/Eliminar Fondo: un
 botón más de la franja superior con su propio popover (ver popover_button.py)."""
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QSpinBox
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QT_TRANSLATE_NOOP
 
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
@@ -18,13 +18,13 @@ from core.constants import INTERPOLATION_METHODS
 # None = "No escalar" (preset por defecto, equivale a Redimensionar desactivado).
 # "custom" = habilita ancho/alto/proporción editables a mano ("Personalizado...").
 _PRESETS = [
-    ("No escalar (Original)", None),
-    ("4K UHD (Máx: 3840×2160)", (3840, 2160)),
-    ("2K QHD (Máx: 2560×1440)", (2560, 1440)),
-    ("1080p FHD (Máx: 1920×1080)", (1920, 1080)),
-    ("720p HD (Máx: 1280×720)", (1280, 720)),
-    ("480p SD (Máx: 854×480)", (854, 480)),
-    ("Personalizado...", "custom"),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "No escalar (Original)"), None),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "4K UHD (Máx: 3840×2160)"), (3840, 2160)),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "2K QHD (Máx: 2560×1440)"), (2560, 1440)),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "1080p FHD (Máx: 1920×1080)"), (1920, 1080)),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "720p HD (Máx: 1280×720)"), (1280, 720)),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "480p SD (Máx: 854×480)"), (854, 480)),
+    (QT_TRANSLATE_NOOP("ResizePopoverContent", "Personalizado..."), "custom"),
 ]
 
 
@@ -132,7 +132,7 @@ class ResizePopoverContent(QFrame):
 
     def get_settings(self) -> dict:
         value = self._current_preset_value()
-        interpolation_method = self.combo_interpolation.currentData() or "Lanczos (Mejor Calidad)"
+        interpolation_method = self.combo_interpolation.currentData() or self.tr("Lanczos (Mejor Calidad)")
 
         if value is None:
             return {

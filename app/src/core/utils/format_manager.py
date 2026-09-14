@@ -84,7 +84,8 @@ class FormatManager:
             return 'SKIP'
 
         # ── REGLA 1: Casos especiales de vcodec literal
-        if vcodec in ('audio only',):
+        # 'audio only' es un valor crudo de yt-dlp (nunca localizado) - no traducir.
+        if vcodec == 'audio only':
             return 'AUDIO'
         if vcodec in ('images', 'slideshow'):
             return 'SKIP'

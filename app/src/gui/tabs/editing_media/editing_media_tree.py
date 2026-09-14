@@ -1,4 +1,5 @@
 # src/gui/tabs/editing_media/editing_media_tree.py
+from PySide6.QtCore import QCoreApplication
 import os
 from PySide6.QtCore import Qt, QSize, QRectF
 from PySide6.QtGui import QIcon, QColor, QFont, QPixmap, QPainter
@@ -22,7 +23,7 @@ from gui.tabs.editing_media.editing_media_icons import (
 )
 
 from core.tabs.editing_media.folder_color_manager import get_item_color, set_item_color, get_random_label_color
-from core.tabs.editing_media.editing_media_logic import VALID_EXTS
+from core.tabs.editing_media.editing_media_logic import VALID_EXTS, resolve_filter_type
 from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManager
 
 
@@ -30,7 +31,16 @@ from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManage
 class TreeListMixin:
     """Mixin que maneja el árbol de carpetas, lista de medios y menús contextuales."""
 
-    # ── Población y Control de Vistas del Árbol ──────────────────────────────
+    def _format_collection_title(self, col_name: str) -> str:
+        """Traduce títulos de colecciones predeterminadas para la UI sin tocar la clave interna."""
+        if col_name == "Descargados":
+            return QCoreApplication.translate("TreeListMixin", "Descargados")
+        elif col_name == "Subclips":
+            return QCoreApplication.translate("TreeListMixin", "Subclips")
+        elif col_name == "Favoritos":
+            return QCoreApplication.translate("TreeListMixin", "Favoritos")
+        return col_name
+
     # ── Población y Control de Vistas del Árbol ──────────────────────────────
     def _update_tree_view(self):
         """Reconstruye el árbol de carpetas lógicas y físicas de forma jerárquica con Lazy Loading."""
@@ -42,7 +52,7 @@ class TreeListMixin:
         self.tree_folders.clear()
         
         # 1. Nodo Raíz de Medios Web (agrupa los orígenes remotos: Freesound, Wikimedia, ...)
-        self.web_root = QTreeWidgetItem(self.tree_folders, [self.tr("Medios Web")])
+        self.web_root = QTreeWidgetItem(self.tree_folders, [QCoreApplication.translate("TreeListMixin", "Medios Web")])
         self.web_root.setIcon(0, get_svg_icon("travel_explore.svg"))
         self.web_root.setData(0, Qt.UserRole, {"tipo": "root_web"})
         self.web_root.setExpanded(True)
@@ -53,7 +63,7 @@ class TreeListMixin:
             source_item.setData(0, Qt.UserRole, {"tipo": "web_source", "source_id": source_id})
 
         # 2. Nodo Raíz de Directorios Físicos
-        self.physical_root = QTreeWidgetItem(self.tree_folders, [self.tr("Directorios")])
+        self.physical_root = QTreeWidgetItem(self.tree_folders, [QCoreApplication.translate("TreeListMixin", "Directorios")])
         self.physical_root.setIcon(0, get_folder_icon())
         self.physical_root.setData(0, Qt.UserRole, {"tipo": "root_physical"})
         self.physical_root.setExpanded(True)
@@ -80,7 +90,7 @@ class TreeListMixin:
         default_item.setData(0, Qt.UserRole, {"tipo": "collection", "nombre": "Default"})
 
         # 3. Nodo Raíz de Colecciones Virtuales
-        self.virtual_root = QTreeWidgetItem(self.tree_folders, [self.tr("Colecciones")])
+        self.virtual_root = QTreeWidgetItem(self.tree_folders, [QCoreApplication.translate("TreeListMixin", "Colecciones")])
         self.virtual_root.setIcon(0, get_svg_icon("star.svg"))
         self.virtual_root.setData(0, Qt.UserRole, {"tipo": "root_virtual"})
         self.virtual_root.setExpanded(True)
@@ -88,7 +98,7 @@ class TreeListMixin:
         for col_name in self.controller.collections.keys():
             if col_name == "Default":
                 continue  # Ya se muestra dentro de Directorios, ver más arriba.
-            item = QTreeWidgetItem(self.virtual_root, [col_name])
+            item = QTreeWidgetItem(self.virtual_root, [self._format_collection_title(col_name)])
             color = get_item_color(f"col:{col_name}")
             if col_name == "Descargados":
                 accent_color = get_theme_token("acento_primario", "#B9E640")
@@ -234,9 +244,9 @@ class TreeListMixin:
             self._license_combo_source_id = source_id
             self.web_license_combo.blockSignals(True)
             self.web_license_combo.clear()
-            self.web_license_combo.addItem(self.tr("Cualquiera"), "Cualquiera")
+            self.web_license_combo.addItem(QCoreApplication.translate("TreeListMixin", "Cualquiera"), "Cualquiera")
             for value, label in license_options:
-                self.web_license_combo.addItem(self.tr(label), value)
+                self.web_license_combo.addItem(QCoreApplication.translate("TreeListMixin", label), value)
             self.web_license_combo.blockSignals(False)
 
         # Ocultar columnas innecesarias para medios locales y actualizar headers
@@ -259,12 +269,12 @@ class TreeListMixin:
             forced_type = next(iter(provider.supported_media_types))
 
         if forced_type:
-            forced_label = {"audio": self.tr("Audios"), "video": self.tr("Videos"), "imagen": self.tr("Imágenes")}.get(forced_type, self.tr("Audios"))
             for btn in self.filter_buttons:
-                if btn.text() == forced_label:
+                key = btn.property("filter_key") or btn.text()
+                if resolve_filter_type(key) == forced_type:
                     btn.setChecked(True)
                     btn.setEnabled(True)
-                    self.active_filter = forced_label
+                    self.active_filter = key
                 else:
                     btn.setChecked(False)
                     btn.setEnabled(False)
@@ -278,7 +288,8 @@ class TreeListMixin:
             if was_forced:
                 self._filter_forced_by_online = False
                 for btn in self.filter_buttons:
-                    btn.setChecked(btn.text() == self.tr("Todos"))
+                    key = btn.property("filter_key") or btn.text()
+                    btn.setChecked(resolve_filter_type(key) is None)
                 self.active_filter = "Todos"
 
     def _get_cached_media_icon(self, icon_name: str, color: str) -> QIcon:
@@ -381,7 +392,7 @@ class TreeListMixin:
                 source_id = data.get("source_id")
                 provider = getattr(self, "web_providers", {}).get(source_id)
                 if provider is None:
-                    self.media_model.set_data([{"nombre": self.tr("Origen web no disponible."), "tipo": "empty"}])
+                    self.media_model.set_data([{"nombre": QCoreApplication.translate("TreeListMixin", "Origen web no disponible."), "tipo": "empty"}])
                     return
 
                 if provider.requires_auth and not provider.is_authenticated():
@@ -392,7 +403,7 @@ class TreeListMixin:
 
                 if not self.online_results:
                     is_searching = self.online_search_thread and self.online_search_thread.isRunning()
-                    msg = self.tr(f"Buscando en {provider.display_name}...") if is_searching else self.tr("No se encontraron resultados o la búsqueda falló. Intente de nuevo.")
+                    msg = QCoreApplication.translate("TreeListMixin", "Buscando en {0}...").format(provider.display_name) if is_searching else QCoreApplication.translate("TreeListMixin", "No se encontraron resultados o la búsqueda falló. Intente de nuevo.")
                     self.media_model.set_data([{"nombre": msg, "tipo": "empty"}])
                     return
 
@@ -437,12 +448,11 @@ class TreeListMixin:
                 # de medio (ej. Wikimedia). Freesound siempre es audio, así que aunque el
                 # filtro esté forzado a "Audios" no hace falta filtrar (todo ya es audio).
                 active_filter = getattr(self, "active_filter", "Todos")
-                if active_filter == "Todos" or len(provider.supported_media_types) <= 1:
+                target_type = resolve_filter_type(active_filter)
+                if target_type is None or len(provider.supported_media_types) <= 1:
                     display_results = self.online_results
                 else:
-                    type_map = {"Imágenes": "imagen", "Videos": "video", "Audios": "audio"}
-                    wanted = type_map.get(active_filter)
-                    display_results = [it for it in self.online_results if it.get("tipo") == wanted] if wanted else self.online_results
+                    display_results = [it for it in self.online_results if it.get("tipo") == target_type]
 
                 if getattr(self, "_pending_scroll_restore", None) is None:
                     scroll_widget = self.media_table if getattr(self, "view_mode", "grid") == "list" and hasattr(self, "media_table") else self.media_list
@@ -489,16 +499,13 @@ class TreeListMixin:
                     and getattr(self, "_filtered_sort_cache_media_items", None) is media_items):
                 filtered_items = self._filtered_sort_cache
             else:
+                target_type = resolve_filter_type(active_filter)
                 filtered_items = []
                 for item in media_items:
                     item_type = item.get("tipo", "")
                     item_name = item.get("nombre", "").lower()
 
-                    if active_filter == "Imágenes" and item_type != "imagen":
-                        continue
-                    if active_filter == "Videos" and item_type != "video":
-                        continue
-                    if active_filter == "Audios" and item_type != "audio":
+                    if target_type is not None and item_type != target_type:
                         continue
 
                     if search_query and search_query not in item_name:
@@ -548,21 +555,28 @@ class TreeListMixin:
                 if tipo == "collection":
                     nombre = data.get("nombre", "") if data else ""
                     if nombre == "Favoritos":
-                        msg = self.tr("Aquí puedes guardar tus medios locales o web para acceder más rápido a ellos ⭐")
+                        msg = QCoreApplication.translate("TreeListMixin", "Aquí puedes guardar tus medios locales o web para acceder más rápido a ellos ⭐")
                     else:
-                        msg = self.tr(f"La colección '{nombre}' está vacía.\nAñade elementos haciendo clic derecho sobre cualquier medio.")
+                        display_name = self._format_collection_title(nombre)
+                        msg = QCoreApplication.translate("TreeListMixin", "La colección '{0}' está vacía.\nAñade elementos haciendo clic derecho sobre cualquier medio.").format(display_name)
                 elif tipo in ["folder", "subfolder"]:
-                    msg = self.tr("Esta carpeta no contiene archivos multimedia.")
+                    msg = QCoreApplication.translate("TreeListMixin", "Esta carpeta no contiene archivos multimedia.")
                 elif tipo == "root_virtual":
-                    msg = self.tr("Selecciona o crea una colección a la izquierda para ver sus archivos.")
+                    msg = QCoreApplication.translate("TreeListMixin", "Selecciona o crea una colección a la izquierda para ver sus archivos.")
                 elif tipo == "root_web":
-                    msg = self.tr("Selecciona un origen de medios web a la izquierda (Freesound, Wikimedia, ...).")
+                    msg = QCoreApplication.translate("TreeListMixin", "Selecciona un origen de medios web a la izquierda (Freesound, Wikimedia, ...).")
                 elif search_query:
-                    msg = self.tr(f"No se encontraron medios que coincidan con '{search_query}'.")
-                elif active_filter != "Todos":
-                    msg = self.tr(f"No hay elementos de tipo '{active_filter}' en esta sección.")
+                    msg = QCoreApplication.translate("TreeListMixin", "No se encontraron medios que coincidan con '{0}'.").format(search_query)
+                elif target_type is not None:
+                    display_filter = active_filter
+                    for btn in getattr(self, "filter_buttons", []):
+                        k = btn.property("filter_key") or btn.text()
+                        if resolve_filter_type(k) == target_type:
+                            display_filter = btn.text()
+                            break
+                    msg = QCoreApplication.translate("TreeListMixin", "No hay elementos de tipo '{0}' en esta sección.").format(display_filter)
                 else:
-                    msg = self.tr("No hay archivos multimedia para mostrar.")
+                    msg = QCoreApplication.translate("TreeListMixin", "No hay archivos multimedia para mostrar.")
 
                 self.media_model.set_data([{"nombre": msg, "tipo": "empty"}])
                 self._applied_display_paths = []
@@ -574,7 +588,7 @@ class TreeListMixin:
             if len(filtered_items) > max_count:
                 display_items = filtered_items[:max_count]
                 # Agregamos el item de "Mostrar todo" si cortamos la lista
-                display_items.append({"nombre": "Cargar más", "tipo": "load_more"})
+                display_items.append({"nombre": QCoreApplication.translate("TreeListMixin", "Cargar más"), "tipo": "load_more"})
             else:
                 display_items = filtered_items
 
@@ -651,7 +665,7 @@ class TreeListMixin:
 
     def _on_add_folder_clicked(self):
         """Abre un selector de carpetas e indexa la seleccionada."""
-        folder = QFileDialog.getExistingDirectory(self, self.tr("Seleccionar carpeta para indexar"))
+        folder = QFileDialog.getExistingDirectory(self, QCoreApplication.translate("TreeListMixin", "Seleccionar carpeta para indexar"))
         if folder:
             success = self.controller.add_folder(folder)
             if success:
@@ -665,7 +679,7 @@ class TreeListMixin:
                         self._update_media_list()
                         break
             else:
-                QMessageBox.information(self, self.tr("Indexador"), self.tr("Esta carpeta ya se encuentra indexada."))
+                QMessageBox.information(self, QCoreApplication.translate("TreeListMixin", "Indexador"), QCoreApplication.translate("TreeListMixin", "Esta carpeta ya se encuentra indexada."))
 
     def _on_remove_folder_clicked(self):
         """Remueve la carpeta indexada seleccionada."""
@@ -679,8 +693,8 @@ class TreeListMixin:
             # Confirmar desvinculación
             reply = QMessageBox.question(
                 self, 
-                self.tr("Desvincular Carpeta"),
-                self.tr(f"¿Estás seguro de que deseas desvincular '{os.path.basename(ruta)}'?\n(No se eliminarán los archivos del disco)."),
+                QCoreApplication.translate("TreeListMixin", "Desvincular Carpeta"),
+                QCoreApplication.translate("TreeListMixin", "¿Estás seguro de que deseas desvincular '{0}'?\n(No se eliminarán los archivos del disco).").format(os.path.basename(ruta)),
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
@@ -692,14 +706,14 @@ class TreeListMixin:
         """Crea una nueva colección virtual solicitando el nombre al usuario."""
         name, ok = QInputDialog.getText(
             self, 
-            self.tr("Nueva Colección"), 
-            self.tr("Nombre de la colección virtual:")
+            QCoreApplication.translate("TreeListMixin", "Nueva Colección"), 
+            QCoreApplication.translate("TreeListMixin", "Nombre de la colección virtual:")
         )
         if ok and name.strip():
             name = name.strip()
             success = self.controller.add_collection(name)
             if not success:
-                QMessageBox.warning(self, self.tr("Nueva Colección"), self.tr("El nombre ingresado está vacío o ya existe."))
+                QMessageBox.warning(self, QCoreApplication.translate("TreeListMixin", "Nueva Colección"), QCoreApplication.translate("TreeListMixin", "El nombre ingresado está vacío o ya existe."))
 
     def _on_remove_collection_clicked(self):
         """Elimina una colección virtual."""
@@ -710,10 +724,11 @@ class TreeListMixin:
         data = selected.data(0, Qt.UserRole)
         if data and data.get("tipo") == "collection":
             name = data.get("nombre")
+            display_name = self._format_collection_title(name)
             reply = QMessageBox.question(
                 self, 
-                self.tr("Eliminar Colección"),
-                self.tr(f"¿Estás seguro de que deseas eliminar la colección '{name}'?"),
+                QCoreApplication.translate("TreeListMixin", "Eliminar Colección"),
+                QCoreApplication.translate("TreeListMixin", "¿Estás seguro de que deseas eliminar la colección '{0}'?").format(display_name),
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
@@ -796,14 +811,14 @@ class TreeListMixin:
     def _on_filter_button_clicked(self):
         """Maneja el cambio de filtro y deselecciona los otros botones."""
         sender = self.sender()
-        self.active_filter = sender.text()
+        self.active_filter = sender.property("filter_key") or sender.text()
         self._max_display_count = 500  # Resetear paginación al cambiar de filtro
         
         # Si filtramos por categoría específica y el modo actual de ordenación es "tipo", revertir a "nombre"
-        if self.active_filter != "Todos" and getattr(self, "sort_by", "nombre") == "tipo":
+        if resolve_filter_type(self.active_filter) is not None and getattr(self, "sort_by", "nombre") == "tipo":
             self.sort_by = "nombre"
             if hasattr(self, "btn_sort_by"):
-                self.btn_sort_by.setText("Nombre")
+                self.btn_sort_by.setText(QCoreApplication.translate("TreeListMixin", "Nombre"))
 
         for btn in self.filter_buttons:
             if btn != sender:
@@ -856,14 +871,14 @@ class TreeListMixin:
         item = self.tree_folders.itemAt(position)
         menu = QMenu(self)
 
-        act_refresh = menu.addAction(get_contrast_svg_icon("refresh.svg"), self.tr("Actualizar"))
+        act_refresh = menu.addAction(get_contrast_svg_icon("refresh.svg"), QCoreApplication.translate("TreeListMixin", "Actualizar"))
 
         act_refresh.triggered.connect(self._refresh_current_view)
         menu.addSeparator()
 
         if not item:
             # Click derecho en zona vacía: ofrecer crear colección virtual
-            act_new_col = menu.addAction(self.tr("Nueva Colección Virtual"))
+            act_new_col = menu.addAction(QCoreApplication.translate("TreeListMixin", "Nueva Colección Virtual"))
             act_new_col.triggered.connect(self._on_add_collection_clicked)
             menu.exec(self.tree_folders.mapToGlobal(position))
             return
@@ -875,34 +890,34 @@ class TreeListMixin:
             
         tipo = data.get("tipo")
         if tipo == "folder":
-            act_remove = menu.addAction(self.tr("Desvincular Carpeta Física"))
+            act_remove = menu.addAction(QCoreApplication.translate("TreeListMixin", "Desvincular Carpeta Física"))
             act_remove.triggered.connect(self._on_remove_folder_clicked)
             
             # Opciones de coloreado
             menu.addSeparator()
-            act_color = menu.addAction(self.tr("Color Aleatorio"))
+            act_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Color Aleatorio"))
             act_color.triggered.connect(lambda: self._set_random_color_for_item(item))
             
-            act_choose = menu.addAction(self.tr("Elegir Color..."))
+            act_choose = menu.addAction(QCoreApplication.translate("TreeListMixin", "Elegir Color..."))
             act_choose.triggered.connect(lambda: self._choose_color_for_item(item))
             
             current_color = get_item_color(f"folder:{data.get('ruta')}")
             if current_color:
-                act_reset_color = menu.addAction(self.tr("Restablecer Color"))
+                act_reset_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Restablecer Color"))
                 act_reset_color.triggered.connect(lambda: self._reset_color_for_item(item))
                 
             menu.exec(self.tree_folders.mapToGlobal(position))
         elif tipo == "subfolder":
             # Para subcarpetas físicas, no hay acción de desvincular, pero sí de colorear
-            act_color = menu.addAction(self.tr("Color Aleatorio"))
+            act_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Color Aleatorio"))
             act_color.triggered.connect(lambda: self._set_random_color_for_item(item))
             
-            act_choose = menu.addAction(self.tr("Elegir Color..."))
+            act_choose = menu.addAction(QCoreApplication.translate("TreeListMixin", "Elegir Color..."))
             act_choose.triggered.connect(lambda: self._choose_color_for_item(item))
             
             current_color = get_item_color(f"folder:{data.get('ruta')}")
             if current_color:
-                act_reset_color = menu.addAction(self.tr("Restablecer Color"))
+                act_reset_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Restablecer Color"))
                 act_reset_color.triggered.connect(lambda: self._reset_color_for_item(item))
                 
             menu.exec(self.tree_folders.mapToGlobal(position))
@@ -912,25 +927,25 @@ class TreeListMixin:
             # eliminar por clic derecho para evitar borrarlas por accidente. El coloreado sí
             # se deja disponible para las tres, igual que cualquier otra colección.
             if data.get("nombre") not in ("Descargados", "Subclips", "Default", "Favoritos"):
-                act_remove = menu.addAction(self.tr("Eliminar Colección Virtual"))
+                act_remove = menu.addAction(QCoreApplication.translate("TreeListMixin", "Eliminar Colección Virtual"))
                 act_remove.triggered.connect(self._on_remove_collection_clicked)
                 menu.addSeparator()
 
             # Opciones de coloreado
-            act_color = menu.addAction(self.tr("Color Aleatorio"))
+            act_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Color Aleatorio"))
             act_color.triggered.connect(lambda: self._set_random_color_for_item(item))
             
-            act_choose = menu.addAction(self.tr("Elegir Color..."))
+            act_choose = menu.addAction(QCoreApplication.translate("TreeListMixin", "Elegir Color..."))
             act_choose.triggered.connect(lambda: self._choose_color_for_item(item))
             
             current_color = get_item_color(f"col:{data.get('nombre')}")
             if current_color:
-                act_reset_color = menu.addAction(self.tr("Restablecer Color"))
+                act_reset_color = menu.addAction(QCoreApplication.translate("TreeListMixin", "Restablecer Color"))
                 act_reset_color.triggered.connect(lambda: self._reset_color_for_item(item))
                 
             menu.exec(self.tree_folders.mapToGlobal(position))
         elif tipo == "root_virtual":
-            act_new_col = menu.addAction(self.tr("Nueva Colección Virtual"))
+            act_new_col = menu.addAction(QCoreApplication.translate("TreeListMixin", "Nueva Colección Virtual"))
             act_new_col.triggered.connect(self._on_add_collection_clicked)
             menu.exec(self.tree_folders.mapToGlobal(position))
 
@@ -1070,26 +1085,28 @@ class TreeListMixin:
                 count_str = f" ({len(file_paths)})" if len(file_paths) > 1 else ""
 
                 if is_viewing_collection:
-                    act_remove = menu.addAction(self.tr(f"Quitar de esta Colección{count_str}"))
+                    remove_label = QCoreApplication.translate("TreeListMixin", "Quitar de esta Colección ({0})").format(len(file_paths)) if len(file_paths) > 1 else QCoreApplication.translate("TreeListMixin", "Quitar de esta Colección")
+                    act_remove = menu.addAction(remove_label)
                     act_remove.triggered.connect(lambda: [self._remove_file_from_collection(current_col_name, fp) for fp in file_paths])
                 else:
-                    submenu = menu.addMenu(self.tr(f"Añadir a Colección{count_str}"))
+                    add_label = QCoreApplication.translate("TreeListMixin", "Añadir a Colección ({0})").format(len(file_paths)) if len(file_paths) > 1 else QCoreApplication.translate("TreeListMixin", "Añadir a Colección")
+                    submenu = menu.addMenu(add_label)
                     collections_list = [c for c in self.controller.collections.keys() if c not in ("Descargados", "Subclips", "Default")]
                     if collections_list:
                         for col_name in collections_list:
-                            act_col = submenu.addAction(col_name)
+                            act_col = submenu.addAction(self._format_collection_title(col_name))
                             act_col.triggered.connect(lambda checked=False, cn=col_name, items=item_datas: [self._add_media_to_collection(cn, it) for it in items])
                     else:
-                        act_none = submenu.addAction(self.tr("(Sin colecciones)"))
+                        act_none = submenu.addAction(QCoreApplication.translate("TreeListMixin", "(Sin colecciones)"))
                         act_none.setEnabled(False)
 
                 if len(file_paths) == 1:
                     is_remote = file_paths[0].startswith("http://") or file_paths[0].startswith("https://")
                     if is_remote:
-                        act_download = menu.addAction(get_svg_icon("download.svg"), self.tr("Descargar Medio"))
+                        act_download = menu.addAction(get_svg_icon("download.svg"), QCoreApplication.translate("TreeListMixin", "Descargar Medio"))
                         act_download.triggered.connect(self._on_download_clicked)
                     else:
-                        act_reveal = menu.addAction(get_svg_icon("folder_open.svg"), self.tr("Abrir en Explorador"))
+                        act_reveal = menu.addAction(get_svg_icon("folder_open.svg"), QCoreApplication.translate("TreeListMixin", "Abrir en Explorador"))
                         act_reveal.triggered.connect(self._on_reveal_clicked)
                 
                 from core.services.editor_integration_manager import EditorIntegrationManager
@@ -1111,9 +1128,9 @@ class TreeListMixin:
                         
                     count = len(file_paths)
                     if count > 1:
-                        act_send = menu.addAction(e_icon, self.tr(f"Enviar ({count}) medios a {e_name}"))
+                        act_send = menu.addAction(e_icon, QCoreApplication.translate("TreeListMixin", "Enviar ({0}) medios a {1}").format(count, e_name))
                     else:
-                        act_send = menu.addAction(e_icon, self.tr(f"Enviar medio a {e_name}"))
+                        act_send = menu.addAction(e_icon, QCoreApplication.translate("TreeListMixin", "Enviar medio a {0}").format(e_name))
                         
                     act_send.triggered.connect(self._on_send_editor_clicked)
 
@@ -1122,20 +1139,20 @@ class TreeListMixin:
 
                 if imagenes:
                     n = len(imagenes)
-                    label = self.tr(f"Enviar ({n}) a Editor de Imagen") if n > 1 else self.tr("Enviar a Editor de Imagen")
+                    label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Editor de Imagen").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Editor de Imagen")
                     act_send_img = menu.addAction(get_svg_icon("image.svg"), label)
                     act_send_img.triggered.connect(lambda checked=False, items=imagenes: self._on_send_to_tool_clicked(items, "image"))
 
                 if medios_av:
                     n = len(medios_av)
-                    label = self.tr(f"Enviar ({n}) a Herramientas Multimedia") if n > 1 else self.tr("Enviar a Herramientas Multimedia")
+                    label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Herramientas Multimedia").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Herramientas Multimedia")
                     act_send_vid = menu.addAction(get_svg_icon("movie.svg"), label)
                     act_send_vid.triggered.connect(lambda checked=False, items=medios_av: self._on_send_to_tool_clicked(items, "video"))
 
                 menu.addSeparator()
 
         # 2. Acciones Generales (Actualizar, Ordenar por, Vista)
-        act_refresh = menu.addAction(get_contrast_svg_icon("refresh.svg"), self.tr("Actualizar Lista"))
+        act_refresh = menu.addAction(get_contrast_svg_icon("refresh.svg"), QCoreApplication.translate("TreeListMixin", "Actualizar Lista"))
         act_refresh.triggered.connect(self._refresh_current_view)
         menu.addSeparator()
 
@@ -1147,21 +1164,21 @@ class TreeListMixin:
             if t_data and t_data.get("tipo") == "web_source":
                 is_online_mode = True
 
-        sort_sub = menu.addMenu(self.tr("Ordenar por"))
+        sort_sub = menu.addMenu(QCoreApplication.translate("TreeListMixin", "Ordenar por"))
 
         if is_online_mode:
             options = [
-                ("nombre", self.tr("Nombre")),
-                ("duration", self.tr("Duración")),
-                ("license", self.tr("Licencia")),
+                ("nombre", QCoreApplication.translate("TreeListMixin", "Nombre")),
+                ("duration", QCoreApplication.translate("TreeListMixin", "Duración")),
+                ("license", QCoreApplication.translate("TreeListMixin", "Licencia")),
             ]
         else:
             options = [
-                ("nombre", self.tr("Nombre")),
-                ("size", self.tr("Tamaño")),
-                ("tipo", self.tr("Tipo de Archivo")),
-                ("mtime", self.tr("Fecha de Modificación")),
-                ("ruta", self.tr("Ruta Completa")),
+                ("nombre", QCoreApplication.translate("TreeListMixin", "Nombre")),
+                ("size", QCoreApplication.translate("TreeListMixin", "Tamaño")),
+                ("tipo", QCoreApplication.translate("TreeListMixin", "Tipo de Archivo")),
+                ("mtime", QCoreApplication.translate("TreeListMixin", "Fecha de Modificación")),
+                ("ruta", QCoreApplication.translate("TreeListMixin", "Ruta Completa")),
             ]
         curr_sort = getattr(self, "sort_by", "nombre")
         active_filter = getattr(self, "active_filter", "Todos")
@@ -1171,28 +1188,28 @@ class TreeListMixin:
             act.setCheckable(True)
             if key == curr_sort:
                 act.setChecked(True)
-            if key == "tipo" and active_filter != "Todos":
+            if key == "tipo" and resolve_filter_type(active_filter) is not None:
                 act.setEnabled(False)
             act.triggered.connect(lambda checked, k=key, l=label: self._on_sort_option_selected(k, l))
 
         sort_sub.addSeparator()
-        act_asc = sort_sub.addAction(self.tr("Ascendente (A-Z, Menor a Mayor)"))
+        act_asc = sort_sub.addAction(QCoreApplication.translate("TreeListMixin", "Ascendente (A-Z, Menor a Mayor)"))
         act_asc.setCheckable(True)
         act_asc.setChecked(getattr(self, "sort_ascending", True))
         act_asc.triggered.connect(lambda: self._set_sort_direction(True))
 
-        act_desc = sort_sub.addAction(self.tr("Descendente (Z-A, Mayor a Menor)"))
+        act_desc = sort_sub.addAction(QCoreApplication.translate("TreeListMixin", "Descendente (Z-A, Mayor a Menor)"))
         act_desc.setCheckable(True)
         act_desc.setChecked(not getattr(self, "sort_ascending", True))
         act_desc.triggered.connect(lambda: self._set_sort_direction(False))
 
-        view_sub = menu.addMenu(self.tr("Vista"))
-        act_grid = view_sub.addAction(self.tr("Cuadrícula"))
+        view_sub = menu.addMenu(QCoreApplication.translate("TreeListMixin", "Vista"))
+        act_grid = view_sub.addAction(QCoreApplication.translate("TreeListMixin", "Cuadrícula"))
         act_grid.setCheckable(True)
         act_grid.setChecked(getattr(self, "view_mode", "grid") == "grid")
         act_grid.triggered.connect(lambda: self.set_view_mode("grid"))
 
-        act_list = view_sub.addAction(self.tr("Lista"))
+        act_list = view_sub.addAction(QCoreApplication.translate("TreeListMixin", "Lista"))
         act_list.setCheckable(True)
         act_list.setChecked(getattr(self, "view_mode", "grid") == "list")
         act_list.triggered.connect(lambda: self.set_view_mode("list"))
@@ -1268,11 +1285,11 @@ class TreeListMixin:
             if asc:
                 self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_upward_alt.svg", "#FFFFFF", size=16))
                 self.btn_sort_dir.setIconSize(QSize(16, 16))
-                self.btn_sort_dir.setToolTip(self.tr("Orden Ascendente (A-Z, Antiguos primero)"))
+                self.btn_sort_dir.setToolTip(QCoreApplication.translate("TreeListMixin", "Orden Ascendente (A-Z, Antiguos primero)"))
             else:
                 self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_downward_alt.svg", "#FFFFFF", size=16))
                 self.btn_sort_dir.setIconSize(QSize(16, 16))
-                self.btn_sort_dir.setToolTip(self.tr("Orden Descendente (Z-A, Recientes primero)"))
+                self.btn_sort_dir.setToolTip(QCoreApplication.translate("TreeListMixin", "Orden Descendente (Z-A, Recientes primero)"))
         self._apply_active_filters_fast()
         self.preview_box.show_default_state()
         self._clear_metadata()

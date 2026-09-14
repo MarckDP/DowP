@@ -1,4 +1,5 @@
 # src/gui/tabs/image_tools/image_queue_widget.py
+from PySide6.QtCore import QCoreApplication
 import os
 import uuid
 from datetime import datetime
@@ -75,7 +76,10 @@ SUPPORTED_EXTENSIONS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS
 _IMAGE_ICON_COLOR = "#2ecc71"
 _ROW_THUMB_SIZE = 18  # px, cuadrado
 
-_HEADERS = ("Nombre", "Tipo", "Tamaño", "Estado")
+_HEADERS = (QCoreApplication.translate("image_queue_widget", "Nombre"),
+            QCoreApplication.translate("image_queue_widget", "Tipo"),
+            QCoreApplication.translate("image_queue_widget", "Tamaño"),
+            QCoreApplication.translate("image_queue_widget", "Estado"))
 
 
 class _QueueTableModel(QAbstractTableModel):
@@ -437,7 +441,7 @@ class ImageQueueWidget(QFrame):
     def _on_add_files_clicked(self):
         from PySide6.QtWidgets import QFileDialog
         exts_pattern = " ".join(f"*{e}" for e in sorted(SUPPORTED_EXTENSIONS))
-        filter_str = f"Archivos de Imagen ({exts_pattern});;Todos los archivos (*.*)"
+        filter_str = self.tr("Archivos de Imagen ({0});;Todos los archivos (*.*)").format(exts_pattern)
         files, _ = QFileDialog.getOpenFileNames(self, self.tr("Seleccionar Archivos de Imagen"), "", filter_str)
         if files:
             self.add_files(files)
@@ -621,7 +625,7 @@ class ImageQueueWidget(QFrame):
 
     def _update_counter(self):
         count = len(self.files_list)
-        self.lbl_count.setText(f"{count} {self.tr('archivos')}")
+        self.lbl_count.setText(self.tr("{0} archivos").format(count))
         self.queue_updated.emit(count)
         self.lbl_drop_hint.setVisible(count == 0)
 

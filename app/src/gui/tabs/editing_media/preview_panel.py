@@ -870,7 +870,7 @@ class PreviewContainerWidget(QFrame):
                 return
 
         self.placeholder_label.setPixmap(QPixmap())
-        self.placeholder_label.setText(f"▶ [ Previsualización de Video ]\n\n{name}")
+        self.placeholder_label.setText(self.tr("▶ [ Previsualización de Video ]\n\n{0}").format(name))
         self.placeholder_label.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-weight: bold; font-size: 13px;")
 
     def show_audio_preview(self, path: str):
@@ -884,7 +884,7 @@ class PreviewContainerWidget(QFrame):
         self.placeholder_label.setVisible(True)
         self.placeholder_label.setPixmap(QPixmap())
         name = os.path.basename(path)
-        self.placeholder_label.setText(f"🎵 [ Detalle de Audio ]\n\n{name}")
+        self.placeholder_label.setText(self.tr("🎵 [ Detalle de Audio ]\n\n{0}").format(name))
         self.placeholder_label.setStyleSheet("color: #f5c2e7; font-weight: bold; font-size: 13px;")
 
     # Métodos de Control del Reproductor de Video

@@ -4,13 +4,16 @@ import re
 import requests
 from core.logger.logger_manager import logger
 from core.tabs.editing_media.web_sources.base import WebSourceProvider
+from PySide6.QtCore import QCoreApplication
 
 BASE_URL = "https://commons.wikimedia.org/w/api.php"
 PAGE_SIZE = 30
 
 # La API de Wikimedia pide un User-Agent descriptivo que identifique la app (política de
 # etiqueta de la plataforma): https://developer.wikimedia.org/build-tools/apis/
-USER_AGENT = "DowP/2.0 (https://github.com/dowp-project; gestor de medios de escritorio)"
+# Es un valor de protocolo (header HTTP), no texto de UI - no debe pasar por el sistema
+# de traducción (un idioma con caracteres fuera de latin-1 rompería la petición HTTP).
+USER_AGENT = "DowP/2.0 (https://github.com/dowp-project; desktop media manager)"
 
 _TAG_RE = re.compile(r"<[^<]+?>")
 
@@ -80,7 +83,7 @@ class WikimediaProvider(WebSourceProvider):
             data = response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"WikimediaProvider: Error en la petición de búsqueda: {e}")
-            raise IOError(f"Error de red al conectar con Wikimedia: {e}")
+            raise IOError(QCoreApplication.translate("WikimediaProvider", "Error de red al conectar con Wikimedia: {0}").format(e))
 
         pages = (data.get("query") or {}).get("pages") or {}
         results = []
@@ -215,7 +218,7 @@ class WikimediaProvider(WebSourceProvider):
     def download(self, item_data: dict, dest_dir: str, fallback_name: str, progress_callback=None) -> str:
         url = item_data.get("ruta")
         if not url:
-            raise ValueError("No se pudo determinar la URL del archivo de Wikimedia.")
+            raise ValueError(QCoreApplication.translate("WikimediaProvider", "No se pudo determinar la URL del archivo de Wikimedia."))
 
         os.makedirs(dest_dir, exist_ok=True)
         dest_path = os.path.join(dest_dir, fallback_name).replace("\\", "/")

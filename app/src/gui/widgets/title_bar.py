@@ -145,7 +145,7 @@ class CustomTitleBar(QWidget):
         self.btn_close = QPushButton(self)
         self.btn_close.setObjectName("titleBarClose")
         self.btn_close.setIcon(_icon("close.svg"))
-        self.btn_close.setToolTip("Cerrar")
+        self.btn_close.setToolTip(self.tr("Cerrar"))
         self.btn_close.setStyleSheet(
             self._BTN_BASE.format(
                 size=btn_size, radius=radius,

@@ -31,7 +31,7 @@ class CookieTestWorker(QThread):
         ytdlp_path = get_ytdlp_path()
         if not ytdlp_path:
             logger.error("CookieTestWorker: yt-dlp no encontrado.")
-            self.finished.emit(False, "yt-dlp no encontrado")
+            self.finished.emit(False, self.tr("yt-dlp no encontrado"))
             return
 
         ydl_opts = {
@@ -46,7 +46,7 @@ class CookieTestWorker(QThread):
         if self.mode == "file":
             if not self.file_path:
                 logger.error("CookieTestWorker: Archivo de cookies no especificado.")
-                self.finished.emit(False, "Archivo no especificado")
+                self.finished.emit(False, self.tr("Archivo no especificado"))
                 return
             ydl_opts['cookiefile'] = self.file_path
         elif self.mode == "browser":
@@ -67,13 +67,13 @@ class CookieTestWorker(QThread):
 
             if info:
                 logger.info("CookieTestWorker: Prueba de cookies exitosa.")
-                self.finished.emit(True, "Correcto")
+                self.finished.emit(True, self.tr("Correcto"))
             else:
                 logger.error("CookieTestWorker: Falló la prueba de cookies (sin información extraída).")
-                self.finished.emit(False, "Falló")
+                self.finished.emit(False, self.tr("Falló"))
         except Exception as e:
             logger.error(f"CookieTestWorker: Error de ejecución: {e}")
-            self.finished.emit(False, "Error de ejecución")
+            self.finished.emit(False, self.tr("Error de ejecución"))
 
 class CookiesPage(QWidget):
     def __init__(self):

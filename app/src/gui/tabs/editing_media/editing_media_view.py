@@ -488,8 +488,17 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         btn_bar = QHBoxLayout()
         btn_bar.setSpacing(4)
         self.filter_buttons = []
+        # Mapeo con llamadas self.tr(...) literales -- lupdate solo extrae strings
+        # cuando el argumento es un literal escrito ahí mismo, no una variable de loop.
+        _filter_labels = {
+            "Todos": self.tr("Todos"),
+            "Imágenes": self.tr("Imágenes"),
+            "Videos": self.tr("Videos"),
+            "Audios": self.tr("Audios"),
+        }
         for text in ["Todos", "Imágenes", "Videos", "Audios"]:
-            btn = QPushButton(self.tr(text))
+            btn = QPushButton(_filter_labels[text])
+            btn.setProperty("filter_key", text)
             btn.setCheckable(True)
             if text == "Todos":
                 btn.setChecked(True)
@@ -811,7 +820,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.btn_carousel_prev.setStyleSheet("background: transparent; font-weight: bold; color: white;")
         self.btn_carousel_prev.clicked.connect(self._on_carousel_prev)
         
-        self.lbl_carousel_status = QLabel("1 de 1")
+        self.lbl_carousel_status = QLabel(self.tr("{0} de {1}").format(1, 1))
         self.lbl_carousel_status.setAlignment(Qt.AlignCenter)
         self.lbl_carousel_status.setStyleSheet("color: #a6adc8; font-weight: bold;")
         
@@ -1545,21 +1554,26 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
     def _on_indexing_started(self):
         if hasattr(self, "lbl_indexed_count"):
+            # Bandera en vez de comparar contra el texto ya traducido de la etiqueta:
+            # el total final se muestra en el idioma activo y un "in" contra el literal
+            # en espanol solo acertaba con la app en espanol.
+            self._indexing_done = False
             if not self.lbl_indexed_count.text():
                 self.lbl_indexed_count.setText(self.tr("Iniciando indexación..."))
 
     def _on_indexing_progress(self, count):
         if hasattr(self, "lbl_indexed_count"):
-            if "Medios Indexados" not in self.lbl_indexed_count.text():
-                self.lbl_indexed_count.setText(self.tr(f"Indexando... ({count} encontrados)"))
+            if not getattr(self, "_indexing_done", False):
+                self.lbl_indexed_count.setText(self.tr("Indexando... ({0} encontrados)").format(count))
 
     def _on_indexing_finished(self, files):
         if hasattr(self, "lbl_indexed_count"):
+            self._indexing_done = True
             total = len(files)
             if total == 1:
                 self.lbl_indexed_count.setText(self.tr("1 Medio Indexado en Total"))
             else:
-                self.lbl_indexed_count.setText(self.tr(f"{total} Medios Indexados en Total"))
+                self.lbl_indexed_count.setText(self.tr("{0} Medios Indexados en Total").format(total))
         # Si estamos viendo la raíz de Directorios o de Colecciones (ambas son vistas
         # agregadas que dependen de este mismo indexado en segundo plano), actualizamos
         # automáticamente.

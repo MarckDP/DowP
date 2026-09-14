@@ -333,7 +333,7 @@ class QueueWorker(QThread):
                     # se registra igual porque de él cuelga el nombre base del que se
                     # barren los hermanos al arrastrar (ver output_artifacts).
                     job.add_output_files([d.get("filename")])
-                self.job_progress_changed.emit(job.job_id, 100.0, "", "Procesando final...")
+                self.job_progress_changed.emit(job.job_id, 100.0, "", self.tr("Procesando final..."))
             elif d.get("status") == "fragment_progress":
                 idx = d.get("fragment_index")
                 total = d.get("fragment_count")
@@ -352,7 +352,7 @@ class QueueWorker(QThread):
         
         # Modo especial: solo descargar miniatura
         if batch_thumb_mode == "thumbnail_only":
-            self.job_progress_changed.emit(job.job_id, 10.0, "Descargando miniatura...", "...")
+            self.job_progress_changed.emit(job.job_id, 10.0, self.tr("Descargando miniatura..."), "...")
             output_dir = config_to_use.get("output_path") or self._default_output_path()
             title = config_to_use.get("title") or job.title or "thumbnail"
             
@@ -375,7 +375,7 @@ class QueueWorker(QThread):
                     return
             
             job.status = JobStatus.FAILED
-            job.error_message = "No se pudo obtener la miniatura para este video."
+            job.error_message = self.tr("No se pudo obtener la miniatura para este video.")
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             return
 
@@ -493,7 +493,7 @@ class QueueWorker(QThread):
         ]
         if not selected_entries:
             job.status = JobStatus.FAILED
-            job.error_message = "La playlist no tiene medios seleccionados."
+            job.error_message = self.tr("La playlist no tiene medios seleccionados.")
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             return
 
@@ -778,7 +778,7 @@ class QueueWorker(QThread):
 
         ffmpeg_exe = os.path.join(get_ffmpeg_dir(), "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
         if not os.path.exists(ffmpeg_exe):
-            return False, "No se encontró ffmpeg."
+            return False, self.tr("No se encontró ffmpeg.")
 
         # Construir comando FFmpeg
         cmd = [ffmpeg_exe, "-y"]
@@ -985,7 +985,7 @@ class QueueWorker(QThread):
                         os.remove(output_file)
                     except Exception:
                         pass
-                return False, "Cancelado por el usuario"
+                return False, self.tr("Cancelado por el usuario")
 
             if proc.returncode == 0:
                 return True, None
@@ -1040,7 +1040,7 @@ class QueueWorker(QThread):
             logger.info(f"QueueWorker: [RECODE] Recodificación finalizada exitosamente: {output_file}")
         else:
             job.status = JobStatus.FAILED
-            job.error_message = error or "Error desconocido en FFmpeg"
+            job.error_message = error or self.tr("Error desconocido en FFmpeg")
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             logger.error(f"QueueWorker: [RECODE] FFmpeg falló: {job.error_message} ({job.title})")
 

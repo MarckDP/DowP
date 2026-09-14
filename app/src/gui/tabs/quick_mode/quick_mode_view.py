@@ -632,7 +632,7 @@ class QuickModeTab(QWidget):
             from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
             dummy_info = {
                 "title": "Tutorial Playlist",
-                "entries": [{"title": "Video 1"}, {"title": "Video 2"}]
+                "entries": [{"title": self.tr("Video 1")}, {"title": self.tr("Video 2")}]
             }
             self._dummy_playlist_dialog = PlaylistSelectionDialog(dummy_info, self)
             

@@ -41,14 +41,14 @@ class MediaTableModel(QAbstractTableModel):
         self._icon_cache = {}
         
         self.headers = [
-            "Estado",
-            "Nombre de Archivo",
-            "Descripción",
-            "Licencia",
-            "Duración",
-            "Origen",
-            "Tipo de Archivo",
-            "Detalles"
+            self.tr("Estado"),
+            self.tr("Nombre de Archivo"),
+            self.tr("Descripción"),
+            self.tr("Licencia"),
+            self.tr("Duración"),
+            self.tr("Origen"),
+            self.tr("Tipo de Archivo"),
+            self.tr("Detalles")
         ]
 
     def set_view_mode(self, mode: str, grid_size_hint: QSize = None):
@@ -129,15 +129,30 @@ class MediaTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             if not getattr(self, "_is_online_mode", False):
-                if section == 2:
-                    return "Tamaño"
+                if section == 0:
+                    return self.tr("Estado")
+                elif section == 1:
+                    return self.tr("Nombre de Archivo")
+                elif section == 2:
+                    return self.tr("Tamaño")
                 elif section == 3:
-                    return "Tipo de Archivo"
+                    return self.tr("Tipo de Archivo")
                 elif section == 4:
-                    return "Fecha Modificación"
+                    return self.tr("Fecha Modificación")
                 elif section == 5:
-                    return "Ruta Completa"
-            return self.headers[section]
+                    return self.tr("Ruta Completa")
+            online_headers = [
+                self.tr("Estado"),
+                self.tr("Nombre de Archivo"),
+                self.tr("Descripción"),
+                self.tr("Licencia"),
+                self.tr("Duración"),
+                self.tr("Origen"),
+                self.tr("Tipo de Archivo"),
+                self.tr("Detalles")
+            ]
+            if 0 <= section < len(online_headers):
+                return online_headers[section]
         return None
 
     def data(self, index, role=Qt.DisplayRole):

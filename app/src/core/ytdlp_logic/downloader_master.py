@@ -1,4 +1,5 @@
 # src/core/ytdlp_logic/downloader_master.py
+from PySide6.QtCore import QCoreApplication
 import os
 import sys
 import traceback
@@ -90,7 +91,7 @@ class DownloaderMaster:
                 logger.info(f"DownloaderMaster: Iniciando descargas individuales para {len(fragments)} fragmentos.")
                 for i, frag in enumerate(fragments):
                     if cancellation_event and cancellation_event.is_set():
-                        raise DownloadCancelledError("Descarga cancelada por el usuario")
+                        raise DownloadCancelledError(QCoreApplication.translate("DownloaderMaster", "Descarga cancelada por el usuario"))
 
                     # Crear solicitud específica para este fragmento
                     frag_data = request_data.copy()
@@ -370,7 +371,7 @@ class DownloaderMaster:
                 return True
             choice = conflict_ask_callback(os.path.basename(desired_path))
             if choice == "cancel":
-                raise DownloadCancelledError("Descarga cancelada por el usuario en conflicto de archivo.")
+                raise DownloadCancelledError(QCoreApplication.translate("DownloaderMaster", "Descarga cancelada por el usuario en conflicto de archivo."))
             policy = "sobrescribir" if choice == "overwrite" else "conservar"
 
         final_path, backup_path = file_conflict_manager.resolve_conflict(desired_path, policy)
@@ -1231,7 +1232,7 @@ class DownloaderMaster:
             # 1. Verificar Cancelación
             if self.cancellation_event and self.cancellation_event.is_set():
                 logger.info("DownloaderMaster: Cancelación detectada en el hook")
-                raise DownloadCancelledError("Descarga cancelada por el usuario")
+                raise DownloadCancelledError(QCoreApplication.translate("DownloaderMaster", "Descarga cancelada por el usuario"))
 
             # 2. Anotar qué ítem de playlist llegó a terminar. Es la ÚNICA señal fiable
             # de éxito por ítem: con ignoreerrors='only_download' yt-dlp registra el

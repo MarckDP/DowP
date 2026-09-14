@@ -100,7 +100,7 @@ class _FragmentItem(QWidget):
         btn_del.setIcon(_icon("delete.svg"))
         btn_del.setIconSize(QSize(15, 15))
         btn_del.setFixedSize(22, 22)
-        btn_del.setToolTip("Eliminar fragmento")
+        btn_del.setToolTip(self.tr("Eliminar fragmento"))
         btn_del.setStyleSheet("""
             QPushButton { background: transparent; border: none; border-radius: 6px; }
             QPushButton:hover { background: rgba(229,57,53,160); }

@@ -188,7 +188,7 @@ class CompressPanel(QWidget):
         fondo = get_theme_token('fondo_secundario', '#121212')
         texto = get_theme_token('texto_principal', '#ffffff')
         for level in advisor.LEVELS:
-            btn = QPushButton(advisor.LEVEL_LABELS[level], page)
+            btn = QPushButton(advisor.get_level_label(level), page)
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.setMinimumHeight(64)
@@ -279,7 +279,7 @@ class CompressPanel(QWidget):
 
         for level, btn in self._level_buttons.items():
             est_mb = advisor.estimate_level_size_mb(meta, level) if self._source_meta else None
-            label = advisor.LEVEL_LABELS[level]
+            label = advisor.get_level_label(level)
             if est_mb is None:
                 btn.setText(label)
             elif source_mb:
@@ -292,9 +292,9 @@ class CompressPanel(QWidget):
             self.lbl_suggestion.setText(self.tr("Selecciona un archivo en la cola para ver una sugerencia."))
         else:
             info = advisor.analyze_source(self._source_meta)
-            recommended = advisor.LEVEL_LABELS.get(info["recommended_level"], "")
+            recommended = advisor.get_level_label(info["recommended_level"])
             note = info.get("note", "")
-            self.lbl_suggestion.setText(f"{self.tr('Sugerencia')}: {recommended}. {note}")
+            self.lbl_suggestion.setText(self.tr("Sugerencia: {0}. {1}").format(recommended, note))
 
         self._refresh_queue_total_label()
 

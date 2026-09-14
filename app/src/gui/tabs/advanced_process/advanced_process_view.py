@@ -530,7 +530,7 @@ class AdvancedProcessTab(QWidget):
                             break
                 if not v_data:
                     v_data = video_streams[0]
-            elif q_str in ("máxima calidad", "maxima calidad", "maximum quality"):
+            elif q_str in (self.tr("máxima calidad"), "maxima calidad", "maximum quality"):
                 v_data = video_streams[0]
             else:
                 height_map = {
@@ -577,7 +577,7 @@ class AdvancedProcessTab(QWidget):
                     if "✨" in stream.get('label', ''):
                         return stream
             return audio_streams[0]
-        elif q_str in ("máxima calidad", "maxima calidad", "maximum quality"):
+        elif q_str in (self.tr("máxima calidad"), "maxima calidad", "maximum quality"):
             return audio_streams[0]
             
         bitrate_map = {
@@ -895,7 +895,7 @@ class AdvancedProcessTab(QWidget):
             def handler(data, error):
                 if error:
                     logger.error(f"AdvancedProcessTab: Error de análisis: {error}")
-                    self.video_details.title_input.setText(self.tr(f"{error}"))
+                    self.video_details.title_input.setText(str(error))
                     self.video_details.title_input.setCursorPosition(0)
                     self.output_options.btn_start_download.setEnabled(False)
                     self.output_options.set_progress(0, self.tr("Error en el análisis"), "error")
@@ -981,7 +981,7 @@ class AdvancedProcessTab(QWidget):
                     
                     if j_id == self._selected_job_id or len(self.queue_mgr.get_all_jobs()) == 1:
                         logger.error(f"AdvancedProcessTab: Error de análisis: {error}")
-                        self.video_details.title_input.setText(self.tr(f"{error}"))
+                        self.video_details.title_input.setText(str(error))
                         self.video_details.title_input.setCursorPosition(0)
                         self.output_options.btn_start_download.setEnabled(False)
 

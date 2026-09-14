@@ -40,6 +40,7 @@ import zipfile
 import requests
 from core.logger.logger_manager import logger
 from core.setup.potprovider_setup import get_plugin_dir
+from PySide6.QtCore import QCoreApplication
 
 WPC_API_URL = "https://api.github.com/repos/coletdjnz/yt-dlp-getpot-wpc/releases/latest"
 WPC_PLUGIN_SENTINEL = os.path.join("yt_dlp_plugins", "extractor", "getpot_wpc.py")
@@ -213,7 +214,7 @@ def _download_and_extract_sdist_package(url: str, dest_dir: str, import_name: st
             None
         )
         if root_member is None:
-            raise RuntimeError(f"No se encontró {import_name}/__init__.py dentro del sdist descargado.")
+            raise RuntimeError(QCoreApplication.translate("wpc_setup", "No se encontró {0}/__init__.py dentro del sdist descargado.").format(import_name))
 
         prefix = root_member.name[:-len("__init__.py")]  # ".../<import_name>/"
         target_root = os.path.normpath(os.path.join(dest_dir, import_name))
@@ -296,13 +297,13 @@ def install_wpc(progress_callback=None) -> tuple:
         )
         if not wheel_url:
             logger.error("WPC: no se encontró un asset .whl en el último release")
-            return False, "No se encontró el archivo .whl de WPC en el último release."
+            return False, QCoreApplication.translate("wpc_setup", "No se encontró el archivo .whl de WPC en el último release.")
 
         logger.info(f"WPC: descargando plugin desde {wheel_url}")
         _download_and_extract_wheel(wheel_url, plugin_dir)
 
         if not _check_plugin_sentinel(plugin_dir):
-            return False, "El plugin de WPC no se encontró tras la extracción."
+            return False, QCoreApplication.translate("wpc_setup", "El plugin de WPC no se encontró tras la extracción.")
 
         if progress_callback:
             progress_callback(30)
@@ -319,13 +320,13 @@ def install_wpc(progress_callback=None) -> tuple:
             elif kind == "wheel":
                 dep_url = _get_pinned_wheel_url(pypi_name, version)
                 if not dep_url:
-                    return False, f"No se encontró la wheel de {pypi_name}=={version} en PyPI."
+                    return False, QCoreApplication.translate("wpc_setup", "No se encontró la wheel de {0}=={1} en PyPI.").format(pypi_name, version)
                 logger.info(f"WPC: descargando {pypi_name}=={version} (wheel) desde {dep_url}")
                 _download_and_extract_wheel(dep_url, plugin_dir)
             else:  # "sdist_pure"
                 dep_url = _get_pinned_sdist_url(pypi_name, version)
                 if not dep_url:
-                    return False, f"No se encontró el sdist de {pypi_name}=={version} en PyPI."
+                    return False, QCoreApplication.translate("wpc_setup", "No se encontró el sdist de {0}=={1} en PyPI.").format(pypi_name, version)
                 logger.info(f"WPC: descargando {pypi_name}=={version} (sdist) desde {dep_url}")
                 _download_and_extract_sdist_package(dep_url, plugin_dir, import_name)
 
@@ -333,7 +334,7 @@ def install_wpc(progress_callback=None) -> tuple:
                 progress_callback(30 + int(((i + 1) / total) * 65))
 
         if not check_wpc():
-            return False, "Faltan dependencias de WPC tras la instalación."
+            return False, QCoreApplication.translate("wpc_setup", "Faltan dependencias de WPC tras la instalación.")
 
         version = get_local_version()
         msg = f"WPC instalado correctamente: v{version}" if version else "WPC instalado correctamente"

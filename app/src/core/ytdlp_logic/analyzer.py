@@ -7,6 +7,7 @@ from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config
 from core.setup.ytdlp_setup import get_ytdlp_path
 from core.setup.setup_manager import get_dependency_env
+from PySide6.QtCore import QCoreApplication
 
 def strip_ansi_codes(text):
     """Elimina códigos de color ANSI como [0;31m del texto."""
@@ -28,6 +29,7 @@ class YTDLLogger:
         if self.progress_callback:
             try:
                 clean_msg = strip_ansi_codes(msg)
+                # Texto crudo de yt-dlp, siempre en ingles - no traducir estos marcadores.
                 if "Downloading item" in clean_msg or "Downloading video" in clean_msg:
                     match = re.search(r'(?:item|video)\s+(\d+)\s+of\s+(\d+)', clean_msg, re.IGNORECASE)
                     if match:
@@ -225,7 +227,7 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
         import yt_dlp
     except ImportError:
         logger.error("Failed to import yt_dlp from zip")
-        return None, "Error: yt-dlp could not be imported."
+        return None, QCoreApplication.translate("analyzer", "Error: yt-dlp could not be imported.")
 
     ydl_opts = get_base_ydl_opts(extra_opts)
     if progress_callback:
@@ -265,14 +267,14 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
             err_msg = ""
             if yt_logger and hasattr(yt_logger, "errors") and yt_logger.errors:
                 err_msg = "\n".join(yt_logger.errors)
-            return None, strip_ansi_codes(err_msg) or "No se pudo obtener información de la URL."
+            return None, strip_ansi_codes(err_msg) or QCoreApplication.translate("analyzer", "No se pudo obtener información de la URL.")
             
         return info_dict, None
         
     except Exception as e:
         err_detail = traceback.format_exc()
         logger.error(f"Unexpected error in analyzer: {err_detail}")
-        return None, strip_ansi_codes(str(e)) or "Error desconocido durante el análisis."
+        return None, strip_ansi_codes(str(e)) or QCoreApplication.translate("analyzer", "Error desconocido durante el análisis.")
         
     finally:
         os.environ["PATH"] = old_path

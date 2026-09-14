@@ -14,6 +14,7 @@ from urllib.parse import urlparse, parse_qs
 from PySide6.QtCore import QObject, Signal
 
 from core.logger.logger_manager import logger
+from PySide6.QtCore import QCoreApplication
 
 # ─── Credenciales de la App (ofuscadas) ─────────────────────────────────────
 # Estas identifican a DowP como aplicación ante Freesound.
@@ -167,16 +168,19 @@ class FreesoundAuth:
                 self._exchange_code(self._server.auth_code)
             elif self._server.auth_error:
                 logger.warning(f"FreesoundAuth: Autorización denegada: {self._server.auth_error}")
-                self.signals.auth_error.emit(f"Acceso denegado por el usuario: {self._server.auth_error}")
+                self.signals.auth_error.emit(QCoreApplication.translate("FreesoundAuth", "Acceso denegado por el usuario: {0}").format(self._server.auth_error))
             else:
                 logger.warning("FreesoundAuth: No se recibió código de autorización (timeout)")
-                self.signals.auth_error.emit("Tiempo de espera agotado. Intente de nuevo.")
+                self.signals.auth_error.emit(QCoreApplication.translate("FreesoundAuth", "Tiempo de espera agotado. Intente de nuevo."))
 
         except OSError as e:
             logger.error(f"FreesoundAuth: Error al iniciar servidor callback: {e}")
             self.signals.auth_error.emit(
-                f"No se pudo iniciar el servidor local (puerto {REDIRECT_PORT} en uso). "
-                f"Cierre otras instancias de DowP e intente de nuevo."
+                QCoreApplication.translate(
+                    "FreesoundAuth",
+                    "No se pudo iniciar el servidor local (puerto {0} en uso). "
+                    "Cierre otras instancias de DowP e intente de nuevo."
+                ).format(REDIRECT_PORT)
             )
         except Exception as e:
             logger.error(f"FreesoundAuth: Error inesperado: {e}")
@@ -202,7 +206,7 @@ class FreesoundAuth:
             if response.status_code != 200:
                 error_detail = response.text
                 logger.error(f"FreesoundAuth: Error en token exchange: {response.status_code} - {error_detail}")
-                self.signals.auth_error.emit(f"Error al obtener token: {error_detail}")
+                self.signals.auth_error.emit(QCoreApplication.translate("FreesoundAuth", "Error al obtener token: {0}").format(error_detail))
                 return
 
             data = response.json()
@@ -225,7 +229,7 @@ class FreesoundAuth:
 
         except requests.exceptions.RequestException as e:
             logger.error(f"FreesoundAuth: Error de red en token exchange: {e}")
-            self.signals.auth_error.emit(f"Error de red al obtener token: {e}")
+            self.signals.auth_error.emit(QCoreApplication.translate("FreesoundAuth", "Error de red al obtener token: {0}").format(e))
 
     def _fetch_username(self, access_token: str) -> str:
         """Obtiene el nombre de usuario del usuario autenticado via /me/."""

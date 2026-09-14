@@ -21,6 +21,7 @@ from core.logger.logger_manager import logger
 from core.setup.models_setup import get_all_rembg_families
 from core.utils.onnx_providers import DML_FAILURE_HINTS, build_session_options, get_execution_providers
 from core.utils.paths import get_models_dir
+from PySide6.QtCore import QCoreApplication
 
 _DEFAULT_INPUT_SIZE = (1024, 1024)
 _IMAGENET_MEAN = (0.485, 0.456, 0.406)
@@ -203,13 +204,13 @@ def remove_background(img: Image.Image, options: dict, progress_callback=None) -
     criterio validado en producción por DowP1 (ver DML_FAILURE_HINTS)."""
     model_info = _model_info(options.get("rembg_family"), options.get("rembg_model"))
     if not model_info:
-        raise ValueError("Eliminar Fondo: no hay un modelo de IA seleccionado.")
+        raise ValueError(QCoreApplication.translate("rembg_engine", "Eliminar Fondo: no hay un modelo de IA seleccionado."))
 
     model_path = _model_path(model_info)
     if not os.path.exists(model_path):
         model_name = options.get("rembg_model")
         raise FileNotFoundError(
-            f"El modelo '{model_name}' no está instalado -- ve a Ajustes > Modelos para descargarlo."
+            QCoreApplication.translate("rembg_engine", "El modelo '{0}' no está instalado -- ve a Ajustes > Modelos para descargarlo.").format(model_name)
         )
 
     use_gpu = options.get("rembg_gpu", True)

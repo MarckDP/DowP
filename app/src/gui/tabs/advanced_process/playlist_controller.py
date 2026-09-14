@@ -1,5 +1,5 @@
 # src/gui/tabs/single_process/playlist_controller.py
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QCoreApplication
 from PySide6.QtWidgets import QDialog
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config
@@ -23,17 +23,17 @@ class PlaylistController(QObject):
 
         dialog = PlaylistSelectionDialog(data, self.tab)
         if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.result_data:
-            job.error_message = self.tab.tr("Selección de playlist cancelada")
+            job.error_message = QCoreApplication.translate("AdvancedProcessTab", "Selección de playlist cancelada")
             self.tab.queue_mgr.update_job_status(job_id, "FAILED")
             return
 
         selected = dialog.result_data.get("selected_indices", [])
         if not selected:
-            job.error_message = self.tab.tr("No se seleccionaron medios")
+            job.error_message = QCoreApplication.translate("AdvancedProcessTab", "No se seleccionaron medios")
             self.tab.queue_mgr.update_job_status(job_id, "FAILED")
             return
 
-        title = data.get("title") or self.tab.tr("Playlist")
+        title = data.get("title") or QCoreApplication.translate("AdvancedProcessTab", "Playlist")
         job.job_type = "PLAYLIST"
         job.title = title
         job.config.update({
@@ -64,7 +64,7 @@ class PlaylistController(QObject):
         if not entries:
             job = self.tab.queue_mgr.get_job(job_id)
             if job:
-                job.error_message = self.tab.tr("La playlist está vacía o no tiene elementos extraíbles.")
+                job.error_message = QCoreApplication.translate("AdvancedProcessTab", "La playlist está vacía o no tiene elementos extraíbles.")
                 self.tab.queue_mgr.update_job_status(job_id, "FAILED")
             return
 
@@ -86,7 +86,7 @@ class PlaylistController(QObject):
         for i, entry in enumerate(entries[1:], start=2):
             if not entry:
                 continue
-            entry_title = entry.get('title') or f"Video {i}"
+            entry_title = entry.get('title') or QCoreApplication.translate("AdvancedProcessTab", "Video {0}").format(i)
             entry_url = entry.get("webpage_url") or entry.get("url") or (job.config.get("url") if job else "")
             
             new_config = {
@@ -201,7 +201,7 @@ class PlaylistController(QObject):
             self.tab.video_details.load_thumbnail(thumb_url, fallback_urls=fallback_urls)
             self.tab.video_details.btn_download_thumb.setEnabled(True)
         else:
-            self.tab.video_details.thumb_container.set_text(self.tab.tr("Sin miniatura de playlist"))
+            self.tab.video_details.thumb_container.set_text(QCoreApplication.translate("AdvancedProcessTab", "Sin miniatura de playlist"))
             self.tab.video_details.btn_download_thumb.setEnabled(False)
         
         # Ocultar botón de corte (no aplica a playlists)
@@ -233,23 +233,23 @@ class PlaylistController(QObject):
         # --- Ocultar o bloquear combos ---
         self.tab.video_details.combo_video.blockSignals(True)
         self.tab.video_details.combo_video.clear()
-        self.tab.video_details.combo_video.addItem(self.tab.tr("Configurado en Playlist"))
+        self.tab.video_details.combo_video.addItem(QCoreApplication.translate("AdvancedProcessTab", "Configurado en Playlist"))
         self.tab.video_details.combo_video.setEnabled(False)
         self.tab.video_details.combo_video.blockSignals(False)
         
         self.tab.video_details.combo_audio.blockSignals(True)
         self.tab.video_details.combo_audio.clear()
-        self.tab.video_details.combo_audio.addItem(self.tab.tr("Configurado en Playlist"))
+        self.tab.video_details.combo_audio.addItem(QCoreApplication.translate("AdvancedProcessTab", "Configurado en Playlist"))
         self.tab.video_details.combo_audio.setEnabled(False)
         self.tab.video_details.combo_audio.blockSignals(False)
 
         selected_count = len(job.config.get("selected_indices", []))
         total_count = job.config.get("total_videos", selected_count)
-        mode_label = self.tab.tr("Solo Audio") if job.config.get("playlist_mode") == "audio_only" else self.tab.tr("Video + Audio")
+        mode_label = QCoreApplication.translate("AdvancedProcessTab", "Solo Audio") if job.config.get("playlist_mode") == "audio_only" else QCoreApplication.translate("AdvancedProcessTab", "Video + Audio")
         quality_label = job.config.get("playlist_quality", "best_compatible")
         self.tab.output_options.set_progress(
             0,
-            self.tab.tr(f"Playlist configurada: {selected_count}/{total_count} | {mode_label} | {quality_label}"),
+            QCoreApplication.translate("AdvancedProcessTab", "Playlist configurada: {0}/{1} | {2} | {3}").format(selected_count, total_count, mode_label, quality_label),
             "wait"
         )
         self.tab.output_options.btn_start_download.setEnabled(True)

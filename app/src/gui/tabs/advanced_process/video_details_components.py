@@ -12,6 +12,7 @@ from gui.styles import get_theme_token, apply_cut_button_style
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox, CheckmarkComboDelegate
 from core.utils.paths import get_src_dir
+from PySide6.QtCore import QCoreApplication
 
 class ThumbnailLoaderThread(QThread):
     finished = Signal(bytes, str) # content, error
@@ -44,8 +45,8 @@ class RichTextDelegate(CheckmarkComboDelegate):
     def __init__(self, combo=None, parent=None):
         super().__init__(combo, parent)
         self.tag_colors = {
-            self.tr("[Combinado]"): get_theme_token("etiqueta_combinado", "#3498db"),
-            self.tr("[Multi-Idioma]"): get_theme_token("etiqueta_multi_idioma", "#9b59b6"),
+            QCoreApplication.translate("RichTextDelegate", "[Combinado]"): get_theme_token("etiqueta_combinado", "#3498db"),
+            QCoreApplication.translate("RichTextDelegate", "[Multi-Idioma]"): get_theme_token("etiqueta_multi_idioma", "#9b59b6"),
         }
         # Cargar Iconos
         _icon_dir = os.path.join(get_src_dir(), "assets", "icons", "svg")
@@ -274,8 +275,8 @@ class RichComboBox(AutoPopupComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.tag_colors = {
-            self.tr("[Combinado]"): get_theme_token("etiqueta_combinado", "#3498db"),
-            self.tr("[Multi-Idioma]"): get_theme_token("etiqueta_multi_idioma", "#9b59b6"),
+            QCoreApplication.translate("RichComboBox", "[Combinado]"): get_theme_token("etiqueta_combinado", "#3498db"),
+            QCoreApplication.translate("RichComboBox", "[Multi-Idioma]"): get_theme_token("etiqueta_multi_idioma", "#9b59b6"),
         }
         _icon_dir = os.path.join(get_src_dir(), "assets", "icons", "svg")
         self.star_pixmap = self._get_colored_icon(os.path.join(_icon_dir, "star.svg"), "#4CAF50")
