@@ -41,8 +41,14 @@ class QuickModeTab(QWidget):
         self.controller = QuickDownloadController(self)
         
         # Conectar señales del controlador
+        # NOTA: controls_state_changed (deshabilitaba modo/calidad/etiquetas/recodificación
+        # mientras había OTRA descarga activa o en cola) ya no se conecta a propósito: cada
+        # descarga ya toma su propia foto de la configuración al lanzarse (ver
+        # _on_download_clicked -> build_quick_request_data), así que cambiar estas opciones
+        # mientras algo corre no afecta a lo que ya está en curso — el panel puede quedar
+        # siempre habilitado. busy_state_changed sigue conectado: ese es un candado corto,
+        # propio del análisis del clic actual (playlist/corte), no de descargas ajenas.
         self.controller.busy_state_changed.connect(self._set_busy)
-        self.controller.controls_state_changed.connect(self._set_controls_enabled)
         self.controller.download_text_changed.connect(self._set_download_text)
         self.controller.progress_updated.connect(self.output_options.set_progress)
 
@@ -485,8 +491,6 @@ class QuickModeTab(QWidget):
         """Llamado cuando el monitor de portapapeles pega una URL en nuestro campo."""
         if self.url_input.text().strip() != url:
             return
-        if self.controller.is_downloading:
-            return
         from core.utils.config_manager import get_config
         if get_config().get("auto_analyze", False):
             logger.info("QuickModeTab: Auto-inicio por pegado automático de URL")
@@ -497,9 +501,7 @@ class QuickModeTab(QWidget):
         url = text.strip()
         if not url:
             return
-        if self.controller.is_downloading:
-            return
-            
+
         from core.utils.config_manager import get_config
         if not get_config().get("auto_analyze", False):
             return
@@ -596,7 +598,7 @@ class QuickModeTab(QWidget):
             
             frag_steps = [
                 {
-                    "widgets": [self._dummy_frag_dialog.range_slider],
+                    "widgets": [self._dummy_frag_dialog.trim_player.waveform_widget],
                     "title": self.tr("Selector de Corte"),
                     "desc": self.tr("Aquí puedes elegir el inicio y fin exacto del fragmento que deseas descargar.")
                 },

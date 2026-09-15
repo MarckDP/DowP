@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, QSize, Signal, QT_TRANSLATE_NOOP
+from PySide6.QtCore import Qt, QSize, Signal, QT_TRANSLATE_NOOP, QCoreApplication
 from PySide6.QtGui import QImage, QPixmap, QIcon, QColor
 from PySide6.QtWidgets import QApplication
 
@@ -434,7 +434,25 @@ class QuickDownloadRow(QFrame):
 
     # Mismo mapeo estado -> token de tema que usa QueueItemCard en queue_panel.py,
     # para que Modo Rápido y LOTES se vean consistentes.
-    _STATUS_TOKENS = {
+    #
+    # _STATUS_TOKENS_SOURCE queda en español a propósito, envuelto en
+    # QT_TRANSLATE_NOOP (que NO traduce en tiempo real -- solo marca el string
+    # para que lupdate lo registre en el catálogo bajo el contexto
+    # "QuickDownloadRow"). _status_tokens() es lo que realmente se usa para
+    # comparar: TRAMPA DE TRADUCCIÓN (ver memoria i18n-dowp-workflow.md, trampa
+    # #7 -- mismo bug ya arreglado en [Combinado]/[Multi-Idioma] y en las colas
+    # de Editor de Imagen/Herramientas Multimedia) -- el texto real de estado le
+    # llega a esta fila ya traducido vía self.tr(), a veces desde este mismo
+    # QuickDownloadRow, a veces desde QuickDownloadController
+    # (download_controller.py) -- y ambos contextos NO siempre tienen la misma
+    # cadena traducida en el catálogo (algunas laa tiene uno, otras el otro, de
+    # ahí que el bug fuera intermitente: "Completado"/"Procesando" fallaban en
+    # inglés, pero "Cancelado"/"Analizando"/"Preparando" coincidían de casualidad
+    # porque esas nunca se tradujeron bajo el contexto del controlador y
+    # self.tr() devolvía el original en español sin traducir). Por eso acá se
+    # registran las traducciones de AMBOS contextos (más el español crudo, por
+    # si acaso) para cada palabra, no solo una.
+    _STATUS_TOKENS_SOURCE = {
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Completado"): ("estado_exito", "#40d66b"),
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Error"): ("estado_error", "#ff6b5f"),
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Cancelado"): ("estado_error", "#ff6b5f"),
@@ -447,6 +465,21 @@ class QuickDownloadRow(QFrame):
         QT_TRANSLATE_NOOP("QuickDownloadRow", "En espera"): ("estado_espera", "#aaaaaa"),
         QT_TRANSLATE_NOOP("QuickDownloadRow", "En cola"): ("estado_espera", "#aaaaaa"),
     }
+    _STATUS_TOKENS_CACHE = None
+
+    @classmethod
+    def _status_tokens(cls) -> dict:
+        """Memoizado (no a nivel de clase/import): el cambio de idioma en DowP
+        exige reiniciar la app, así que alcanza con traducir una sola vez, la
+        primera vez que se pinta una fila."""
+        if cls._STATUS_TOKENS_CACHE is None:
+            tokens = {}
+            for spanish, value in cls._STATUS_TOKENS_SOURCE.items():
+                tokens[spanish.lower()] = value
+                for ctx in ("QuickDownloadRow", "QuickDownloadController"):
+                    tokens[QCoreApplication.translate(ctx, spanish).lower()] = value
+            cls._STATUS_TOKENS_CACHE = tokens
+        return cls._STATUS_TOKENS_CACHE
 
     @staticmethod
     def _blend(base_hex, tint_hex, ratio):
@@ -503,15 +536,17 @@ class QuickDownloadRow(QFrame):
         el controlador ("Error al recodificar", "Recodificación cancelada",
         "Recodificando 2 de 5...") caían al gris de espera: un ítem que fallaba no se
         pintaba de rojo. Se resuelve por prefijo, y el error/cancelado se detecta por
-        palabra para no depender de la redacción exacta."""
+        palabra para no depender de la redacción exacta (y funciona en cualquier
+        idioma: "cancel"/"fail" también aparecen en "cancelled"/"failed")."""
         texto = (status or "").strip()
-        if texto in cls._STATUS_TOKENS:
-            return cls._STATUS_TOKENS[texto]
+        tokens = cls._status_tokens()
         bajo = texto.lower()
-        if bajo.startswith("error") or "cancel" in bajo or "fall" in bajo:
+        if bajo in tokens:
+            return tokens[bajo]
+        if bajo.startswith("error") or "cancel" in bajo or "fall" in bajo or "fail" in bajo:
             return cls._TOKEN_ERROR
-        for clave, valor in cls._STATUS_TOKENS.items():
-            if bajo.startswith(clave.lower()):
+        for clave, valor in tokens.items():
+            if bajo.startswith(clave):
                 return valor
         return cls._TOKEN_ESPERA
 

@@ -157,7 +157,13 @@ class CompareViewer(QGraphicsView):
         self._before_item.setPos((target_w - bw * before_scale) / 2, (target_h - bh * before_scale) / 2)
         self._after_item.setPos((target_w - aw * after_scale) / 2, (target_h - ah * after_scale) / 2)
 
-        self._scene.setSceneRect(0, 0, target_w, target_h)
+        # La escena se hace más grande que el contenido (mismo margen del 200% a cada
+        # lado que usa ZoomableImageViewer.set_pixmap(), para paneAR más allá de los
+        # bordes) -- el contenido (before/after/divisor) sigue viviendo en (0,0)-(w,h)
+        # dentro de esa escena más grande, ningún otro cálculo cambia.
+        content_rect = QRectF(0, 0, target_w, target_h)
+        margin_x, margin_y = target_w * 2, target_h * 2
+        self._scene.setSceneRect(QRectF(-margin_x, -margin_y, target_w + margin_x * 2, target_h + margin_y * 2))
 
         self._lbl_before.setText(self.tr("Original: {0}×{1} px").format(bw, bh))
         self._lbl_after.setText(self.tr("Resultado: {0}×{1} px").format(aw, ah))
@@ -169,7 +175,9 @@ class CompareViewer(QGraphicsView):
 
         self._divider_fraction = 0.5
         self._update_divider()
-        self.fitInView(self._scene.sceneRect(), Qt.KeepAspectRatio)
+        # Encuadrar al CONTENIDO, no a la escena (que ahora es bastante más grande) --
+        # si no, el ajuste inicial saldría alejadísimo mostrando todo el margen vacío.
+        self.fitInView(content_rect, Qt.KeepAspectRatio)
         self._position_chips()
         self._position_handle()
 

@@ -66,6 +66,7 @@ class SubclipItemWidget(QWidget):
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_sutil', '#333333')};
                 border-radius: 6px;
+                padding: 0px;
             }}
             QPushButton:hover {{
                 background-color: {get_theme_token('acento_primario', '#B9E640')};
@@ -99,7 +100,7 @@ class SubclipItemWidget(QWidget):
         btn_del.setFixedSize(22, 22)
         btn_del.setToolTip(self.tr("Eliminar subclip"))
         btn_del.setStyleSheet("""
-            QPushButton { background: transparent; border: none; border-radius: 6px; }
+            QPushButton { background: transparent; border: none; border-radius: 6px; padding: 0px; }
             QPushButton:hover { background: rgba(229,57,53,160); }
         """)
         btn_del.clicked.connect(lambda: on_delete(index))

@@ -42,22 +42,49 @@ from core.utils.paths import get_pasted_images_dir
 # ya prueba el Gestor de Medios con decenas de miles de archivos sin colgarse, ver
 # gui/tabs/editing_media/media_model.py::MediaTableModel.
 
-_STATUS_COLOR_MAP = {
-    "completado (": "estado_aviso",
-    "pendiente": "estado_espera",
-    "en cola": "estado_espera",
-    "procesando": "estado_aviso",
-    "completado": "estado_exito",
-    "finalizado": "estado_exito",
-    "error": "estado_error",
-    "cancelado": "estado_espera",
-    "eliminado": "estado_error",
-}
+_STATUS_COLOR_MAP_CACHE = None
+
+def _status_color_map() -> dict:
+    """TRAMPA DE TRADUCCIÓN (ver memoria i18n-dowp-workflow.md, trampa #7 -- mismo
+    bug ya encontrado y arreglado en [Combinado]/[Multi-Idioma] de
+    core/utils/format_manager.py): estas claves NO pueden quedar fijas en
+    español. El texto real de estado llega ya traducido, vía self.tr(), desde
+    ImageConvertWorker (Completado/Procesando.../Cancelado/Error),
+    _QueueTableModel (Pendiente) e ImageQueueWidget (Resultado eliminado) -- en
+    inglés "Completado" pasa a ser "Completed", la búsqueda de "completado" como
+    substring dejaba de encontrar nada, y el círculo quedaba siempre en el color
+    por defecto (gris), sin importar el estado real. Acá se traduce con el MISMO
+    contexto/cadena que usan esas clases, así generador y buscador siempre
+    coinciden sea cual sea el idioma activo. Memoizado (no a nivel de módulo):
+    el cambio de idioma en DowP exige reiniciar la app, así que alcanza con
+    calcularlo una sola vez, la primera vez que se pinta un ítem.
+    "completado (" tiene que seguir yendo ANTES que "completado" a secas: el
+    loop de abajo devuelve el primer match, y "completado (...)" contiene
+    "completado" como substring -- sin este orden, un completado-con-advertencia
+    se pintaría verde igual."""
+    global _STATUS_COLOR_MAP_CACHE
+    if _STATUS_COLOR_MAP_CACHE is None:
+        tr = QCoreApplication.translate
+        completado = tr("ImageConvertWorker", "Completado").lower()
+        procesando = tr("ImageConvertWorker", "Procesando...").lower().rstrip(".")
+        error = tr("ImageConvertWorker", "Error: {0}").split(":")[0].lower()
+        _STATUS_COLOR_MAP_CACHE = {
+            f"{completado} (": "estado_aviso",
+            tr("_QueueTableModel", "Pendiente").lower(): "estado_espera",
+            "en cola": "estado_espera",  # sin uso real hoy en Editor de Imagen, se deja tal cual
+            procesando: "estado_aviso",
+            completado: "estado_exito",
+            "finalizado": "estado_exito",  # ídem -- sin uso real hoy
+            error: "estado_error",
+            tr("ImageConvertWorker", "Cancelado").lower(): "estado_espera",
+            tr("ImageQueueWidget", "Resultado eliminado").lower(): "estado_error",
+        }
+    return _STATUS_COLOR_MAP_CACHE
 
 def _get_status_icon(status_text: str):
     clean = (status_text or "").lower().strip()
     token_key = "estado_espera"
-    for key, token in _STATUS_COLOR_MAP.items():
+    for key, token in _status_color_map().items():
         if key in clean:
             token_key = token
             break

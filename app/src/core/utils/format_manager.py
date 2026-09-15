@@ -11,6 +11,7 @@ Clasificación de 3 tipos:
 Lógica inspirada en el DowP viejo pero simplificada y sin redundancia.
 """
 import math
+from PySide6.QtCore import QCoreApplication
 from core.constants import (
     EDITOR_FRIENDLY_CRITERIA, LANG_CODE_MAP,
     VIDEO_EXTENSIONS, AUDIO_EXTENSIONS,
@@ -283,10 +284,17 @@ class FormatManager:
         size_str = FormatManager.get_friendly_size(size_bytes)
 
         tags = []
+        # Traducido con el mismo contexto/cadena que usa RichTextDelegate/RichComboBox
+        # (video_details_components.py) para colorear estas etiquetas por texto: si acá se
+        # dejara sin traducir, en cualquier idioma que no sea español el texto pintado
+        # ("[Combinado]"/"[Multi-Idioma]", siempre en español) dejaría de coincidir con la
+        # clave ya traducida de tag_colors, y la etiqueta perdía color y negrita en silencio
+        # (bug ya reportado en inglés). Ambas clases ya tienen esta traducción en el catálogo
+        # (en_US.ts/pt_BR.ts), así que no hace falta regenerar nada.
         if is_multi:
-            tags.append("[Multi-Idioma]")
+            tags.append(QCoreApplication.translate("RichTextDelegate", "[Multi-Idioma]"))
         elif is_combined:
-            tags.append("[Combinado]")
+            tags.append(QCoreApplication.translate("RichTextDelegate", "[Combinado]"))
 
         tag_str = " ".join(tags) + " " if tags else ""
 

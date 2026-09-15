@@ -20,7 +20,6 @@ class QuickDownloadController(QObject):
     
     # Señales para notificar cambios a la vista
     busy_state_changed = Signal(bool, str)       # (busy, message)
-    controls_state_changed = Signal(bool)       # (enabled)
     download_text_changed = Signal(str)         # (text)
     download_finished_signal = Signal(bool, str) # (success, message)
     progress_updated = Signal(int, str, str)    # (value, message, status_type)
@@ -423,7 +422,6 @@ class QuickDownloadController(QObject):
 
         self.active_workers.append(task_data)
         self.is_downloading = True
-        self.controls_state_changed.emit(False)
         self.download_text_changed.emit(self.tr("Descargar") if hasattr(self, "tr") else "Descargar")
         self._emit_batch_progress()
         worker.start()
@@ -440,7 +438,6 @@ class QuickDownloadController(QObject):
             self.queue_mgr.cancel_job(job_id)
             
         self.is_downloading = False
-        self.controls_state_changed.emit(True)
         self.download_text_changed.emit(self.tr("Descargar") if hasattr(self, "tr") else "Descargar")
         self.progress_updated.emit(0, self.tr("Descargas canceladas") if hasattr(self, "tr") else "Descargas canceladas", "wait")
         if self.tab.taskbar_manager:
@@ -693,7 +690,6 @@ class QuickDownloadController(QObject):
 
         if not self.active_workers and not self.pending_tasks:
             self.is_downloading = False
-            self.controls_state_changed.emit(True)
             self.download_text_changed.emit(self.tr("Descargar") if hasattr(self, "tr") else "Descargar")
             self.progress_updated.emit(100, self.tr("Descargas completadas") if hasattr(self, "tr") else "Descargas completadas", "done")
             if self.tab.taskbar_manager:

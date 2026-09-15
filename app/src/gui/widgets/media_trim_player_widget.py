@@ -542,8 +542,16 @@ class _CheckerboardFrame(QFrame):
         painter = QPainter(self)
         rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
 
+        # Solo las esquinas SUPERIORES redondeadas — el borde inferior queda recto para
+        # "amarrar" sin costura contra lbl_time_info (widget hermano fuera de este
+        # contenedor, ver MediaTrimPlayerWidget._init_ui), que a su vez redondea solo sus
+        # esquinas inferiores al mismo radio. Juntos dan la impresión de una sola tarjeta,
+        # como antes de separarlos en dos widgets independientes.
         path = QPainterPath()
         path.addRoundedRect(rect, self._radius, self._radius)
+        bottom_half = QPainterPath()
+        bottom_half.addRect(QRectF(rect.left(), rect.center().y(), rect.width(), rect.height() / 2.0 + 1))
+        path = path.united(bottom_half)
         painter.setClipPath(path)
 
         if self._show_checkerboard:
@@ -1346,6 +1354,10 @@ class MediaTrimPlayerWidget(QWidget):
         self._native_size = None
         self._proxy_signal_connected = False
         self._pending_source_restore = None  # (pos_ms, was_playing) pendiente de aplicar tras un swap de fuente
+        # Permite ocultar permanentemente el slider de ganancia visual (dB) — ver
+        # set_gain_slider_visible() — independiente del ocultamiento automático por ancho
+        # angosto que ya hace _recalculate_compact_controls().
+        self._gain_slider_allowed = True
 
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -1467,22 +1479,6 @@ class MediaTrimPlayerWidget(QWidget):
 
         prev_layout.addWidget(self.empty_preview_widget, 1)
 
-        # Reloj global: franja delgada al pie de la vista previa (antes vivía en ctrl_bar,
-        # abajo del todo, separado del video — se movió aquí adentro porque ya hay espacio
-        # y queda junto a lo que representa).
-        self.lbl_time_info = QLabel("00:00:00.000 / 00:00:00.000")
-        self.lbl_time_info.setAlignment(Qt.AlignCenter)
-        self.lbl_time_info.setFixedHeight(20)
-        self.lbl_time_info.setStyleSheet("""
-            QLabel {
-                background-color: #000000;
-                color: #cdd6f4;
-                font-size: 11px;
-                font-weight: bold;
-            }
-        """)
-        prev_layout.addWidget(self.lbl_time_info)
-
         # Botón flotante para selección de resolución de previsualización (esquina superior derecha del visor)
         self.btn_quality = QToolButton(self.preview_container)
         self.btn_quality.setToolButtonStyle(Qt.ToolButtonTextOnly)
@@ -1508,7 +1504,40 @@ class MediaTrimPlayerWidget(QWidget):
         self.btn_quality.setVisible(False)
         self._init_quality_menu()
 
-        left_layout.addWidget(self.preview_container, 1)
+        # Reloj global: franja delgada debajo de la vista previa. Vive FUERA de
+        # preview_container (que tiene esquinas redondeadas + cuadrícula para el video) a
+        # propósito — antes vivía adentro, apilada en el mismo QVBoxLayout, y el hueco entre
+        # el video y esta franja dejaba asomar la cuadrícula del contenedor (spacing por
+        # defecto del layout, nunca puesto en 0), además de que sus esquinas rectas, pegadas
+        # al borde redondeado del contenedor, dejaban asomar ese mismo fondo en las puntas
+        # inferiores (efecto óptico de "esquinas redondeadas" en esta franja).
+        #
+        # Para que ambos "amarren" y sigan pareciendo una sola tarjeta (sin la costura
+        # redondeada de antes ni el hueco de cuadrícula), preview_container solo redondea
+        # sus esquinas SUPERIORES (ver _CheckerboardFrame.paintEvent) y esta etiqueta solo
+        # las INFERIORES, al mismo radio, unidas sin espacio en una columna propia.
+        self.lbl_time_info = QLabel("00:00:00.000 / 00:00:00.000")
+        self.lbl_time_info.setAlignment(Qt.AlignCenter)
+        self.lbl_time_info.setFixedHeight(20)
+        self.lbl_time_info.setStyleSheet("""
+            QLabel {
+                background-color: #000000;
+                color: #cdd6f4;
+                font-size: 11px;
+                font-weight: bold;
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }
+        """)
+
+        preview_col = QVBoxLayout()
+        preview_col.setContentsMargins(0, 0, 0, 0)
+        preview_col.setSpacing(0)
+        preview_col.addWidget(self.preview_container, 1)
+        preview_col.addWidget(self.lbl_time_info)
+        left_layout.addLayout(preview_col, 1)
 
         # Contenedor horizontal: Columna de herramientas/waveform a la izquierda y Vúmetro completo a la derecha
         wave_container = QHBoxLayout()
@@ -1544,9 +1573,9 @@ class MediaTrimPlayerWidget(QWidget):
 
         zoom_bar.addSpacing(16)
 
-        lbl_zoom_y_icon = QLabel("dB")
-        lbl_zoom_y_icon.setStyleSheet("color: #888; font-size: 11px; font-weight: bold;")
-        zoom_bar.addWidget(lbl_zoom_y_icon)
+        self.lbl_zoom_y_icon = QLabel("dB")
+        self.lbl_zoom_y_icon.setStyleSheet("color: #888; font-size: 11px; font-weight: bold;")
+        zoom_bar.addWidget(self.lbl_zoom_y_icon)
 
         self.slider_zoom_y = QSlider(Qt.Horizontal)
         self.slider_zoom_y.setRange(10, 1000)
@@ -1794,7 +1823,18 @@ class MediaTrimPlayerWidget(QWidget):
         if hasattr(self, "slider_zoom_x"):
             self.slider_zoom_x.setVisible(width >= 320)
         if hasattr(self, "slider_zoom_y"):
-            self.slider_zoom_y.setVisible(width >= 320)
+            self.slider_zoom_y.setVisible(self._gain_slider_allowed and width >= 320)
+        if hasattr(self, "lbl_zoom_y_icon"):
+            self.lbl_zoom_y_icon.setVisible(self._gain_slider_allowed and width >= 320)
+
+    def set_gain_slider_visible(self, visible: bool):
+        """Muestra/oculta permanentemente el slider de ganancia visual (dB) de la waveform
+        y su ícono — no aporta nada cuando la waveform nunca va a tener picos de audio
+        reales (p.ej. corte de fragmentos sobre un stream remoto, sin waveform real).
+        Independiente del ocultamiento automático por ancho angosto de arriba."""
+        self._gain_slider_allowed = visible
+        width = self._timeline_container.width() if getattr(self, "_timeline_container", None) else self.width()
+        self._recalculate_compact_controls(width)
 
     def _init_media_player(self):
         self.media_player = QMediaPlayer(self)
@@ -1891,6 +1931,72 @@ class MediaTrimPlayerWidget(QWidget):
         self._update_waveform_range()
         self._update_time_label()
         self.load_waveform()
+        QTimer.singleShot(100, self._sync_ruler)
+
+    def load_remote_preview(self, stream_url: str, media_type: str = "video",
+                             duration_sec: float = 0.0, fps: float = 30.0,
+                             initial_in_sec: float = None, initial_out_sec: float = None):
+        """Carga un stream remoto (URL, típicamente vía proxy local) para previsualización
+        y corte EN VIVO, sin pasar por el flujo de 'medio local' de load_media()/set_pending().
+
+        A diferencia de load_media(), no exige que el archivo exista en disco: reproduce
+        directamente la URL dada. self.media_path se deja vacío a propósito para que toda
+        la maquinaria atada a un archivo local (extracción de waveform vía
+        WaveformCacheManager, proxies de calidad vía ProxyCacheManager) quede inerte — nada
+        de eso aplica a un stream. Play/pause e In/Out quedan habilitados desde ya: no hay,
+        en este flujo, ningún archivo local posterior que reemplace a este stream (a
+        diferencia de set_resolved_media_path(), pensado para ESE reemplazo)."""
+        self.cleanup(stop_only=True)
+
+        self.media_path = ""
+        self.media_type = (media_type or "video").lower()
+        self.duration_sec = duration_sec if duration_sec and duration_sec > 0 else 1.0
+        self.fps = fps if fps and fps > 0 else 30.0
+        self.in_sec = initial_in_sec if initial_in_sec is not None else 0.0
+        self.out_sec = initial_out_sec if initial_out_sec is not None else self.duration_sec
+        self.pending_download = False
+        self._preview_loop_range = None
+        self._first_frame_rendered = False
+        self._active_audio_track = 0
+        self._pending_audio_track_selection = None
+        self.btn_audio_track.setVisible(False)
+        self.chk_all_tracks.setVisible(False)
+        self.audio_track_menu.clear()
+
+        self._proxy_divisor = 1
+        self._pending_proxy_divisor = None
+        self._native_size_known = False
+        self._native_size = None
+        self.btn_quality.setVisible(False)
+
+        self.crop_overlay.hide_and_reset()
+
+        is_video = self.media_type in ("video", "video+audio", "imagen")
+        is_audio = not is_video
+
+        if hasattr(self, "empty_preview_widget"):
+            self.empty_preview_widget.setVisible(False)
+        self.video_widget.setVisible(is_video)
+        self.lbl_audio_art.setVisible(is_audio)
+        if hasattr(self, "preview_container"):
+            self.preview_container.set_checkerboard_visible(is_video)
+
+        self.timeline_ruler.media_type = self.media_type
+        self.timeline_ruler.is_video = is_video
+        self.timeline_ruler.duration_sec = max(0.001, self.duration_sec)
+        self.timeline_ruler.fps = self.fps
+        self.timeline_ruler.show_hours = self.duration_sec >= 3600.0
+        self.timeline_ruler.update()
+        self.video_widget.reset_zoom()
+
+        self.waveform_widget.set_audio_path("")
+
+        self.media_player.setSource(QUrl(stream_url) if stream_url else QUrl())
+        if is_video:
+            QTimer.singleShot(50, self._render_initial_frame)
+
+        self._update_waveform_range()
+        self._update_time_label()
         QTimer.singleShot(100, self._sync_ruler)
 
     def clear(self):
