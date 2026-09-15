@@ -1,6 +1,6 @@
 window.onload = function () {
     const csInterface = new CSInterface();
-    const CURRENT_EXTENSION_VERSION = "1.9.0";
+    const CURRENT_EXTENSION_VERSION = "1.9.1";
     const serverUrl = "http://127.0.0.1:7788";
     let thisAppName = "Desconocido";
     let thisAppIdentifier = "unknown";

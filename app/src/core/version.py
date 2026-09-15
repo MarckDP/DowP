@@ -18,7 +18,7 @@ Los dos últimos son archivos generados en cuanto al número: no los edites a ma
 el build los reescribe desde aquí y falla si no puede.
 """
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.9.1"
 
 # Fase beta previa a la 2.0.0 oficial: se reparte a un grupo reducido mientras se
 # termina el resto de la app, subiendo APP_VERSION en cada push (1.9.0, 1.9.1, ...).
@@ -57,4 +57,4 @@ MIN_UPDATABLE_VERSION = "1.9.0"
 # Repo de GitHub donde tools/updater/publish.py sube los releases y de donde el
 # cliente de descarga (core/updater/) los lee. Única fuente -- evita que el "--repo"
 # del publicador y el que consulta la app real diverjan.
-UPDATE_REPO = "MarckDP/DowP2"
+UPDATE_REPO = "MarckDP/DowP"

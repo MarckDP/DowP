@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const btnText = document.getElementById('btn-text');
     const mainBtn = document.getElementById('main-download-btn');
-    
+
     // Configura la versión actual de la app aquí
-    const VERSION = "1.9.0"; 
-    const REPO_URL = "https://github.com/MarckDP/DowP2/releases/download/v" + VERSION;
-    
+    const VERSION = "1.9.0";
+    const REPO_URL = "https://github.com/MarckDP/DowP/releases/download/v" + VERSION;
+
     const urlWindows = `${REPO_URL}/DowP_Setup_${VERSION}.exe`;
     const urlMacSilicon = `${REPO_URL}/DowP-${VERSION}-arm64.dmg`;
     const urlMacIntel = `${REPO_URL}/DowP-${VERSION}-x64.dmg`;
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Detección de arquitectura para Mac
     let isAppleSilicon = false;
-    
+
     if (osName === 'Mac') {
         // Truco 1: UserAgentData API (Chromium-based)
         if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
@@ -39,9 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (ua.architecture === 'arm') {
                     isAppleSilicon = true;
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
-        
+
         // Truco 2: WebGL Renderer (Safari, Firefox y fallback)
         if (!isAppleSilicon) {
             try {
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -76,6 +76,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         // Fallback genérico para Linux o desconocidos
         btnText.textContent = 'Descargar DowP (Windows)';
-        mainBtn.href = urlWindows; 
+        mainBtn.href = urlWindows;
     }
 });

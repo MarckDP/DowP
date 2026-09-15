@@ -29,6 +29,24 @@ def get_whats_new_items(version: str) -> list:
     que cambia es el aviso de beta, agregado arriba segun IS_BETA. Cuando
     salgan mas betas (1.9.1, 1.9.2...) van a necesitar contenido propio, no
     reusar esto sin mas (ver ACTUALIZACIONES.md, "Lo que falta")."""
+    if version == "1.9.1":
+        items = []
+        if IS_BETA:
+            items.append((
+                QCoreApplication.translate("WhatsNewContent", "Estás probando una Beta"),
+                QCoreApplication.translate(
+                    "WhatsNewContent",
+                    "Esta es una versión de prueba, previa al lanzamiento oficial de DowP 2.0.0 "
+                    "-- puede tener errores todavía sin detectar. Vas a recibir actualizaciones "
+                    "seguidas mientras se termina de pulir, sin que tengas que reinstalar nada.",
+                ),
+            ))
+        items.append((
+            QCoreApplication.translate("WhatsNewContent", "Nuevos idiomas"),
+            QCoreApplication.translate("WhatsNewContent", "La aplicación ahora está completamente traducida al inglés y al portugués (Brasil)."),
+        ))
+        return items
+
     if version not in ("1.9.0", "2.0.0"):
         return []
 
