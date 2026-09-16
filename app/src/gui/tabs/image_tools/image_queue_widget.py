@@ -1,6 +1,8 @@
 # src/gui/tabs/image_tools/image_queue_widget.py
 from PySide6.QtCore import QCoreApplication
 import os
+import shutil
+import tempfile
 import uuid
 from datetime import datetime
 from PySide6.QtWidgets import (
@@ -17,7 +19,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QMessageBox,
 )
-from PySide6.QtCore import Qt, Signal, QSize, QUrl, QThread, QAbstractTableModel, QModelIndex, QEvent
+from PySide6.QtCore import Qt, Signal, QSize, QUrl, QThread, QAbstractTableModel, QModelIndex, QEvent, QMimeData
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 from gui.styles import get_theme_token, create_colored_circle_icon
@@ -62,22 +64,26 @@ def _status_color_map() -> dict:
     loop de abajo devuelve el primer match, y "completado (...)" contiene
     "completado" como substring -- sin este orden, un completado-con-advertencia
     se pintaría verde igual."""
+    # NOTA: se llama a QCoreApplication.translate(...) directo, NUNCA a través de un
+    # alias tipo "tr = QCoreApplication.translate" -- lupdate no resuelve esa
+    # indirección y termina extrayendo el string del CONTEXTO ("ImageConvertWorker",
+    # "_QueueTableModel"...) como si fuera un texto traducible suelto, ensuciando el
+    # catálogo con entradas sin sentido (detectado y limpiado 2026-09-15).
     global _STATUS_COLOR_MAP_CACHE
     if _STATUS_COLOR_MAP_CACHE is None:
-        tr = QCoreApplication.translate
-        completado = tr("ImageConvertWorker", "Completado").lower()
-        procesando = tr("ImageConvertWorker", "Procesando...").lower().rstrip(".")
-        error = tr("ImageConvertWorker", "Error: {0}").split(":")[0].lower()
+        completado = QCoreApplication.translate("ImageConvertWorker", "Completado").lower()
+        procesando = QCoreApplication.translate("ImageConvertWorker", "Procesando...").lower().rstrip(".")
+        error = QCoreApplication.translate("ImageConvertWorker", "Error: {0}").split(":")[0].lower()
         _STATUS_COLOR_MAP_CACHE = {
             f"{completado} (": "estado_aviso",
-            tr("_QueueTableModel", "Pendiente").lower(): "estado_espera",
+            QCoreApplication.translate("_QueueTableModel", "Pendiente").lower(): "estado_espera",
             "en cola": "estado_espera",  # sin uso real hoy en Editor de Imagen, se deja tal cual
             procesando: "estado_aviso",
             completado: "estado_exito",
             "finalizado": "estado_exito",  # ídem -- sin uso real hoy
             error: "estado_error",
-            tr("ImageConvertWorker", "Cancelado").lower(): "estado_espera",
-            tr("ImageQueueWidget", "Resultado eliminado").lower(): "estado_error",
+            QCoreApplication.translate("ImageConvertWorker", "Cancelado").lower(): "estado_espera",
+            QCoreApplication.translate("ImageQueueWidget", "Resultado eliminado").lower(): "estado_error",
         }
     return _STATUS_COLOR_MAP_CACHE
 
@@ -123,12 +129,43 @@ class _QueueTableModel(QAbstractTableModel):
         self._sizes: dict[str, str] = {}     # cache perezoso: path -> "x.y MB"
         self._statuses: dict[str, str] = {}  # path -> texto de estado (sobrevive a los resets, ver set_rows)
         self._icon_cache = {}
+        # Consulta hacia el widget dueño (ver ImageQueueWidget.set_output_lookup)
+        # para saber si una fila ya tiene un resultado convertido -- eso es lo
+        # único que se puede arrastrar fuera/dentro de la app (ver flags/mimeData).
+        self._output_lookup = None
+
+    def set_output_lookup(self, lookup_fn):
+        self._output_lookup = lookup_fn
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._paths)
 
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(_HEADERS)
+
+    def flags(self, index):
+        base = super().flags(index)
+        if not index.isValid():
+            return base
+        path = self._paths[index.row()]
+        if self._output_lookup and self._output_lookup(path):
+            base |= Qt.ItemIsDragEnabled
+        return base
+
+    def mimeData(self, indexes):
+        if not self._output_lookup:
+            return None
+        rows = {idx.row() for idx in indexes}
+        urls = []
+        for row in rows:
+            output_path = self._output_lookup(self._paths[row])
+            if output_path:
+                urls.append(QUrl.fromLocalFile(output_path))
+        if not urls:
+            return None
+        mime = QMimeData()
+        mime.setUrls(urls)
+        return mime
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole and 0 <= section < len(_HEADERS):
@@ -267,7 +304,15 @@ class ImageQueueWidget(QFrame):
         # nombre base (sin extensión) que va a usar ImageConvertWorker para el
         # archivo de salida en vez del nombre original.
         self._titles = {}
+        # Rango de páginas al importar un PDF (ver _resolve_pdf_pages): cada
+        # página elegida se extrae a su propio PDF de 1 página bajo un
+        # subdirectorio temporal propio -- esos archivos SON la identidad de su
+        # fila mientras esté en la cola (no un override temporal solo durante la
+        # conversión, a diferencia de _flatten_temp_dir en image_tools_view.py).
+        self._pdf_pages_temp_dir: str | None = None
+        self._pdf_page_dirs: set[str] = set()
         self._init_ui()
+        self._model.set_output_lookup(self.get_output_path)
 
         ThumbnailCacheManager.get_instance().thumbnail_loaded.connect(self._model.on_thumbnail_loaded)
 
@@ -355,10 +400,17 @@ class ImageQueueWidget(QFrame):
         self.tree.setRootIsDecorated(False)
         self.tree.setIndentation(0)
         self.tree.setUniformRowHeights(True)
-        self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(18, 18))
+        # Arrastrar un resultado ya completado fuera de la app (Explorador/
+        # Finder/otra app) o soltarlo dentro (otra cola, la misma lista) -- ver
+        # _QueueTableModel.flags/mimeData, solo las filas con salida quedan
+        # habilitadas para arrastrar. DragOnly (no DragDrop): no hace falta
+        # reordenar la lista arrastrando dentro de sí misma.
+        self.tree.setDragEnabled(True)
+        self.tree.setDragDropMode(QAbstractItemView.DragOnly)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._show_context_menu)
         self.tree.selectionModel().selectionChanged.connect(self._on_selection_changed)
@@ -604,6 +656,19 @@ class ImageQueueWidget(QFrame):
         # diálogo de archivos y las rutas pegadas como texto traen "C:\x\y".
         # Comparando cadenas sin normalizar, el mismo archivo entra dos veces.
         paths = [os.path.normpath(p) for p in paths]
+
+        # PDF de varias páginas: se resuelve ANTES del dedup normal -- cada
+        # página elegida se convierte en su propia ruta (ver _resolve_pdf_pages),
+        # así el resto del pipeline (miniatura, vista previa, conversión) ve un
+        # archivo normal por página, sin saber nada de PDFs multipágina.
+        resolved_paths = []
+        for p in paths:
+            if os.path.splitext(p)[1].lower() == ".pdf":
+                resolved_paths.extend(self._resolve_pdf_pages(p))
+            else:
+                resolved_paths.append(p)
+        paths = resolved_paths
+
         new_paths = [p for p in paths if p not in self._path_set]
         if not new_paths:
             return
@@ -617,12 +682,71 @@ class ImageQueueWidget(QFrame):
         if self.files_list and not self.tree.selectionModel().hasSelection():
             self.tree.setCurrentIndex(self._model.index(0, 0))
 
+    def _resolve_pdf_pages(self, pdf_path: str) -> list[str]:
+        """Un PDF de 1 sola página se agrega tal cual (nada que elegir). Uno de
+        varias páginas dispara el diálogo de rango -- si se cancela, ese PDF no
+        se agrega (no aborta el resto del lote si se soltaron varios archivos
+        juntos); si se confirma, se extrae cada página elegida a su propio PDF de
+        1 página bajo un subdirectorio temporal propio (ver __init__ y
+        _cleanup_pdf_page_file/clear_queue para el borrado)."""
+        from core.tabs.image_tools.pdf_pages import extract_pdf_pages, get_pdf_page_count
+
+        try:
+            page_count = get_pdf_page_count(pdf_path)
+        except Exception as e:
+            logger.error(f"Editor de Imagen: no se pudo abrir {pdf_path} como PDF: {e}")
+            QMessageBox.warning(
+                self, self.tr("PDF inválido"),
+                self.tr("No se pudo abrir \"{0}\" como PDF: {1}").format(os.path.basename(pdf_path), e),
+            )
+            return []
+
+        if page_count <= 1:
+            return [pdf_path]
+
+        from gui.dialogs.dialogs import PdfPageRangeDialog
+        pages = PdfPageRangeDialog.get_pages(self, os.path.basename(pdf_path), page_count)
+        if not pages:
+            return []
+
+        if self._pdf_pages_temp_dir is None:
+            self._pdf_pages_temp_dir = tempfile.mkdtemp(prefix="dowp_pdf_pages_")
+        sub_dir = os.path.join(self._pdf_pages_temp_dir, uuid.uuid4().hex[:8])
+        try:
+            extracted = extract_pdf_pages(pdf_path, pages, sub_dir)
+        except Exception as e:
+            logger.error(f"Editor de Imagen: fallo extrayendo páginas de {pdf_path}: {e}")
+            QMessageBox.warning(
+                self, self.tr("Error al extraer páginas"),
+                self.tr("No se pudieron extraer las páginas de \"{0}\": {1}").format(os.path.basename(pdf_path), e),
+            )
+            return []
+        self._pdf_page_dirs.add(sub_dir)
+        return extracted
+
+    def _cleanup_pdf_page_file(self, path: str):
+        parent_dir = os.path.dirname(path)
+        if parent_dir not in self._pdf_page_dirs:
+            return
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+            if not os.listdir(parent_dir):
+                os.rmdir(parent_dir)
+                self._pdf_page_dirs.discard(parent_dir)
+        except OSError as e:
+            logger.error(f"Editor de Imagen: no se pudo limpiar el temporal de página PDF {path}: {e}")
+
     def clear_queue(self):
         self.files_list.clear()
         self._path_set.clear()
         self._model.set_rows([])
         self._output_paths.clear()
         self._titles.clear()
+        if self._pdf_pages_temp_dir is not None:
+            shutil.rmtree(self._pdf_pages_temp_dir, ignore_errors=True)
+            self._pdf_pages_temp_dir = None
+        self._pdf_page_dirs.clear()
         self._update_counter()
         self.file_selected.emit("")
 
@@ -644,6 +768,7 @@ class ImageQueueWidget(QFrame):
                 self._path_set.discard(path)
             self._output_paths.pop(path, None)
             self._titles.pop(path, None)
+            self._cleanup_pdf_page_file(path)
         self._model.set_rows(self.files_list)
         self._update_counter()
 

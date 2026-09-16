@@ -484,6 +484,158 @@ class SavePresetDialog(QDialog):
         self.accept()
 
 
+class PdfPageRangeDialog(QDialog):
+    """Rango de páginas al importar un PDF de varias páginas al Editor de Imagen
+    (ver ImageQueueWidget._resolve_pdf_pages en
+    gui/tabs/image_tools/image_queue_widget.py) -- mismo diálogo que tenía
+    DowP1. Mismo patrón visual que SavePresetDialog (un solo QLineEdit +
+    error_lbl), la validación real vive en
+    core/tabs/image_tools/pdf_pages.py::parse_page_range."""
+
+    def __init__(self, parent, filename: str, page_count: int):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowTitle(self.tr("Rango de páginas"))
+        self.setFixedSize(360, 210)
+        self._filename = filename
+        self._page_count = page_count
+        self.result_pages: list[int] | None = None
+        self.init_ui()
+
+    def init_ui(self):
+        from gui.widgets.title_bar import CustomTitleBar
+        from gui.styles import get_theme_token
+
+        main_dialog_layout = QVBoxLayout(self)
+        main_dialog_layout.setContentsMargins(0, 0, 0, 0)
+        main_dialog_layout.setSpacing(0)
+
+        self.central_widget = QFrame()
+        self.central_widget.setObjectName("PdfPageRangeDialogContainer")
+        self.central_widget.setStyleSheet(f"""
+            QFrame#PdfPageRangeDialogContainer {{
+                background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
+                border: 1px solid {get_theme_token("borde", "#2d2d2d")};
+                border-radius: 6px;
+            }}
+            QLabel {{
+                color: {get_theme_token("texto_principal", "#ffffff")};
+                font-size: 12px;
+                border: none;
+                background: transparent;
+            }}
+            QLineEdit {{
+                background-color: {get_theme_token("fondo_principal", "#121212")};
+                color: {get_theme_token("texto_principal", "#ffffff")};
+                border: 1px solid {get_theme_token("borde", "#2d2d2d")};
+                border-radius: 6px;
+                padding: 6px;
+            }}
+            QPushButton#dialogButton {{
+                background-color: {get_theme_token("boton_secundario_fondo", "#1b3b22")};
+                color: {get_theme_token("boton_secundario_texto", "#B9E640")};
+                border: none;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: bold;
+            }}
+            QPushButton#dialogButton:hover {{
+                background-color: {get_theme_token("boton_secundario_hover", "#224a2b")};
+            }}
+            QPushButton#dialogCancelButton {{
+                background-color: transparent;
+                color: #e74c3c;
+                border: 1px solid #e74c3c;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: bold;
+            }}
+            QPushButton#dialogCancelButton:hover {{
+                background-color: rgba(231, 76, 60, 0.15);
+            }}
+        """)
+        main_dialog_layout.addWidget(self.central_widget)
+
+        central_layout = QVBoxLayout(self.central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSpacing(0)
+
+        self.title_bar = CustomTitleBar(self, self.windowTitle())
+        self.title_bar.btn_min.hide()
+        self.title_bar.btn_max.hide()
+        self.title_bar.btn_close.clicked.disconnect()
+        self.title_bar.btn_close.clicked.connect(self.reject)
+        self.title_bar.setStyleSheet("""
+            CustomTitleBar {
+                background-color: #0d0d0d;
+                border-bottom: 1px solid #222222;
+                border-top-left-radius: 11px;
+                border-top-right-radius: 11px;
+            }
+        """)
+        central_layout.addWidget(self.title_bar)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(16, 12, 16, 16)
+        layout.setSpacing(8)
+
+        self.lbl_info = QLabel(
+            self.tr("\"{0}\" tiene {1} páginas. ¿Cuáles quieres importar?").format(
+                self._filename, self._page_count
+            )
+        )
+        self.lbl_info.setWordWrap(True)
+        layout.addWidget(self.lbl_info)
+
+        self.range_input = QLineEdit()
+        self.range_input.setText(f"1-{self._page_count}")
+        self.range_input.setPlaceholderText(self.tr("ej. 1-5, 8, 10-12"))
+        self.range_input.selectAll()
+        self.range_input.returnPressed.connect(self._on_import_clicked)
+        layout.addWidget(self.range_input)
+
+        self.error_lbl = QLabel("")
+        self.error_lbl.setStyleSheet("color: #e74c3c; font-size: 11px;")
+        self.error_lbl.setWordWrap(True)
+        self.error_lbl.hide()
+        layout.addWidget(self.error_lbl)
+
+        actions_layout = QHBoxLayout()
+        self.btn_cancel = QPushButton(self.tr("Cancelar"))
+        self.btn_cancel.setObjectName("dialogCancelButton")
+        self.btn_cancel.clicked.connect(self.reject)
+
+        self.btn_import = QPushButton(self.tr("Importar"))
+        self.btn_import.setObjectName("dialogButton")
+        self.btn_import.clicked.connect(self._on_import_clicked)
+
+        actions_layout.addStretch()
+        actions_layout.addWidget(self.btn_cancel)
+        actions_layout.addWidget(self.btn_import)
+        layout.addLayout(actions_layout)
+
+        central_layout.addLayout(layout)
+        self.range_input.setFocus()
+
+    def _on_import_clicked(self):
+        from core.tabs.image_tools.pdf_pages import parse_page_range
+        try:
+            self.result_pages = parse_page_range(self.range_input.text(), self._page_count)
+        except ValueError as e:
+            self.error_lbl.setText(str(e))
+            self.error_lbl.show()
+            return
+        self.accept()
+
+    @staticmethod
+    def get_pages(parent, filename: str, page_count: int) -> list[int] | None:
+        dialog = PdfPageRangeDialog(parent, filename, page_count)
+        if dialog.exec():
+            return dialog.result_pages
+        return None
+
+
 class ColorSquare(QWidget):
     color_changed = Signal(int, int) # Sat, Val
 

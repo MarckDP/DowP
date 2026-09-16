@@ -723,6 +723,7 @@ QFrame#ffmpegOptionsPanel,
 QFrame#ytdlpPotPanel,
 QFrame#denoCardPanel,
 QFrame#ghostscriptCardPanel,
+QFrame#vtracerCardPanel,
 QFrame#adobeCard,
 QFrame#davinciCard,
 QFrame[variant="card"] {

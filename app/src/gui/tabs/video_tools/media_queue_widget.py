@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, Signal, QSize, QUrl, QThread, QAbstractTableModel, QModelIndex, QEvent
+from PySide6.QtCore import Qt, Signal, QSize, QUrl, QThread, QAbstractTableModel, QModelIndex, QEvent, QMimeData
 from PySide6.QtGui import QIcon, QDragEnterEvent, QDropEvent
 
 from gui.styles import get_theme_token, create_colored_circle_icon
@@ -60,19 +60,23 @@ def _status_color_map() -> dict:
     loop de abajo devuelve el primer match, y "completado (...)" contiene
     "completado" como substring - sin este orden, un completado-con-advertencia
     se pintaria verde igual."""
+    # NOTA: se llama a QCoreApplication.translate(...) directo, NUNCA a través de un
+    # alias tipo "tr = QCoreApplication.translate" -- lupdate no resuelve esa
+    # indirección y termina extrayendo el string del CONTEXTO ("VideoToolsTab",
+    # "_QueueTableModel"...) como si fuera un texto traducible suelto, ensuciando el
+    # catálogo con entradas sin sentido (detectado y limpiado 2026-09-15).
     global _STATUS_COLOR_MAP_CACHE
     if _STATUS_COLOR_MAP_CACHE is None:
-        tr = QCoreApplication.translate
-        completado = tr("VideoToolsTab", "Completado").lower()
+        completado = QCoreApplication.translate("VideoToolsTab", "Completado").lower()
         _STATUS_COLOR_MAP_CACHE = {
             f"{completado} (": "estado_aviso",
-            tr("_QueueTableModel", "Pendiente").lower(): "estado_espera",
+            QCoreApplication.translate("_QueueTableModel", "Pendiente").lower(): "estado_espera",
             "en cola": "estado_espera",  # sin uso real hoy, se deja tal cual
-            tr("VideoToolsTab", "Procesando...").lower().rstrip("."): "estado_aviso",
+            QCoreApplication.translate("VideoToolsTab", "Procesando...").lower().rstrip("."): "estado_aviso",
             completado: "estado_exito",
-            tr("VideoToolsTab", "Finalizado").lower(): "estado_exito",
-            tr("VideoToolsTab", "Error").lower(): "estado_error",
-            tr("VideoToolsTab", "Cancelado").lower(): "estado_espera",
+            QCoreApplication.translate("VideoToolsTab", "Finalizado").lower(): "estado_exito",
+            QCoreApplication.translate("VideoToolsTab", "Error").lower(): "estado_error",
+            QCoreApplication.translate("VideoToolsTab", "Cancelado").lower(): "estado_espera",
         }
     return _STATUS_COLOR_MAP_CACHE
 
@@ -148,12 +152,43 @@ class _QueueTableModel(QAbstractTableModel):
         self._sizes: dict[str, str] = {}     # cache perezoso: clave -> "x.y MB"
         self._statuses: dict[str, str] = {}  # clave -> texto de estado (sobrevive a los resets, ver set_rows)
         self._icon_cache = {}
+        # Consulta hacia el widget dueño (ver MediaQueueWidget.set_output_lookup)
+        # para saber si una fila ya tiene un resultado convertido -- eso es lo
+        # único que se puede arrastrar fuera/dentro de la app (ver flags/mimeData).
+        self._output_lookup = None
+
+    def set_output_lookup(self, lookup_fn):
+        self._output_lookup = lookup_fn
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._paths)
 
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(_HEADERS)
+
+    def flags(self, index):
+        base = super().flags(index)
+        if not index.isValid():
+            return base
+        entry_key = self._paths[index.row()]
+        if self._output_lookup and self._output_lookup(entry_key):
+            base |= Qt.ItemIsDragEnabled
+        return base
+
+    def mimeData(self, indexes):
+        if not self._output_lookup:
+            return None
+        rows = {idx.row() for idx in indexes}
+        urls = []
+        for row in rows:
+            output_path = self._output_lookup(self._paths[row])
+            if output_path:
+                urls.append(QUrl.fromLocalFile(output_path))
+        if not urls:
+            return None
+        mime = QMimeData()
+        mime.setUrls(urls)
+        return mime
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole and 0 <= section < len(_HEADERS):
@@ -310,7 +345,13 @@ class MediaQueueWidget(QFrame):
         self.files_list = []
         self._path_set = set()
         self._scan_thread = None
+        # entry_key -> ruta del archivo ya convertido (ver set_output_path/
+        # get_output_path), indexado por CLAVE de entrada igual que _statuses
+        # (ver _ENTRY_MARKER) -- dos filas del mismo archivo con recortes
+        # distintos rastrean su salida cada una por separado.
+        self._output_paths = {}
         self._init_ui()
+        self._model.set_output_lookup(self.get_output_path)
 
         ThumbnailCacheManager.get_instance().thumbnail_loaded.connect(
             lambda file_path, _thumb_path: self._model.on_media_icon_loaded(file_path)
@@ -389,10 +430,17 @@ class MediaQueueWidget(QFrame):
         self.tree.setRootIsDecorated(False)
         self.tree.setIndentation(0)
         self.tree.setUniformRowHeights(True)
-        self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(32, 18))
+        # Arrastrar un resultado ya completado fuera de la app (Explorador/
+        # Finder/otra app) o soltarlo dentro (otra cola, la misma lista) -- ver
+        # _QueueTableModel.flags/mimeData, solo las filas con salida quedan
+        # habilitadas para arrastrar. DragOnly (no DragDrop): no hace falta
+        # reordenar la lista arrastrando dentro de sí misma.
+        self.tree.setDragEnabled(True)
+        self.tree.setDragDropMode(QAbstractItemView.DragOnly)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._show_context_menu)
         self.tree.selectionModel().selectionChanged.connect(self._on_selection_changed)
@@ -579,6 +627,7 @@ class MediaQueueWidget(QFrame):
         self.files_list.clear()
         self._path_set.clear()
         self._model.set_rows([])
+        self._output_paths.clear()
         self._update_counter()
         self.file_selected.emit("")
 
@@ -598,6 +647,7 @@ class MediaQueueWidget(QFrame):
             if path in self._path_set:
                 self.files_list.remove(path)
                 self._path_set.discard(path)
+            self._output_paths.pop(path, None)
         self._model.set_rows(self.files_list)
         self._update_counter()
 
@@ -605,6 +655,23 @@ class MediaQueueWidget(QFrame):
         """Claves de entrada, en orden. Para la ruta real usar entry_path() -- coinciden
         salvo en las repeticiones del mismo archivo (ver _ENTRY_MARKER)."""
         return list(self.files_list)
+
+    def set_output_path(self, entry_key: str, output_path: str):
+        """Registra el archivo de salida de una conversión completada (ver
+        video_tools_view.py::_on_job_status, rama JobStatus.COMPLETED) --
+        indexado por entry_key, igual que _statuses (ver _ENTRY_MARKER)."""
+        self._output_paths[entry_key] = output_path
+
+    def get_output_path(self, entry_key: str) -> str | None:
+        """Devuelve la ruta del resultado convertido de `entry_key`, o None si
+        nunca se convirtió O si el archivo ya no existe en disco -- mismo
+        criterio de auto-corrección que ImageQueueWidget.get_output_path."""
+        output_path = self._output_paths.get(entry_key)
+        if output_path and not os.path.exists(output_path):
+            self._output_paths.pop(entry_key, None)
+            self.update_file_status(entry_key, self.tr("Resultado eliminado"))
+            return None
+        return output_path
 
     def _update_counter(self):
         count = len(self.files_list)

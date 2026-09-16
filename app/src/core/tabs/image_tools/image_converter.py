@@ -82,6 +82,7 @@ class ImageConverter:
 
             input_ext = os.path.splitext(input_path)[1].lower()
             output_format = options.get("format", OUTPUT_FORMATS[0]).upper()
+            logger.info(f"Convertir: {input_path} -> {output_format} ({output_path})")
 
             resize_enabled = options.get("resize_enabled", False)
             target_size = None
@@ -139,6 +140,7 @@ class ImageConverter:
                     self._save_as(img, output_format, output_path, options)
 
                 report(100, "saving")
+                logger.info(f"Convertir: {input_path} -> OK ({output_path})")
                 return True, QCoreApplication.translate("image_converter", "Conversión completada.")
             finally:
                 # Cerrar la imagen PIL explícitamente para liberar file handles y buffers
@@ -203,11 +205,16 @@ class ImageConverter:
             img = self._resize_raster_image(img, target_size, maintain_aspect, options)
         return img
 
-    def _load_pdf_like(self, filepath, target_size, maintain_aspect, options):
+    def _load_pdf_like(self, filepath, target_size, maintain_aspect, options, transparent=True):
         """Renderiza PDF/AI con pypdfium2 -- reemplaza Poppler (vía pdf2image) de
         DowP1. La inmensa mayoría de .ai modernos (Illustrator 9+) son PDF válido
         por dentro; los .ai pre-PDF (PostScript puro) caen en UnsupportedFormatError,
-        mismo bucket que EPS/PS."""
+        mismo bucket que EPS/PS.
+        `transparent`: True (por defecto) para la conversión real -- el área sin
+        tinta del PDF sale sin fondo, tal cual DowP1 con "PDF Transparente". La
+        vista previa (preview_panel.py) pide transparent=False para verse como un
+        documento normal (fondo blanco), la transparencia real solo importa en el
+        archivo final."""
         import pypdfium2 as pdfium
         try:
             pdf = pdfium.PdfDocument(filepath)
@@ -226,7 +233,8 @@ class ImageConverter:
                     scale = self._calculate_optimal_dpi(page, target_size, maintain_aspect) / 72.0
                 else:
                     scale = _DEFAULT_VECTOR_DPI / 72.0
-                bitmap = page.render(scale=scale, fill_color=(0, 0, 0, 0))
+                fill_color = (0, 0, 0, 0) if transparent else (255, 255, 255, 255)
+                bitmap = page.render(scale=scale, fill_color=fill_color)
                 img = bitmap.to_pil()
             finally:
                 page.close()
@@ -487,6 +495,7 @@ class ImageConverter:
         writers = {
             "PNG": self._save_as_png, "JPG": self._save_as_jpg, "JPEG": self._save_as_jpg,
             "WEBP": self._save_as_webp, "AVIF": self._save_as_avif, "PDF": self._save_as_pdf,
+            "SVG": self._save_as_svg,
             "TIFF": self._save_as_tiff, "ICO": self._save_as_ico, "ICNS": self._save_as_icns,
             "BMP": self._save_as_bmp,
         }
@@ -495,20 +504,28 @@ class ImageConverter:
             raise Exception(QCoreApplication.translate("image_converter", "Formato de salida no soportado: {0}").format(output_format))
         writer(img, output_path, options)
 
+    def _flatten_to_rgb_white(self, img):
+        """Aplana a RGB componiendo sobre fondo blanco -- usado cuando el usuario
+        desmarca "mantener transparencia". `img.convert("RGB")` directo NO sirve
+        para esto: descarta el canal alfa sin componer nada, y en un RGBA típico
+        el RGB de los píxeles transparentes suele ser (0,0,0) -- el resultado
+        salía negro en vez de con fondo blanco (bug real, reportado por el
+        usuario). Mismo criterio que ya usaba _save_as_jpg, ahora compartido."""
+        if img.mode in ("RGBA", "LA", "PA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            return background
+        return img.convert("RGB")
+
     def _save_as_png(self, img, output_path, options):
         if options.get("png_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
             save_img = img
         else:
-            save_img = img.convert("RGB")
+            save_img = self._flatten_to_rgb_white(img)
         save_img.save(output_path, "PNG", compress_level=options.get("png_compression", 6), optimize=True)
 
     def _save_as_jpg(self, img, output_path, options):
-        if img.mode in ("RGBA", "LA", "PA"):
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1])
-            save_img = background
-        else:
-            save_img = img.convert("RGB")
+        save_img = self._flatten_to_rgb_white(img)
         subsampling_map = {"4:2:0 (Estándar)": "4:2:0", "4:2:2 (Alta)": "4:2:2", "4:4:4 (Máxima)": "4:4:4"}
         subsampling = subsampling_map.get(options.get("jpg_subsampling", "4:2:0 (Estándar)"), "4:2:0")
         save_img.save(
@@ -523,7 +540,7 @@ class ImageConverter:
         if options.get("webp_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
             save_img = img
         else:
-            save_img = img.convert("RGB")
+            save_img = self._flatten_to_rgb_white(img)
         kwargs = {"format": "WEBP", "lossless": options.get("webp_lossless", False)}
         if not kwargs["lossless"]:
             kwargs["quality"] = options.get("webp_quality", 90)
@@ -539,7 +556,11 @@ class ImageConverter:
 
     def _save_as_pdf(self, img, output_path, options):
         import img2pdf
-        save_img = img if img.mode in ("RGB", "L") else img.convert("RGB")
+        keep_transparency = options.get("pdf_transparency", False) and "A" in img.getbands()
+        if keep_transparency:
+            save_img = img if img.mode == "RGBA" else img.convert("RGBA")
+        else:
+            save_img = img if img.mode in ("RGB", "L") else self._flatten_to_rgb_white(img)
         temp_png = output_path + ".tmp.png"
         try:
             save_img.save(temp_png, "PNG")
@@ -549,11 +570,83 @@ class ImageConverter:
             if os.path.exists(temp_png):
                 os.remove(temp_png)
 
+    def _save_as_svg(self, img, output_path, options):
+        """Vectoriza con vtracer (dependencia opcional -- ver
+        core/setup/vtracer_setup.py). Mismo patrón que _load_eps_ps con
+        Ghostscript: si falta el binario, se corta acá con un mensaje de ayuda --
+        la UI ya debería haber ofrecido descargarlo antes de llegar a este punto
+        (ver image_tools_view.py::_confirm_vtracer_if_needed), esto es la red de
+        seguridad por si igual faltara (ej. se desinstaló a mano entre medio)."""
+        from core.setup.vtracer_setup import check_vtracer, get_vtracer_path
+
+        if not check_vtracer():
+            raise UnsupportedFormatError(
+                QCoreApplication.translate(
+                    "ImageConverter",
+                    "SVG necesita vtracer -- instálalo desde Ajustes > Dependencias, "
+                    "o acepta la descarga que te ofrece Convertir."
+                )
+            )
+
+        import subprocess
+        import tempfile
+
+        # vtracer traza por color RGB, pero NO trata el alfa como "esto es
+        # fondo, ignorar" -- si se le pasa el RGBA crudo, un logo con fondo
+        # transparente (donde el canal RGB del fondo suele ser negro, (0,0,0),
+        # igual que muchos logos oscuros) sale como un cuadro negro sólido: para
+        # vtracer el fondo transparente y el logo opaco son el mismo color.
+        # Mismo bug que ya arreglamos en PNG/WEBP/TIFF/PDF/BMP (_flatten_to_rgb_
+        # white) -- acá componemos sobre blanco ANTES de vectorizar, no hay
+        # (todavía) una opción de "mantener transparencia" para SVG en la UI.
+        save_img = self._flatten_to_rgb_white(img).convert("RGBA")
+
+        with tempfile.TemporaryDirectory(prefix="dowp_vtracer_") as tmp_dir:
+            temp_png = os.path.join(tmp_dir, "in.png")
+            save_img.save(temp_png, "PNG")
+
+            # vtracer escribe el SVG directo en output_path -- no hace falta un
+            # paso intermedio de copiar/mover.
+            cmd = [get_vtracer_path(), "-i", temp_png, "-o", output_path, "--optimize", "2"]
+
+            if options.get("svg_mode", "quick") == "quick":
+                cmd += ["--preset", options.get("svg_preset", "photo")]
+            else:
+                clustering = options.get("svg_clustering", "color-cluster")
+                cmd += [
+                    "--mode", options.get("svg_curve_mode", "spline"),
+                    "--clustering", clustering,
+                    "--color-precision", str(options.get("svg_color_precision", 6)),
+                    "--filter-speckle", str(options.get("svg_filter_speckle", 4)),
+                ]
+                simplify = options.get("svg_simplify", 0.0)
+                if simplify:
+                    cmd += ["--simplify", str(simplify)]
+                if clustering == "bw":
+                    if options.get("svg_adaptive", False):
+                        cmd += ["--adaptive"]
+                    else:
+                        cmd += ["--threshold", str(options.get("svg_threshold", 128))]
+
+            logger.info(f"Convertir SVG: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=120,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            if result.returncode != 0 or not os.path.exists(output_path):
+                raise Exception(
+                    QCoreApplication.translate(
+                        "ImageConverter", "vtracer no pudo vectorizar: {0}"
+                    ).format(result.stderr[:300])
+                )
+            if result.stdout.strip():
+                logger.info(f"Convertir SVG: vtracer -> {result.stdout.strip()}")
+
     def _save_as_tiff(self, img, output_path, options):
         if options.get("tiff_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
             save_img = img
         else:
-            save_img = img.convert("RGB")
+            save_img = self._flatten_to_rgb_white(img)
         compression_map = {
             "Ninguna": None, "LZW (Recomendada)": "tiff_lzw",
             "Deflate (ZIP)": "tiff_deflate", "PackBits": "packbits",
@@ -601,4 +694,4 @@ class ImageConverter:
             images[0].save(output_path, "ICNS", append_images=images[1:])
 
     def _save_as_bmp(self, img, output_path, options):
-        img.convert("RGB").save(output_path, "BMP")
+        self._flatten_to_rgb_white(img).save(output_path, "BMP")

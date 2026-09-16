@@ -20,6 +20,7 @@ from core.setup.ffmpeg_setup import (
     validate_custom_ffmpeg, FFMPEG_RECOMMENDED_VERSION
 )
 from core.setup.deno_setup import check_deno, download_deno, get_local_version as deno_local, get_latest_remote_version as deno_remote
+from core.setup.vtracer_setup import check_vtracer, download_vtracer, get_local_version as vtracer_local, get_latest_remote_version as vtracer_remote
 from core.setup.ytdlp_setup import check_ytdlp, download_ytdlp, get_local_version as ytdlp_local, get_latest_remote_version as ytdlp_remote
 from core.setup.potprovider_setup import (
     check_all as check_potprovider, download_potprovider,
@@ -1446,6 +1447,191 @@ class DenoCardPanel(QFrame):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# TARJETA: VTRACER (vectorizado a SVG del Editor de Imagen -- opcional)
+# ═════════════════════════════════════════════════════════════════════════════
+
+class VtracerCardPanel(QFrame):
+    """Tarjeta dedicada a vtracer -- calcada de DenoCardPanel (mismo perfil de
+    dependencia: un solo binario portable, sin variantes/canales)."""
+    download_requested = Signal(str, object)  # "vtracer", version
+
+    _TOOLTIP_VTRACER = QCoreApplication.translate(
+        "VtracerCardPanel",
+        "vtracer convierte imágenes raster (PNG/JPG/etc.) a vectores SVG.\n"
+        "Lo usa el Editor de Imagen para el formato de salida SVG -- es opcional,\n"
+        "solo hace falta si vas a exportar a ese formato."
+    )
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("vtracerCardPanel")
+        self.dep_id = "vtracer"
+        self.is_installed = False
+        self.local_ver = None
+        self._build_ui()
+        self.check_status()
+
+    def _build_ui(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(14, 12, 14, 12)
+        root.setSpacing(8)
+
+        # ── Título y Estado ──────────────────────────────────────────────────
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
+
+        title_lbl = QLabel(self.tr("vtracer (Vectorizado a SVG)"))
+        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        top_row.addWidget(title_lbl)
+
+        info_btn = QToolButton()
+        info_btn.setText("?")
+        info_btn.setFixedSize(20, 20)
+        info_btn.setStyleSheet(
+            "QToolButton { border: 1px solid #555; border-radius: 10px;"
+            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
+            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
+        )
+        info_btn.setToolTip(self._TOOLTIP_VTRACER)
+        top_row.addWidget(info_btn)
+
+        self._status_badge = QLabel(self.tr("Chequeando..."))
+        self._status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        top_row.addWidget(self._status_badge)
+
+        top_row.addStretch()
+
+        self._version_summary = QLabel(self.tr("Versión: Calculando..."))
+        self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        top_row.addWidget(self._version_summary)
+
+        root.addLayout(top_row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet("color: #333;")
+        root.addWidget(sep)
+
+        # ── Descripción y Botón de Acción ────────────────────────────────────
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(12)
+
+        desc_lbl = QLabel(self.tr(
+            "Vectoriza imágenes a SVG. Necesario en el Editor de Imagen para exportar a ese formato."
+        ))
+        desc_lbl.setStyleSheet("color: #888888; font-size: 12px;")
+        desc_lbl.setWordWrap(True)
+        bottom_row.addWidget(desc_lbl, 1)
+
+        self._btn_action = QPushButton(self.tr("Descargar"))
+        self._btn_action.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self._btn_action, "secondary")
+        self._btn_action.setMinimumWidth(110)
+        self._btn_action.clicked.connect(self._on_action_clicked)
+        bottom_row.addWidget(self._btn_action, 0, Qt.AlignVCenter)
+
+        root.addLayout(bottom_row)
+
+        # ── Barra de Progreso y Mensaje ───────────────────────────────────────
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setTextVisible(False)
+        self._progress_bar.setFixedHeight(4)
+        self._progress_bar.setRange(0, 100)
+        self._progress_bar.hide()
+        root.addWidget(self._progress_bar)
+
+        self._progress_msg = QLabel("")
+        self._progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        self._progress_msg.hide()
+        root.addWidget(self._progress_msg)
+
+    def check_status(self):
+        self.is_installed = check_vtracer()
+        if self.is_installed:
+            try:
+                self.local_ver = vtracer_local()
+            except Exception:
+                self.local_ver = None
+        else:
+            self.local_ver = None
+        self._update_ui_state()
+
+    def _update_ui_state(self):
+        if self.is_installed:
+            self._status_badge.setText(self.tr("✓ Instalado"))
+            self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+            v_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
+            self._version_summary.setText(v_text)
+            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            self._btn_action.setText(self.tr("Reinstalar"))
+            self._btn_action.setDisabled(False)
+            set_button_variant(self._btn_action, "secondary")
+        else:
+            self._status_badge.setText(self.tr("✗ Falta"))
+            self._status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+            self._version_summary.setText(self.tr("No instalado"))
+            self._version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+            self._btn_action.setText(self.tr("Descargar"))
+            self._btn_action.setDisabled(False)
+            set_button_variant(self._btn_action, "accent-blue")
+
+    def set_searching_updates(self):
+        if self.is_installed:
+            self._version_summary.setText(self.tr("Versión: {0} (Buscando...)").format(self.local_ver))
+
+    def set_update_available(self, remote_ver):
+        if not self.is_installed:
+            return
+        if not remote_ver:
+            self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
+            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            return
+        r_ver = str(remote_ver).strip().lstrip('v')
+        l_ver = str(self.local_ver).strip().lstrip('v')
+        if r_ver != l_ver and r_ver not in l_ver:
+            self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
+            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            self._btn_action.setText(self.tr("Actualizar"))
+            self._btn_action.setDisabled(False)
+            set_button_variant(self._btn_action, "accent-blue")
+        else:
+            self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
+            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            self._btn_action.setText(self.tr("Reinstalar"))
+            self._btn_action.setDisabled(False)
+            set_button_variant(self._btn_action, "secondary")
+
+    def _on_action_clicked(self):
+        version = "latest" if self._btn_action.text() == self.tr("Actualizar") else None
+        self.set_downloading_state(True)
+        self.download_requested.emit(self.dep_id, version)
+
+    def set_downloading_state(self, is_downloading, message=""):
+        self._btn_action.setDisabled(is_downloading)
+        if is_downloading:
+            self._progress_bar.setRange(0, 0)
+            self._progress_bar.setValue(0)
+            self._progress_bar.show()
+            self._progress_msg.setText(message if message else self.tr("Iniciando..."))
+            self._progress_msg.show()
+            self._status_badge.setText(self.tr("Procesando"))
+            self._status_badge.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+        else:
+            self._progress_bar.hide()
+            self._progress_msg.hide()
+            set_button_variant(self._btn_action, "secondary")
+            self.check_status()
+
+    def update_progress_msg(self, msg):
+        self._progress_msg.setText(msg)
+
+    def update_numeric_progress(self, value):
+        if self._progress_bar.minimum() == 0 and self._progress_bar.maximum() == 0:
+            self._progress_bar.setRange(0, 100)
+        self._progress_bar.setValue(value)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # TARJETA 4: GHOSTSCRIPT (EPS/PS del Editor de Imagen -- opcional)
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -1828,6 +2014,11 @@ class DependenciesPage(QWidget):
         self.gs_panel.download_requested.connect(self.start_download)
         self.scroll_layout.addWidget(self.gs_panel)
 
+        # 5. Tarjeta vtracer (SVG del Editor de Imagen -- opcional)
+        self.vtracer_panel = VtracerCardPanel()
+        self.vtracer_panel.download_requested.connect(self.start_download)
+        self.scroll_layout.addWidget(self.vtracer_panel)
+
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
         
@@ -1891,6 +2082,12 @@ class DependenciesPage(QWidget):
             update_configs.append(
                 {"id": "ghostscript", "local_func": gs_local, "remote_func": gs_remote})
 
+        # vtracer sí tiene build portable en los tres SO (como Deno), así que no
+        # hace falta la condición "solo si ya está instalado" que usa Ghostscript.
+        self.vtracer_panel.set_searching_updates()
+        update_configs.append(
+            {"id": "vtracer", "local_func": vtracer_local, "remote_func": vtracer_remote})
+
         self.update_worker = UpdateCheckWorker(update_configs)
         self.update_worker.finished_signal.connect(self.on_update_check_finished)
         self.update_worker.start()
@@ -1928,6 +2125,11 @@ class DependenciesPage(QWidget):
                 self.gs_panel.local_ver = results["ghostscript"]["local"]
             self.gs_panel.set_update_available(results["ghostscript"]["remote"])
 
+        if "vtracer" in results:
+            if results["vtracer"]["local"]:
+                self.vtracer_panel.local_ver = results["vtracer"]["local"]
+            self.vtracer_panel.set_update_available(results["vtracer"]["remote"])
+
     def start_download(self, dep_id, version=None):
         channel = None
         if dep_id == "ytdlp":
@@ -1941,6 +2143,8 @@ class DependenciesPage(QWidget):
             download_fn = download_deno
         elif dep_id == "ghostscript":
             download_fn = download_ghostscript
+        elif dep_id == "vtracer":
+            download_fn = download_vtracer
         else:
             return
 
@@ -1959,6 +2163,8 @@ class DependenciesPage(QWidget):
             self.deno_panel.update_numeric_progress(val)
         elif dep_id == "ghostscript":
             self.gs_panel.update_numeric_progress(val)
+        elif dep_id == "vtracer":
+            self.vtracer_panel.update_numeric_progress(val)
 
     def on_worker_progress(self, msg, dep_id):
         if dep_id == "ytdlp":
@@ -1967,6 +2173,8 @@ class DependenciesPage(QWidget):
             self.deno_panel.update_progress_msg(msg)
         elif dep_id == "ghostscript":
             self.gs_panel.update_progress_msg(msg)
+        elif dep_id == "vtracer":
+            self.vtracer_panel.update_progress_msg(msg)
 
     def on_worker_finished(self, success, msg, dep_id):
         if dep_id in self.workers:
@@ -1988,6 +2196,13 @@ class DependenciesPage(QWidget):
             self.deno_panel.set_downloading_state(False)
         elif dep_id == "ghostscript":
             self.gs_panel.set_downloading_state(False)
+        elif dep_id == "vtracer":
+            if success:
+                try:
+                    vtracer_local(force_check=True)
+                except Exception as e:
+                    logger.error(f"Error actualizando versión local de vtracer: {e}")
+            self.vtracer_panel.set_downloading_state(False)
 
         if not success:
             QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr("Fallo al descargar {0}:\n{1}").format(dep_id, msg))

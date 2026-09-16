@@ -533,21 +533,23 @@ class PreviewContainerWidget(QFrame):
             except Exception as e:
                 logger.error(f"PreviewPanel: Error renderizando SVG {path}: {e}")
 
-        # Renderizado de documento PDF / Ilustrator (.ai)
+        # Renderizado de documento PDF / Ilustrator (.ai) -- mismo motor que la
+        # conversión real (pypdfium2, ver ImageConverter._load_pdf_like) en vez de
+        # QPdfDocument: éste último renderiza al tamaño en píxeles del panel (se ve
+        # pixelado al hacer zoom) -- con target_size=None se renderiza a DPI fijo
+        # (_DEFAULT_VECTOR_DPI). transparent=False: la vista previa debe verse como
+        # un documento normal (fondo blanco); la transparencia real de salida solo
+        # aplica al archivo final si el usuario marca "Fondo transparente" al
+        # convertir (ver ConvertPanel._build_pdf_page/_save_as_pdf).
         if ext in (".pdf", ".ai"):
             try:
-                from PySide6.QtPdf import QPdfDocument
-                doc = QPdfDocument(self)
-                doc.load(path)
-                if doc.pageCount() > 0:
-                    sz = doc.pagePointSize(0)
-                    if sz.isValid() and sz.width() > 0 and sz.height() > 0:
-                        scale = min(avail_w / sz.width(), avail_h / sz.height())
-                        render_w = max(1, int(sz.width() * scale))
-                        render_h = max(1, int(sz.height() * scale))
-                        page_img = doc.render(0, QSize(render_w, render_h))
-                        if not page_img.isNull():
-                            return QPixmap.fromImage(page_img)
+                from core.tabs.image_tools.image_converter import ImageConverter
+                pil_img = ImageConverter()._load_pdf_like(path, None, True, {}, transparent=False)
+                rgb_im = pil_img.convert("RGBA")
+                data = rgb_im.tobytes("raw", "RGBA")
+                qimg = QImage(data, rgb_im.width, rgb_im.height, rgb_im.width * 4, QImage.Format.Format_RGBA8888).copy()
+                if not qimg.isNull():
+                    return QPixmap.fromImage(qimg)
             except Exception as e:
                 logger.error(f"PreviewPanel: Error renderizando PDF/AI {path}: {e}")
 

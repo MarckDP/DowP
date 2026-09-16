@@ -8,11 +8,12 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QApplication,
     QPushButton, QButtonGroup, QLineEdit, QFileDialog, QMessageBox, QProgressDialog,
 )
-from PySide6.QtCore import Qt, QSize, QEvent, QUrl, QStandardPaths, QThread, Signal, QTimer
+from PySide6.QtCore import Qt, QSize, QEvent, QUrl, QStandardPaths, QThread, Signal, QTimer, QMimeData
 from PySide6.QtGui import QDesktopServices, QPixmap
 
 from core.logger.logger_manager import logger
 from core.setup.ghostscript_setup import check_ghostscript, download_ghostscript
+from core.setup.vtracer_setup import check_vtracer, download_vtracer
 from core.utils.config_manager import get_config, save_config
 from gui.styles import (
     get_theme_token, apply_folder_browse_button_style, apply_folder_open_button_style,
@@ -1004,9 +1005,16 @@ class ImageToolsTab(QWidget):
         if not output_path:
             self._warn_result_missing(self._current_filepath)
             return
-        pixmap = QPixmap(output_path)
-        if not pixmap.isNull():
-            QApplication.clipboard().setPixmap(pixmap)
+
+        if os.path.splitext(output_path)[1].lower() == ".svg":
+            copied = self._copy_svg_result_to_clipboard(output_path)
+        else:
+            pixmap = QPixmap(output_path)
+            copied = not pixmap.isNull()
+            if copied:
+                QApplication.clipboard().setPixmap(pixmap)
+
+        if copied:
             # Feedback visual
             original_text = self.btn_copy_result.text()
             self.btn_copy_result.setText(self.tr("¡Copiado!"))
@@ -1027,6 +1035,26 @@ class ImageToolsTab(QWidget):
                 self, self.tr("No se pudo copiar"),
                 self.tr("El archivo existe pero no se pudo leer como imagen."),
             )
+
+    def _copy_svg_result_to_clipboard(self, output_path: str) -> bool:
+        """SVG es vectorial -- copiar un QPixmap (como el resto de los formatos)
+        lo rasteriza a un bitmap fijo y pierde justo lo que hace valioso al SVG.
+        En cambio se copia el ARCHIVO real vía QMimeData.setUrls(), el mismo
+        mecanismo portable que ya usa _start_file_drag() en subclip_dialog.py
+        para arrastrar archivos afuera de la app -- Qt lo traduce solo al formato
+        de portapapeles nativo de cada SO (CF_HDROP en Windows, NSFilenamesPboardType
+        en macOS, text/uri-list en Linux/X11/Wayland), así que pegarlo en el
+        explorador de archivos o en un editor vectorial (Illustrator/Inkscape) da
+        el SVG real, editable. Se agrega además una vista previa rasterizada en el
+        mismo QMimeData -- por si la app de destino solo sabe pegar "una imagen",
+        no un archivo (ej. un chat/editor de texto)."""
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(output_path)])
+        pixmap = QPixmap(output_path)
+        if not pixmap.isNull():
+            mime.setImageData(pixmap.toImage())
+        QApplication.clipboard().setMimeData(mime)
+        return True
 
     def _build_queue_content(self) -> QWidget:
         """Lista de imágenes (arriba) + panel "Convertir" con opciones de formato
@@ -1321,11 +1349,78 @@ class ImageToolsTab(QWidget):
             )
         return result["success"]
 
+    def _confirm_vtracer_if_needed(self) -> bool:
+        """SVG necesita vtracer (dependencia opcional, ver
+        core/setup/vtracer_setup.py, con build portable en los tres SO -- a
+        diferencia de Ghostscript, no hace falta distinguir por plataforma aquí).
+        Mismo criterio que _confirm_ghostscript_if_needed: si el formato elegido
+        es SVG y no está instalado, se pregunta ANTES de arrancar. Solo necesita
+        el formato elegido (no toda la cola de archivos), así que se consulta el
+        combo directo en vez de esperar a armar el dict de settings completo."""
+        if self.convert_panel.combo_format.currentData() != "SVG" or check_vtracer():
+            return True
+
+        reply = QMessageBox.question(
+            self, self.tr("vtracer no encontrado"),
+            self.tr(
+                "Elegiste SVG como formato de salida, que necesita vtracer para "
+                "vectorizar. ¿Descargarlo ahora o cancelar el proceso?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return False
+        return self._download_vtracer_blocking()
+
+    def _download_vtracer_blocking(self) -> bool:
+        """Mismo patrón que _download_ghostscript_blocking, con download_vtracer()
+        (la misma función que usa la tarjeta de Ajustes > Dependencias)."""
+        progress = QProgressDialog(
+            self.tr("Descargando vtracer..."), self.tr("Cancelar"), 0, 100, self,
+        )
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(True)
+        progress.setValue(0)
+
+        result = {"success": False, "msg": ""}
+
+        class _VtracerDownloadThread(QThread):
+            finished_signal = Signal(bool, str)
+            progress_signal = Signal(int)
+
+            def run(self):
+                success, msg = download_vtracer(progress_callback=self.progress_signal.emit)
+                self.finished_signal.emit(success, msg)
+
+        worker = _VtracerDownloadThread()
+        worker.progress_signal.connect(progress.setValue)
+
+        def _on_finished(success, msg):
+            result["success"] = success
+            result["msg"] = msg
+            progress.close()
+
+        worker.finished_signal.connect(_on_finished)
+        worker.start()
+        progress.exec()
+        worker.wait()
+
+        if not result["success"]:
+            QMessageBox.warning(
+                self, self.tr("Error"),
+                self.tr("No se pudo descargar vtracer:\n{0}").format(result["msg"]),
+            )
+        return result["success"]
+
     def _on_convert_clicked(self):
         filepaths = self.image_queue.get_all_filepaths()
         if not filepaths or self._convert_worker is not None:
             return
         if not self._confirm_ghostscript_if_needed(filepaths):
+            return
+        if not self._confirm_vtracer_if_needed():
             return
         settings = {
             **self.resize_popover_content.get_settings(),

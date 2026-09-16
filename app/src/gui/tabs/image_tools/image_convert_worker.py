@@ -14,7 +14,7 @@ from core.utils.file_conflict_manager import resolve_conflict, commit_backup, ro
 # resuelve en _desired_output_path() mirando la extensión de cada archivo de origen.
 _EXT_BY_FORMAT = {
     "PNG": ".png", "JPG": ".jpg", "WEBP": ".webp", "AVIF": ".avif",
-    "PDF": ".pdf", "TIFF": ".tiff", "ICO": ".ico", "ICNS": ".icns", "BMP": ".bmp",
+    "PDF": ".pdf", "SVG": ".svg", "TIFF": ".tiff", "ICO": ".ico", "ICNS": ".icns", "BMP": ".bmp",
 }
 _PASSTHROUGH_KEEP_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif", ".bmp"}
 
