@@ -49,7 +49,8 @@ class PresetBar(QWidget):
 
     def __init__(self, namespace: str, get_settings=None, parent=None,
                  show_picker: bool = True, show_save_button: bool = True,
-                 default_function: str | None = None, job_type: str = "RECODE"):
+                 default_function: str | None = None, job_type: str = "RECODE",
+                 function_choices: dict | None = None):
         super().__init__(parent)
         self.namespace = namespace
         self._get_settings = get_settings
@@ -61,6 +62,12 @@ class PresetBar(QWidget):
         # deja el combo del diálogo sin preseleccionar nada en particular.
         self._default_function = default_function
         self._job_type = job_type
+        # Qué diccionario de función ofrecer/agrupar (ver core.utils.preset_manager) --
+        # None usa PRESET_FUNCTIONS (categorías de Recodificación, el caso de siempre).
+        # Una barra sobre un namespace de IA (ej. "video_tools/ia_tools") pasa
+        # IA_TOOL_FUNCTIONS acá para no ofrecer "Convertir"/"Comprimir" al guardar, y
+        # para agrupar el picker por las categorías correctas (ver refresh()).
+        self._function_choices = function_choices or PRESET_FUNCTIONS
         self._active_name = None
         self._is_picker = show_picker  # NO usar combo.isVisible(): una pestaña
         # inactiva del QTabWidget reporta isVisible()==False aunque este
@@ -157,8 +164,8 @@ class PresetBar(QWidget):
 
     def refresh(self, select_name: str = ""):
         """Recarga la lista de presets desde el manager, agrupada por función (ver
-        core.utils.preset_manager.PRESET_FUNCTIONS) dentro del mismo combo - un grupo se
-        omite si no tiene ningún preset."""
+        self._function_choices, pasado al constructor) dentro del mismo combo - un grupo
+        se omite si no tiene ningún preset."""
         target = select_name or self._active_name
         self.combo.blockSignals(True)
         self.combo.clear()
@@ -169,7 +176,7 @@ class PresetBar(QWidget):
         for preset in presets:
             by_function.setdefault(preset.get("function"), []).append(preset["name"])
 
-        group_order = list(PRESET_FUNCTIONS.items()) + [(None, UNSPECIFIED_FUNCTION_LABEL)]
+        group_order = list(self._function_choices.items()) + [(None, UNSPECIFIED_FUNCTION_LABEL)]
         for func_id, label in group_order:
             names = by_function.get(func_id)
             if not names:
@@ -203,7 +210,10 @@ class PresetBar(QWidget):
     def _on_save_clicked(self):
         manager = get_preset_manager()
         existing = manager.list_names(self.namespace)
-        dialog = SavePresetDialog(self, existing_names=existing, default_function=self._default_function)
+        dialog = SavePresetDialog(
+            self, existing_names=existing, default_function=self._default_function,
+            function_choices=self._function_choices,
+        )
         if not dialog.exec() or not dialog.result_name:
             return
         name = dialog.result_name

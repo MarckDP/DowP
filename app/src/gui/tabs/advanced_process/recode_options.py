@@ -21,20 +21,31 @@ from PySide6.QtWidgets import (
 
 from gui.widgets.preset_bar import PresetBar
 from gui.styles import get_theme_token
+from core.utils.preset_manager import IA_TOOL_FUNCTIONS, IA_TOOLS_NAMESPACE
 
 _PRESET_NAMESPACE = "video_tools/avanzado"
+_UPSCALE_PRESET_NAMESPACE = IA_TOOLS_NAMESPACE
 _TITLE_STYLE_BASE = "font-weight: bold; font-size: 13px;"
 
 
 class RecodeOptionsWidget(QFrame):
     """
-    Tarjeta "Recodificar" de Proceso Avanzado: switch para recodificar el medio al
-    terminar la descarga (eligiendo un preajuste ya armado en Herramientas Multimedia >
-    Avanzado, vía PresetBar en modo picker) + checkbox "Mantener medios originales".
+    Tarjeta "Posprocesar" de Proceso Avanzado/Modo Rápido: dos secciones
+    independientes y COMBINABLES -- Recodificación (switch + PresetBar sobre
+    "video_tools/avanzado") y "Herramientas IA" (switch + PresetBar sobre
+    "video_tools/ia_tools", namespace compartido -- ver
+    core.utils.preset_manager.IA_TOOL_FUNCTIONS; hoy la sección solo trae
+    Reescalado) -- elegir solo una corre solo esa al terminar la
+    descarga; elegir las dos las encadena (Reescalado IA primero,
+    Recodificación después, mismo orden y mismas razones que en Herramientas
+    Multimedia -- ver core/tabs/video_tools/upscale_chain.py). Antes se
+    llamaba "Recodificar" y tenía una sola sección -- renombrada al agregar
+    la segunda, ya no describe una sola acción.
 
     Mismo molde visual que SubtitleOptionsWidget (misma pestaña, tarjeta hermana a su
     izquierda): QFrame de ancho fijo, header colapsable, cuerpo animado. No sabe nada de
-    cómo se ejecuta la recodificación — eso lo maneja recode_controller.py.
+    cómo se ejecuta nada de esto — eso lo maneja recode_controller.py (junta la
+    configuración) y cada download_controller.py (la ejecuta).
     """
     COMPACT_WIDTH = 350
     COLLAPSED_HEIGHT = 38
@@ -77,7 +88,7 @@ class RecodeOptionsWidget(QFrame):
         header_layout.setContentsMargins(4, 0, 4, 0)
         header_layout.setSpacing(0)
 
-        self.title_label = QLabel(self.tr("Recodificar"))
+        self.title_label = QLabel(self.tr("Posprocesar"))
         self.title_label.setObjectName("sectionTitle")
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setStyleSheet(_TITLE_STYLE_BASE)
@@ -91,6 +102,10 @@ class RecodeOptionsWidget(QFrame):
         body_layout = QVBoxLayout(self.body_container)
         body_layout.setContentsMargins(0, 4, 0, 0)
         body_layout.setSpacing(6)
+
+        self.lbl_section_recode = QLabel(self.tr("Recodificación"))
+        self.lbl_section_recode.setObjectName("sectionTitle")
+        body_layout.addWidget(self.lbl_section_recode)
 
         # Texto propio del checkbox (no un QLabel aparte, ver conversación): el tema ya
         # define QCheckBox { spacing: 8px } para el hueco entre el indicador y su
@@ -155,6 +170,71 @@ class RecodeOptionsWidget(QFrame):
 
         body_layout.addLayout(naming_row)
 
+        # ── Herramientas IA (hoy solo Reescalado) -- segunda sección, combinable con la de arriba ──
+        # (ver docstring de la clase): mismo molde (switch + PresetBar +
+        # prefijo/sufijo), namespace compartido "video_tools/ia_tools". El
+        # prefijo/sufijo de acá solo se usa cuando Reescalado IA corre SOLO
+        # (sin Recodificación) -- si las dos están activas, el archivo final
+        # usa el prefijo/sufijo de Recodificación, el intermedio del
+        # reescalado no tiene nombre visible (ver upscale_chain.py).
+        divider = QFrame(self.body_container)
+        divider.setFrameShape(QFrame.HLine)
+        divider.setStyleSheet(f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')};")
+        divider.setFixedHeight(1)
+        body_layout.addWidget(divider)
+
+        self.lbl_section_upscale = QLabel(self.tr("Herramientas IA"))
+        self.lbl_section_upscale.setObjectName("sectionTitle")
+        body_layout.addWidget(self.lbl_section_upscale)
+
+        switch_row_upscale = QHBoxLayout()
+        switch_row_upscale.setContentsMargins(0, 0, 0, 0)
+        self.switch_upscale = QCheckBox(self.tr("Reescalar con IA al finalizar"))
+        self.switch_upscale.setCursor(Qt.PointingHandCursor)
+        switch_row_upscale.addWidget(self.switch_upscale)
+        switch_row_upscale.addStretch()
+        body_layout.addLayout(switch_row_upscale)
+
+        self.preset_bar_upscale = PresetBar(
+            _UPSCALE_PRESET_NAMESPACE, get_settings=None, parent=self.body_container,
+            show_picker=True, show_save_button=False,
+            function_choices=IA_TOOL_FUNCTIONS,
+        )
+        self.preset_bar_upscale.setEnabled(False)
+        self.preset_bar_upscale.preset_applied.connect(self._update_header_highlight)
+        body_layout.addWidget(self.preset_bar_upscale)
+
+        naming_row_upscale = QHBoxLayout()
+        naming_row_upscale.setContentsMargins(0, 0, 0, 0)
+        naming_row_upscale.setSpacing(6)
+
+        prefix_col_upscale = QVBoxLayout()
+        prefix_col_upscale.setSpacing(2)
+        self.lbl_upscale_prefix = QLabel(self.tr("Prefijo"))
+        self.lbl_upscale_prefix.setObjectName("menuLabel")
+        self.txt_upscale_prefix = QLineEdit()
+        self.txt_upscale_prefix.setPlaceholderText(self.tr("(ninguno)"))
+        self.txt_upscale_prefix.setEnabled(False)
+        prefix_col_upscale.addWidget(self.lbl_upscale_prefix)
+        prefix_col_upscale.addWidget(self.txt_upscale_prefix)
+        naming_row_upscale.addLayout(prefix_col_upscale)
+
+        suffix_col_upscale = QVBoxLayout()
+        suffix_col_upscale.setSpacing(2)
+        self.lbl_upscale_suffix = QLabel(self.tr("Sufijo"))
+        self.lbl_upscale_suffix.setObjectName("menuLabel")
+        self.txt_upscale_suffix = QLineEdit("_upscaled")
+        self.txt_upscale_suffix.setPlaceholderText(self.tr("(ninguno)"))
+        self.txt_upscale_suffix.setEnabled(False)
+        suffix_col_upscale.addWidget(self.lbl_upscale_suffix)
+        suffix_col_upscale.addWidget(self.txt_upscale_suffix)
+        naming_row_upscale.addLayout(suffix_col_upscale)
+
+        body_layout.addLayout(naming_row_upscale)
+
+        self.switch_upscale.toggled.connect(self._on_switch_upscale_toggled)
+        self.switch_upscale.toggled.connect(self._update_header_highlight)
+
         # Red de seguridad: _expanded_height() ya calcula el alto exacto del contenido
         # (ver conversación - antes esto era necesario porque EXPANDED_HEIGHT era un
         # número fijo con hueco de sobra, y sin stretch Qt centraba el contenido en vez
@@ -170,16 +250,33 @@ class RecodeOptionsWidget(QFrame):
 
     def _on_switch_toggled(self, checked: bool):
         self.preset_bar.setEnabled(checked)
-        self.chk_keep_original.setEnabled(checked)
         self.txt_prefix.setEnabled(checked)
         self.txt_suffix.setEnabled(checked)
+        self._update_keep_original_enabled()
+
+    def _on_switch_upscale_toggled(self, checked: bool):
+        self.preset_bar_upscale.setEnabled(checked)
+        self.txt_upscale_prefix.setEnabled(checked)
+        self.txt_upscale_suffix.setEnabled(checked)
+        self._update_keep_original_enabled()
+
+    def _update_keep_original_enabled(self):
+        # "Mantener medios originales" se refiere al archivo ORIGINAL descargado,
+        # antes de CUALQUIER etapa -- aplica si hay al menos una activa, no solo
+        # Recodificación (antes esto era 1:1 con el único switch que existía).
+        self.chk_keep_original.setEnabled(
+            self.switch_recode.isChecked() or self.switch_upscale.isChecked()
+        )
 
     def _update_header_highlight(self, *_args):
-        """Ilumina el texto "Recodificar" en el verde de acento cuando hay una
-        recodificación realmente activa (switch encendido + preset elegido, no "Sin
-        preset" - ver conversación: dejar el switch prendido con "Sin preset" no
-        recodifica nada, así que ese estado NO debe verse "activo")."""
-        active = self.switch_recode.isChecked() and bool(self.preset_bar.active_preset_name())
+        """Ilumina el texto "Posprocesar" en el verde de acento cuando hay al
+        menos una etapa (Recodificación y/o Reescalado IA) realmente activa
+        (switch encendido + preset elegido, no "Sin preset" - ver conversación:
+        dejar el switch prendido con "Sin preset" no hace nada, así que ese
+        estado NO debe verse "activo")."""
+        recode_active = self.switch_recode.isChecked() and bool(self.preset_bar.active_preset_name())
+        upscale_active = self.switch_upscale.isChecked() and bool(self.preset_bar_upscale.active_preset_name())
+        active = recode_active or upscale_active
         if active:
             accent = get_theme_token('acento_primario', '#B9E640')
             self.title_label.setStyleSheet(f"{_TITLE_STYLE_BASE} color: {accent};")

@@ -72,6 +72,12 @@ def source_has_real_video(input_file: str) -> bool:
         return True
 
 
+# Job types que compiten por GPU/CPU local (a diferencia de DOWNLOAD/PLAYLIST,
+# limitados por ancho de banda) -- máximo 1 a la vez, ver QueueWorker.run() y
+# QueueManager._get_next_runnable_job.
+_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO"})
+
+
 class JobStatus:
     PENDING = "PENDING"
     ANALYZING = "ANALYZING"
@@ -134,6 +140,8 @@ class SingleJobWorker(QThread):
                 self.queue_worker._execute_playlist(self.job, self.cancellation_event, self)
             elif self.job.job_type == "RECODE":
                 self.queue_worker._execute_recode(self.job, self.cancellation_event, self)
+            elif self.job.job_type == "UPSCALE_VIDEO":
+                self.queue_worker._execute_upscale_video(self.job, self.cancellation_event, self)
         except Exception as e:
             import traceback
             logger.error(f"SingleJobWorker: Error inesperado en job {self.job.job_id}: {traceback.format_exc()}")
@@ -181,10 +189,10 @@ class QueueWorker(QThread):
             
             with QMutexLocker(self._workers_mutex):
                 active_count = len(self._active_workers)
-                active_recodes = sum(1 for w in self._active_workers.values() if w.job.job_type == "RECODE")
+                active_heavy = sum(1 for w in self._active_workers.values() if w.job.job_type in _HEAVY_JOB_TYPES)
 
             if active_count < max_concurrent:
-                job = self.manager._get_next_runnable_job(active_recodes)
+                job = self.manager._get_next_runnable_job(active_heavy)
                 if job:
                     job.status = JobStatus.RUNNING
                     self.job_status_changed.emit(job.job_id, JobStatus.RUNNING)
@@ -1044,6 +1052,89 @@ class QueueWorker(QThread):
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             logger.error(f"QueueWorker: [RECODE] FFmpeg falló: {job.error_message} ({job.title})")
 
+    def _execute_upscale_video(self, job, cancellation_event=None, worker_ref=None):
+        """Reescalado de Video con IA: extrae fotogramas (ffmpeg) -> los
+        reescala TODOS en un solo proceso con el motor NCNN elegido -> rearma
+        el video (ffmpeg, remuxando el audio original). Ver
+        core/tabs/video_tools/video_upscale_engine.py para las 3 funciones,
+        acá solo se pesa el progreso de cada una dentro del progreso total
+        (0-15% / 15-85% / 85-100%, mismo peso que usaba DowP1 para esta misma
+        función -- ver el comentario en
+        core/tabs/image_tools/image_converter.py::_apply_ai_upscale) y se
+        decide el estado final del job, mismo molde que _execute_recode."""
+        if cancellation_event is None:
+            cancellation_event = self._cancellation_event
+
+        job.status = JobStatus.RUNNING
+        job.progress = 0.0
+        self.job_status_changed.emit(job.job_id, JobStatus.RUNNING)
+        self.job_progress_changed.emit(job.job_id, 0.0, self.tr("Extrayendo fotogramas..."), "")
+
+        config = job.config
+        input_file = config.get("input_path")
+        output_file = config.get("output_path")
+        options = config.get("upscale_options", {})
+        fps = config.get("fps") or 30.0
+        duration_sec = config.get("duration_sec", 0.0)
+
+        import shutil
+        import tempfile
+        from core.tabs.video_tools.video_upscale_engine import (
+            extract_frames, upscale_frames_batch, reassemble_video,
+        )
+
+        temp_root = tempfile.mkdtemp(prefix="dowp_upscale_video_")
+        frames_dir = os.path.join(temp_root, "frames")
+        upscaled_dir = os.path.join(temp_root, "frames_up")
+
+        def stage_progress(base, weight, label):
+            def cb(pct):
+                mapped = base + (pct / 100.0) * weight
+                job.progress = mapped
+                self.job_progress_changed.emit(job.job_id, mapped, label, "")
+            return cb
+
+        success, error = False, None
+        try:
+            success, error = extract_frames(
+                input_file, frames_dir, fps, duration_sec, cancellation_event,
+                progress_callback=stage_progress(0.0, 15.0, self.tr("Extrayendo fotogramas...")),
+                worker_ref=worker_ref,
+            )
+            if success:
+                success, error = upscale_frames_batch(
+                    frames_dir, upscaled_dir, options, cancellation_event,
+                    progress_callback=stage_progress(15.0, 70.0, self.tr("Reescalando fotogramas...")),
+                )
+            if success:
+                success, error = reassemble_video(
+                    upscaled_dir, input_file, output_file, fps, duration_sec, cancellation_event,
+                    progress_callback=stage_progress(85.0, 15.0, self.tr("Recomponiendo video...")),
+                    worker_ref=worker_ref,
+                )
+        finally:
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+        if cancellation_event.is_set():
+            job.status = JobStatus.CANCELLED
+            self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
+            logger.info(f"QueueWorker: [UPSCALE_VIDEO] Trabajo cancelado por el usuario: {job.title}")
+            return
+
+        if success:
+            job.status = JobStatus.COMPLETED
+            job.progress = 100.0
+            job.final_filepath = output_file
+            job.add_output_files([output_file], is_stem_source=False)
+            self.job_progress_changed.emit(job.job_id, 100.0, self.tr("Completado"), "")
+            self.job_status_changed.emit(job.job_id, JobStatus.COMPLETED)
+            logger.info(f"QueueWorker: [UPSCALE_VIDEO] Reescalado finalizado exitosamente: {output_file}")
+        else:
+            job.status = JobStatus.FAILED
+            job.error_message = error or self.tr("Error desconocido en Reescalado de Video IA")
+            self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
+            logger.error(f"QueueWorker: [UPSCALE_VIDEO] Falló: {job.error_message} ({job.title})")
+
     @staticmethod
     def _default_output_path():
         try:
@@ -1271,12 +1362,13 @@ class QueueManager(QObject):
         with QMutexLocker(self._mutex):
             return list(self._jobs)
 
-    def _get_next_runnable_job(self, active_recodes: int) -> Job | None:
-        """Obtiene la siguiente tarea PENDING saltando los RECODE si ya hay uno corriendo."""
+    def _get_next_runnable_job(self, active_heavy: int) -> Job | None:
+        """Obtiene la siguiente tarea PENDING saltando los job types pesados de
+        GPU/CPU (ver _HEAVY_JOB_TYPES) si ya hay uno corriendo."""
         with QMutexLocker(self._mutex):
             for j in self._jobs:
                 if j.status == JobStatus.PENDING:
-                    if j.job_type == "RECODE" and active_recodes > 0:
+                    if j.job_type in _HEAVY_JOB_TYPES and active_heavy > 0:
                         continue
                     return j
             return None

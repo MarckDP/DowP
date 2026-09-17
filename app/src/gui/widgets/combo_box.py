@@ -101,6 +101,21 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
         else:
             style.drawControl(QStyle.CE_ItemViewItem, opt, painter, widget)
 
+        # 2b. Encabezados de grupo (ej. PresetBar._add_group_header, convert_panel.py::
+        # _populate_container_combo): item deshabilitado y centrado, sin icono ni
+        # checkmark posibles -- se dibuja centrado en TODO el ancho de la fila, no con
+        # el offset/reserva de la rama normal de abajo (que antes ignoraba el
+        # Qt.AlignCenter del item y lo pintaba pegado a la izquierda, descuadrando las
+        # rayas "───" del separador contra el ancho real del combo).
+        if int(opt.displayAlignment) & Qt.AlignHCenter:
+            painter.save()
+            painter.setFont(opt.font)
+            painter.setPen(QColor("#c5c5c5"))
+            centered_text = opt.fontMetrics.elidedText(raw_text, Qt.ElideRight, opt.rect.width() - 4)
+            painter.drawText(opt.rect, Qt.AlignCenter, centered_text)
+            painter.restore()
+            return
+
         # 2. Dibujar icono del item si tiene (ej. etiquetas de colores)
         left_offset = 10
         if not opt.icon.isNull():

@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import (QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
                                  QLabel, QLineEdit, QPushButton, QFileDialog, QColorDialog, QSlider, QWidget, QFrame,
                                  QComboBox)
-from PySide6.QtCore import Qt, Signal, QPoint
+from PySide6.QtCore import Qt, Signal, QPoint, QCoreApplication
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QLinearGradient
 import os
 from core.logger.logger_manager import logger
@@ -44,7 +44,6 @@ def _translate_dialog_text(parent, text: str) -> str:
         res = parent.tr(text)
         if res != text:
             return res
-    from PySide6.QtCore import QCoreApplication
     res = QCoreApplication.translate("dialogs", text)
     if res != text:
         return res
@@ -329,7 +328,7 @@ class SavePresetDialog(QDialog):
     PresetBar). Reemplaza al patrón anterior de escribir el nombre directo en el combo
     -no tenía sentido tener que escribir dentro de un combo pensado para elegir de una
     lista existente."""
-    def __init__(self, parent=None, existing_names=None, default_function=None):
+    def __init__(self, parent=None, existing_names=None, default_function=None, function_choices=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -337,6 +336,12 @@ class SavePresetDialog(QDialog):
         self.setFixedSize(360, 230)
         self._existing_names = existing_names or []
         self._default_function = default_function
+        # Qué diccionario de "función" ofrecer (ver core.utils.preset_manager):
+        # PRESET_FUNCTIONS por defecto (categorías de Recodificación) -- el llamador
+        # pasa IA_TOOL_FUNCTIONS u otro cuando el preset que se está guardando no es de
+        # ese tipo (ver PresetBar._on_save_clicked), para no mezclar "Convertir"/
+        # "Comprimir" con categorías que no aplican a ese preset.
+        self._function_choices = function_choices
         self.result_name = None
         self.result_function = None
         self.init_ui()
@@ -431,10 +436,11 @@ class SavePresetDialog(QDialog):
         # (nunca se pre-fija sin poder cambiarla): Avanzado puede armar cualquier cosa,
         # así que no hay una función "correcta" única que asumir por default ahí.
         from core.utils.preset_manager import PRESET_FUNCTIONS
+        function_choices = self._function_choices if self._function_choices is not None else PRESET_FUNCTIONS
         self.lbl_function = QLabel(self.tr("Tipo de tarea:"))
         self.combo_function = QComboBox()
         self.combo_function.setCursor(Qt.PointingHandCursor)
-        for func_id, label in PRESET_FUNCTIONS.items():
+        for func_id, label in function_choices.items():
             self.combo_function.addItem(QCoreApplication.translate("preset_manager", label), func_id)
         if self._default_function:
             idx = self.combo_function.findData(self._default_function)

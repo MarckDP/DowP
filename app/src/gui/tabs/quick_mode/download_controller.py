@@ -1,5 +1,6 @@
 # src/gui/tabs/quick_mode/download_controller.py
 import os
+import tempfile
 import requests
 import threading
 from PySide6.QtCore import QObject, Signal, Qt
@@ -10,6 +11,9 @@ from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config
 from core.utils.queue_manager import get_queue_manager
 from core.utils.output_artifacts import find_actual_downloaded_file
+from core.utils.preset_manager import build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE
+from core.utils.file_conflict_manager import quarantine_for_recode, rollback_backup
+from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
 from core.tabs.quick_mode.quick_mode_logic import build_quick_request_data, reveal_in_file_manager
 from gui.tabs.advanced_process.workers import AnalysisWorker, DownloadWorker
 from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
@@ -64,6 +68,11 @@ class QuickDownloadController(QObject):
         self._recode_state = {}
         self._row_recode_pending = {}
         self._row_recode_results = {}
+        # Reescalado IA + Recodificación combinados (ver _start_post_download_recode/
+        # _on_recode_job_status): job_id del job RECODE de la etapa 2 -> ruta del
+        # archivo intermedio (y su carpeta temporal propia) a borrar cuando esa etapa
+        # termine, pase lo que pase -- el intermedio nunca es el resultado final.
+        self._chain_cleanup = {}
 
     def start_download_flow(self, url, mode, quality, output_path, speed_limit_val,
                             chk_thumb_file_checked, chk_thumb_only_checked,
@@ -592,7 +601,7 @@ class QuickDownloadController(QObject):
         editor_mgr = EditorIntegrationManager.get_instance()
 
         request_data = task_data["request_data"]
-        recode_requested = bool(request_data.get("recode_enabled"))
+        recode_requested = bool(request_data.get("recode_enabled")) or bool(request_data.get("upscale_enabled"))
         is_single_row = len(task_data["item_rows"]) == 1
         fragment_files = task_data.get("_fragment_files")  # {frag_idx: path} o None
 
@@ -709,11 +718,12 @@ class QuickDownloadController(QObject):
                 return frag[2]
         return f"fragment{frag_idx:02d}" if frag_idx else "fragment"
 
-    def _recode_status_text(self, position, total):
+    def _recode_status_text(self, position, total, label: str | None = None):
+        label = label or (self.tr("Recodificando...") if hasattr(self, "tr") else "Recodificando...")
         if total and total > 1 and position:
-            return (self.tr("Recodificando {0} de {1}...").format(position, total)
-                    if hasattr(self, "tr") else f"Recodificando {position} de {total}...")
-        return self.tr("Recodificando...") if hasattr(self, "tr") else "Recodificando..."
+            return (self.tr("{0} ({1} de {2})").format(label, position, total)
+                    if hasattr(self, "tr") else f"{label} ({position} de {total})")
+        return label
 
     def _queue_fragment_recodes(self, row, fragment_files, request_data, base_title):
         """
@@ -810,31 +820,47 @@ class QuickDownloadController(QObject):
     def _start_post_download_recode(self, actual_path, request_data, row, title,
                                      fragment_position=None, fragment_total=None):
         """
-        Encola un job RECODE async para el archivo que acaba de bajar esta fila.
-        Contraparte de AdvancedProcessTab.DownloadController._start_post_download_recode
-        (modo SOLO) pero reflejando el progreso en la fila de activity_panel en vez de
-        en output_options. fragment_position/fragment_total (1-based) se usan solo para
-        el texto "Recodificando N de M..." cuando esta fila agrupa varios fragmentos
-        (ver _queue_fragment_recodes) - None/1 para una recodificación normal de un solo
-        archivo. Devuelve True si el job quedó encolado (la fila queda a cargo de
-        _on_recode_job_progress/_status), False si no se pudo iniciar - en ese caso el
-        llamador debe resolver el estado "Completado" normalmente.
+        Encola el/los job(s) de posprocesado async para el archivo que acaba de bajar
+        esta fila. Contraparte de
+        AdvancedProcessTab.DownloadController._start_post_download_recode (modo SOLO)
+        pero reflejando el progreso en la fila de activity_panel en vez de en
+        output_options. fragment_position/fragment_total (1-based) se usan solo para
+        el texto de progreso cuando esta fila agrupa varios fragmentos (ver
+        _queue_fragment_recodes) - None/1 para un archivo normal. Devuelve True si el
+        job quedó encolado (la fila queda a cargo de _on_recode_job_progress/_status),
+        False si no se pudo iniciar - en ese caso el llamador debe resolver el estado
+        "Completado" normalmente.
+
+        Recodificación y Reescalado IA son combinables (ver tarjeta "Posprocesar",
+        recode_options.py): con las dos activas se encadenan -- Reescalado IA primero
+        (hacia un archivo temporal propio, invisible), Recodificación después (con el
+        intermedio como entrada, ver _continue_chain_to_recode) -- mismo orden y
+        mismas razones que Herramientas Multimedia
+        (video_tools_view.py::_start_chained_jobs).
         """
         if not actual_path or not os.path.exists(actual_path) or os.path.isdir(actual_path):
-            logger.warning(f"QuickModeTab: No se encontró el archivo descargado para recodificar ({title}).")
+            logger.warning(f"QuickModeTab: No se encontró el archivo descargado para posprocesar ({title}).")
             return False
 
-        from core.utils.preset_manager import build_recode_output_path
-        from core.utils.file_conflict_manager import quarantine_for_recode
+        recode_enabled = bool(request_data.get("recode_enabled"))
+        upscale_enabled = bool(request_data.get("upscale_enabled"))
 
-        preset_name = request_data.get("recode_preset_name")
-        prefix = request_data.get("recode_filename_prefix") or ""
-        suffix = request_data.get("recode_filename_suffix") or ""
+        if recode_enabled:
+            preset_name = request_data.get("recode_preset_name")
+            prefix = request_data.get("recode_filename_prefix") or ""
+            suffix = request_data.get("recode_filename_suffix") or ""
+            namespace = "video_tools/avanzado"
+        else:
+            preset_name = request_data.get("upscale_preset_name")
+            prefix = request_data.get("upscale_filename_prefix") or ""
+            suffix = request_data.get("upscale_filename_suffix") or ""
+            namespace = IA_TOOLS_NAMESPACE
+
         settings, out_file = build_recode_output_path(
-            actual_path, "video_tools/avanzado", preset_name, prefix=prefix, suffix=suffix
+            actual_path, namespace, preset_name, prefix=prefix, suffix=suffix
         )
         if not settings:
-            logger.warning(f"QuickModeTab: Preset de recodificación '{preset_name}' no encontrado, se omite ({title}).")
+            logger.warning(f"QuickModeTab: Preajuste de posprocesado '{preset_name}' no encontrado, se omite ({title}).")
             return False
 
         try:
@@ -845,25 +871,61 @@ class QuickDownloadController(QObject):
 
         duration_sec = self._resolve_media_duration(row, backup_path)
 
-        recode_job_id = self.queue_mgr.add_job({
-            "input_path": backup_path,
-            "output_path": out_file,
-            "settings": settings,
-            "duration_sec": duration_sec,
-            "title": f"Recode: {title}",
-        }, "RECODE")
+        chain_next = None
+        stage_label = None
+        if recode_enabled and upscale_enabled:
+            upscale_preset_name = request_data.get("upscale_preset_name")
+            upscale_settings = get_preset_manager().get_settings(IA_TOOLS_NAMESPACE, upscale_preset_name)
+            if not upscale_settings:
+                logger.warning(f"QuickModeTab: Preajuste de Reescalado IA '{upscale_preset_name}' no encontrado, se omite esa etapa ({title}).")
+            else:
+                fps, duration_sec = probe_fps_and_duration(backup_path, duration_sec)
+                chain_temp_dir = tempfile.mkdtemp(prefix="dowp_chain_qm_")
+                job_id, _intermediate_path = start_upscale_stage(
+                    self.queue_mgr, backup_path, upscale_settings, chain_temp_dir,
+                    fps, duration_sec, title=f"Reescalado IA: {title}",
+                )
+                chain_next = {
+                    "original_path": actual_path,
+                    "recode_preset_name": request_data.get("recode_preset_name"),
+                    "recode_prefix": request_data.get("recode_filename_prefix") or "",
+                    "recode_suffix": request_data.get("recode_filename_suffix") or "",
+                }
+                stage_label = self.tr("Reescalando con IA...")
 
-        self._recode_by_download[recode_job_id] = row
-        self._recode_state[recode_job_id] = {
+        if chain_next is None:
+            if upscale_enabled and not recode_enabled:
+                fps, duration_sec = probe_fps_and_duration(backup_path, duration_sec)
+                job_id = self.queue_mgr.add_job({
+                    "input_path": backup_path,
+                    "output_path": out_file,
+                    "upscale_options": settings,
+                    "fps": fps,
+                    "duration_sec": duration_sec,
+                    "title": f"Reescalado IA: {title}",
+                }, "UPSCALE_VIDEO")
+                stage_label = self.tr("Reescalando con IA...")
+            else:
+                job_id = self.queue_mgr.add_job({
+                    "input_path": backup_path,
+                    "output_path": out_file,
+                    "settings": settings,
+                    "duration_sec": duration_sec,
+                    "title": f"Recode: {title}",
+                }, "RECODE")
+
+        self._recode_by_download[job_id] = row
+        self._recode_state[job_id] = {
             "backup_path": backup_path,
             "keep_original": request_data.get("recode_keep_original", True),
             "request_data": dict(request_data),
             "title": title,
             "fragment_position": fragment_position,
             "fragment_total": fragment_total,
+            "chain_next": chain_next,
         }
 
-        estado = self._recode_status_text(fragment_position, fragment_total)
+        estado = self._recode_status_text(fragment_position, fragment_total, label=stage_label)
         if duration_sec > 0:
             row.update_progress(0, info="", status=estado)
         else:
@@ -872,7 +934,7 @@ class QuickDownloadController(QObject):
             row.set_busy(estado)
         # La cola global nace pausada y solo se reanuda desde Proceso Avanzado (modo
         # LOTES) o Herramientas Multimedia (ver video_tools_view.py) - sin esto, un job
-        # RECODE encolado desde Modo Rápido se queda esperando indefinidamente si el
+        # encolado desde Modo Rápido se queda esperando indefinidamente si el
         # usuario nunca tocó esas otras pestañas.
         self.queue_mgr.start_queue()
         return True
@@ -883,8 +945,81 @@ class QuickDownloadController(QObject):
             return
         info = f"{speed} | {eta}" if speed and eta else (speed or eta or "")
         state = self._recode_state.get(job_id, {})
-        status = self._recode_status_text(state.get("fragment_position"), state.get("fragment_total"))
+        label = self.tr("Reescalando con IA...") if state.get("chain_next") else None
+        status = self._recode_status_text(state.get("fragment_position"), state.get("fragment_total"), label=label)
         row.update_progress(percent, info=info, status=status)
+
+    def _continue_chain_to_recode(self, job_id, row, state):
+        """Arma y encola la etapa 2 (Recodificación) de una cadena, usando la
+        salida de la etapa 1 (Reescalado IA, `job_id`) como entrada. Reusa el
+        MISMO backup_path/keep_original/request_data/title/fragment_* que ya
+        traía `state` (la cuarentena del archivo original se hizo una sola vez,
+        antes de la etapa 1 -- ver _start_post_download_recode) con
+        `chain_next=None` -- así el job nuevo es indistinguible de un RECODE
+        normal para _on_recode_job_status, que lo resuelve con el mismo código
+        de siempre cuando termine. Misma lógica que
+        AdvancedProcessTab.DownloadController._continue_chain_to_recode."""
+        chain_next = state["chain_next"]
+        upscale_job = self.queue_mgr.get_job(job_id)
+        intermediate_path = upscale_job.final_filepath if upscale_job else None
+        self.queue_mgr.remove_job(job_id)
+
+        title = state.get("title", "")
+
+        if not intermediate_path or not os.path.exists(intermediate_path):
+            logger.error(f"QuickModeTab: la etapa de Reescalado IA no dejó un archivo válido, se aborta la cadena ({title}).")
+            rollback_backup(state.get("backup_path"))
+            row.update_progress(0, status=self.tr("Error al reescalar"))
+            row.mark_error()
+            return
+
+        settings, out_file = build_recode_output_path(
+            chain_next["original_path"], "video_tools/avanzado", chain_next["recode_preset_name"],
+            prefix=chain_next["recode_prefix"], suffix=chain_next["recode_suffix"],
+        )
+        if not settings:
+            logger.warning(f"QuickModeTab: Preajuste de Recodificación inválido a mitad de cadena, se omite ({title}).")
+            rollback_backup(state.get("backup_path"))
+            row.update_progress(0, status=self.tr("Error al recodificar"))
+            row.mark_error()
+            self._cleanup_chain_intermediate_path(intermediate_path)
+            return
+
+        # El intermedio es recién creado, nunca está en caché -- ver docstring de
+        # probe_fps_and_duration (core/tabs/video_tools/upscale_chain.py).
+        _fps_unused, duration_sec = probe_fps_and_duration(intermediate_path)
+
+        new_job_id = self.queue_mgr.add_job({
+            "input_path": intermediate_path,
+            "output_path": out_file,
+            "settings": settings,
+            "duration_sec": duration_sec,
+            "title": f"Recode: {title}",
+        }, "RECODE")
+
+        self._recode_by_download[new_job_id] = row
+        self._recode_state[new_job_id] = {**state, "chain_next": None}
+        self._chain_cleanup[new_job_id] = intermediate_path
+
+        estado = self._recode_status_text(state.get("fragment_position"), state.get("fragment_total"))
+        if duration_sec > 0:
+            row.update_progress(0, info="", status=estado)
+        else:
+            row.set_busy(estado)
+
+    def _cleanup_chain_intermediate_path(self, intermediate_path: str):
+        """Borra el archivo intermedio de una cadena y, si quedó vacía, su
+        carpeta temporal propia (una por cadena, ver _start_post_download_recode)
+        -- se llama pase lo que pase con la etapa 2 (éxito, error o cancelación),
+        el intermedio nunca es el resultado que le importa al usuario."""
+        try:
+            if os.path.exists(intermediate_path):
+                os.remove(intermediate_path)
+            parent = os.path.dirname(intermediate_path)
+            if os.path.isdir(parent) and not os.listdir(parent):
+                os.rmdir(parent)
+        except OSError as e:
+            logger.warning(f"QuickModeTab: no se pudo limpiar el intermedio de cadena '{intermediate_path}': {e}")
 
     def _on_recode_job_status(self, job_id, status):
         if job_id not in self._recode_by_download:
@@ -894,6 +1029,16 @@ class QuickDownloadController(QObject):
 
         row = self._recode_by_download.pop(job_id)
         state = self._recode_state.pop(job_id, {})
+
+        if state.get("chain_next") and status == "COMPLETED":
+            # Etapa 1 (Reescalado IA) de una cadena terminó bien -- todavía NO es el
+            # resultado final, arma la etapa 2 (Recodificación) y listo, no cae al
+            # resto de esta función (backup/fila se resuelven recién cuando ESA etapa
+            # termine). FAILED/CANCELLED de la etapa 1 SÍ caen al camino de abajo tal
+            # cual -- es un fallo genérico más, mismo criterio que cualquier otro.
+            self._continue_chain_to_recode(job_id, row, state)
+            return
+
         backup_path = state.get("backup_path")
         keep_original = state.get("keep_original", True)
         request_data = state.get("request_data") or {}
@@ -938,6 +1083,9 @@ class QuickDownloadController(QObject):
                 editor_mgr.process_raw_download(actual or final_path, request_data)
 
         self.queue_mgr.remove_job(job_id)
+        intermediate = self._chain_cleanup.pop(job_id, None)
+        if intermediate:
+            self._cleanup_chain_intermediate_path(intermediate)
 
         if fragment_total and fragment_total > 1 and row in self._row_recode_pending:
             # Parte de un grupo (corte con varios fragmentos, una sola fila, ver

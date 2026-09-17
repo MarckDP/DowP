@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QMessageBox,
     QCheckBox,
+    QProgressDialog,
 )
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QThread, Signal
 from PySide6.QtGui import QIcon, QDesktopServices
@@ -134,6 +135,21 @@ class VideoToolsTab(QWidget):
         # aquí (no en el Job de queue_manager.py) porque es pura anotación de UI para esta
         # pestaña - no cambia el comando de ffmpeg ni le interesa a Descargas/Playlists.
         self._recode_job_notes: dict[str, str] = {}
+        # Reescalado IA + Recodificación combinados (ver
+        # _start_chained_jobs/_on_job_status): job_id de la etapa de
+        # reescalado -> datos para armar la etapa de recodificación que sigue
+        # cuando esa primera etapa termine bien.
+        self._chain_pending: dict[str, dict] = {}
+        # job_id de la etapa de recodificación (la segunda) -> ruta del
+        # archivo intermedio a borrar cuando ESA etapa termine, sea cual sea
+        # el resultado -- el intermedio nunca es el archivo final, no tiene
+        # sentido conservarlo pase lo que pase.
+        self._chain_cleanup: dict[str, str] = {}
+        # Carpeta temporal para los archivos intermedios de la etapa de
+        # reescalado en una cadena -- creada la primera vez que hace falta,
+        # barrida en _check_all_finished() cuando ya no queda nada corriendo
+        # (mismo criterio que _flatten_temp_dir en image_tools_view.py).
+        self._chain_temp_dir: str | None = None
 
         self.init_ui()
         # Acepta arrastrar archivos desde fuera de la app (o desde otra pestaña de
@@ -901,9 +917,40 @@ class VideoToolsTab(QWidget):
             QMessageBox.warning(self, self.tr("Carpeta inválida"), self.tr("Por favor selecciona una carpeta de salida válida."))
             return
 
+        # Preajustes combinables: si la pestaña activa es "Preajustes" y hay un
+        # preajuste de Reescalado IA elegido (con o sin uno de Recodificación
+        # también), se decide ACÁ, ANTES de pedirle a get_encoding_settings()
+        # el dict genérico de RECODE -- ese dict para "Preajustes" viene de
+        # PresetsPanel.get_settings(), que ahora es un alias de
+        # get_recode_settings() y devolvería {} (vacío) si solo hay un
+        # preajuste de Reescalado IA elegido, disparando el aviso de "Sin
+        # configuración" de más abajo antes de llegar acá. Ver
+        # PresetsPanel.get_upscale_settings()/get_recode_settings().
+        if self.options_widget.tabs.currentWidget() is self.options_widget.tab_presets:
+            upscale_settings = self.options_widget.tab_presets.get_upscale_settings()
+            if upscale_settings is not None:
+                recode_settings = self.options_widget.tab_presets.get_recode_settings()
+                if recode_settings is not None:
+                    self._start_chained_jobs(files, upscale_settings, recode_settings, out_dir, same_path)
+                else:
+                    self._start_upscale_ia_jobs(files, upscale_settings, out_dir, same_path)
+                return
+            # Sin preajuste de Reescalado IA elegido -- sigue el flujo de
+            # siempre (solo Recodificación), sin cambios.
+
         settings = self.options_widget.get_encoding_settings()
         if not settings:
             QMessageBox.warning(self, self.tr("Sin configuración"), self.tr("Selecciona un preajuste o una configuración válida."))
+            return
+
+        # Reescalado IA es un job_type distinto (UPSCALE_VIDEO, no RECODE) con su
+        # propia lógica de extracción/reescalado/rearmado -- ver
+        # _start_upscale_ia_jobs y QueueWorker._execute_upscale_video
+        # (core/utils/queue_manager.py). El resto de esta función es exclusivo
+        # de RECODE (trim, marca de agua, selección de pista de audio...), nada
+        # de eso aplica acá.
+        if self.options_widget.tabs.currentWidget() is self.options_widget.tab_upscale_ia:
+            self._start_upscale_ia_jobs(files, settings, out_dir, same_path)
             return
 
         # Recorte interactivo: si el usuario lo modificó en la vista previa y marcó
@@ -1076,6 +1123,289 @@ class VideoToolsTab(QWidget):
         self.progress_bar.style().polish(self.progress_bar)
         qm.start_queue()
 
+    def _has_enough_space_for_upscale(self, meta: dict, fps: float, duration_sec: float, settings: dict) -> bool:
+        """Estimación gruesa antes de encolar (ver
+        video_upscale_engine.estimate_temp_space_bytes) -- los frames
+        temporales se extraen en tempfile.mkdtemp(), que en los 3 SO cae en
+        el directorio temporal del sistema. Solo un archivo UPSCALE_VIDEO
+        corre a la vez (ver _HEAVY_JOB_TYPES en queue_manager.py), así que
+        alcanza con chequear el espacio libre ACTUAL para cada archivo por
+        separado -- para cuando le toque el turno al siguiente, el anterior
+        ya liberó sus temporales."""
+        import re
+        import shutil
+        import tempfile
+        from core.tabs.video_tools.video_upscale_engine import estimate_temp_space_bytes
+
+        match = re.match(r"(\d+)x(\d+)", meta.get("resolución", ""))
+        if not match:
+            return True  # sin resolución confiable, no bloquear por las dudas
+        width, height = int(match.group(1)), int(match.group(2))
+
+        scale_text = str(settings.get("upscale_scale") or "4")
+        scale_digits = re.sub(r"[^0-9]", "", scale_text)
+        scale = int(scale_digits) if scale_digits else 4
+
+        needed = estimate_temp_space_bytes(width, height, fps, duration_sec, scale)
+        try:
+            free = shutil.disk_usage(tempfile.gettempdir()).free
+        except OSError:
+            return True
+        return needed <= free
+
+    def _start_upscale_ia_jobs(self, files, settings, out_dir, same_path):
+        """Arma un job UPSCALE_VIDEO por archivo -- versión simplificada del
+        loop de RECODE (_on_start_recoding_clicked): sin trim/marca de agua/
+        selección de pista de audio, esas opciones no aplican al Reescalado
+        IA. Reusa self._recode_jobs/_recode_backups para el progreso/estado/
+        cancelación -- _on_job_progress/_on_job_status/_on_cancel_recoding_
+        clicked ya son genéricos (no miran job_type), así que no hace falta
+        duplicarlos para este job_type nuevo."""
+        if not self._confirm_upscale_engine_if_needed(settings.get("upscale_engine")):
+            return
+
+        qm = get_queue_manager()
+        container = settings.get("container", "mp4")
+        container_ext = CONTAINER_TO_EXTENSION.get(container, container)
+        prefix = self.txt_prefix.text() if hasattr(self, "txt_prefix") else ""
+        suffix = self.txt_suffix.text() if hasattr(self, "txt_suffix") else ""
+        conflict_policy = self.combo_conflict_policy.currentData() or "conservar"
+        claimed_out_paths = set()
+        queued_any = False
+
+        for entry_key in files:
+            filepath = entry_path(entry_key)
+            ext = os.path.splitext(filepath)[1].lower()
+            if ext in AUDIO_ONLY_EXTENSIONS:
+                logger.info(f"VideoToolsTab: Reescalado IA omite (sin video): {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Omitido (sin video)"))
+                continue
+
+            # get_metadata_instant() es solo-caché -- un archivo recién agregado a la
+            # cola casi nunca está cacheado, y devuelve fps/resolución vacíos en
+            # silencio (confirmado con una corrida real: el reensamblado salía a
+            # 30fps fijo en vez del fps real de la fuente). _extract_ffprobe_json()
+            # es el sondeo síncrono real, el único que sirve acá.
+            meta = FFprobeMetadataManager.get_instance()._extract_ffprobe_json(filepath, "video")
+            duration_sec = self._parse_duration_to_seconds(meta.get("duración", "0"))
+            fps = self._parse_fps(meta.get("fps", "30"))
+
+            if not self._has_enough_space_for_upscale(meta, fps, duration_sec, settings):
+                logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
+                continue
+
+            base_name = os.path.splitext(os.path.basename(filepath))[0]
+            out_name = f"{prefix}{base_name}{suffix}.{container_ext}"
+            actual_out_dir = os.path.dirname(filepath) if same_path else out_dir
+            out_file = os.path.join(actual_out_dir, out_name)
+
+            out_file, backup_path = resolve_conflict(out_file, conflict_policy)
+            while out_file is not None and out_file in claimed_out_paths:
+                if conflict_policy == "omitir":
+                    out_file = None
+                else:
+                    out_file = find_available_rename(out_file)
+            if out_file is None:
+                logger.info(f"VideoToolsTab: Omitido por conflicto de nombre: {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Omitido"))
+                continue
+            claimed_out_paths.add(out_file)
+
+            config = {
+                "input_path": filepath,
+                "output_path": out_file,
+                "upscale_options": settings,
+                "fps": fps,
+                "duration_sec": duration_sec,
+                "title": f"Reescalado IA: {base_name}",
+                "queue_entry_key": entry_key,
+            }
+            job_id = qm.add_job(config, "UPSCALE_VIDEO")
+            self._recode_jobs.add(job_id)
+            self._recode_backups[job_id] = backup_path
+            queued_any = True
+            self.queue_widget.update_file_status(entry_key, self.tr("En cola"))
+
+        if not queued_any:
+            return
+
+        self._set_start_button_running(True)
+        self.progress_bar.setProperty("status", "downloading")
+        self.progress_bar.style().unpolish(self.progress_bar)
+        self.progress_bar.style().polish(self.progress_bar)
+        qm.start_queue()
+
+    def _start_chained_jobs(self, files, upscale_settings, recode_settings, out_dir, same_path):
+        """Arma, por archivo, un job UPSCALE_VIDEO seguido de un job RECODE
+        encadenado -- Reescalado IA primero, Recodificación después (ver
+        conversación sobre el orden: la Recodificación define el archivo
+        final -- códec/calidad/contenedor -- y si hay marca de agua queda
+        nítida al aplicarse sobre el video ya reescalado). El de
+        Recodificación recién se crea cuando el de Reescalado IA termina bien
+        (ver _on_job_status, rama COMPLETED, que chequea self._chain_pending)
+        -- no hay ningún mecanismo de "depende de" en queue_manager.py, se
+        arma acá en la GUI sin tocarlo. El archivo intermedio (salida de la
+        etapa 1) vive en self._chain_temp_dir, invisible para el usuario --
+        NO pasa por resolve_conflict (no es un destino real), y se borra
+        apenas la etapa 2 termina sea cual sea el resultado (ver
+        self._chain_cleanup)."""
+        if not self._confirm_upscale_engine_if_needed(upscale_settings.get("upscale_engine")):
+            return
+
+        import tempfile
+
+        qm = get_queue_manager()
+        final_container = recode_settings.get("container", "mp4")
+        final_container_ext = CONTAINER_TO_EXTENSION.get(final_container, final_container)
+        prefix = self.txt_prefix.text() if hasattr(self, "txt_prefix") else ""
+        suffix = self.txt_suffix.text() if hasattr(self, "txt_suffix") else ""
+        conflict_policy = self.combo_conflict_policy.currentData() or "conservar"
+        claimed_out_paths = set()
+        queued_any = False
+
+        for idx, entry_key in enumerate(files):
+            filepath = entry_path(entry_key)
+            ext = os.path.splitext(filepath)[1].lower()
+            if ext in AUDIO_ONLY_EXTENSIONS:
+                logger.info(f"VideoToolsTab: Reescalado IA omite (sin video): {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Omitido (sin video)"))
+                continue
+
+            # get_metadata_instant() es solo-caché -- ver comentario equivalente en
+            # _start_upscale_ia_jobs, mismo motivo.
+            meta = FFprobeMetadataManager.get_instance()._extract_ffprobe_json(filepath, "video")
+            duration_sec = self._parse_duration_to_seconds(meta.get("duración", "0"))
+            fps = self._parse_fps(meta.get("fps", "30"))
+
+            if not self._has_enough_space_for_upscale(meta, fps, duration_sec, upscale_settings):
+                logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
+                continue
+
+            base_name = os.path.splitext(os.path.basename(filepath))[0]
+
+            # Salida FINAL -- misma lógica de nombre/conflicto que el loop de RECODE normal.
+            out_name = f"{prefix}{base_name}{suffix}.{final_container_ext}"
+            actual_out_dir = os.path.dirname(filepath) if same_path else out_dir
+            out_file = os.path.join(actual_out_dir, out_name)
+            out_file, backup_path = resolve_conflict(out_file, conflict_policy)
+            while out_file is not None and out_file in claimed_out_paths:
+                if conflict_policy == "omitir":
+                    out_file = None
+                else:
+                    out_file = find_available_rename(out_file)
+            if out_file is None:
+                logger.info(f"VideoToolsTab: Omitido por conflicto de nombre: {filepath}")
+                self.queue_widget.update_file_status(entry_key, self.tr("Omitido"))
+                continue
+            claimed_out_paths.add(out_file)
+
+            # Intermedio -- invisible para el usuario, no pasa por resolve_conflict.
+            if self._chain_temp_dir is None:
+                self._chain_temp_dir = tempfile.mkdtemp(prefix="dowp_chain_")
+            intermediate_path = os.path.join(self._chain_temp_dir, f"{idx}_{base_name}.mp4")
+
+            config = {
+                "input_path": filepath,
+                "output_path": intermediate_path,
+                "upscale_options": upscale_settings,
+                "fps": fps,
+                "duration_sec": duration_sec,
+                "title": f"Reescalado IA: {base_name}",
+                "queue_entry_key": entry_key,
+            }
+            job_id = qm.add_job(config, "UPSCALE_VIDEO")
+            self._recode_jobs.add(job_id)
+            self._chain_pending[job_id] = {
+                "recode_settings": recode_settings,
+                "final_output": out_file,
+                "backup_path": backup_path,
+                "duration_sec": duration_sec,
+                "entry_key": entry_key,
+            }
+            queued_any = True
+            self.queue_widget.update_file_status(entry_key, self.tr("En cola"))
+
+        if not queued_any:
+            return
+
+        self._set_start_button_running(True)
+        self.progress_bar.setProperty("status", "downloading")
+        self.progress_bar.style().unpolish(self.progress_bar)
+        self.progress_bar.style().polish(self.progress_bar)
+        qm.start_queue()
+
+    def _confirm_upscale_engine_if_needed(self, engine: str | None) -> bool:
+        """Reescalado IA puede tardar minutos/horas -- a diferencia del popover
+        de Reescalar IA de Editor de Imagen (que ofrece la descarga al elegir
+        el motor pero no bloquea si se ignora), acá conviene el mismo patrón
+        bloqueante que ya usa Convertir para Ghostscript/vtracer
+        (_confirm_ghostscript_if_needed/_confirm_vtracer_if_needed en
+        image_tools_view.py): preguntar y descargar ANTES de encolar nada, no
+        dejar que cada archivo falle a mitad de un trabajo largo."""
+        from core.constants import UPSCALING_TOOLS
+        from core.setup.models_setup import is_upscaling_engine_installed
+
+        tool_info = UPSCALING_TOOLS.get(engine)
+        if tool_info is None or is_upscaling_engine_installed(tool_info):
+            return True
+
+        reply = QMessageBox.question(
+            self, self.tr("Motor no instalado"),
+            self.tr(
+                "'{0}' no está instalado. ¿Descargarlo ahora o cancelar el proceso?"
+            ).format(tool_info["name"]),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return False
+        return self._download_upscale_engine_blocking(tool_info)
+
+    def _download_upscale_engine_blocking(self, tool_info: dict) -> bool:
+        from core.setup.models_setup import download_upscaling_engine
+
+        progress = QProgressDialog(
+            self.tr("Descargando {0}...").format(tool_info["name"]), self.tr("Cancelar"), 0, 100, self,
+        )
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(True)
+        progress.setValue(0)
+
+        result = {"success": False, "msg": ""}
+
+        class _EngineDownloadThread(QThread):
+            finished_signal = Signal(bool, str)
+            progress_signal = Signal(int)
+
+            def run(self):
+                def _cb(pct):
+                    self.progress_signal.emit(int(pct))
+                success, msg = download_upscaling_engine(tool_info, progress_callback=_cb)
+                self.finished_signal.emit(success, msg)
+
+        worker = _EngineDownloadThread()
+        worker.progress_signal.connect(progress.setValue)
+
+        def _on_finished(success, msg):
+            result["success"] = success
+            result["msg"] = msg
+            progress.close()
+
+        worker.finished_signal.connect(_on_finished)
+        worker.start()
+        progress.exec()
+        worker.wait()
+
+        if not result["success"]:
+            QMessageBox.warning(
+                self, self.tr("Error"),
+                self.tr("No se pudo descargar '{0}':\n{1}").format(tool_info["name"], result["msg"]),
+            )
+        return result["success"]
+
     def _on_cancel_recoding_clicked(self):
         qm = get_queue_manager()
         for job_id in list(self._recode_jobs):
@@ -1104,6 +1434,26 @@ class VideoToolsTab(QWidget):
 
         if status == JobStatus.RUNNING:
             self.queue_widget.update_file_status(file_path, self.tr("Procesando..."))
+        elif status == JobStatus.COMPLETED and job_id in self._chain_pending:
+            # Terminó la etapa 1 (Reescalado IA) de una cadena -- todavía NO es
+            # el resultado final, recién ahora se arma la etapa 2
+            # (Recodificación) usando la salida de esta como entrada. Nada de
+            # commit_backup/envío al editor/_check_all_finished acá -- eso le
+            # toca a la etapa 2 cuando termine de verdad.
+            chain = self._chain_pending.pop(job_id)
+            self.queue_widget.update_file_status(file_path, self.tr("Recodificando..."))
+            new_config = {
+                "input_path": job.config.get("output_path"),  # el intermedio
+                "output_path": chain["final_output"],
+                "settings": chain["recode_settings"],
+                "duration_sec": chain["duration_sec"],
+                "title": f"Recode (tras IA): {os.path.basename(chain['final_output'])}",
+                "queue_entry_key": chain["entry_key"],
+            }
+            new_job_id = qm.add_job(new_config, "RECODE")
+            self._recode_jobs.add(new_job_id)
+            self._recode_backups[new_job_id] = chain["backup_path"]
+            self._chain_cleanup[new_job_id] = job.config.get("output_path")
         elif status == JobStatus.COMPLETED:
             commit_backup(self._recode_backups.pop(job_id, None))
             note = self._recode_job_notes.pop(job_id, None)
@@ -1121,19 +1471,38 @@ class VideoToolsTab(QWidget):
             if editor_mgr and editor_mgr.is_auto_send_enabled:
                 if output_path:
                     editor_mgr.process_raw_download(output_path, job.request_data if job else {})
-                
+
+            self._cleanup_chain_intermediate(job_id)
             self._check_all_finished()
         elif status == JobStatus.FAILED:
             rollback_backup(self._recode_backups.pop(job_id, None))
             self._recode_job_notes.pop(job_id, None)
+            self._chain_pending.pop(job_id, None)
             self.queue_widget.update_file_status(file_path, self.tr("Error"))
+            self._cleanup_chain_intermediate(job_id)
             self._check_all_finished()
         elif status == JobStatus.CANCELLED:
             rollback_backup(self._recode_backups.pop(job_id, None))
             self._recode_job_notes.pop(job_id, None)
+            self._chain_pending.pop(job_id, None)
             self.queue_widget.update_file_status(file_path, self.tr("Cancelado"))
+            self._cleanup_chain_intermediate(job_id)
             self._check_all_finished()
-            
+
+    def _cleanup_chain_intermediate(self, job_id: str):
+        """Borra el archivo intermedio de una cadena Reescalado IA ->
+        Recodificación cuando la etapa 2 (Recodificación) llega a un estado
+        final -- pase lo que pase (éxito, error o cancelación), el intermedio
+        nunca es el resultado que le importa al usuario."""
+        intermediate_path = self._chain_cleanup.pop(job_id, None)
+        if not intermediate_path:
+            return
+        try:
+            if os.path.exists(intermediate_path):
+                os.remove(intermediate_path)
+        except OSError as e:
+            logger.warning(f"VideoToolsTab: no se pudo borrar el intermedio de cadena '{intermediate_path}': {e}")
+
     def _check_all_finished(self):
         qm = get_queue_manager()
         all_done = True
@@ -1145,6 +1514,10 @@ class VideoToolsTab(QWidget):
                 
         if all_done:
             self._recode_jobs.clear()
+            if self._chain_temp_dir is not None:
+                import shutil
+                shutil.rmtree(self._chain_temp_dir, ignore_errors=True)
+                self._chain_temp_dir = None
             self._set_start_button_running(False)
             self._on_start_status_changed(*self.options_widget.get_current_status())
             self.progress_bar.setValue(100)

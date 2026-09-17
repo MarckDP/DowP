@@ -12,6 +12,7 @@ from gui.tabs.video_tools.compress_panel import CompressPanel
 from gui.tabs.video_tools.convert_panel import ConvertPanel
 from gui.tabs.video_tools.editing_panel import EditingPanel
 from gui.tabs.video_tools.advanced_recode_panel import AdvancedRecodePanel
+from gui.tabs.video_tools.upscale_ia_panel import UpscaleIAPanel
 
 class EncodingOptionsWidget(QFrame):
     """
@@ -79,8 +80,14 @@ class EncodingOptionsWidget(QFrame):
         self.tabs.addTab(self.tab_advanced, self.tr("Avanzado"))
         self.tab_advanced.validity_changed.connect(self._on_advanced_validity_changed)
 
-        # Preajustes cambia de válido/inválido cuando el usuario elige o deselecciona un preset
-        self.tab_presets.preset_bar.preset_applied.connect(self._on_presets_validity_changed)
+        self.tab_upscale_ia = UpscaleIAPanel(self)
+        self.tabs.addTab(self.tab_upscale_ia, self.tr("Herramientas IA"))
+        self.tab_upscale_ia.validity_changed.connect(self._on_upscale_ia_validity_changed)
+
+        # Preajustes cambia de válido/inválido cuando el usuario elige o deselecciona un
+        # preset en CUALQUIERA de las dos secciones (Recodificación o Reescalado IA).
+        self.tab_presets.preset_bar_recode.preset_applied.connect(self._on_presets_validity_changed)
+        self.tab_presets.preset_bar_upscale.preset_applied.connect(self._on_presets_validity_changed)
 
         layout.addWidget(self.tabs)
 
@@ -98,6 +105,8 @@ class EncodingOptionsWidget(QFrame):
             return self.tab_convert.get_status()
         if current is self.tab_editing:
             return self.tab_editing.get_status()
+        if current is self.tab_upscale_ia:
+            return self.tab_upscale_ia.get_status()
         return True, self.tr("Iniciar Recodificación")
 
     def _emit_current_status(self):
@@ -127,6 +136,10 @@ class EncodingOptionsWidget(QFrame):
         if self.tabs.currentWidget() is self.tab_editing:
             self._emit_current_status()
 
+    def _on_upscale_ia_validity_changed(self, _is_valid: bool):
+        if self.tabs.currentWidget() is self.tab_upscale_ia:
+            self._emit_current_status()
+
     def get_encoding_settings(self, file_meta: dict | None = None, filepath: str | None = None) -> dict:
         """`file_meta`/`filepath`, si se pasan, describen un archivo del lote DISTINTO al
         que está en preview - Comprimir los necesita para recalcular por archivo (Rápido:
@@ -144,4 +157,6 @@ class EncodingOptionsWidget(QFrame):
             return self.tab_convert.get_settings(meta_override=file_meta, filepath_override=filepath)
         if current is self.tab_editing:
             return self.tab_editing.get_settings(meta_override=file_meta, filepath_override=filepath)
+        if current is self.tab_upscale_ia:
+            return self.tab_upscale_ia.get_settings(meta_override=file_meta, filepath_override=filepath)
         return {}

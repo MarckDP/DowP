@@ -14,12 +14,18 @@ def _get_presets_path() -> str:
     return os.path.join(get_app_data_dir(), "presets.json")
 
 
-# Categorias de "que hace" un preset, independientes de que pestaña/modulo lo creo (ver
-# conversación: pensado para un futuro menú universal de "qué hacer con este archivo" -
-# ej. despues de una descarga en Proceso Avanzado - donde a nadie le importa si el
-# preajuste se armó en Convertir o en Avanzado, sino qué va a hacer). Registro abierto a
-# propósito: agregar una función nueva (ej. "gif", "ia_reescalar", "extraer_fotogramas"
-# el día que existan) es sumar una entrada aquí, no reestructurar nada de lo guardado.
+# Categorias de "que hace" un preset RECODE, independientes de que pestaña/modulo lo
+# creo (ver conversación: pensado para un futuro menú universal de "qué hacer con este
+# archivo" - ej. despues de una descarga en Proceso Avanzado - donde a nadie le importa
+# si el preajuste se armó en Convertir o en Avanzado, sino qué va a hacer). Registro
+# abierto a propósito: agregar una función nueva (ej. "gif", "extraer_fotogramas" el día
+# que existan) es sumar una entrada aquí, no reestructurar nada de lo guardado.
+#
+# Deliberadamente SIN nada de IA acá (ver IA_TOOL_FUNCTIONS abajo): mezclar categorías de
+# recodificación con las de IA en el mismo combo de SavePresetDialog confundía al guardar
+# -- un preset de Reescalado IA no "convierte" ni "comprime", y al revés, un preset de
+# Recodificación no tiene nada que ver con "Reescalado". Cada PresetBar recibe el
+# diccionario que le corresponde según su propio job_type (ver PresetBar.__init__).
 PRESET_FUNCTIONS = {
     "convertir": QT_TRANSLATE_NOOP("preset_manager", "Convertir"),
     "comprimir": QT_TRANSLATE_NOOP("preset_manager", "Comprimir"),
@@ -28,6 +34,24 @@ PRESET_FUNCTIONS = {
     "audio": QT_TRANSLATE_NOOP("preset_manager", "Normalizar Audio"),
     "otro": QT_TRANSLATE_NOOP("preset_manager", "Otro"),
 }
+
+# Categorías de presets de IA -- namespace compartido "video_tools/ia_tools" (ver
+# gui/tabs/video_tools/upscale_ia_panel.py), pensado a propósito para que TODA futura
+# función de IA (quitar fondo, vectorizar, etc.) vaya sumando una entrada acá y
+# apareciendo como un grupo más dentro del MISMO combo/tarjeta "Herramientas IA", en vez
+# de crear un namespace y una pestaña de Preajustes nueva por cada una (ver
+# conversación). Corta a propósito ("Reescalado", no "Reescalado IA"): el encabezado ya
+# vive bajo la tarjeta "Preajustes de Herramientas IA", repetir "IA" ahí es ruido.
+IA_TOOL_FUNCTIONS = {
+    "ia_reescalar": QT_TRANSLATE_NOOP("preset_manager", "Reescalado"),
+}
+
+# Namespace único (ver PresetManager) para TODO preset de IA -- constante acá, no un
+# literal repetido en cada módulo que lo lee/escribe (quick_mode/download_controller.py,
+# advanced_process/download_controller.py, recode_options.py, upscale_ia_panel.py,
+# presets_panel.py): un namespace desincronizado en un solo lugar deja presets guardados
+# que la ejecución real nunca encuentra, sin error visible.
+IA_TOOLS_NAMESPACE = "video_tools/ia_tools"
 
 # Grupo (dentro del mismo combo, no un filtro aparte - ver conversación) para presets sin
 # función asignada: migrados de antes de que este campo existiera, o importados de un
@@ -91,6 +115,7 @@ class PresetManager(QObject):
             except Exception as e:
                 logger.error(f"PresetManager: Error al leer presets.json: {e}")
         self._migrate_legacy_shape()
+        self._migrate_renamed_namespaces()
         self._seed_defaults()
 
     def _migrate_legacy_shape(self):
@@ -109,6 +134,30 @@ class PresetManager(QObject):
                     changed = True
         if changed:
             logger.info("PresetManager: Presets guardados en formato anterior migrados al nuevo sobre.")
+            self._save_to_disk()
+
+    # Namespaces renombrados a lo largo de la vida de la app: {viejo: nuevo}. Se
+    # fusiona en memoria (y se reescribe a disco) la primera vez que se carga, para que
+    # presets ya guardados por el usuario bajo el nombre viejo no queden huérfanos (ver
+    # conversación: "video_tools/upscale_ia" -> "video_tools/ia_tools" al generalizar la
+    # tarjeta de Reescalado IA a "Herramientas IA").
+    _RENAMED_NAMESPACES = {
+        "video_tools/upscale_ia": "video_tools/ia_tools",
+    }
+
+    def _migrate_renamed_namespaces(self):
+        changed = False
+        for old_ns, new_ns in self._RENAMED_NAMESPACES.items():
+            old_presets = self._data.pop(old_ns, None)
+            if not old_presets:
+                continue
+            new_presets = self._data.setdefault(new_ns, {})
+            for name, entry in old_presets.items():
+                if name not in new_presets:  # no pisar uno ya guardado a mano bajo el nuevo nombre
+                    new_presets[name] = entry
+            changed = True
+        if changed:
+            logger.info("PresetManager: Namespace(s) renombrado(s) migrados en presets.json.")
             self._save_to_disk()
 
     # Clave reservada para metadata de siembra de defaults - "_" al frente para que

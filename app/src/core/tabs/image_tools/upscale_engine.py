@@ -37,6 +37,15 @@ _POLL_INTERVAL_SEC = 0.2
 _UPSCAYL_PROGRESS_ENGINE = "Upscayl"
 _PERCENT_RE = re.compile(r"(\d{1,3}[.,]\d{1,2})\s*%")
 
+# Modo lote (carpeta -i / -o en vez de un archivo, ver `batch_total` en
+# run_upscale): confirmado en vivo que los 3 motores imprimen una línea
+# "<entrada> -> <salida> done" por CADA archivo terminado del lote -- a
+# diferencia de _PERCENT_RE (progreso por *tile* de un solo archivo, se repite
+# por archivo y no es acumulativo), contar estas líneas contra el total de
+# frames sí da un progreso real y creciente para todo el lote, y funciona igual
+# en los 3 motores (Waifu2x/SRMD no imprimen "%", pero sí esta línea).
+_DONE_LINE_RE = re.compile(r"->.+\bdone\b")
+
 
 def _auto_threads() -> str:
     """"Automático": mismo criterio que _thread_args() de DowP1 -- conservador según
@@ -117,13 +126,18 @@ def _model_dir_for(engine: str, model_key: str) -> str:
     return os.path.join(get_models_dir(), tool_info["folder"], internal)
 
 
-def _build_cmd(exe: str, input_path: str, output_path: str, options: dict) -> list[str]:
+def _build_cmd(exe: str, input_path: str, output_path: str, options: dict, verbose: bool = False) -> list[str]:
     engine = options["upscale_engine"]
     model_key = options.get("upscale_model") or ""
     scale = _clamp_scale(engine, model_key, options.get("upscale_scale") or "4x")
     tile = str(options.get("upscale_tile") or "0")
     threads = _resolve_threads(options.get("upscale_power", "Automático"))
     tta = bool(options.get("upscale_tta"))
+    # -v (verbose): solo en modo lote -- es lo único que hace que los 3 motores
+    # impriman la línea "-> ... done" por archivo terminado (confirmado en vivo:
+    # sin -v, esa línea no aparece en absoluto). Sin usar en modo un-solo-archivo
+    # para no cambiar el comportamiento ya probado del progreso por-tile.
+    verbose_flag = ["-v"] if verbose else []
 
     if engine == "Upscayl":
         # UPSCAYL_MODELS_MAP: clave = nombre crudo del archivo, valor = etiqueta
@@ -149,6 +163,7 @@ def _build_cmd(exe: str, input_path: str, output_path: str, options: dict) -> li
             cmd += ["-z", z_match]
         if tta:
             cmd += ["-x"]
+        cmd += verbose_flag
         return cmd
 
     # Waifu2x y SRMD -- misma forma (-n es nivel de ruido, no nombre de modelo).
@@ -158,20 +173,30 @@ def _build_cmd(exe: str, input_path: str, output_path: str, options: dict) -> li
            "-s", scale, "-t", tile, "-f", "png", "-j", threads]
     if tta:
         cmd += ["-x"]
+    cmd += verbose_flag
     return cmd
 
 
 def run_upscale(input_path: str, output_path: str, options: dict, cancellation_event=None,
-                 progress_callback=None) -> tuple[bool, str]:
-    """Corre el motor de "upscale_engine" (Waifu2x/SRMD/Upscayl) sobre UNA imagen.
+                 progress_callback=None, batch_total: int | None = None) -> tuple[bool, str]:
+    """Corre el motor de "upscale_engine" (Waifu2x/SRMD/Upscayl) sobre UNA imagen,
+    o sobre una CARPETA entera de una (los 3 binarios aceptan -i/-o apuntando a un
+    directorio, confirmado en vivo) si se pasan `input_path`/`output_path` como
+    carpetas Y `batch_total` con la cantidad de frames esperados -- usado por el
+    Reescalado de Video con IA (core/tabs/video_tools/video_upscale_engine.py) para
+    reescalar todos los fotogramas en un solo proceso en vez de uno por frame.
     Siempre escribe PNG (-f png, igual que DowP1) -- quien llame se encarga de volver
     a cargar el resultado y seguir el pipeline de guardado al formato final.
 
-    `progress_callback(pct)` se llama con un float 0-100 mientras Upscayl (el único
-    de los 3 motores que imprime progreso real, confirmado corriéndolo en vivo) va
-    terminando mosaicos -- o con `None` para Waifu2x/SRMD (sin ninguna señal real
-    que leer: no hay que inventar un número, es responsabilidad de quien llama
-    mostrar un estado "trabajando" indeterminado en ese caso)."""
+    `progress_callback(pct)` se llama con un float 0-100:
+    - Un solo archivo: mientras Upscayl (el único de los 3 motores que imprime
+      progreso real por archivo, confirmado corriéndolo en vivo) va terminando
+      mosaicos -- o con `None` para Waifu2x/SRMD (sin ninguna señal real que leer:
+      no hay que inventar un número, es responsabilidad de quien llama mostrar un
+      estado "trabajando" indeterminado en ese caso).
+    - `batch_total` puesto: progreso = frames terminados / batch_total, contando
+      líneas "-> ... done" (ver _DONE_LINE_RE) -- funciona igual en los 3 motores,
+      a diferencia del progreso por-archivo de arriba."""
     engine = options.get("upscale_engine")
     tool_info = UPSCALING_TOOLS.get(engine)
     if tool_info is None:
@@ -181,10 +206,20 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
     if not exe or not os.path.exists(exe):
         return False, QCoreApplication.translate("upscale_engine", "'{0}' no está instalado -- ve a Ajustes > Modelos para descargarlo.").format(tool_info["name"])
 
-    cmd = _build_cmd(exe, input_path, output_path, options)
+    if batch_total:
+        # Confirmado en vivo: con -i apuntando a un directorio, el binario exige
+        # que -o YA exista como directorio también ("Input path and Output path
+        # both must be either a file or a directory!") -- a diferencia del modo
+        # un-solo-archivo, donde el archivo de salida no necesita existir antes.
+        os.makedirs(output_path, exist_ok=True)
+
+    cmd = _build_cmd(exe, input_path, output_path, options, verbose=bool(batch_total))
     logger.info(f"Reescalar IA: {' '.join(cmd)}")
 
-    reports_progress = engine == _UPSCAYL_PROGRESS_ENGINE
+    # En lote (batch_total puesto), los 3 motores imprimen la línea "-> ... done" --
+    # progreso real en los 3, a diferencia del por-archivo de abajo (solo Upscayl).
+    reports_progress = bool(batch_total) or engine == _UPSCAYL_PROGRESS_ENGINE
+    frames_done = 0
 
     try:
         proc = subprocess.Popen(
@@ -211,10 +246,19 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
     stderr_lines: list[str] = []
 
     def _read_stderr():
+        nonlocal frames_done
         try:
             for line in proc.stderr:
                 stderr_lines.append(line)
-                if reports_progress and progress_callback:
+                if not (reports_progress and progress_callback):
+                    continue
+                if batch_total:
+                    if _DONE_LINE_RE.search(line):
+                        frames_done += 1
+                        pct = min(100.0, (frames_done / batch_total) * 100.0)
+                        logger.info(f"Reescalar Video IA: {frames_done}/{batch_total} frames ({pct:.1f}%)")
+                        progress_callback(pct)
+                else:
                     match = _PERCENT_RE.search(line)
                     if match:
                         pct = float(match.group(1).replace(",", "."))
@@ -251,7 +295,18 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
             ).format(tool_info["name"], tail)
         return False, QCoreApplication.translate("upscale_engine", "'{0}' falló (código {1}): {2}").format(tool_info["name"], proc.returncode, tail)
 
-    if not os.path.exists(output_path) or os.path.getsize(output_path) < 100:
+    if batch_total:
+        # Carpeta de salida: validar cantidad de archivos, no un tamaño de un
+        # único archivo (que acá no existe).
+        try:
+            out_count = len(os.listdir(output_path))
+        except OSError:
+            out_count = 0
+        if out_count < batch_total:
+            return False, QCoreApplication.translate(
+                "upscale_engine", "'{0}' solo generó {1} de {2} fotogramas esperados."
+            ).format(tool_info["name"], out_count, batch_total)
+    elif not os.path.exists(output_path) or os.path.getsize(output_path) < 100:
         return False, QCoreApplication.translate("upscale_engine", "'{0}' no generó una salida válida.").format(tool_info["name"])
 
     if progress_callback and reports_progress:

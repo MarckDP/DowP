@@ -121,7 +121,7 @@ class QuickModeTab(QWidget):
         self.recode_options.header_highlight_changed.connect(self._on_recode_highlight_changed)
         self._reposition_recode_popover()
 
-        # Cerrar el popover de "Recodificar" al hacer clic afuera (de recode_bar y del
+        # Cerrar el popover de "Posprocesar" al hacer clic afuera (de recode_bar y del
         # propio cuerpo flotante) - filtro global porque el cuerpo no usa Qt.Popup (ver
         # _reposition_recode_popover: vive como hijo normal posicionado a mano, no como
         # ventana top-level), así que Qt no lo cierra solo. Se ignora mientras haya un
@@ -132,7 +132,7 @@ class QuickModeTab(QWidget):
         self.load_labels()
 
     def _build_recode_bar(self):
-        """Recuadro clicable "Recodificar", del mismo alto que options_panel (Qt los
+        """Recuadro clicable "Posprocesar", del mismo alto que options_panel (Qt los
         estira parejo al compartir fila en options_row, ver init_ui) - hace de
         cabecera del cuerpo flotante de recode_options (que vive sin su propia
         cabecera, ver show_header=False)."""
@@ -140,12 +140,12 @@ class QuickModeTab(QWidget):
         bar.setObjectName("quickRecodeBar")
         bar.setCursor(Qt.PointingHandCursor)
         bar.setMinimumWidth(200)
-        bar.setToolTip(self.tr("Abrir opciones de recodificación para convertir formatos"))
+        bar.setToolTip(self.tr("Abrir opciones de posprocesado: recodificar o reescalar con IA"))
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(15, 6, 15, 6)
         layout.setSpacing(6)
 
-        self.lbl_recode_toggle = QLabel(self.tr("Recodificar"))
+        self.lbl_recode_toggle = QLabel(self.tr("Posprocesar"))
         self.lbl_recode_toggle.setStyleSheet("font-weight: bold;")
         self.lbl_recode_toggle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_recode_toggle)
@@ -158,8 +158,8 @@ class QuickModeTab(QWidget):
             self.recode_options.raise_()
 
     def _on_recode_highlight_changed(self, active: bool):
-        """Réplica del resaltado verde de RecodeOptionsWidget.title_label sobre
-        lbl_recode_toggle: aquí el header real vive oculto (show_header=False), la
+        """Réplica del resaltado verde de RecodeOptionsWidget.title_label ("Posprocesar")
+        sobre lbl_recode_toggle: aquí el header real vive oculto (show_header=False), la
         etiqueta visible es esta otra, fuera del widget."""
         if active:
             accent = get_theme_token('acento_primario', '#B9E640')
