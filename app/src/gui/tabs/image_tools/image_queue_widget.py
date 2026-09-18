@@ -485,6 +485,16 @@ class ImageQueueWidget(QFrame):
         self.tree.setColumnWidth(2, 65)
         self.tree.setColumnWidth(3, 90)
 
+        # Piso de altura (mismo criterio que LayersPanel.scroll, ver layers_panel.py):
+        # sin esto el árbol no tiene mínimo propio, y cuando convert_panel crece (ej.
+        # aparece svg_threshold_group al elegir Vectorizar > Blanco y negro, ver
+        # convert_panel.py::_on_svg_clustering_changed) dentro del mismo QVBoxLayout de
+        # _build_queue_content (image_tools_view.py), su stretch=0 se queda con todo lo
+        # que pide y esta lista (stretch=1, "lo que sobra") se aplastaba hasta casi
+        # desaparecer. ~5 filas + encabezado a la altura de fila real de este estilo.
+        # El panel entero vive en el QScrollArea de CollapsiblePanel, así que si no
+        # entra todo, scrollea en vez de seguir achicando la lista.
+        self.tree.setMinimumHeight(200)
         layout.addWidget(self.tree, 1)
 
         self.lbl_drop_hint = QLabel(self.tr("Arrastra archivos de imagen aquí"))

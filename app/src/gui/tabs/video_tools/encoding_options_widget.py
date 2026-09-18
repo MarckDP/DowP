@@ -13,6 +13,7 @@ from gui.tabs.video_tools.convert_panel import ConvertPanel
 from gui.tabs.video_tools.editing_panel import EditingPanel
 from gui.tabs.video_tools.advanced_recode_panel import AdvancedRecodePanel
 from gui.tabs.video_tools.upscale_ia_panel import UpscaleIAPanel
+from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
 
 class EncodingOptionsWidget(QFrame):
     """
@@ -49,7 +50,6 @@ class EncodingOptionsWidget(QFrame):
             QTabWidget#encodingTabs > QTabBar::tab:selected {{
                 background: transparent;
                 color: #ffffff;
-                border-bottom: 3px solid {accent_color};
             }}
         """)
 
@@ -92,6 +92,8 @@ class EncodingOptionsWidget(QFrame):
         layout.addWidget(self.tabs)
 
         self.tabs.currentChanged.connect(self._on_tab_changed)
+
+        self._tabs_indicator = AnimatedTabIndicator(self.tabs)
 
     def get_current_status(self) -> tuple[bool, str]:
         current = self.tabs.currentWidget()

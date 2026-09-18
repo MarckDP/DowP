@@ -531,18 +531,37 @@ QTabBar::tab {
 QTabBar::tab:selected {
     color: {{texto_activo}};
     background-color: {{tab_fondo_seleccionado}};
-    border-bottom: 3px solid {{acento_primario}};
+    /* El border-bottom estático se saca de acá -- lo reemplaza el indicador
+       animado (AnimatedTabIndicator, widgets/animated_tab_indicator.py). */
 }
 
-/* Botones de scroll del tab bar: se ocultan visualmente (ancho 0) pero se
-   mantiene el modo scroll activo, así las pestañas conservan su tamaño
-   completo y el auto-scroll al hacer clic sigue funcionando. */
-QTabBar QToolButton {
-    width: 0px;
-    min-width: 0px;
-    max-width: 0px;
+QFrame#animatedTabIndicator {
+    background-color: {{acento_primario}};
     border: none;
+}
+
+/* Botones de scroll del tab bar: antes ocultos (ancho 0), ahora con estilo propio
+   -- tamaño real + hover/pressed consistentes con el resto de la app. El ícono de
+   flecha en sí lo sigue dibujando Qt de forma nativa. */
+QTabBar QToolButton {
+    /* El margin de 2px por lado se suma al tamaño final del widget (min/max size
+       en Qt Style Sheets incluye el margin acá) -- 24+2+2=28px de lado a lado. */
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    margin: 2px;
+    border: none;
+    border-radius: 5px;
     background: transparent;
+}
+QTabBar QToolButton:hover {
+    background-color: {{fondo_terciario}};
+}
+QTabBar QToolButton:pressed {
+    background-color: {{borde_normal}};
 }
 
 /* ═══════════════════════════════════════════

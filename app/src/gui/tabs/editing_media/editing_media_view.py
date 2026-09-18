@@ -132,7 +132,20 @@ class _DragCleanupMixin:
 
 
 class _MediaTreeView(_DragCleanupMixin, QTreeView):
-    pass
+    def scrollTo(self, index, hint=QAbstractItemView.EnsureVisible):
+        """Vista de columnas anchas con scroll horizontal AsNeeded (ver
+        editing_media_view.py::init_ui) -- el scrollTo() por defecto de Qt, que
+        setCurrentIndex() dispara solo en un simple clic (SelectRows selecciona toda la
+        fila, pero el "current index" es la celda exacta bajo el cursor), reencuadra
+        TAMBIÉN horizontalmente para que esa celda quede completa a la vista. Con
+        columnas que no entran todas en el ancho disponible, eso empuja el scroll
+        horizontal solo, sin que el usuario lo haya pedido. Se preserva el valor
+        horizontal y se deja intacto el vertical (ese sí hace falta, ej. al navegar
+        con flechas del teclado a una fila fuera de vista)."""
+        hbar = self.horizontalScrollBar()
+        old_value = hbar.value()
+        super().scrollTo(index, hint)
+        hbar.setValue(old_value)
 
 
 class _MediaListView(_DragCleanupMixin, QListView):
@@ -396,6 +409,16 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.tree_folders.itemExpanded.connect(self._on_tree_item_expanded)
         self.tree_folders.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_folders.customContextMenuRequested.connect(self._show_tree_context_menu)
+        # Por defecto QHeaderView.stretchLastSection=True estira la única columna al
+        # ancho exacto del viewport siempre -- nunca puede ser más ancha, así que un
+        # nombre de carpeta largo solo se elide ("...") sin forma de verlo completo.
+        # ResizeToContents + stretchLastSection=False deja que la columna crezca con el
+        # contenido (incluida la sangría de ítems anidados/expandidos); si eso supera el
+        # ancho del panel, aparece el scroll horizontal (ScrollBarAsNeeded, ya es el
+        # default de QAbstractItemView) en vez de seguir elidiendo el texto.
+        header = self.tree_folders.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         layout.addWidget(self.tree_folders, 1)
 
         # Texto indicando los medios indexados al pie de la columna

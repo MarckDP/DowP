@@ -10,6 +10,7 @@ from core.utils.paths import get_src_dir
 from gui.styles import load_stylesheet
 from gui.widgets.title_bar import CustomTitleBar
 from gui.widgets.tab_drag_hover import TabBarDragHoverSwitcher
+from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
 from core.utils.i18n import load_language
 from core.utils.config_manager import get_config
 
@@ -691,6 +692,8 @@ class MainWindow(QMainWindow):
         self.tabs.setCornerWidget(self.editor_status_widget, Qt.TopRightCorner)
 
         self.main_layout.addWidget(self.tabs)
+
+        self._main_tabs_indicator = AnimatedTabIndicator(self.tabs)
 
         # ── Modal Overlay de Ajustes ──────────────────────────────────────────
         self.tab_settings = SettingsTab()
