@@ -2717,308 +2717,308 @@ that YouTube applies dynamically to its streams.</translation>
 <context>
     <name>EditingMediaTab</name>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="354"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="369"/>
         <source>¡Créditos Copiados!</source>
         <translation>Credits Copied!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="356"/>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="883"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="371"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="908"/>
         <source>Copiar Créditos (TASL)</source>
         <translation>Copy Credits (TASL)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="377"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="392"/>
         <source>Carpetas &amp; Colecciones</source>
         <translation>Folders &amp; Collections</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="382"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="397"/>
         <source>Indexar Carpeta</source>
         <translation>Index Folder</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="417"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="442"/>
         <source>Lista de Medios</source>
         <translation>Media List</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="427"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="452"/>
         <source>Buscar medios...</source>
         <translation>Search media...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="459"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="484"/>
         <source>Cualquiera</source>
         <translation>Any</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="452"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="477"/>
         <source>Filtro de Licencia</source>
         <translation>License Filter</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="460"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="485"/>
         <source>Filtrar por Licencia</source>
         <translation>Filter by License</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="494"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="519"/>
         <source>Todos</source>
         <translation>All</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="495"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="520"/>
         <source>Imágenes</source>
         <translation>Images</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="496"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="521"/>
         <source>Videos</source>
         <translation>Videos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="497"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="522"/>
         <source>Audios</source>
         <translation>Audio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="546"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="571"/>
         <source>Vista de Lista</source>
         <translation>List View</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="556"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="581"/>
         <source>Vista de Cuadrícula</source>
         <translation>Grid View</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="593"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="618"/>
         <source>Tamaño de cuadrícula</source>
         <translation>Grid size</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="661"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="686"/>
         <source>Inicia sesión con Freesound para buscar sonidos 🔑</source>
         <translation>Log in with Freesound to search for sounds 🔑</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="664"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="689"/>
         <source>Iniciar Sesión con Freesound</source>
         <translation>Log In with Freesound</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="739"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="764"/>
         <source>Visualizador de Espectro</source>
         <translation>Spectrum Visualizer</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="805"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="830"/>
         <source>Vista Previa &amp; Detalles</source>
         <translation>Preview &amp; Details</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="823"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="848"/>
         <source>{0} de {1}</source>
         <translation>{0} of {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="900"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="925"/>
         <source>Información Técnica</source>
         <translation>Technical Information</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="945"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="970"/>
         <source>Nombre:</source>
         <translation>Name:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="946"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="971"/>
         <source>Ruta:</source>
         <translation>Path:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="947"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="972"/>
         <source>Tipo:</source>
         <translation>Type:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="948"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="973"/>
         <source>Tamaño:</source>
         <translation>Size:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="949"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="974"/>
         <source>Creado:</source>
         <translation>Created:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="950"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="975"/>
         <source>Modificado:</source>
         <translation>Modified:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="951"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="976"/>
         <source>Duración:</source>
         <translation>Duration:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="952"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="977"/>
         <source>Resolución:</source>
         <translation>Resolution:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="953"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="978"/>
         <source>Códec Video:</source>
         <translation>Video Codec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="954"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="979"/>
         <source>Perfil Video:</source>
         <translation>Video Profile:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="955"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="980"/>
         <source>FPS:</source>
         <translation>FPS:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="956"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="981"/>
         <source>Rel. Aspecto:</source>
         <translation>Aspect Ratio:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="957"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="982"/>
         <source>Bitrate Video:</source>
         <translation>Video Bitrate:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="958"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="983"/>
         <source>Espacio Color:</source>
         <translation>Color Space:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="959"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="984"/>
         <source>Códec Audio:</source>
         <translation>Audio Codec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="960"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="985"/>
         <source>Muestreo:</source>
         <translation>Sample Rate:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="961"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="986"/>
         <source>Canales:</source>
         <translation>Channels:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="962"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="987"/>
         <source>Bitrate Audio:</source>
         <translation>Audio Bitrate:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="995"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1020"/>
         <source>Abrir en Explorador</source>
         <translation>Open in Explorer</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1006"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1031"/>
         <source>Ningún editor conectado</source>
         <translation>No editor connected</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1036"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1061"/>
         <source>Enviar solo este medio (1)</source>
         <translation>Send only this media (1)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1056"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1081"/>
         <source>Descargar Medio</source>
         <translation>Download Media</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1451"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1476"/>
         <source>Etiqueta</source>
         <translation>Label</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1562"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1587"/>
         <source>Iniciando indexación...</source>
         <translation>Starting indexing...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1567"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1592"/>
         <source>Indexando... ({0} encontrados)</source>
         <translation>Indexing... ({0} found)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1576"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1601"/>
         <source>{0} Medios Indexados en Total</source>
         <translation>{0} Media Files Indexed in Total</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1574"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1599"/>
         <source>1 Medio Indexado en Total</source>
         <translation>1 Media File Indexed in Total</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1598"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1623"/>
         <source>Botón Indexar Carpetas</source>
         <translation>Index Folders Button</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1599"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1624"/>
         <source>¡Indexa tus carpetas o archivos favoritos! DowP procesará los metadatos en segundo plano para que la búsqueda sea instantánea.</source>
         <translation>Index your favorite folders or files! DowP will process the metadata in the background so searching is instant.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1603"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1628"/>
         <source>Árbol de Fuentes</source>
         <translation>Source Tree</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1604"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1629"/>
         <source>Revisa tus medios indexados fácilmente, navega por tu disco, y guarda tus carpetas favoritas o colecciones personalizadas.</source>
         <translation>Browse your indexed media easily, navigate your disk, and save your favorite folders or custom collections.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1608"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1633"/>
         <source>Medios Web</source>
         <translation>Web Media</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1609"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1634"/>
         <source>Además, expandiendo la sección &apos;Medios Web&apos;, puedes buscar y descargar sonidos o imágenes directamente de sitios como Freesound y Wikimedia para tus proyectos.</source>
         <translation>Also, by expanding the &apos;Web Media&apos; section, you can search for and download sounds or images straight from sites like Freesound and Wikimedia for your projects.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1613"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1638"/>
         <source>Explorador Central</source>
         <translation>Central Browser</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1614"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1639"/>
         <source>Organiza y busca tus archivos. ¡El secreto aquí es que puedes arrastrar cualquier medio directamente a tus programas favoritos u otras pestañas!</source>
         <translation>Organize and search your files. The secret here is that you can drag any media file straight into your favorite programs or other tabs!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1618"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1643"/>
         <source>Vista Previa y Detalles</source>
         <translation>Preview and Details</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1619"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1644"/>
         <source>Reproduce, visualiza los detalles técnicos de tus archivos y corta segmentos rápidamente para enviarlos a tu editor o guardarlos en disco.</source>
         <translation>Play your files, view their technical details and quickly cut segments to send to your editor or save to disk.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1623"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1648"/>
         <source>Ventana de Subclips</source>
         <translation>Subclips Window</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1624"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_view.py" line="1649"/>
         <source>Al igual que en el Modo Rápido, con las tijeras puedes realizar múltiples cortes a un mismo medio, arrastrarlos o mandarlos a tu software de edición en un clic.</source>
         <translation>Just like in Quick Mode, the scissors let you make multiple cuts of the same media file, drag them out, or send them to your editing software in one click.</translation>
     </message>
@@ -3116,22 +3116,22 @@ that YouTube applies dynamically to its streams.</translation>
 <context>
     <name>EditorAppWidget</name>
     <message>
-        <location filename="../../gui/main_window.py" line="223"/>
+        <location filename="../../gui/main_window.py" line="224"/>
         <source>{0} (Iniciando...)</source>
         <translation>{0} (Starting...)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="225"/>
+        <location filename="../../gui/main_window.py" line="226"/>
         <source>{0} (Conectado y Vinculado)</source>
         <translation>{0} (Connected and Linked)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="227"/>
+        <location filename="../../gui/main_window.py" line="228"/>
         <source>{0} (Abierto - Sin vincular)</source>
         <translation>{0} (Open - Not linked)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="229"/>
+        <location filename="../../gui/main_window.py" line="230"/>
         <source>{0} (Cerrado - Clic para abrir)</source>
         <translation>{0} (Closed - Click to open)</translation>
     </message>
@@ -3139,47 +3139,47 @@ that YouTube applies dynamically to its streams.</translation>
 <context>
     <name>EditorStatusCornerWidget</name>
     <message>
-        <location filename="../../gui/main_window.py" line="435"/>
+        <location filename="../../gui/main_window.py" line="436"/>
         <source>Auto-enviar: DESACTIVADO / PAUSADO (Clic para activar)</source>
         <translation>Auto-send: OFF / PAUSED (Click to enable)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="311"/>
+        <location filename="../../gui/main_window.py" line="312"/>
         <source>Auto-enviar</source>
         <translation>Auto-send</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="317"/>
+        <location filename="../../gui/main_window.py" line="318"/>
         <source>Ajustes</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="439"/>
+        <location filename="../../gui/main_window.py" line="440"/>
         <source>Auto-enviar a {0}: ACTIVO Y CONECTADO</source>
         <translation>Auto-send to {0}: ACTIVE AND CONNECTED</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="442"/>
+        <location filename="../../gui/main_window.py" line="443"/>
         <source>Auto-enviar: Editor detectado (sin vincular)</source>
         <translation>Auto-send: Editor detected (not linked)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="445"/>
+        <location filename="../../gui/main_window.py" line="446"/>
         <source>Auto-enviar: Ningún editor abierto (En espera)</source>
         <translation>Auto-send: No editor open (Waiting)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="456"/>
+        <location filename="../../gui/main_window.py" line="457"/>
         <source>Configurar integración</source>
         <translation>Configure integration</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="494"/>
+        <location filename="../../gui/main_window.py" line="495"/>
         <source>Ruta no encontrada</source>
         <translation>Path not found</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="494"/>
+        <location filename="../../gui/main_window.py" line="495"/>
         <source>No se encontró el ejecutable en:
 {0}
 Configura la ruta en Ajustes -&gt; Integraciones.</source>
@@ -3188,7 +3188,7 @@ Configura la ruta en Ajustes -&gt; Integraciones.</source>
 Set the path in Settings -&gt; Integrations.</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="500"/>
+        <location filename="../../gui/main_window.py" line="501"/>
         <source>La extensión no está respondiendo. Abre el panel de DowP en tu editor para conectar.</source>
         <translation>The extension is not responding. Open the DowP panel in your editor to connect.</translation>
     </message>
@@ -3221,7 +3221,7 @@ Set the path in Settings -&gt; Integrations.</translation>
         <translation>AI Tools</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/encoding_options_widget.py" line="110"/>
+        <location filename="../../gui/tabs/video_tools/encoding_options_widget.py" line="112"/>
         <source>Iniciar Recodificación</source>
         <translation>Start Recoding</translation>
     </message>
@@ -4410,42 +4410,42 @@ official build to bundle: a Ghostscript you already installed is detected instea
         <translation>Paste an image from the clipboard (screenshot, &quot;copy image&quot; from the browser, or files copied in the file explorer)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="490"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="500"/>
         <source>Arrastra archivos de imagen aquí</source>
         <translation>Drag image files here</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="523"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="533"/>
         <source>Archivos de Imagen ({0});;Todos los archivos (*.*)</source>
         <translation>Image Files ({0});;All files (*.*)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="524"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="534"/>
         <source>Seleccionar Archivos de Imagen</source>
         <translation>Select Image Files</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="530"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="540"/>
         <source>Seleccionar Carpeta con Imágenes</source>
         <translation>Select Folder With Images</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="570"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="580"/>
         <source>No se pudo pegar</source>
         <translation>Could not paste</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="571"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="581"/>
         <source>Había una imagen en el portapapeles, pero no se pudo guardar en disco. Revisa el espacio libre y los permisos.</source>
         <translation>There was an image on the clipboard, but it could not be saved to disk. Check your free space and permissions.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="634"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="644"/>
         <source>Nada que pegar</source>
         <translation>Nothing to paste</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="635"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="645"/>
         <source>No hay ninguna imagen en el portapapeles.
 
 Copia una imagen (por ejemplo con una captura de pantalla, o con &quot;Copiar imagen&quot; en el navegador) o copia archivos de imagen desde el explorador de archivos, y vuelve a intentarlo.</source>
@@ -4454,43 +4454,43 @@ Copia una imagen (por ejemplo con una captura de pantalla, o con &quot;Copiar im
 Copy an image (for example with a screenshot, or with &quot;Copy image&quot; in your browser) or copy image files from the file explorer, and try again.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="699"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="709"/>
         <source>PDF inválido</source>
         <translation>Invalid PDF</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="700"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="710"/>
         <source>No se pudo abrir &quot;{0}&quot; como PDF: {1}</source>
         <translation>Could not open &quot;{0}&quot; as a PDF: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="720"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="730"/>
         <source>Error al extraer páginas</source>
         <translation>Error extracting pages</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="721"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="731"/>
         <source>No se pudieron extraer las páginas de &quot;{0}&quot;: {1}</source>
         <translation>Could not extract pages from &quot;{0}&quot;: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="780"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="790"/>
         <source>{0} archivos</source>
         <translation>{0} files</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="797"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="807"/>
         <source>Eliminar de la cola</source>
         <translation>Remove from queue</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="798"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="808"/>
         <source>Abrir ubicación del archivo</source>
         <translation>Open file location</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="86"/>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="828"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="838"/>
         <source>Resultado eliminado</source>
         <translation>Result deleted</translation>
     </message>
@@ -5436,27 +5436,27 @@ Continue?</translation>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../gui/main_window.py" line="663"/>
+        <location filename="../../gui/main_window.py" line="664"/>
         <source>Modo Rápido</source>
         <translation>Quick Mode</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="667"/>
+        <location filename="../../gui/main_window.py" line="668"/>
         <source>Proceso Avanzado</source>
         <translation>Advanced Process</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="671"/>
+        <location filename="../../gui/main_window.py" line="672"/>
         <source>Editor de Imagen</source>
         <translation>Image Editor</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="675"/>
+        <location filename="../../gui/main_window.py" line="676"/>
         <source>Herramientas Multimedia</source>
         <translation>Media Tools</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="679"/>
+        <location filename="../../gui/main_window.py" line="680"/>
         <source>Gestor de Medios</source>
         <translation>Media Manager</translation>
     </message>
@@ -6215,6 +6215,39 @@ It is saved only once: next time it will be ready to use.</translation>
     </message>
 </context>
 <context>
+    <name>OpenverseProvider</name>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="51"/>
+        <source>Dominio Público (CC0)</source>
+        <translation>Public Domain (CC0)</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="52"/>
+        <source>Requiere Atribución</source>
+        <translation>Requires Attribution</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="53"/>
+        <source>No Comercial / Sin Derivados</source>
+        <translation>Non-Commercial / No Derivatives</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="104"/>
+        <source>Error de red al conectar con Openverse: {0}</source>
+        <translation>Network error connecting to Openverse: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="140"/>
+        <source>Sin título</source>
+        <translation>Untitled</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/editing_media/web_sources/openverse_provider.py" line="190"/>
+        <source>No se pudo determinar la URL del archivo de Openverse.</source>
+        <translation>Could not determine the Openverse file URL.</translation>
+    </message>
+</context>
+<context>
     <name>OutputOptionsWidget</name>
     <message>
         <location filename="../../gui/tabs/advanced_process/output_options.py" line="57"/>
@@ -6435,21 +6468,32 @@ It is saved only once: next time it will be ready to use.</translation>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="907"/>
         <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="920"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="933"/>
         <source>&quot;{title}&quot; por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})</source>
         <translation>&quot;{title}&quot; by {author} ({author_url}) obtained from {source_url} is licensed under {lic} ({cc_url})</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="912"/>
+        <source>Sin Derivados (CC-BY-ND)</source>
+        <translation>No Derivatives (CC-BY-ND)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="913"/>
+        <source>Uso comercial permitido, pero NO puedes modificar ni recortar este medio -- solo redistribuirlo tal cual, dando crédito al autor.</source>
+        <translation>Commercial use is allowed, but you may NOT modify or trim this media -- only redistribute it as-is, crediting the author.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="925"/>
         <source>Requiere Atribución</source>
         <translation>Requires Attribution</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="913"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="926"/>
         <source>Uso comercial y modificaciones permitidas, pero es obligatorio dar crédito al autor copiando el texto TASL.</source>
         <translation>Commercial use and modifications are allowed, but crediting the author by copying the TASL text is mandatory.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="926"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="939"/>
         <source>Revisa la licencia original antes de usar este medio.</source>
         <translation>Check the original license before using this media.</translation>
     </message>
@@ -6459,37 +6503,37 @@ It is saved only once: next time it will be ready to use.</translation>
         <translation>Non-Commercial Use (CC-BY-NC)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="925"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="938"/>
         <source>Licencia Desconocida</source>
         <translation>Unknown License</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="933"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="946"/>
         <source>Usuario:</source>
         <translation>User:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="934"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="947"/>
         <source>Licencia:</source>
         <translation>License:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="935"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="948"/>
         <source>Estadísticas:</source>
         <translation>Statistics:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="953"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="966"/>
         <source>Códec Video:</source>
         <translation>Video Codec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="954"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="967"/>
         <source>Perfil Video:</source>
         <translation>Video Profile:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="955"/>
+        <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="968"/>
         <source>Rel. Aspecto:</source>
         <translation>Aspect Ratio:</translation>
     </message>
@@ -7995,12 +8039,12 @@ You can download it again whenever you want.</translation>
 <context>
     <name>SettingsModalOverlay</name>
     <message>
-        <location filename="../../gui/main_window.py" line="544"/>
+        <location filename="../../gui/main_window.py" line="545"/>
         <source>Ajustes</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="556"/>
+        <location filename="../../gui/main_window.py" line="557"/>
         <source>Cerrar (Esc)</source>
         <translation>Close (Esc)</translation>
     </message>

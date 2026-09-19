@@ -16,7 +16,7 @@ EXT_MAP = {
     "Video": [
         ".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".wmv", ".flv", ".mpg",
         ".mpeg", ".ts", ".m2ts", ".mts", ".mxf", ".3gp", ".3g2", ".ogv", ".vob",
-        ".asf", ".divx", ".braw", ".r3d",
+        ".asf", ".divx", ".braw", ".r3d", ".dv",
     ],
     "Imágenes": [
         ".jpg", ".jpeg", ".png", ".gif", ".tiff", ".tif", ".webp", ".bmp", ".svg",
@@ -26,7 +26,8 @@ EXT_MAP = {
     ],
     "Audio": [
         ".mp3", ".wav", ".m4a", ".flac", ".ogg", ".opus", ".aac", ".wma", ".aiff",
-        ".aif", ".ac3", ".dts", ".weba", ".mka", ".amr", ".caf",
+        ".aif", ".ac3", ".dts", ".weba", ".mka", ".amr", ".caf", ".adts",
+        ".thd", ".mlp", ".mpc", ".w64", ".shn",
     ],
 }
 

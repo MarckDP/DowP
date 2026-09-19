@@ -41,6 +41,13 @@ class TreeListMixin:
             return QCoreApplication.translate("TreeListMixin", "Favoritos")
         return col_name
 
+    def _web_source_needs_auth(self, source_id) -> bool:
+        """True si el origen web requiere sesión y todavía no la hay (ej. Freesound sin
+        login) -- evita disparar una búsqueda que va a fallar con un error de token y
+        mostrar un aviso redundante con la página grande de login (ver _update_media_list)."""
+        provider = getattr(self, "web_providers", {}).get(source_id)
+        return provider is not None and provider.requires_auth and not provider.is_authenticated()
+
     # ── Población y Control de Vistas del Árbol ──────────────────────────────
     def _update_tree_view(self):
         """Reconstruye el árbol de carpetas lógicas y físicas de forma jerárquica con Lazy Loading."""
@@ -395,7 +402,7 @@ class TreeListMixin:
                     self.media_model.set_data([{"nombre": QCoreApplication.translate("TreeListMixin", "Origen web no disponible."), "tipo": "empty"}])
                     return
 
-                if provider.requires_auth and not provider.is_authenticated():
+                if self._web_source_needs_auth(source_id):
                     if hasattr(self, "media_stack") and hasattr(self, "freesound_login_page"):
                         self.media_stack.setCurrentWidget(self.freesound_login_page)
                     self.media_model.set_data([])
@@ -795,7 +802,7 @@ class TreeListMixin:
                 self.active_web_source_id = source_id
                 self.current_page = 1
                 self.online_results = []
-            if not self.online_results:
+            if not self.online_results and not self._web_source_needs_auth(source_id):
                 self._exec_online_search()
 
         self._update_media_list()
@@ -837,8 +844,9 @@ class TreeListMixin:
         if selected:
             data = selected.data(0, Qt.UserRole)
             if data and data.get("tipo") == "web_source":
-                provider = getattr(self, "web_providers", {}).get(data.get("source_id"))
-                if provider and len(provider.supported_media_types) > 1:
+                source_id = data.get("source_id")
+                provider = getattr(self, "web_providers", {}).get(source_id)
+                if provider and len(provider.supported_media_types) > 1 and not self._web_source_needs_auth(source_id):
                     self.current_page = 1
                     self.online_results = []
                     self._exec_online_search()
@@ -858,9 +866,11 @@ class TreeListMixin:
             try:
                 data = selected.data(0, Qt.UserRole)
                 if data and data.get("tipo") == "web_source":
-                    self.current_page = 1
-                    self.online_results = []
-                    self._exec_online_search()
+                    source_id = data.get("source_id")
+                    if not self._web_source_needs_auth(source_id):
+                        self.current_page = 1
+                        self.online_results = []
+                        self._exec_online_search()
                     return
             except RuntimeError:
                 pass

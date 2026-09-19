@@ -908,6 +908,19 @@ class PlaybackMixin:
                     title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
                 )
                 icon_name = "warning.svg"
+            elif bucket == "attribution_nd":
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Sin Derivados (CC-BY-ND)")
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "Uso comercial permitido, pero NO puedes modificar ni recortar este medio -- solo redistribuirlo tal cual, dando crédito al autor.")
+                lic_color = "#E67E22" # Orange -- misma cautela visual que No Comercial, restricción distinta
+                # A diferencia de "attribution_nc" (mezcla NC con ND por no tener bucket propio
+                # antes), acá el código crudo YA es específicamente "by-nd" (ver
+                # OpenverseProvider.normalize_license) -- por eso sí se puede asumir esta URL de
+                # licencia exacta en vez de caer a source_url como hace "attribution".
+                cc_url = "https://creativecommons.org/licenses/by-nd/4.0/"
+                tasl = QCoreApplication.translate("PlaybackMixin", '"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
+                    title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
+                )
+                icon_name = "warning.svg"
             elif bucket == "attribution":
                 lic_title = QCoreApplication.translate("PlaybackMixin", "Requiere Atribución")
                 lic_desc = QCoreApplication.translate("PlaybackMixin", "Uso comercial y modificaciones permitidas, pero es obligatorio dar crédito al autor copiando el texto TASL.")

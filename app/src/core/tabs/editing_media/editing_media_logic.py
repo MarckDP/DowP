@@ -30,12 +30,13 @@ VALID_VECTOR_EXTS = {'.svg', '.svgz', '.ai', '.eps', '.ps', '.pdf'}
 VALID_VIDEO_EXTS = {
     '.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.wmv', '.flv',
     '.mpg', '.mpeg', '.3gp', '.3g2', '.mts', '.m2ts', '.ts', '.mxf',
-    '.vob', '.ogv', '.asf', '.rm', '.rmvb', '.f4v',
+    '.vob', '.ogv', '.asf', '.rm', '.rmvb', '.f4v', '.dv',
 }
 VALID_AUDIO_EXTS = {
     '.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.opus', '.wma',
     '.aiff', '.aif', '.ac3', '.amr', '.ape', '.caf', '.dsf', '.au',
-    '.gsm', '.voc', '.wv', '.tta', '.mka', '.eac3', '.m4b', '.3ga',
+    '.gsm', '.voc', '.wv', '.tta', '.mka', '.eac3', '.m4b', '.3ga', '.adts',
+    '.dts', '.thd', '.mlp', '.mpc', '.w64', '.shn',
 }
 VALID_EXTS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS | VALID_VIDEO_EXTS | VALID_AUDIO_EXTS
 

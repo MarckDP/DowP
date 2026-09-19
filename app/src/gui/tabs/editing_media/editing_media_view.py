@@ -206,10 +206,12 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         from core.tabs.editing_media.freesound_client import FreesoundClient
         from core.tabs.editing_media.web_sources.freesound_provider import FreesoundProvider
         from core.tabs.editing_media.web_sources.wikimedia_provider import WikimediaProvider
+        from core.tabs.editing_media.web_sources.openverse_provider import OpenverseProvider
         self.freesound_client = FreesoundClient()
         self.web_providers = {
             "freesound": FreesoundProvider(self.freesound_client, self.controller),
             "wikimedia": WikimediaProvider(),
+            "openverse": OpenverseProvider(),
         }
         self.active_web_source_id = None
         self.search_timer = QTimer(self)
