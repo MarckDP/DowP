@@ -29,6 +29,7 @@ from gui.tabs.editing_media.preview_panel import PreviewContainerWidget
 from gui.tabs.image_tools.image_queue_widget import ImageQueueWidget
 from gui.tabs.image_tools.upscale_popover import UpscalePopoverContent
 from gui.tabs.image_tools.rembg_popover import RembgPopoverContent
+from gui.tabs.image_tools.depth_popover import DepthPopoverContent
 from gui.tabs.image_tools.canvas_popover import CanvasPopoverContent
 from gui.tabs.image_tools.resize_popover import ResizePopoverContent
 from gui.tabs.image_tools.convert_panel import ConvertPanel
@@ -111,6 +112,13 @@ class ImageToolsTab(QWidget):
         # Eliminar Fondo cuando tenga ejecución conectada) -- determina si Comparar
         # arranca activado por defecto al mirar ese archivo (ver _on_file_selected).
         self._files_with_ai_edit: dict[str, bool] = {}
+        # Filepath -> (ancho, alto) al que se calculó su Mapa de Profundidad,
+        # solo si el lote fue ÚNICAMENTE de profundidad -- de ahí sale la nota
+        # amarilla "920×518 calculado" sobre el resultado (ver
+        # _show_compare_view). _pending_depth_sizes guarda lo que manda el
+        # worker hasta que el archivo termina y se sabe qué lote era.
+        self._depth_process_sizes: dict[str, tuple[int, int]] = {}
+        self._pending_depth_sizes: dict[str, tuple[int, int]] = {}
         self._active_convert_settings: dict | None = None
         self._build_ui()
         # Acepta arrastrar archivos desde fuera de la app (o desde otra pestaña de
@@ -194,6 +202,23 @@ class ImageToolsTab(QWidget):
             lambda: self.btn_rembg.set_open(False))
         top_layout.addWidget(self.btn_rembg)
         self._popover_buttons.append(self.btn_rembg)
+
+        self.depth_popover_content = DepthPopoverContent()
+        self.depth_popover_content.selection_changed.connect(self._on_depth_selection_changed)
+
+        self.btn_depth = PopoverTriggerButton(
+            host=self, content=self.depth_popover_content,
+            on_right_click=lambda: self._deactivate_on_right_click(
+                self.btn_depth, self.depth_popover_content),
+        )
+        self.btn_depth.setFixedSize(32, 32)
+        self.btn_depth.setIconSize(QSize(18, 18))
+        self.btn_depth.setCursor(Qt.PointingHandCursor)
+        self._style_depth_button(is_valid=False)
+        self.depth_popover_content.close_popover_requested.connect(
+            lambda: self.btn_depth.set_open(False))
+        top_layout.addWidget(self.btn_depth)
+        self._popover_buttons.append(self.btn_depth)
 
         top_layout.addWidget(_make_sep())
 
@@ -302,6 +327,7 @@ class ImageToolsTab(QWidget):
         # (incluido Canvas) y te deja en Seleccionar.
         self.btn_upscale.opened.connect(self._reset_to_select_tool)
         self.btn_rembg.opened.connect(self._reset_to_select_tool)
+        self.btn_depth.opened.connect(self._reset_to_select_tool)
         self.btn_resize.opened.connect(self._reset_to_select_tool)
 
         top_layout.addStretch()
@@ -454,6 +480,9 @@ class ImageToolsTab(QWidget):
         self.selected_rembg_model = model_key or None
         self._style_rembg_button(is_valid)
 
+    def _on_depth_selection_changed(self, _family_key: str, _model_key: str, is_valid: bool):
+        self._style_depth_button(is_valid)
+
     def _on_resize_selection_changed(self, is_active: bool):
         self._style_resize_button(is_active)
 
@@ -516,6 +545,41 @@ class ImageToolsTab(QWidget):
             self.btn_rembg.setIcon(get_colored_svg_icon("background_replace.svg", "#6c7086", size=18))
             self.btn_rembg.setToolTip(self.tr("Eliminar Fondo (IA)"))
             self.btn_rembg.setStyleSheet(f"""
+                QPushButton {{
+                    min-width: 30px; max-width: 30px;
+                    min-height: 30px; max-height: 30px;
+                    background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
+                    border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
+                    border-radius: 6px;
+                    padding: 0px;
+                }}
+                QPushButton:hover {{
+                    background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')};
+                }}
+            """)
+
+    def _style_depth_button(self, is_valid: bool):
+        """Mismo criterio visual que _style_upscale_button -- ver ese método."""
+        if is_valid:
+            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", "#000000", size=18))
+            self.btn_depth.setToolTip(self.tr("Mapa de Profundidad (IA) — configuración lista (clic derecho: desactivar)"))
+            self.btn_depth.setStyleSheet(f"""
+                QPushButton {{
+                    min-width: 32px; max-width: 32px;
+                    min-height: 32px; max-height: 32px;
+                    background-color: {get_theme_token('acento_secundario', '#1DC038')};
+                    border: none;
+                    border-radius: 6px;
+                    padding: 0px;
+                }}
+                QPushButton:hover {{
+                    background-color: {get_theme_token('acento_primario', '#B9E640')};
+                }}
+            """)
+        else:
+            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", "#6c7086", size=18))
+            self.btn_depth.setToolTip(self.tr("Mapa de Profundidad (IA)"))
+            self.btn_depth.setStyleSheet(f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -954,12 +1018,41 @@ class ImageToolsTab(QWidget):
             return False
         before_pix, after_pix = self._compare_cache.get(filepath)
         self.preview.show_compare_preview(filepath, output_path, before_pix, after_pix)
+        cv = self.preview.compare_viewer
         if before_pix is None or after_pix is None:
             # Cache miss -- preview_panel ya cargó de disco/re-renderizó; se
             # guardan los pixmaps recién usados para la próxima vez.
-            cv = self.preview.compare_viewer
             self._compare_cache.put(filepath, cv.before_pixmap(), cv.after_pixmap())
+        self._update_depth_note(filepath)
         return True
+
+    def _update_depth_note(self, filepath: str):
+        """Nota amarilla "920×518 calculado" bajo "Resultado" en la vista
+        comparativa: el mapa se guarda al tamaño original, pero su detalle real
+        es el de la resolución a la que calculó el modelo (ver
+        depth_engine.get_process_size). Solo aparece si el lote fue únicamente
+        de profundidad (ver _on_convert_file_completed) y si el cálculo quedó
+        claramente por debajo del tamaño del resultado -- en una imagen chica,
+        que casi no se amplía, la nota solo sería ruido."""
+        cv = self.preview.compare_viewer
+        size = self._depth_process_sizes.get(filepath)
+        after = cv.after_pixmap()
+        if not size or after.isNull():
+            cv.set_after_note("")
+            return
+        process_w, process_h = size
+        result_w, result_h = after.width(), after.height()
+        if process_w >= result_w * 0.9 and process_h >= result_h * 0.9:
+            cv.set_after_note("")
+            return
+        tooltip = self.tr(
+            "El modelo calculó la profundidad a {0}×{1} y el resultado se amplió a "
+            "{2}×{3}: los bordes tendrán menos detalle que la imagen original."
+        ).format(process_w, process_h, result_w, result_h)
+        if process_w == process_h and abs(result_w / max(1, result_h) - 1.0) > 0.05:
+            tooltip += "\n" + self.tr(
+                "Este modelo calcula en cuadrado, así que la imagen se deformó durante el cálculo.")
+        cv.set_after_note(self.tr("{0}×{1} calculado").format(process_w, process_h), tooltip)
 
     def _on_compare_toggled(self, checked: bool):
         """Comparar (título/botones, ver _build_ui) -- vista bajo demanda, no
@@ -1425,6 +1518,7 @@ class ImageToolsTab(QWidget):
         settings = {
             **self.resize_popover_content.get_settings(),
             **self.rembg_popover_content.get_settings(),
+            **self.depth_popover_content.get_settings(),
             **self.upscale_popover_content.get_settings(),
             **self.canvas_popover_content.get_settings(),
             **self.convert_panel.get_settings(),
@@ -1449,6 +1543,7 @@ class ImageToolsTab(QWidget):
         self._convert_worker.file_status_changed.connect(self._on_convert_file_status)
         self._convert_worker.file_progress.connect(self._on_convert_file_progress)
         self._convert_worker.busy_indeterminate.connect(self._on_convert_busy_indeterminate)
+        self._convert_worker.file_depth_info.connect(self._on_convert_file_depth_info)
         self._convert_worker.file_completed.connect(self._on_convert_file_completed)
         self._convert_worker.finished_signal.connect(self._on_convert_finished)
 
@@ -1494,6 +1589,7 @@ class ImageToolsTab(QWidget):
             "loading": self.tr("Cargando"),
             "resize": self.tr("Redimensionando"),
             "rembg": self.tr("Eliminando fondo"),
+            "depth": self.tr("Calculando profundidad"),
             "upscale": self.tr("Reescalando con IA"),
             "canvas": self.tr("Ajustando canvas"),
             "saving": self.tr("Guardando"),
@@ -1548,6 +1644,9 @@ class ImageToolsTab(QWidget):
         self.progress_bar.setBouncing(False)
         self._update_progress_bar()
 
+    def _on_convert_file_depth_info(self, input_path: str, width: int, height: int):
+        self._pending_depth_sizes[input_path] = (width, height)
+
     def _on_convert_file_completed(self, input_path: str, output_path: str):
         """Registra el resultado de una conversión exitosa -- a propósito NO
         interrumpe una edición en curso (como en Photoshop), EXCEPTO cuando el
@@ -1558,8 +1657,20 @@ class ImageToolsTab(QWidget):
         self.image_queue.set_output_path(input_path, output_path)
         self._compare_cache.invalidate(input_path)
         settings = self._active_convert_settings or {}
-        uses_ai = bool(settings.get("upscale_enabled") or settings.get("rembg_enabled"))
+        uses_ai = bool(settings.get("upscale_enabled") or settings.get("rembg_enabled")
+                       or settings.get("depth_enabled"))
         self._files_with_ai_edit[input_path] = uses_ai
+
+        # La nota "calculado" solo aplica si el mapa de profundidad ES el
+        # resultado: con otro paso de tamaño o de IA encima, el tamaño final ya
+        # no depende solo del cálculo de profundidad.
+        depth_size = self._pending_depth_sizes.pop(input_path, None)
+        depth_only = bool(settings.get("depth_enabled")) and not any(
+            settings.get(key) for key in ("rembg_enabled", "upscale_enabled", "resize_enabled", "canvas_enabled"))
+        if depth_size and depth_only:
+            self._depth_process_sizes[input_path] = depth_size
+        else:
+            self._depth_process_sizes.pop(input_path, None)
         
         # Enviar al editor si corresponde
         from core.services.editor_integration_manager import EditorIntegrationManager
@@ -1677,6 +1788,12 @@ class ImageToolsTab(QWidget):
                 "desc": self.tr("Elimina automáticamente el fondo de cualquier imagen. Tienes diferentes modelos IA pesados para objetos, ropa o siluetas."),
                 "widgets": [self.btn_rembg],
                 "on_enter": lambda: self.btn_rembg.set_open(True)
+            },
+            {
+                "title": self.tr("Mapa de Profundidad"),
+                "desc": self.tr("Genera un mapa en escala de grises con la distancia de cada zona de la imagen (lo cercano en blanco). Sirve para efectos de desenfoque, niebla o desplazamiento en DaVinci Resolve o Blender."),
+                "widgets": [self.btn_depth],
+                "on_enter": lambda: self.btn_depth.set_open(True)
             },
             {
                 "title": self.tr("Redimensionar"),

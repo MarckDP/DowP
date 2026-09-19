@@ -1,0 +1,365 @@
+# src/gui/tabs/image_tools/depth_popover.py
+"""Contenido del popover "Mapa de Profundidad (IA)" del Editor de Imagen.
+
+Misma forma y mismas reglas que el de Eliminar Fondo (ver rembg_popover.py, que
+explica cada decisión en detalle): Aceleración GPU (encendida por defecto en
+Windows, APAGADA con aviso en macOS, oculta en Linux), Motor (familia), Modelo,
+línea de estado con descarga en el sitio, y los botones Eliminar/Administrar.
+Sin checkbox de "activar": con Motor y Modelo elegidos la función se aplica
+(botón verde), con cualquiera de los dos en su placeholder, no.
+
+Opciones propias:
+  - Invertir: por defecto el mapa sale con "cerca = blanco" (la convención de
+    DaVinci/Blender para desplazamiento); invertido, cerca = negro.
+  - Salida de 16 bits: un mapa de 8 bits se ve escalonado al usarlo como
+    desplazamiento. Solo PNG y TIFF guardan 16 bits, y solo sin transparencia
+    (ver ImageConverter._save_as_png / depth_engine.estimate_depth).
+
+La resolución a la que calcula cada modelo es fija a propósito (ver la nota de
+DEPTH_MODEL_FAMILIES en core/constants.py) -- aquí solo se informa."""
+import platform
+
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QMessageBox
+from PySide6.QtCore import QCoreApplication, Signal, Qt, QTimer
+from PySide6.QtGui import QFontMetrics
+
+from gui.styles import get_theme_token
+from gui.widgets.combo_box import AutoPopupComboBox
+from gui.widgets.model_download_prompt import (
+    ModelActionsRow, ModelDownloadWorker, ModelStatusRow, confirm_model_download,
+    format_model_label, open_models_settings,
+)
+from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from core.constants import AI_ENGINE_HOLDER, AI_MODEL_HOLDER
+from core.setup.models_setup import (
+    delete_depth_model, download_depth_model, get_depth_families, get_depth_model_size_bytes,
+    is_depth_model_installed,
+)
+
+_GPU_MACOS_WARNING = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "En macOS, la aceleración por GPU (CoreML) no es confiable con todos los "
+    "modelos de IA -- con los de Eliminar Fondo hay bugs conocidos de Apple "
+    "(macOS 26.x) que pueden cerrar la app de golpe, y los de profundidad todavía "
+    "no se han probado en Mac. La CPU sola ya rinde bien para esto.\n\n"
+    "Puedes dejarla activada igual si quieres probar, pero si la app se cierra "
+    "sola o se cuelga, vuelve a desmarcar esta opción."
+)
+
+_GPU_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Si está activo, usa la tarjeta gráfica (GPU).\n"
+    "Si se desactiva, usará el procesador (CPU) a máxima potencia.\n"
+    "Desactívalo si tienes problemas de drivers o cuelgues."
+)
+_INVERT_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Por defecto lo cercano sale blanco y lo lejano negro.\n"
+    "Marca esta opción si tu programa espera lo contrario."
+)
+_16BIT_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Guarda el mapa con 65.536 niveles de gris en vez de 256: evita los "
+    "escalones al usarlo como desplazamiento en DaVinci o Blender.\n\n"
+    "Solo se aplica al guardar en PNG o TIFF, y si la imagen no tiene "
+    "transparencia (por ejemplo, si también se eliminó el fondo). En los demás "
+    "casos se guarda en 8 bits."
+)
+
+
+class DepthPopoverContent(QFrame):
+    """selection_changed(family_key, model_key, is_valid) -- ver
+    RembgPopoverContent.selection_changed."""
+    selection_changed = Signal(str, str, bool)
+    close_popover_requested = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("depthPopover")
+        bg = get_theme_token('fondo_secundario', '#1e1e1e')
+        border = get_theme_token('borde_normal', '#2d2d2d')
+        self.setStyleSheet(f"""
+            QFrame#depthPopover {{
+                background-color: {bg};
+                border: 1px solid {border};
+                border-radius: 8px;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(8)
+        self._label_widgets = []
+
+        title = QLabel(self.tr("Mapa de Profundidad con IA"))
+        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        layout.addWidget(title)
+
+        # Mismo criterio por SO que Eliminar Fondo (ver docstring de rembg_popover.py).
+        if platform.system() != "Linux":
+            self.check_gpu = QCheckBox(self.tr("Aceleración de Hardware (GPU)"))
+            self.check_gpu.setChecked(platform.system() != "Darwin")
+            self.check_gpu.setToolTip(_GPU_TOOLTIP)
+            self.check_gpu.toggled.connect(self._on_gpu_toggled)
+            layout.addWidget(self.check_gpu)
+        else:
+            self.check_gpu = None
+
+        family_row = QHBoxLayout()
+        family_row.addWidget(self._label(self.tr("Motor:")))
+        self.combo_family = AutoPopupComboBox(fit_contents=True)
+        self.combo_family.addItem(AI_ENGINE_HOLDER, None)
+        for family_name in get_depth_families().keys():
+            self.combo_family.addItem(family_name, family_name)
+        self.combo_family.currentIndexChanged.connect(self._on_family_changed)
+        family_row.addWidget(self.combo_family, 1)
+        layout.addLayout(family_row)
+
+        model_row = QHBoxLayout()
+        model_row.addWidget(self._label(self.tr("Modelo:")))
+        self.combo_model = AutoPopupComboBox(fit_contents=True)
+        self.combo_model.addItem(AI_MODEL_HOLDER, None)
+        self.combo_model.currentIndexChanged.connect(self._on_model_changed)
+        model_row.addWidget(self.combo_model, 1)
+        layout.addLayout(model_row)
+
+        # A qué resolución calcula el modelo elegido -- informativo, no editable.
+        self.lbl_process = QLabel()
+        self.lbl_process.setWordWrap(True)
+        self.lbl_process.setStyleSheet(
+            f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        self.lbl_process.setVisible(False)
+        layout.addWidget(self.lbl_process)
+
+        # Descargas en curso por clave de modelo -- ver RembgPopoverContent._downloads.
+        self._downloads: dict[str, ModelDownloadWorker] = {}
+
+        self.actions_row = ModelActionsRow(
+            delete_tooltip=self.tr("Borrar del disco el modelo seleccionado"))
+        self.actions_row.delete_requested.connect(self._on_delete_clicked)
+        self.actions_row.manage_requested.connect(self._on_manage_clicked)
+        layout.addWidget(self.actions_row)
+
+        self.status_row = ModelStatusRow()
+        self.status_row.clicked.connect(self._on_manage_clicked)
+        layout.addWidget(self.status_row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet(f"background-color: {border}; max-height: 1px; border: none;")
+        layout.addWidget(sep)
+
+        self.check_invert = QCheckBox(self.tr("Invertir (cerca = negro)"))
+        self.check_invert.setToolTip(_INVERT_TOOLTIP)
+        layout.addWidget(self.check_invert)
+
+        self.check_16bit = QCheckBox(self.tr("Salida de 16 bits (PNG/TIFF)"))
+        self.check_16bit.setToolTip(_16BIT_TOOLTIP)
+        layout.addWidget(self.check_16bit)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Un modelo pudo instalarse o borrarse desde Ajustes > Modelos mientras el
+        # popover estaba cerrado.
+        self._refresh_model_items()
+        self._update_status()
+        self._resize_label_column()
+
+    def _label(self, text: str) -> QLabel:
+        lbl = QLabel(text)
+        self._label_widgets.append(lbl)
+        return lbl
+
+    def _resize_label_column(self):
+        fm = QFontMetrics(self.font())
+        width = max(fm.horizontalAdvance(w.text()) for w in self._label_widgets) + 6
+        for w in self._label_widgets:
+            w.setFixedWidth(width)
+
+    def _on_gpu_toggled(self, checked: bool):
+        """No impedimos, avisamos -- ver RembgPopoverContent._on_gpu_toggled."""
+        if checked and platform.system() == "Darwin":
+            QMessageBox.warning(self, self.tr("Aceleración por GPU en macOS"), _GPU_MACOS_WARNING)
+
+    def _current_family_key(self):
+        return self.combo_family.currentData()
+
+    def _current_model_info(self):
+        return get_depth_families().get(self._current_family_key(), {}).get(self.combo_model.currentData())
+
+    def _on_family_changed(self, _index: int):
+        self._refresh_model_items()
+        self._update_status()
+        self._emit_selection()
+
+    def _refresh_model_items(self):
+        """Repuebla el combo de modelos conservando la selección -- mismo
+        esquema de iconos que RembgPopoverContent._refresh_model_items."""
+        current = self.combo_model.currentData()
+        self.combo_model.blockSignals(True)
+        self.combo_model.clear()
+        self.combo_model.addItem(AI_MODEL_HOLDER, None)
+        for model_name, model_info in get_depth_families().get(self._current_family_key(), {}).items():
+            if is_depth_model_installed(model_info):
+                icon = get_colored_svg_icon(
+                    "check_circle.svg", get_theme_token('estado_exito', '#40d66b'), size=14)
+                tooltip = self.tr("Instalado")
+            else:
+                icon = get_colored_svg_icon(
+                    "download.svg", get_theme_token('texto_secundario', '#888888'), size=14)
+                tooltip = self.tr("No descargado")
+            self.combo_model.addItem(
+                icon, format_model_label(model_name, get_depth_model_size_bytes(model_info)), model_name)
+            self.combo_model.setItemData(self.combo_model.count() - 1, tooltip, Qt.ToolTipRole)
+        idx = self.combo_model.findData(current) if current else -1
+        self.combo_model.setCurrentIndex(idx if idx >= 0 else 0)
+        self.combo_model.blockSignals(False)
+
+    def _on_model_changed(self, _index: int):
+        self._update_status()
+        self._emit_selection()
+        self._offer_download_if_missing(self._current_model_info())
+
+    @staticmethod
+    def _model_id(model_info: dict) -> str:
+        """Clave estable de una descarga: carpeta + archivo principal (los dos
+        Small de Depth Anything V2 comparten carpeta)."""
+        return f"{model_info.get('folder', '')}/{model_info.get('file', '')}"
+
+    def _update_process_label(self, model_info):
+        if not model_info:
+            self.lbl_process.setVisible(False)
+            return
+        size = int(model_info.get("process_size") or 518)
+        if model_info.get("process_mode") == "square":
+            text = self.tr("Calcula la profundidad a {0}×{0} px (en cuadrado) y la amplía al "
+                           "tamaño original.").format(size)
+        else:
+            text = self.tr("Calcula la profundidad con el lado corto a {0} px y la amplía al "
+                           "tamaño original.").format(size)
+        self.lbl_process.setText(text)
+        self.lbl_process.setVisible(True)
+
+    def _update_status(self):
+        model_info = self._current_model_info()
+        self._update_process_label(model_info)
+        if not model_info:
+            self.status_row.clear()
+            self.actions_row.set_delete_enabled(False)
+            return
+        downloading = self._model_id(model_info) in self._downloads
+        # Borrar a media descarga dejaría el .part huérfano y el worker escribiendo
+        # sobre un archivo recién borrado.
+        self.actions_row.set_delete_enabled(is_depth_model_installed(model_info) and not downloading)
+        if downloading:
+            return
+        if is_depth_model_installed(model_info):
+            self.status_row.show_ready(self.tr("Modelo listo para usar."))
+        else:
+            self.status_row.show_missing(self.tr(
+                "No descargado — vuelve a elegirlo en la lista para descargarlo."))
+
+    # ── Acciones sobre el modelo elegido ────────────────────────────────────
+    def _on_manage_clicked(self):
+        if open_models_settings(self):
+            self.close_popover_requested.emit()
+
+    def _on_delete_clicked(self):
+        model_name = self.combo_model.currentData()
+        model_info = self._current_model_info()
+        if not model_info or not is_depth_model_installed(model_info):
+            return
+        pregunta = self.tr(
+            "¿Eliminar '{0}' del disco?\n\nPuedes volver a descargarlo cuando quieras."
+        ).format(model_name)
+        if QMessageBox.question(self, self.tr("Eliminar modelo"), pregunta) != QMessageBox.Yes:
+            return
+        if not delete_depth_model(model_info):
+            self.status_row.show_error(self.tr("No se pudo eliminar el modelo."))
+            return
+        self._refresh_model_items()
+        self._update_status()
+        self._emit_selection()
+
+    # ── Descarga del modelo elegido ─────────────────────────────────────────
+    def _offer_download_if_missing(self, model_info):
+        """Ver RembgPopoverContent._offer_download_if_missing -- se difiere un
+        ciclo de evento para no abrir el modal con el desplegable a medio cerrar."""
+        if not model_info or is_depth_model_installed(model_info):
+            return
+        if self._model_id(model_info) in self._downloads:
+            return
+        model_name = self.combo_model.currentData()
+        QTimer.singleShot(0, lambda: self._ask_and_download(model_name, model_info))
+
+    def _ask_and_download(self, model_name: str, model_info: dict):
+        model_id = self._model_id(model_info)
+        if model_id in self._downloads or is_depth_model_installed(model_info):
+            self._update_status()
+            return
+        if self.combo_model.currentData() != model_name:
+            return
+        accepted = confirm_model_download(
+            self, model_name, get_depth_model_size_bytes(model_info), subject=self.tr("modelo"))
+        if not accepted:
+            self._update_status()
+            return
+
+        worker = ModelDownloadWorker(model_id, download_depth_model, model_info, parent=self)
+        worker.numeric_progress_signal.connect(self._on_download_progress)
+        worker.finished_signal.connect(self._on_download_finished)
+        self._downloads[model_id] = worker
+        self.status_row.show_progress(0)
+        worker.start()
+
+    def _is_current_model(self, model_id: str) -> bool:
+        model_info = self._current_model_info()
+        return bool(model_info) and self._model_id(model_info) == model_id
+
+    def _on_download_progress(self, pct: int, model_id: str):
+        if self._is_current_model(model_id):
+            self.status_row.show_progress(pct)
+
+    def _on_download_finished(self, success: bool, message: str, model_id: str):
+        worker = self._downloads.pop(model_id, None)
+        if worker is not None:
+            worker.deleteLater()
+        self._refresh_model_items()
+        if success:
+            self._update_status()
+            return
+        if self._is_current_model(model_id):
+            self.status_row.show_error(self.tr("No se pudo descargar: {0}").format(message))
+        QMessageBox.warning(self, self.tr("Error de descarga"), message)
+
+    # ── API para ImageToolsTab ──────────────────────────────────────────────
+    def is_valid_selection(self) -> bool:
+        return self.combo_family.currentData() is not None and self.combo_model.currentData() is not None
+
+    def is_active(self) -> bool:
+        return self.is_valid_selection()
+
+    def deactivate(self):
+        """Vuelve Motor a su placeholder -- la cascada limpia Modelo también."""
+        self.combo_family.setCurrentIndex(0)
+
+    def _emit_selection(self):
+        family_key = self.combo_family.currentData()
+        model_key = self.combo_model.currentData()
+        self.selection_changed.emit(family_key or "", model_key or "", self.is_valid_selection())
+
+    def gpu_enabled(self) -> bool:
+        return self.check_gpu.isChecked() if self.check_gpu else False
+
+    def get_settings(self) -> dict:
+        """Ver RembgPopoverContent.get_settings() -- se aplica recién al apretar
+        "Iniciar Proceso" (ImageToolsTab._on_convert_clicked ->
+        ImageConverter._apply_depth)."""
+        return {
+            "depth_enabled": self.is_valid_selection(),
+            "depth_family": self.combo_family.currentData(),
+            "depth_model": self.combo_model.currentData(),
+            "depth_gpu": self.gpu_enabled(),
+            "depth_invert": self.check_invert.isChecked(),
+            "depth_16bit": self.check_16bit.isChecked(),
+        }

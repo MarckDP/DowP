@@ -13,13 +13,13 @@ entrada, y eso ya lo declara cada entrada de REMBG_MODEL_FAMILIES vía
 "input_size" -- ver la nota de ese diccionario en core/constants.py. Agregar un
 modelo nuevo no toca este archivo."""
 import os
-import threading
 
 from PIL import Image, ImageFilter
 
 from core.logger.logger_manager import logger
 from core.setup.models_setup import get_all_rembg_families
-from core.utils.onnx_providers import DML_FAILURE_HINTS, build_session_options, get_execution_providers
+from core.utils import onnx_sessions
+from core.utils.onnx_providers import DML_FAILURE_HINTS
 from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
 
@@ -27,14 +27,11 @@ _DEFAULT_INPUT_SIZE = (1024, 1024)
 _IMAGENET_MEAN = (0.485, 0.456, 0.406)
 _IMAGENET_STD = (0.229, 0.224, 0.225)
 
-# Sesiones ONNX cacheadas por (ruta_modelo, gpu|cpu) -- evita recargar los pesos
-# en cada imagen de un lote (ver prepare_session/clear_sessions, llamadas desde
-# ImageConvertWorker.run al empezar/terminar el lote). Vive a nivel de módulo, no
-# como atributo de ImageConverter, que es adrede "sin estado propio entre
-# llamadas" (ver su docstring) -- este cache es estado de otra capa: dura lo que
-# dura el proceso de la app, no una instancia puntual de ImageConverter.
-_sessions: dict = {}
-_sessions_lock = threading.Lock()
+# Las sesiones ONNX cacheadas viven en core/utils/onnx_sessions.py, compartidas
+# con Mapa de Profundidad (depth_engine.py): "Liberar" y el límite de modelos en
+# memoria de Ajustes > Modelos tienen que cubrir a los dos motores a la vez.
+# loaded_session_count()/clear_sessions() siguen existiendo aquí con el mismo
+# nombre porque es lo que ya llaman ImageConvertWorker y models_page.py.
 
 
 def _model_info(family: str | None, model: str | None) -> dict | None:
@@ -48,34 +45,7 @@ def _model_path(model_info: dict) -> str:
 
 
 def _get_session(model_path: str, use_gpu: bool):
-    key = f"{model_path}_{'gpu' if use_gpu else 'cpu'}"
-    with _sessions_lock:
-        session = _sessions.get(key)
-        if session is not None:
-            return session
-
-        # Limitar la cantidad de modelos en memoria según la config del usuario
-        # (Ajustes > Modelos > "Cantidad máxima de modelos en memoria", defecto 1).
-        # Cada sesión ONNX puede pesar 200-900 MB en RAM/VRAM -- acumular sin
-        # límite haría explotar la memoria. Cuando se excede, se desaloja la más
-        # antigua (FIFO: primer key del dict, que en Python 3.7+ conserva orden de
-        # inserción).
-        from core.utils.config_manager import get_config
-        max_sessions = int(get_config().get("rembg_max_cached_sessions", 1))
-        while len(_sessions) >= max_sessions:
-            oldest_key = next(iter(_sessions))
-            logger.info(f"Eliminar Fondo: desalojando sesión antigua "
-                        f"({os.path.basename(oldest_key.rsplit('_', 1)[0])}) "
-                        f"para respetar el límite de {max_sessions} modelo(s) en memoria")
-            del _sessions[oldest_key]
-
-        import onnxruntime as ort
-        providers = get_execution_providers(use_gpu)
-        sess_options = build_session_options(providers)
-        logger.info(f"Eliminar Fondo: cargando sesión ONNX ({providers[0]}): {os.path.basename(model_path)}")
-        session = ort.InferenceSession(model_path, providers=providers, sess_options=sess_options)
-        _sessions[key] = session
-        return session
+    return onnx_sessions.get_session(model_path, use_gpu, label="Eliminar Fondo")
 
 
 def prepare_session(options: dict) -> None:
@@ -97,45 +67,15 @@ def prepare_session(options: dict) -> None:
 
 
 def loaded_session_count() -> int:
-    """Cuántas sesiones ONNX hay cargadas ahora mismo -- lo consulta Ajustes >
-    Modelos para decir qué se liberó al apretar "Liberar"."""
-    with _sessions_lock:
-        return len(_sessions)
+    """Ver onnx_sessions.loaded_session_count() -- cuenta las sesiones de TODOS
+    los motores ONNX, no solo las de Eliminar Fondo."""
+    return onnx_sessions.loaded_session_count()
 
 
 def clear_sessions() -> int:
-    """Libera las sesiones ONNX cacheadas (memoria de GPU/CPU) y devuelve
-    cuántas eran -- se llama al terminar un lote (ver ImageConvertWorker.run) para
-    que no quede nada cacheado entre lotes distintos, y también a mano desde
-    Ajustes > Modelos, donde ese número es lo que se le muestra al usuario."""
-    import gc
-    import os
-    with _sessions_lock:
-        freed = len(_sessions)
-        if not freed:
-            return 0
-        logger.debug(f"Eliminar Fondo: liberando {freed} sesión(es) ONNX.")
-        _sessions.clear()
-
-    # gc.collect() doble: Python usa 3 generaciones de recolección; el segundo
-    # pase recoge objetos que quedaron en la generación siguiente tras el primero.
-    gc.collect()
-    gc.collect()
-
-    # En Windows, forzar al OS a reclamar las páginas de memoria que el proceso ya
-    # no usa (quedan mapeadas pero inactivas tras liberar la sesión ONNX). Esto
-    # baja el "Working Set" visible en Task Manager sin costo funcional: si el
-    # proceso vuelve a necesitar esas páginas, el OS las trae de vuelta del pagefile
-    # con un page fault transparente.
-    if os.name == "nt":
-        try:
-            import ctypes
-            handle = ctypes.windll.kernel32.GetCurrentProcess()
-            ctypes.windll.kernel32.SetProcessWorkingSetSize(handle, -1, -1)
-        except Exception as e:
-            logger.debug(f"Eliminar Fondo: no se pudo recortar el working set: {e}")
-
-    return freed
+    """Ver onnx_sessions.clear_sessions() -- libera las sesiones de TODOS los
+    motores ONNX (Eliminar Fondo y Mapa de Profundidad)."""
+    return onnx_sessions.clear_sessions()
 
 
 def _preprocess(img: Image.Image, size: tuple[int, int]):

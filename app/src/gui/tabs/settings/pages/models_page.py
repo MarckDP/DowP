@@ -11,8 +11,10 @@ from core.utils.i18n import logger
 from core.utils.cache_manager import format_bytes
 from core.utils.paths import get_models_dir
 from core.utils.config_manager import get_config, save_config
-from core.constants import REMBG_MODEL_FAMILIES, UPSCALING_TOOLS
+from core.constants import DEPTH_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCALING_TOOLS
 from core.setup.models_setup import (
+    is_depth_model_installed, download_depth_model, delete_depth_model,
+    get_depth_model_size_bytes, get_depth_model_disk_size, get_depth_model_path,
     is_rembg_model_installed, is_rembg_model_gated, download_rembg_model, delete_rembg_model,
     is_upscaling_engine_installed, download_upscaling_engine, delete_upscaling_engine,
     get_folder_size, get_custom_rembg_models, import_custom_rembg_model,
@@ -134,11 +136,18 @@ class ModelRow(QFrame):
     download_requested = Signal(str)  # row_id
 
     def __init__(self, row_id: str, title: str, path_for_size: str, gated: bool = False,
-                 no_download: bool = False, parent=None):
+                 no_download: bool = False, installed_check=None, disk_size=None, parent=None):
         super().__init__(parent)
         self.row_id = row_id
         self.path_for_size = path_for_size
         self.gated = gated
+        # Para modelos que son VARIOS archivos (Mapa de Profundidad: .onnx +
+        # model.onnx_data, ver models_setup.is_depth_model_installed): mirar solo
+        # path_for_size daría por instalado un modelo a medio bajar, y medir la
+        # carpeta sumaría el peso de otro modelo que la comparte. Sin estos dos,
+        # la fila se comporta como siempre.
+        self._installed_check = installed_check
+        self._disk_size = disk_size
         # no_download: modelos importados a mano (ver _add_custom_row) -- ya están
         # instalados por definición (se copiaron al importar), no tiene sentido
         # ofrecer "Descargar"/"Reinstalar" para algo que no viene de una URL.
@@ -219,6 +228,8 @@ class ModelRow(QFrame):
         QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
 
     def is_installed(self) -> bool:
+        if self._installed_check is not None:
+            return self._installed_check()
         return os.path.exists(self.path_for_size) and (
             os.path.isdir(self.path_for_size) or os.path.getsize(self.path_for_size) > 1024
         )
@@ -229,7 +240,7 @@ class ModelRow(QFrame):
         dis_color = get_theme_token("texto_deshabilitado", "#777777")
 
         if self.is_installed():
-            size = get_folder_size(self.path_for_size)
+            size = self._disk_size() if self._disk_size is not None else get_folder_size(self.path_for_size)
             self.lbl_status.setText(self.tr("Instalado ({0})").format(format_bytes(size)))
             self.lbl_status.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
             if not self.no_download:
@@ -352,6 +363,13 @@ class ModelsPage(QWidget):
         self.custom_rows_container.setSpacing(10)
         self.content_layout.addLayout(self.custom_rows_container)
         self._refresh_custom_rows()
+
+        self.content_layout.addSpacing(8)
+        self._add_section_header(self.tr("Mapas de Profundidad"))
+        for family_name, models in DEPTH_MODEL_FAMILIES.items():
+            self._add_family_header(family_name)
+            for model_name, model_info in models.items():
+                self._add_depth_row(model_name, model_info)
 
         self.content_layout.addSpacing(8)
         self._add_section_header(self.tr("Motores de Reescalado (Upscaling)"))
@@ -572,6 +590,21 @@ class ModelsPage(QWidget):
         self.row_kind[row_id] = "rembg"
         self.content_layout.addWidget(row)
 
+    def _add_depth_row(self, model_name: str, model_info: dict):
+        row_id = f"depth::{model_info['folder']}::{model_info['file']}"
+        row = ModelRow(
+            row_id, format_model_label(model_name, get_depth_model_size_bytes(model_info)),
+            get_depth_model_path(model_info),
+            installed_check=lambda info=model_info: is_depth_model_installed(info),
+            disk_size=lambda info=model_info: get_depth_model_disk_size(info),
+        )
+        row.download_requested.connect(self._on_download_requested)
+        row.btn_delete.clicked.connect(lambda: self._on_delete_depth(row_id, model_name))
+        self.rows[row_id] = row
+        self.row_info[row_id] = model_info
+        self.row_kind[row_id] = "depth"
+        self.content_layout.addWidget(row)
+
     # ── Modelos personalizados (importados) ─────────────────────────────────
     def _refresh_custom_rows(self):
         while self.custom_rows_container.count():
@@ -653,7 +686,10 @@ class ModelsPage(QWidget):
         row = self.rows[row_id]
         info = self.row_info[row_id]
         kind = self.row_kind[row_id]
-        download_func = download_rembg_model if kind == "rembg" else download_upscaling_engine
+        download_func = {
+            "rembg": download_rembg_model,
+            "depth": download_depth_model,
+        }.get(kind, download_upscaling_engine)
 
         row.set_downloading(True)
         worker = ModelDownloadWorker(row_id, download_func, info, parent=self)
@@ -684,6 +720,15 @@ class ModelsPage(QWidget):
         ) != QMessageBox.Yes:
             return
         if delete_rembg_model(self.row_info[row_id]):
+            self.rows[row_id].refresh_status()
+
+    def _on_delete_depth(self, row_id: str, display_name: str):
+        if QMessageBox.question(
+            self, self.tr("Eliminar modelo"),
+            self.tr("¿Eliminar '{0}' del disco?").format(display_name)
+        ) != QMessageBox.Yes:
+            return
+        if delete_depth_model(self.row_info[row_id]):
             self.rows[row_id].refresh_status()
 
     def _on_delete_upscaling(self, row_id: str, display_name: str):

@@ -702,6 +702,113 @@ REMBG_MODEL_FAMILIES = {
     }
 }
 
+# Catálogo de modelos de Mapa de Profundidad -- mismo criterio de "perfil
+# autocontenido" que REMBG_MODEL_FAMILIES: el motor (core/tabs/image_tools/
+# depth_engine.py) no tiene ningún if por nombre de modelo, todo lo que cambia
+# entre modelos se declara aquí. Todos se probaron con DowP (onnxruntime 1.24,
+# CPU y DirectML sobre una RTX 3060, 2026-09-19) antes de entrar al catálogo.
+#
+# Campos propios de estos modelos (además de file/url/folder/size_bytes):
+#   - "extra_files": archivos que tienen que vivir junto al .onnx. Los Depth
+#     Anything 3 de onnx-community guardan los pesos en un model.onnx_data
+#     aparte, y el .onnx lo busca por ESE nombre exacto -- no se puede renombrar,
+#     por eso cada modelo tiene su propia carpeta.
+#   - "input_layout": "4d" = [lote, 3, alto, ancho]; "5d" = [lote, n_imágenes,
+#     3, alto, ancho] (DA3 es multivista, aquí siempre se le pasa una imagen).
+#   - "output_kind": "disparity" = cerca es un valor ALTO (DA2 y derivados);
+#     "depth" = cerca es un valor BAJO (DA3), el motor lo pasa a 1/d para
+#     entregar siempre la misma convención (cerca = blanco).
+#   - "process_mode"/"process_size": "short_side" escala el lado corto a
+#     process_size manteniendo la proporción (múltiplos de 14, lo que pide el
+#     ViT); "square" aplasta a process_size x process_size. Los Distill-Any-Depth
+#     de esta conversión se exportaron con tamaño FIJO (su segunda salida trae
+#     1369 = 37x37 parches), así que cualquier otra proporción falla al correr.
+#     La resolución de proceso NO se deja subir desde la UI a propósito: en la
+#     prueba, DA3 Base a 1036 px en DirectML devolvió basura sin lanzar ningún
+#     error (en CPU salía bien), y la VRAM pasaba de 3 a 10 GB.
+#
+# "size_bytes" es el peso real de cada archivo (medido contra el archivo
+# descargado de cada URL); el peso que ve el usuario es la suma con extra_files.
+_DEPTH_ANYTHING_URL = "https://huggingface.co/onnx-community/{0}/resolve/main/onnx/{1}"
+DEPTH_MODEL_FAMILIES = {
+    "Depth Anything V2": {
+        QCoreApplication.translate("constants", "Small (Recomendado)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-small", "model.onnx"),
+            "folder": "depth/da2-small",
+            "size_bytes": 99060839,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Small FP16 (Ligero, ideal con GPU)"): {
+            "file": "model_fp16.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-small", "model_fp16.onnx"),
+            "folder": "depth/da2-small",
+            "size_bytes": 49642442,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+    },
+    "Depth Anything 3": {
+        QCoreApplication.translate("constants", "Small (Rápido)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx"),
+            "folder": "depth/da3-small",
+            "size_bytes": 640691,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx_data"),
+                 "size_bytes": 104702464},
+            ],
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Base (Separa mejor los planos)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx"),
+            "folder": "depth/da3-base",
+            "size_bytes": 646912,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx_data"),
+                 "size_bytes": 412068352},
+            ],
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+    },
+    "Distill-Any-Depth": {
+        QCoreApplication.translate("constants", "Base (Más relieve)"): {
+            "file": "model.onnx",
+            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Base-onnx/resolve/main/Distill%20Any%20Depth%20Base/model.onnx",
+            "folder": "depth/dad-base",
+            "size_bytes": 388874697,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "square",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large (Máximo detalle)"): {
+            "file": "model.onnx",
+            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Large-onnx/resolve/main/Distill%20Any%20Depth%20Large/model.onnx",
+            "folder": "depth/dad-large",
+            "size_bytes": 1336858580,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "square",
+            "process_size": 518,
+        },
+    },
+}
+
 UPSCALING_TOOLS = {
     "Waifu2x": {
         "name": "Waifu2x",

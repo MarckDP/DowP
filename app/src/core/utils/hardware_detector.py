@@ -147,11 +147,25 @@ CODEC_ENCODERS = {
         ("libsvtav1", "CPU Software (SVT-AV1)", "software"),
         ("libaom-av1", "CPU Software (aom)", "software"),
     ],
+    # VP9 por hardware solo existe en Intel (QuickSync) y VA-API: ni NVIDIA (NVENC)
+    # ni AMD (AMF) tienen encoder VP9, así que en esas GPU VP9 siempre va por CPU.
     "vp9": [
+        ("vp9_qsv", "Intel QuickSync", "qsv"),
         ("vp9_vaapi", "Linux VA-API", "vaapi"),
         ("libvpx-vp9", "CPU Software (VP9)", "software"),
     ],
 }
+
+# Timeouts en segundos. El de -encoders es holgado porque en la primera ejecución
+# el antivirus puede escanear ffmpeg.exe antes de dejarlo correr. El de las
+# pruebas por GPU cubre la primera inicialización de AMF/QSV, que puede tardar;
+# una prueba que falla de verdad termina con error mucho antes.
+_ENCODERS_TIMEOUT = 15
+_HW_PROBE_TIMEOUT = 15
+
+_FFMPEG_NOT_RUNNABLE_NOTE = QT_TRANSLATE_NOOP(
+    "HardwareDetector",
+    "No se pudo ejecutar ffmpeg para detectar los encoders. Revisa que esté instalado en Ajustes > Dependencias.")
 
 # Orden de prioridad de backend al elegir el "preferido" dentro de un códec.
 _BACKEND_PRIORITY = ["nvenc", "videotoolbox", "qsv", "amf", "vaapi", "software"]
@@ -177,29 +191,61 @@ def _probe_encoder(ffmpeg_exe: str, env, encoder_code: str, backend: str) -> boo
             "-frames:v", "2", "-c:v", encoder_code, "-f", "null", "-",
         ]
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        res = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=6, creationflags=flags)
+        res = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=_HW_PROBE_TIMEOUT, creationflags=flags)
         return res.returncode == 0
     except Exception as e:
         logger.debug(f"HardwareDetector: Probe fallido para {encoder_code}: {e}")
         return False
 
 
-def _get_codec_support_map() -> dict:
+def _get_ffmpeg_exe() -> str:
+    """Ruta COMPLETA al ffmpeg activo (el de DowP o el personalizado de Ajustes).
+
+    No basta con llamar a "ffmpeg" por nombre y pasar get_dependency_env() como
+    env: en Windows, subprocess busca el ejecutable con el PATH del proceso de
+    DowP, no con el del env que se le pasa. Así el escaneo solo funcionaba en
+    equipos que tuvieran OTRO ffmpeg en el PATH del sistema (y escaneaba ese, no
+    el de DowP); en el resto fallaba con [WinError 2] y todos los códecs quedaban
+    como "sin ningún encoder funcional", GPU incluida."""
+    from core.setup.ffmpeg_setup import get_ffmpeg_path
+    return get_ffmpeg_path()
+
+
+def _ffmpeg_fingerprint(ffmpeg_exe: str) -> dict | None:
+    """Identifica QUÉ ffmpeg se escaneó (ruta + tamaño + fecha), para volver a
+    escanear si cambia: una actualización desde Dependencias, pasar del ffmpeg
+    de DowP a uno personalizado o al revés, o la primera ejecución, cuando el
+    escaneo puede correr antes de que ffmpeg termine de descargarse. os.stat y
+    no "ffmpeg -version" a propósito: detect_hardware() se llama cada vez que
+    se cambia de códec en la interfaz y esto tiene que ser instantáneo. None si
+    el archivo no existe."""
+    try:
+        st = os.stat(ffmpeg_exe)
+    except OSError:
+        return None
+    return {"path": os.path.normcase(os.path.abspath(ffmpeg_exe)), "size": st.st_size, "mtime": int(st.st_mtime)}
+
+
+def _get_codec_support_map(ffmpeg_exe: str) -> tuple[dict, bool]:
     """
-    Inspecciona el ffmpeg empaquetado y arma un mapa {códec: {backend: info}} con
+    Inspecciona el ffmpeg activo y arma un mapa {códec: {backend: info}} con
     verificación real por probe-encode, cubriendo H.264, HEVC, AV1 y VP9 —no solo H.264.
+    Devuelve (mapa, escaneo_ok): escaneo_ok es False si ffmpeg no se pudo ejecutar o
+    no listó ningún encoder -- ese resultado no describe al ffmpeg, así que no se
+    guarda en caché (ver detect_hardware).
     """
     env = get_dependency_env()
-    ffmpeg_exe = "ffmpeg"
     codec_support: dict = {}
 
     try:
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        res = subprocess.run([ffmpeg_exe, "-encoders"], capture_output=True, text=True, env=env, timeout=4, creationflags=flags)
+        res = subprocess.run([ffmpeg_exe, "-encoders"], capture_output=True, text=True, env=env,
+                             timeout=_ENCODERS_TIMEOUT, creationflags=flags)
         stdout = res.stdout
     except Exception as e:
-        logger.warning(f"HardwareDetector: Error al ejecutar ffmpeg -encoders: {e}")
+        logger.warning(f"HardwareDetector: Error al ejecutar ffmpeg -encoders ({ffmpeg_exe}): {e}")
         stdout = ""
+    scan_ok = "Encoders:" in stdout or "V....." in stdout
 
     for codec, encoders in CODEC_ENCODERS.items():
         codec_support[codec] = {}
@@ -223,7 +269,7 @@ def _get_codec_support_map() -> dict:
             if existing is None or (not existing["supported"] and entry["supported"]):
                 codec_support[codec][backend] = entry
 
-    return codec_support
+    return codec_support, scan_ok
 
 
 def _flatten_supported_encoders(codec_support: dict) -> tuple[list[str], str]:
@@ -251,13 +297,22 @@ def _flatten_supported_encoders(codec_support: dict) -> tuple[list[str], str]:
     return supported, preferred
 
 
-def _summarize_codec_status(codec_support: dict) -> dict:
+def _summarize_codec_status(codec_support: dict, scan_ok: bool = True) -> dict:
     """
     Reduce el detalle por-backend a un estado único por códec, pensado para consumo
     directo desde la UI de exportación: full (acelerado por hardware, confirmado),
     partial (solo por software, funcional pero lento), none (ni hardware ni software
     disponibles en ESTE build de ffmpeg instalado).
+
+    Con scan_ok=False (ffmpeg no se pudo ejecutar) todos los códecs quedan en "none",
+    pero con una nota que dice eso mismo: la de "este build no trae ningún encoder"
+    culpaba al ffmpeg de algo que nunca se llegó a comprobar.
     """
+    if not scan_ok:
+        return {
+            codec: {"status": "none", "encoder": None, "backend": "none", "note": _FFMPEG_NOT_RUNNABLE_NOTE}
+            for codec in codec_support
+        }
     summary = {}
     for codec, backends in codec_support.items():
         hw_ok = {b: info for b, info in backends.items() if b != "software" and info["supported"]}
@@ -347,10 +402,13 @@ def _get_ram_info() -> str:
     return "No detectada"
 
 
-def _generate_ffmpeg_log_files(codec_support: dict, codec_status: dict, supported_encoders: list, preferred_encoder: str) -> tuple[str, str]:
+def _generate_ffmpeg_log_files(ffmpeg_exe: str, codec_support: dict, codec_status: dict,
+                               supported_encoders: list, preferred_encoder: str) -> tuple[str, str]:
     """
     Genera el log de capacidades en formato JSON (ffmpeg_encoders_log.json)
-    y el informe estructurado (ffmpeg_capabilities.json) en AppData.
+    y el informe estructurado (ffmpeg_capabilities.json) en AppData. Se escribe
+    también cuando el escaneo falla: es justo el caso en que más sirve para
+    diagnosticar.
     """
     import json
     from core.utils.paths import get_app_data_dir
@@ -395,25 +453,16 @@ def _generate_ffmpeg_log_files(codec_support: dict, codec_status: dict, supporte
     full_log_data = {
         "app_info": QCoreApplication.translate("hardware_detector", "DowP 2.0 - Informe Completo de Capacidades de FFmpeg"),
         "diagnostic_date": time.strftime('%Y-%m-%d %H:%M:%S'),
+        "ffmpeg_path": ffmpeg_exe,
         "detected_preferred_encoder": preferred_encoder,
         "supported_encoders_summary": supported_encoders,
         "capabilities": {}
     }
 
     sections = {
-        "version": ["ffmpeg", "-version"],
-        "encoders": ["ffmpeg", "-encoders"],
-        "decoders": ["ffmpeg", "-decoders"],
-        "formats": ["ffmpeg", "-formats"],
-        "filters": ["ffmpeg", "-filters"],
-        "muxers": ["ffmpeg", "-muxers"],
-        "demuxers": ["ffmpeg", "-demuxers"],
-        "codecs": ["ffmpeg", "-codecs"],
-        "hwaccels": ["ffmpeg", "-hwaccels"],
-        "protocols": ["ffmpeg", "-protocols"],
-        "bsfs": ["ffmpeg", "-bsfs"],
-        "layouts": ["ffmpeg", "-layouts"],
-        "colors": ["ffmpeg", "-colors"]
+        key: [ffmpeg_exe, f"-{key}"]
+        for key in ("version", "encoders", "decoders", "formats", "filters", "muxers", "demuxers",
+                    "codecs", "hwaccels", "protocols", "bsfs", "layouts", "colors")
     }
 
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -435,39 +484,61 @@ def _generate_ffmpeg_log_files(codec_support: dict, codec_status: dict, supporte
     return log_json_path, json_path
 
 
+# Último escaneo FALLIDO de esta sesión: (huella del ffmpeg, resultado). Un
+# escaneo fallido no se guarda en config.json (no describe al ffmpeg), pero
+# tampoco se puede repetir en cada llamada: detect_hardware() se usa cada vez que
+# se cambia de códec en la interfaz, y un escaneo completo tarda segundos. Se
+# reintenta cuando cambia el ffmpeg (por ejemplo, al terminar de descargarse),
+# con "Re-escanear" en Ajustes, o al reiniciar DowP.
+_failed_scan_memo: tuple | None = None
+
+
 def detect_hardware(force_refresh: bool = False) -> dict:
     """
     Realiza la detección completa del hardware y la guarda en la configuración.
-    Si force_refresh es False y ya existe hardware_info en la config y el archivo log existe, lo devuelve directamente.
+
+    Sin force_refresh se reutiliza lo guardado, pero solo si se escaneó ESTE mismo
+    ffmpeg (ver _ffmpeg_fingerprint) y el escaneo funcionó. Una caché de antes de
+    este cambio no trae huella, así que se vuelve a escanear una vez -- eso corrige
+    solo los equipos que quedaron con el escaneo roto de [WinError 2].
     """
+    global _failed_scan_memo
     config = get_config()
     cached_info = config.get("hardware_info", {})
     from core.utils.paths import get_app_data_dir
     log_path = os.path.join(get_app_data_dir(), "ffmpeg_encoders_log.json")
 
-    if (
-        not force_refresh
-        and cached_info
-        and cached_info.get("cpu_name")
-        and cached_info.get("ram_size")
-        and cached_info.get("codec_support")
-        and os.path.exists(log_path)
-    ):
-        return cached_info
+    ffmpeg_exe = _get_ffmpeg_exe()
+    fingerprint = _ffmpeg_fingerprint(ffmpeg_exe)
 
-    logger.info("HardwareDetector: Iniciando escaneo de hardware del sistema...")
+    if not force_refresh:
+        if (
+            cached_info
+            and cached_info.get("cpu_name")
+            and cached_info.get("ram_size")
+            and cached_info.get("codec_support")
+            and cached_info.get("ffmpeg_fingerprint") == fingerprint
+            and fingerprint is not None
+            and os.path.exists(log_path)
+        ):
+            return cached_info
+        if _failed_scan_memo is not None and _failed_scan_memo[0] == fingerprint:
+            return _failed_scan_memo[1]
+
+    logger.info(f"HardwareDetector: Iniciando escaneo de hardware del sistema (ffmpeg: {ffmpeg_exe})...")
     start_time = time.time()
-    
+
     cpu_name = _get_cpu_name()
     gpu_name = _get_gpu_name()
     ram_size = _get_ram_info()
-    codec_support = _get_codec_support_map()
-    codec_status = _summarize_codec_status(codec_support)
+    codec_support, scan_ok = _get_codec_support_map(ffmpeg_exe)
+    codec_status = _summarize_codec_status(codec_support, scan_ok)
     supported_encoders, preferred_encoder = _flatten_supported_encoders(codec_support)
-    txt_log_path, json_log_path = _generate_ffmpeg_log_files(codec_support, codec_status, supported_encoders, preferred_encoder)
-    
+    txt_log_path, json_log_path = _generate_ffmpeg_log_files(
+        ffmpeg_exe, codec_support, codec_status, supported_encoders, preferred_encoder)
+
     os_name = _get_os_name()
-    
+
     hardware_info = {
         "os_name": os_name,
         "cpu_name": cpu_name,
@@ -477,14 +548,24 @@ def detect_hardware(force_refresh: bool = False) -> dict:
         "supported_encoders": supported_encoders,
         "codec_support": codec_support,
         "codec_status": codec_status,
+        "ffmpeg_path": ffmpeg_exe,
+        "ffmpeg_fingerprint": fingerprint,
+        "ffmpeg_scan_ok": scan_ok,
         "ffmpeg_log_path": txt_log_path,
         "ffmpeg_json_path": json_log_path,
         "last_checked": int(time.time()),
         "scan_duration_sec": round(time.time() - start_time, 2)
     }
 
+    if not scan_ok:
+        _failed_scan_memo = (fingerprint, hardware_info)
+        logger.warning(f"HardwareDetector: ffmpeg no se pudo ejecutar ({ffmpeg_exe}) -- el escaneo NO se "
+                       f"guarda; se reintentará cuando cambie ffmpeg o al reiniciar DowP.")
+        return hardware_info
+
+    _failed_scan_memo = None
     config["hardware_info"] = hardware_info
     save_config(config)
     logger.info(f"HardwareDetector: Escaneo finalizado. RAM: {ram_size} | Encoder preferido: '{preferred_encoder}' en {hardware_info['scan_duration_sec']}s")
-    
+
     return hardware_info

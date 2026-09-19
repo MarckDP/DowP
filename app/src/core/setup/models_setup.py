@@ -15,7 +15,7 @@ import sys
 import tempfile
 import zipfile
 import requests
-from core.constants import REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES
+from core.constants import DEPTH_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES
 from core.logger.logger_manager import logger
 from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
@@ -277,6 +277,129 @@ def delete_custom_rembg_model(display_name: str) -> bool:
     save_config(cfg)
     logger.info(f"Modelos IA: modelo personalizado eliminado '{display_name}'")
     return True
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MAPA DE PROFUNDIDAD -- modelos de DEPTH_MODEL_FAMILIES (constants.py). Se
+# diferencian de los de Eliminar Fondo en una sola cosa que obliga a tener
+# funciones propias: un modelo puede ser VARIOS archivos (el .onnx + su
+# model.onnx_data, ver "extra_files"), y solo está instalado si están todos.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def get_depth_families() -> dict:
+    """Catálogo de modelos de profundidad -- fuente única para la UI y el motor
+    (mismo papel que get_all_rembg_families(), sin modelos importados)."""
+    return dict(DEPTH_MODEL_FAMILIES)
+
+
+def get_depth_model_dir(model_info: dict) -> str:
+    return os.path.normpath(os.path.join(get_models_dir(), model_info["folder"]))
+
+
+def get_depth_model_path(model_info: dict) -> str:
+    """Ruta al .onnx principal, el que se le pasa a onnxruntime."""
+    return os.path.join(get_depth_model_dir(model_info), model_info["file"])
+
+
+def _depth_files(model_info: dict) -> list[dict]:
+    """El .onnx principal + sus extra_files, todos con file/url/size_bytes."""
+    main = {"file": model_info["file"], "url": model_info["url"],
+            "size_bytes": model_info.get("size_bytes", 0)}
+    return [main, *model_info.get("extra_files", [])]
+
+
+def is_depth_model_installed(model_info: dict) -> bool:
+    folder = get_depth_model_dir(model_info)
+    for entry in _depth_files(model_info):
+        path = os.path.join(folder, entry["file"])
+        # Un grafo con los pesos aparte pesa unos cientos de KB, así que el
+        # mínimo de 1 KB (mismo que is_rembg_model_installed) sirve igual.
+        if not os.path.exists(path) or os.path.getsize(path) <= 1024:
+            return False
+    return True
+
+
+def get_depth_model_size_bytes(model_info: dict) -> int:
+    """Peso total a descargar: el .onnx más sus extra_files."""
+    return sum(int(entry.get("size_bytes") or 0) for entry in _depth_files(model_info))
+
+
+def get_depth_model_disk_size(model_info: dict) -> int:
+    """Lo que ocupa en disco lo instalado de ESTE modelo. No sirve medir la
+    carpeta: los dos Depth Anything V2 Small (FP32 y FP16) comparten carpeta y
+    cada uno sumaría el peso del otro."""
+    folder = get_depth_model_dir(model_info)
+    return sum(get_folder_size(os.path.join(folder, entry["file"])) for entry in _depth_files(model_info))
+
+
+def download_depth_model(model_info: dict, progress_callback=None) -> tuple[bool, str]:
+    """Descarga todos los archivos del modelo, uno detrás de otro, cada uno con
+    su .part temporal y rename al terminar (mismo criterio que
+    download_rembg_model). El porcentaje es del modelo COMPLETO, repartido según
+    el peso de cada archivo -- si no, el grafo de 600 KB de DA3 marcaría 100% al
+    instante y la barra volvería a 0% al empezar los pesos."""
+    folder = get_depth_model_dir(model_info)
+    files = _depth_files(model_info)
+    total_expected = sum(int(f.get("size_bytes") or 0) for f in files) or 1
+    done_before = 0
+    part_path = None
+    try:
+        os.makedirs(folder, exist_ok=True)
+        for entry in files:
+            target_path = os.path.join(folder, entry["file"])
+            part_path = target_path + ".part"
+            expected = int(entry.get("size_bytes") or 0)
+
+            logger.info(f"Descargando modelo de profundidad desde {entry['url']}")
+            r = requests.get(entry["url"], stream=True, timeout=30)
+            r.raise_for_status()
+            file_total = int(r.headers.get("content-length", 0)) or expected
+            downloaded = 0
+            with open(part_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_callback and file_total > 0:
+                            share = expected if expected else file_total
+                            done = done_before + share * min(1.0, downloaded / file_total)
+                            progress_callback(min(100, int(done / total_expected * 100)))
+
+            if os.path.exists(target_path):
+                os.remove(target_path)
+            os.rename(part_path, target_path)
+            part_path = None
+            done_before += expected
+
+        if not is_depth_model_installed(model_info):
+            return False, QCoreApplication.translate("models_setup", "El archivo descargado quedó vacío o incompleto.")
+        logger.info(f"Modelo de profundidad instalado en {folder}")
+        return True, QCoreApplication.translate("models_setup", "Modelo descargado correctamente.")
+    except Exception as e:
+        logger.error(f"Error descargando modelo de profundidad '{model_info.get('folder')}': {e}")
+        try:
+            if part_path and os.path.exists(part_path):
+                os.remove(part_path)
+        except Exception:
+            pass
+        return False, str(e)
+
+
+def delete_depth_model(model_info: dict) -> bool:
+    """Borra solo los archivos de ESTE modelo (la carpeta puede ser compartida,
+    ver get_depth_model_disk_size) y la carpeta si quedó vacía."""
+    folder = get_depth_model_dir(model_info)
+    try:
+        for entry in _depth_files(model_info):
+            path = os.path.join(folder, entry["file"])
+            if os.path.exists(path):
+                os.remove(path)
+        if os.path.isdir(folder) and not os.listdir(folder):
+            os.rmdir(folder)
+        return True
+    except Exception as e:
+        logger.error(f"Error eliminando modelo de profundidad '{model_info.get('folder')}': {e}")
+        return False
 
 
 def _engine_dir(tool_info: dict) -> str:

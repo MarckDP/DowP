@@ -67,7 +67,13 @@ class ImageConverter:
     gui/tabs/image_tools/image_convert_worker.py)."""
 
     def convert_file(self, input_path: str, output_path: str, options: dict,
-                      progress_callback=None, cancellation_event=None) -> tuple[bool, str]:
+                      progress_callback=None, cancellation_event=None,
+                      info: dict | None = None) -> tuple[bool, str]:
+        """`info`, si se pasa, se rellena con datos del proceso de ESTE archivo
+        que quien llama puede querer mostrar -- hoy solo "depth_process_size"
+        ((ancho, alto) al que se calculó el Mapa de Profundidad, ver
+        ImageConvertWorker.file_depth_info). Va por parámetro y no como
+        atributo porque esta clase es adrede sin estado entre llamadas."""
         def report(pct, stage="processing"):
             if progress_callback:
                 try:
@@ -119,10 +125,26 @@ class ImageConverter:
                 if cancellation_event and cancellation_event.is_set():
                     return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
+                # Mapa de Profundidad -- DESPUÉS de Eliminar Fondo a propósito: el
+                # recorte solo toca el alfa, así que el modelo sigue viendo la
+                # escena completa y el mapa hereda ese alfa (solo la profundidad
+                # del sujeto). Antes de Reescalar/Canvas, que trabajan sobre lo
+                # que salga de aquí.
+                if options.get("depth_enabled", False):
+                    report(70, "depth")
+                    img, process_size = self._apply_depth(img, options, report)
+                    if info is not None:
+                        info["depth_process_size"] = process_size
+                    report(72, "depth")
+                if cancellation_event and cancellation_event.is_set():
+                    return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
+
                 # Reescalar IA -- son ejes independientes de Eliminar Fondo, no se
                 # descartan entre sí (se puede recortar Y reescalar en el mismo lote).
                 if options.get("upscale_enabled", False):
-                    report(70, "upscale")
+                    report(72, "upscale")
+                    # Los motores de reescalado trabajan con imágenes de 8 bits.
+                    img = self._downconvert_16bit(img)
                     img = self._apply_ai_upscale(img, options, cancellation_event, report)
                     report(85, "upscale")
 
@@ -130,7 +152,7 @@ class ImageConverter:
                 # guardar, mismo orden que DowP1 (resize -> upscale IA -> canvas).
                 if options.get("canvas_enabled", False):
                     report(85, "canvas")
-                    img = self._apply_canvas(img, options)
+                    img = self._apply_canvas(self._downconvert_16bit(img), options)
                     report(92, "canvas")
 
                 report(93, "saving")
@@ -394,6 +416,35 @@ class ImageConverter:
         expand = int(options.get("rembg_expand", 0) or 0)
         return apply_alpha_postprocess(img, smooth, expand)
 
+    def _apply_depth(self, img, options: dict, progress_callback=None):
+        """Corre Mapa de Profundidad (ver core/tabs/image_tools/depth_engine.py)
+        sobre `img`. Devuelve (mapa, (ancho, alto) de proceso)."""
+        from core.tabs.image_tools.depth_engine import estimate_depth
+
+        def depth_cb(pct=None, *args):
+            if progress_callback:
+                try:
+                    progress_callback(pct, "depth")
+                except TypeError:
+                    progress_callback(pct)
+
+        # Una fuente de 16 bits (PNG/TIFF en gris) se baja a 8 bits antes: el
+        # convert("RGB") del motor recortaría sus valores en vez de escalarlos.
+        return estimate_depth(self._downconvert_16bit(img), options, progress_callback=depth_cb)
+
+    @staticmethod
+    def _downconvert_16bit(img):
+        """Gris de 16 bits (el Mapa de Profundidad con "Salida de 16 bits") ->
+        gris de 8 bits. Hace falta en todo paso que no sea guardar en PNG/TIFF:
+        el convert("RGB"/"L") de Pillow sobre "I;16" RECORTA los valores a 255 en
+        vez de escalarlos, y el mapa saldría casi entero en blanco."""
+        if img.mode not in ("I;16", "I;16L", "I;16B", "I"):
+            return img
+        import numpy as np
+        values = np.asarray(img, dtype=np.float64)
+        max_value = 65535.0 if img.mode.startswith("I;16") else max(1.0, float(values.max()))
+        return Image.fromarray(np.clip(values / max_value * 255 + 0.5, 0, 255).astype(np.uint8))
+
     def _apply_canvas(self, img, options: dict):
         """Canvas como ajuste de LOTE (preset elegido en el popover, clic derecho) --
         puerto directo de _apply_canvas_by_option/_calculate_canvas_position de
@@ -502,6 +553,10 @@ class ImageConverter:
         writer = writers.get(output_format)
         if not writer:
             raise Exception(QCoreApplication.translate("image_converter", "Formato de salida no soportado: {0}").format(output_format))
+        # Solo PNG y TIFF guardan gris de 16 bits; el resto recibe la versión de
+        # 8 bits bien escalada (ver _downconvert_16bit).
+        if output_format not in ("PNG", "TIFF"):
+            img = self._downconvert_16bit(img)
         writer(img, output_path, options)
 
     def _flatten_to_rgb_white(self, img):
@@ -511,6 +566,7 @@ class ImageConverter:
         el RGB de los píxeles transparentes suele ser (0,0,0) -- el resultado
         salía negro en vez de con fondo blanco (bug real, reportado por el
         usuario). Mismo criterio que ya usaba _save_as_jpg, ahora compartido."""
+        img = self._downconvert_16bit(img)
         if img.mode in ("RGBA", "LA", "PA"):
             background = Image.new("RGB", img.size, (255, 255, 255))
             background.paste(img, mask=img.split()[-1])
@@ -518,6 +574,12 @@ class ImageConverter:
         return img.convert("RGB")
 
     def _save_as_png(self, img, output_path, options):
+        if img.mode.startswith("I;16") or img.mode == "L":
+            # Escala de grises (el Mapa de Profundidad, en 8 o 16 bits): se guarda
+            # tal cual. _flatten_to_rgb_white la pasaría a RGB -- tres canales
+            # idénticos, el triple de peso, y los de 16 bits bajados a 8.
+            img.save(output_path, "PNG", compress_level=options.get("png_compression", 6))
+            return
         if options.get("png_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
             save_img = img
         else:
@@ -643,7 +705,9 @@ class ImageConverter:
                 logger.info(f"Convertir SVG: vtracer -> {result.stdout.strip()}")
 
     def _save_as_tiff(self, img, output_path, options):
-        if options.get("tiff_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
+        if img.mode.startswith("I;16") or img.mode == "L":
+            save_img = img  # Escala de grises, ver _save_as_png.
+        elif options.get("tiff_transparency", True) and img.mode in ("RGBA", "LA", "PA"):
             save_img = img
         else:
             save_img = self._flatten_to_rgb_white(img)

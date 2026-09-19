@@ -5,8 +5,9 @@ import threading
 from PySide6.QtCore import QThread, Signal
 
 from core.logger.logger_manager import logger
-from core.tabs.image_tools import rembg_engine
+from core.tabs.image_tools import depth_engine, rembg_engine
 from core.tabs.image_tools.image_converter import ImageConverter
+from core.utils import onnx_sessions
 from core.utils.config_manager import get_config
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup
 
@@ -34,6 +35,10 @@ class ImageConvertWorker(QThread):
     busy_indeterminate = Signal(str, bool, str)
     file_status_changed = Signal(str, str)    # filepath, texto de estado
     file_completed = Signal(str, str)         # input_path, output_path -- solo en éxito
+    # input_path, ancho, alto -- resolución a la que se calculó el Mapa de
+    # Profundidad de ese archivo. Se emite ANTES de file_completed, así quien la
+    # use ya la tiene al mostrar el resultado (ver ImageToolsTab._depth_process_sizes).
+    file_depth_info = Signal(str, int, int)
     finished_signal = Signal(int, int)        # completados, total
 
     def __init__(self, filepaths: list[str], options: dict, titles: dict | None = None,
@@ -71,6 +76,13 @@ class ImageConvertWorker(QThread):
             scale = str(self.options.get("upscale_scale") or "").strip().lower().replace("x", "")
             if scale:
                 base_name = f"{base_name}_x{scale}"
+        # Mapa de Profundidad: el resultado ya no es la foto sino un mapa en
+        # grises, así que lleva "_depth" -- mismo criterio que la escala de
+        # arriba, y evita que con "No Convertir" en la misma carpeta el mapa
+        # choque con el nombre del original. Sufijo fijo en inglés, como "_x4":
+        # es parte del nombre de archivo, no texto de la interfaz.
+        if self.options.get("depth_enabled", False):
+            base_name = f"{base_name}_depth"
         filename = base_name + ext
 
         output_folder = (self.options.get("output_folder") or "").strip()
@@ -88,10 +100,19 @@ class ImageConvertWorker(QThread):
         # y más traba la pantalla) en cada conversión. Ver rembg_engine.py y
         # models_page.py::_on_persist_sessions_toggled (ese desmarcado libera al
         # toque, no hace falta esperar aquí a que corra otro lote).
+        #
+        # Si el lote usa los dos motores ONNX (Eliminar Fondo + Mapa de
+        # Profundidad), la caché compartida tiene que poder tener los dos modelos
+        # a la vez durante el lote -- con el límite por defecto de 1, cada imagen
+        # cargaría y tiraría ambos (ver onnx_sessions.set_min_capacity).
+        onnx_sessions.set_min_capacity(
+            int(bool(self.options.get("rembg_enabled"))) + int(bool(self.options.get("depth_enabled"))))
         rembg_engine.prepare_session(self.options)
+        depth_engine.prepare_session(self.options)
         try:
             self._run_batch()
         finally:
+            onnx_sessions.set_min_capacity(0)
             if not get_config().get("rembg_persist_sessions", False):
                 rembg_engine.clear_sessions()
 
@@ -137,11 +158,13 @@ class ImageConvertWorker(QThread):
                     self.busy_indeterminate.emit(_filepath, False, stage_str)
                     self.file_progress.emit(_filepath, int(round(pct)), stage_str)
 
+            info = {}
             try:
                 success, message = self._converter.convert_file(
                     read_path, output_path, self.options,
                     progress_callback=progress_cb,
                     cancellation_event=self.cancellation_event,
+                    info=info,
                 )
             except Exception as e:
                 logger.error(f"ImageConvertWorker: fallo inesperado con {filepath}: {e}")
@@ -151,6 +174,9 @@ class ImageConvertWorker(QThread):
                 commit_backup(backup_path)
                 completed += 1
                 self.file_status_changed.emit(filepath, self.tr("Completado"))
+                depth_size = info.get("depth_process_size")
+                if depth_size:
+                    self.file_depth_info.emit(filepath, int(depth_size[0]), int(depth_size[1]))
                 self.file_completed.emit(filepath, output_path)
             else:
                 rollback_backup(backup_path)

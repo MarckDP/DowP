@@ -105,6 +105,14 @@ class CompareViewer(QGraphicsView):
         # es el mismo a los dos lados del toggle, no dos etiquetas parecidas.
         self._lbl_before = create_viewer_info_chip(self)
         self._lbl_after = create_viewer_info_chip(self)
+        # Nota bajo "Resultado" (hoy: "920×518 calculado" del Mapa de
+        # Profundidad, ver ImageToolsTab._show_compare_view). Mismo chip, con el
+        # texto en amarillo fijo en vez de un token del tema: el fondo del chip
+        # es negro translúcido en los DOS temas, y el amarillo del tema claro
+        # (estado_aviso, un ocre oscuro) apenas se leería encima.
+        self._lbl_after_note = create_viewer_info_chip(self)
+        self._lbl_after_note.setStyleSheet(
+            self._lbl_after_note.styleSheet() + "\nQLabel { color: #FFD24A; }")
 
     def _build_checker_tile(self) -> QPixmap:
         square = 10
@@ -181,6 +189,19 @@ class CompareViewer(QGraphicsView):
         self._position_chips()
         self._position_handle()
 
+    def set_after_note(self, text: str, tooltip: str = ""):
+        """Nota corta en amarillo bajo el chip de "Resultado"; texto vacío la
+        oculta. Quien muestra la comparación decide si hace falta -- set_images()
+        no la toca, así que hay que llamarla (o limpiarla) en cada archivo."""
+        if not text:
+            self._lbl_after_note.hide()
+            return
+        self._lbl_after_note.setText(text)
+        self._lbl_after_note.setToolTip(tooltip)
+        self._lbl_after_note.adjustSize()
+        self._lbl_after_note.show()
+        self._position_chips()
+
     def before_pixmap(self) -> QPixmap:
         return self._before_item.pixmap()
 
@@ -196,6 +217,7 @@ class CompareViewer(QGraphicsView):
         self._scene.setSceneRect(0, 0, 1, 1)
         self._lbl_before.hide()
         self._lbl_after.hide()
+        self._lbl_after_note.hide()
         self._handle.hide()
 
     # ------------------------------------------------------------------
@@ -302,3 +324,6 @@ class CompareViewer(QGraphicsView):
         margin = VIEWER_CHIP_MARGIN
         self._lbl_before.move(margin, margin)
         self._lbl_after.move(max(margin, self.width() - self._lbl_after.width() - margin), margin)
+        self._lbl_after_note.move(
+            max(margin, self.width() - self._lbl_after_note.width() - margin),
+            margin + self._lbl_after.height() + 4)
