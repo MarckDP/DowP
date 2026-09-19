@@ -42,6 +42,13 @@ def format_bytes_compact(bytes_size: int) -> str:
 class BaseCacheProvider(ABC):
     """Clase base abstracta para cualquier proveedor de caché en la aplicación."""
 
+    # Agrupación puramente visual para Ajustes > Memoria y Caché (ver memory_cache_page.py) --
+    # "local" (archivos propios del usuario: miniaturas, waveforms, proxies, indexación) vs.
+    # "web" (orígenes remotos: Freesound, Wikimedia, Pixabay, Pexels, Openverse). No es
+    # abstracto a propósito: un proveedor nuevo que no lo declare cae en "general" sin romper
+    # nada, en vez de forzar a tocar esta clase base cada vez.
+    scope: str = "general"
+
     @property
     @abstractmethod
     def key(self) -> str:
@@ -90,6 +97,8 @@ class BaseCacheProvider(ABC):
 class ImageThumbnailCacheProvider(BaseCacheProvider):
     """Proveedor de caché para imágenes y miniaturas generadas."""
 
+    scope = "local"
+
     @property
     def key(self) -> str:
         return "thumbnails"
@@ -137,6 +146,8 @@ class ImageThumbnailCacheProvider(BaseCacheProvider):
 
 class IndexingMetadataCacheProvider(BaseCacheProvider):
     """Proveedor de caché para indexación y metadatos extraídos con FFprobe."""
+
+    scope = "local"
 
     @property
     def key(self) -> str:
@@ -196,7 +207,10 @@ class IndexingMetadataCacheProvider(BaseCacheProvider):
 
 class FreesoundPreviewCacheProvider(BaseCacheProvider):
     """Proveedor de caché para previsualizaciones de audio/video de medios web (Freesound,
-    Wikimedia, ...) — máximo MAX_FREESOUND_CACHE_FILES archivos LRU, compartido entre orígenes."""
+    Wikimedia, Pixabay, Pexels, ...) — máximo MAX_FREESOUND_CACHE_FILES archivos LRU,
+    compartido entre orígenes."""
+
+    scope = "web"
 
     @property
     def key(self) -> str:
@@ -209,7 +223,7 @@ class FreesoundPreviewCacheProvider(BaseCacheProvider):
     @property
     def description(self) -> str:
         from core.tabs.editing_media.freesound_preview_cache import MAX_FREESOUND_CACHE_FILES
-        return QCoreApplication.translate("FreesoundPreviewCacheProvider", "Audios/videos en caché local para preescucha instantánea al explorar medios web (Freesound, Wikimedia, máx {0} archivos).").format(MAX_FREESOUND_CACHE_FILES)
+        return QCoreApplication.translate("FreesoundPreviewCacheProvider", "Audios/videos en caché local para preescucha instantánea al explorar medios web (Freesound, Wikimedia, Pixabay, Pexels, máx {0} archivos).").format(MAX_FREESOUND_CACHE_FILES)
 
     def get_stats(self) -> Dict[str, Any]:
         from core.utils.paths import get_freesound_cache_dir
@@ -247,6 +261,8 @@ class FreesoundPreviewCacheProvider(BaseCacheProvider):
 
 class WaveformCacheProvider(BaseCacheProvider):
     """Proveedor de caché para las ondas de audio cacheadas (waveforms)."""
+
+    scope = "local"
 
     @property
     def key(self) -> str:
@@ -298,6 +314,8 @@ class ProxyCacheProvider(BaseCacheProvider):
     """Proveedor de caché para los proxies de previsualización (video de baja resolución para
     scrubbing fluido de medios pesados/RAW en Herramientas Multimedia)."""
 
+    scope = "local"
+
     @property
     def key(self) -> str:
         return "video_proxies"
@@ -338,6 +356,8 @@ class ProxyCacheProvider(BaseCacheProvider):
 class RemoteThumbnailCacheProvider(BaseCacheProvider):
     """Proveedor de caché para miniaturas ya renderizadas por un origen web (ej. thumburl de
     Wikimedia) — separado del caché de previsualización de audio/video de arriba."""
+
+    scope = "web"
 
     @property
     def key(self) -> str:
@@ -402,12 +422,14 @@ class CacheManager:
         self._register_default_providers()
 
     def _register_default_providers(self):
-        """Registra los proveedores por defecto de la aplicación."""
+        """Registra los proveedores por defecto de la aplicación. Orden agrupado por scope
+        (local primero, web después) para que coincida con el agrupado visual de
+        memory_cache_page.py incluso si algo llegara a iterar get_providers() directamente."""
         self.register_provider(ImageThumbnailCacheProvider())
         self.register_provider(IndexingMetadataCacheProvider())
-        self.register_provider(FreesoundPreviewCacheProvider())
         self.register_provider(WaveformCacheProvider())
         self.register_provider(ProxyCacheProvider())
+        self.register_provider(FreesoundPreviewCacheProvider())
         self.register_provider(RemoteThumbnailCacheProvider())
 
 

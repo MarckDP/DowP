@@ -36,6 +36,8 @@ def get_config():
         "auto_paste_url": True,
         "labels": [],
         "default_web_download_dir": "",
+        "pixabay_api_key": "",
+        "pexels_api_key": "",
         "default_subclip_dir": "",
         "editing_media_view_mode": "grid",
         "editing_media_icon_size": 112,

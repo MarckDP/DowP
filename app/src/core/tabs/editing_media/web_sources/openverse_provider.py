@@ -132,18 +132,52 @@ class OpenverseProvider(WebSourceProvider):
         path = urlparse(url or "").path
         return path.rsplit(".", 1)[-1].upper() if "." in path else "-"
 
+    # Formatos sin pérdida -- si un alt_file trae uno de estos, es una señal fuerte de que es
+    # el master real aunque no reporte filesize (ver _map_item).
+    _LOSSLESS_FILETYPES = {"wav", "flac", "aiff", "aif"}
+
+    def _pick_best_audio_file(self, r: dict) -> dict:
+        """Elige qué archivo es "el original" a descargar. Confirmado contra la API real: para
+        audio agregado desde Freesound, el "url" principal de Openverse es en realidad la
+        PREVIEW comprimida de Freesound (mp3 ~128kbps), no el original -- el archivo real
+        (ej. wav sin comprimir) viene aparte en "alt_files", que hasta ahora no se leía en
+        absoluto (ni para elegir qué descargar ni para el nombre/extensión mostrados). Para
+        fuentes sin alt_files (ej. Jamendo) esto no cambia nada: "url" sigue siendo la única
+        opción. Se compara por filesize (con desempate a favor de formatos sin pérdida) para
+        no arriesgarse a "degradar" por error si algún alt_file resultara ser peor."""
+        candidates = [{"url": r.get("url"), "filetype": r.get("filetype"), "filesize": r.get("filesize") or 0}]
+        for alt in (r.get("alt_files") or []):
+            if alt.get("url"):
+                candidates.append({"url": alt["url"], "filetype": alt.get("filetype"), "filesize": alt.get("filesize") or 0})
+        return max(candidates, key=lambda c: (c["filesize"], (c.get("filetype") or "").lower() in self._LOSSLESS_FILETYPES))
+
     def _map_item(self, r: dict, media_kind: str):
         url = r.get("url")
         if not url:
             return None
 
         title = (r.get("title") or "").strip() or QCoreApplication.translate("OpenverseProvider", "Sin título")
-        ext = self._guess_ext(r.get("filetype"), url)
+
+        # "ruta" (lo que se previsualiza/reproduce/usa para el waveform) se queda SIEMPRE en
+        # la preview liviana ("url"). "download_url" (lo que realmente se descarga vía
+        # download()) apunta al mejor candidato real -- solo difiere de "ruta" para audio con
+        # alt_files (ver _pick_best_audio_file). El nombre/extensión/tamaño mostrados
+        # describen ese archivo real, no la preview, para no guardar bytes de un formato con
+        # la extensión de otro.
+        if media_kind == "audio":
+            best = self._pick_best_audio_file(r)
+            download_url = best["url"]
+            ext = self._guess_ext(best["filetype"], download_url)
+            display_filesize = best["filesize"]
+        else:
+            download_url = url
+            ext = self._guess_ext(r.get("filetype"), url)
+            display_filesize = r.get("filesize")
+
         name = title if ext != "-" and title.lower().endswith(f".{ext.lower()}") else f"{title}.{ext}" if ext != "-" else title
 
-        filesize = r.get("filesize")
-        if filesize:
-            size_kb = filesize / 1024.0
+        if display_filesize:
+            size_kb = display_filesize / 1024.0
             size_str = f"{size_kb / 1024.0:.1f} MB" if size_kb > 1024 else f"{size_kb:.1f} KB"
         else:
             size_str = "-"
@@ -153,6 +187,7 @@ class OpenverseProvider(WebSourceProvider):
         item = {
             "nombre": name,
             "ruta": url,
+            "download_url": download_url,
             "tipo": media_kind,
             "file_type": ext,
             "tamaño": size_str,
@@ -182,10 +217,20 @@ class OpenverseProvider(WebSourceProvider):
                 item["duración"] = f"{dur_m:02d}:{dur_s:02d}"
                 item["duration"] = duration_sec
 
+            # A diferencia de Freesound (que da una imagen ya renderizada, "images.waveform_m"),
+            # Openverse ya trae los picos de amplitud como JSON puro en este endpoint --
+            # {"len": N, "points": [0.0-1.0, ...]} -- confirmado contra la API real. No hace
+            # falta descomponer ninguna imagen, ver RemoteWaveformPeaksCacheManager.
+            waveform_url = r.get("waveform")
+            if waveform_url:
+                item["waveform_url"] = waveform_url
+
         return item
 
     def download(self, item_data: dict, dest_dir: str, fallback_name: str, progress_callback=None) -> str:
-        url = item_data.get("ruta")
+        # "download_url" es el original real cuando difiere de "ruta" (ver _pick_best_audio_file);
+        # para ítems sin alt_files (imágenes, o audio de fuentes como Jamendo) son la misma URL.
+        url = item_data.get("download_url") or item_data.get("ruta")
         if not url:
             raise ValueError(QCoreApplication.translate("OpenverseProvider", "No se pudo determinar la URL del archivo de Openverse."))
 

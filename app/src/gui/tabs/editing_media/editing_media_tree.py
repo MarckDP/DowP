@@ -238,11 +238,19 @@ class TreeListMixin:
         if hasattr(self, "btn_add_folder"):
             self.btn_add_folder.setEnabled(not is_online)
 
-        # El login es un control propio de Freesound (único origen con auth por ahora); el
-        # filtro de licencia en cambio aparece para cualquier origen que declare
-        # license_filter_options (hoy Freesound y Wikimedia).
+        # El botón de cuenta/API key es genérico (Freesound, Pixabay, Pexels, ...) -- ver
+        # _update_web_account_button()/_on_web_account_button_clicked() en
+        # editing_media_freesound.py. Freesound se muestra siempre que es el origen activo
+        # (permite iniciar sesión desde acá también); un origen con auth por API key solo se
+        # muestra si ya hay una key vinculada, porque sin ella la página grande ya cubre esa
+        # comunicación y no hace falta duplicar el CTA. El filtro de licencia en cambio
+        # aparece para cualquier origen que declare license_filter_options (hoy Freesound y
+        # Wikimedia).
+        show_account_button = is_freesound_source or (provider is not None and provider.requires_auth and provider.is_authenticated())
         if hasattr(self, "btn_freesound_login"):
-            self.btn_freesound_login.setVisible(is_freesound_source)
+            self.btn_freesound_login.setVisible(show_account_button)
+            if show_account_button and hasattr(self, "_update_web_account_button"):
+                self._update_web_account_button()
 
         license_options = list(getattr(provider, "license_filter_options", []) or []) if provider else []
         if hasattr(self, "license_container"):
@@ -268,12 +276,17 @@ class TreeListMixin:
             self.media_table.setColumnHidden(7, not is_online) # Detalles (Web)
 
         # Si el origen web activo solo soporta un tipo de medio (ej. Freesound = solo audio),
-        # forzar ese filtro y deshabilitar los demás, igual que antes. Si soporta varios tipos
-        # (ej. Wikimedia = imagen/audio/video), dejar los 4 filtros habilitados.
+        # forzar ese filtro y deshabilitar los demás, igual que antes. Si soporta varios pero
+        # no todos (ej. Pixabay/Pexels = imagen+video, SIN audio -- su API pública no expone
+        # búsqueda de audio/música aunque el sitio sí la tenga, ver PixabayProvider), no forzar
+        # nada pero sí apagar el filtro que no aplica -- dejarlo clickeable solo hacía creer
+        # que "no hay resultados" cuando en realidad ese tipo no existe ahí. Si soporta los 3
+        # (ej. Wikimedia), dejar los 4 filtros habilitados como siempre.
         was_forced = getattr(self, "_filter_forced_by_online", False)
+        supported_types = provider.supported_media_types if (is_online and provider) else None
         forced_type = None
-        if is_online and provider and len(provider.supported_media_types) == 1:
-            forced_type = next(iter(provider.supported_media_types))
+        if supported_types and len(supported_types) == 1:
+            forced_type = next(iter(supported_types))
 
         if forced_type:
             for btn in self.filter_buttons:
@@ -286,6 +299,19 @@ class TreeListMixin:
                     btn.setChecked(False)
                     btn.setEnabled(False)
             self._filter_forced_by_online = True
+        elif supported_types:
+            self._filter_forced_by_online = False
+            active_type = resolve_filter_type(getattr(self, "active_filter", "Todos"))
+            if active_type is not None and active_type not in supported_types:
+                # El filtro activo (ej. "Audios") quedó de otro origen y no aplica acá.
+                for btn in self.filter_buttons:
+                    key = btn.property("filter_key") or btn.text()
+                    btn.setChecked(resolve_filter_type(key) is None)
+                self.active_filter = "Todos"
+            for btn in self.filter_buttons:
+                key = btn.property("filter_key") or btn.text()
+                btn_type = resolve_filter_type(key)
+                btn.setEnabled(btn_type is None or btn_type in supported_types)
         else:
             for btn in self.filter_buttons:
                 btn.setEnabled(True)
@@ -403,8 +429,15 @@ class TreeListMixin:
                     return
 
                 if self._web_source_needs_auth(source_id):
-                    if hasattr(self, "media_stack") and hasattr(self, "freesound_login_page"):
-                        self.media_stack.setCurrentWidget(self.freesound_login_page)
+                    if hasattr(self, "media_stack"):
+                        # Freesound usa OAuth2 con su propia página bespoke; cualquier otro
+                        # origen con auth (Pixabay, Pexels, ...) usa la página genérica de API
+                        # key, reconfigurada para este proveedor en particular.
+                        if source_id == "freesound" and hasattr(self, "freesound_login_page"):
+                            self.media_stack.setCurrentWidget(self.freesound_login_page)
+                        elif hasattr(self, "api_key_login_page"):
+                            self.api_key_login_page.configure(provider)
+                            self.media_stack.setCurrentWidget(self.api_key_login_page)
                     self.media_model.set_data([])
                     return
 
@@ -876,6 +909,14 @@ class TreeListMixin:
                 pass
 
         self._update_media_list()
+
+    def _on_web_api_key_saved(self, source_id):
+        """Conectado a ApiKeyLoginWidget.key_saved: recarga la vista (ya autenticada, va a
+        buscar en vez de mostrar la página de key) y refresca el ícono del botón chico de
+        cuenta sin esperar al próximo clic en el árbol."""
+        self._refresh_current_view()
+        if hasattr(self, "_update_web_account_button"):
+            self._update_web_account_button()
 
     def _show_tree_context_menu(self, position):
         item = self.tree_folders.itemAt(position)

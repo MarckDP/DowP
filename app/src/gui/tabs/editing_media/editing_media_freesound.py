@@ -235,21 +235,63 @@ class FreesoundMixin:
                 if hasattr(self, "search_spinner"):
                     self.search_spinner.stop()
 
-    def _update_freesound_login_button(self):
-        """Actualiza el icono y tooltip del botón de login de Freesound según el estado de autenticación."""
+    def _update_web_account_button(self):
+        """Actualiza ícono/tooltip del botón de cuenta junto al buscador, para el origen web
+        activo -- Freesound (OAuth2, con su propio flujo de login/logout) o cualquier otro
+        origen con auth por API key genérica (Pixabay, Pexels, ... -- ver ApiKeyLoginWidget).
+        Reemplaza al viejo _update_freesound_login_button(), que era exclusivo de Freesound."""
         if not hasattr(self, "btn_freesound_login"):
             return
         self.btn_freesound_login.setIconSize(QSize(18, 18))
-        if self.controller.is_freesound_authenticated:
-            username = self.controller.freesound_username or "usuario"
+        source_id = getattr(self, "active_web_source_id", None)
+
+        if source_id == "freesound":
+            if self.controller.is_freesound_authenticated:
+                username = self.controller.freesound_username or "usuario"
+                self.btn_freesound_login.setIcon(get_svg_icon("person.svg"))
+                self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Conectado como: {0} (clic para cerrar sesión)").format(username))
+            else:
+                self.btn_freesound_login.setIcon(get_svg_icon("login.svg"))
+                self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Iniciar sesión con Freesound"))
+            return
+
+        provider = getattr(self, "web_providers", {}).get(source_id)
+        if provider is not None and provider.is_authenticated():
             self.btn_freesound_login.setIcon(get_svg_icon("person.svg"))
-            self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Conectado como: {0} (clic para cerrar sesión)").format(username))
-        else:
-            self.btn_freesound_login.setIcon(get_svg_icon("login.svg"))
-            self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "Iniciar sesión con Freesound"))
+            self.btn_freesound_login.setToolTip(QCoreApplication.translate("FreesoundMixin", "API key de {0} vinculada (clic para desvincular)").format(provider.display_name))
+
+    def _on_web_account_button_clicked(self):
+        """Maneja el clic en el botón de cuenta junto al buscador, para el origen web activo.
+        Freesound conserva su flujo propio de login/logout OAuth2 (_on_freesound_login_clicked,
+        también usado por el botón grande de su página de login); cualquier otro origen con
+        auth por API key se desvincula acá para poder cargar una key distinta."""
+        source_id = getattr(self, "active_web_source_id", None)
+        if source_id == "freesound":
+            self._on_freesound_login_clicked()
+            return
+
+        provider = getattr(self, "web_providers", {}).get(source_id)
+        if provider is None or not provider.is_authenticated():
+            return
+
+        reply = QMessageBox.question(
+            self,
+            QCoreApplication.translate("FreesoundMixin", "Desvincular API Key"),
+            QCoreApplication.translate("FreesoundMixin", "¿Deseas desvincular la API key de {0}? Podrás cargar una nueva.").format(provider.display_name),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            provider.set_api_key("")
+            self._update_web_account_button()
+            self.online_results = []
+            self.current_page = 1
+            self._update_media_list()
 
     def _on_freesound_login_clicked(self):
-        """Maneja el clic en el botón de login/logout de Freesound."""
+        """Maneja el clic en el flujo de login/logout OAuth2 de Freesound (botón grande de
+        freesound_login_page, y el botón chico junto al buscador cuando el origen activo es
+        Freesound -- ver _on_web_account_button_clicked)."""
         if self.controller.is_freesound_authenticated:
             # Ya autenticado → preguntar si desea cerrar sesión
             reply = QMessageBox.question(
@@ -261,7 +303,7 @@ class FreesoundMixin:
             )
             if reply == QMessageBox.Yes:
                 self.controller.clear_freesound_auth()
-                self._update_freesound_login_button()
+                self._update_web_account_button()
                 self.online_results = []
                 self.current_page = 1
                 self._update_media_list()
@@ -291,7 +333,7 @@ class FreesoundMixin:
         """Callback cuando la autenticación OAuth2 es exitosa."""
         self.controller.freesound_auth.update(auth_data)
         self.controller.save_data()
-        self._update_freesound_login_button()
+        self._update_web_account_button()
         self.current_page = 1
         self.online_results = []
         self._exec_online_search()

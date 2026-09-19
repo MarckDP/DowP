@@ -240,18 +240,41 @@ class MemoryCachePage(QWidget):
         lbl_sec_title.setStyleSheet("color: #dddddd; font-size: 13px; font-weight: bold; margin-top: 8px;")
         self.content_layout.addWidget(lbl_sec_title)
 
-        # Construir tarjetas de proveedores registrados en CacheManager
+        # Construir tarjetas de proveedores registrados en CacheManager, agrupadas por scope
+        # ("local": archivos propios del usuario -- miniaturas, waveforms, proxies, indexación;
+        # "web": orígenes remotos -- Freesound, Wikimedia, Pixabay, Pexels, Openverse). Antes
+        # el orden era simplemente el de registro en CacheManager, que las mezclaba sin ningún
+        # criterio visual (ver conversación: "choque visual", tarjetas de web y local
+        # intercaladas). Agrupar acá, no solo reordenar el registro, para que la separación no
+        # dependa de que nadie mantenga el orden correcto en _register_default_providers().
         cache_mgr = CacheManager.get_instance()
+        providers_by_scope: dict[str, list] = {}
         for provider in cache_mgr.get_providers():
-            card = CacheCard(
-                key=provider.key,
-                name=provider.name,
-                description=provider.description,
-                on_clear_callback=self.on_clear_single_clicked,
-                parent=self.scroll_content
-            )
-            self.cache_cards[provider.key] = card
-            self.content_layout.addWidget(card)
+            providers_by_scope.setdefault(getattr(provider, "scope", "general"), []).append(provider)
+
+        scope_order = ["local", "web", "general"]
+        scope_labels = {
+            "local": self.tr("Medios Locales"),
+            "web": self.tr("Medios Web"),
+            "general": self.tr("General"),
+        }
+        for scope in scope_order:
+            providers = providers_by_scope.pop(scope, [])
+            if not providers:
+                continue
+            lbl_group = QLabel(scope_labels[scope])
+            lbl_group.setStyleSheet("color: #777777; font-size: 10px; font-weight: bold; letter-spacing: 1px; margin-top: 4px;")
+            self.content_layout.addWidget(lbl_group)
+            for provider in providers:
+                card = CacheCard(
+                    key=provider.key,
+                    name=provider.name,
+                    description=provider.description,
+                    on_clear_callback=self.on_clear_single_clicked,
+                    parent=self.scroll_content
+                )
+                self.cache_cards[provider.key] = card
+                self.content_layout.addWidget(card)
 
         # Tarjeta reservada para futuras cachés
         self.content_layout.addWidget(FutureCacheCard(parent=self.scroll_content))

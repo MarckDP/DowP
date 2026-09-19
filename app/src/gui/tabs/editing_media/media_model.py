@@ -37,6 +37,10 @@ class MediaTableModel(QAbstractTableModel):
         remote_thumb_mgr = RemoteThumbnailCacheManager.get_instance()
         remote_thumb_mgr.thumbnail_ready.connect(self._on_remote_thumbnail_loaded)
 
+        from core.tabs.editing_media.remote_waveform_peaks_cache_manager import RemoteWaveformPeaksCacheManager
+        remote_wf_peaks_mgr = RemoteWaveformPeaksCacheManager.get_instance()
+        remote_wf_peaks_mgr.peaks_ready.connect(self._on_remote_waveform_peaks_loaded)
+
         # Para caché rápido de íconos base y colores
         self._icon_cache = {}
         
@@ -287,6 +291,26 @@ class MediaTableModel(QAbstractTableModel):
                         icon_size = QSize(80, 80) if self._view_mode == "grid" else QSize(18, 18)
                         return render_waveform_icon(peaks, icon_size)
 
+                # Picos de amplitud ya calculados por el origen web como JSON puro (ej.
+                # waveform_url de Openverse) -- a diferencia de la rama de arriba (imagen que
+                # hay que decodificar), acá es solo bajar y parsear un JSON chico, así que sí
+                # vale la pena pedirlo proactivamente por cada fila visible, igual que
+                # request_thumbnail() más abajo.
+                if tipo == "audio" and item.get("waveform_url"):
+                    waveform_url = item["waveform_url"]
+                    from core.tabs.editing_media.remote_waveform_peaks_cache_manager import RemoteWaveformPeaksCacheManager
+                    remote_wf_peaks_mgr = RemoteWaveformPeaksCacheManager.get_instance()
+                    peaks = remote_wf_peaks_mgr.get_cached_peaks(waveform_url)
+                    icon_size = QSize(80, 80) if self._view_mode == "grid" else QSize(18, 18)
+                    if peaks is not None:
+                        from core.tabs.editing_media.waveform_cache_manager import render_waveform_icon
+                        return render_waveform_icon(peaks, icon_size)
+                    remote_wf_peaks_mgr.request_peaks(waveform_url)
+                    if self._view_mode == "grid":
+                        return self.get_cached_icon("music_note.svg_placeholder", "#3498db")
+                    else:
+                        return self.get_cached_icon("music_note.svg", "#3498db", size=18)
+
                 # Miniatura ya renderizada por el origen web (ej. thumburl de Wikimedia, tanto
                 # para imagen como para video) — se cachea localmente sin descargar el archivo
                 # original completo. El audio no tiene una miniatura real, cae al placeholder.
@@ -298,7 +322,7 @@ class MediaTableModel(QAbstractTableModel):
                     cached_icon = remote_thumb_mgr.get_cached_qicon(thumb_url, icon_size)
                     if cached_icon:
                         return cached_icon
-                    remote_thumb_mgr.request_thumbnail(thumb_url)
+                    remote_thumb_mgr.request_thumbnail(thumb_url, fallback_url=item.get("ruta"))
                     placeholder_name = "movie.svg" if tipo == "video" else "image.svg"
                     placeholder_color = "#9b59b6" if tipo == "video" else "#2ecc71"
                     if self._view_mode == "grid":
@@ -389,6 +413,14 @@ class MediaTableModel(QAbstractTableModel):
         de descargarse y cachearse localmente."""
         for i, item in enumerate(self._media_items):
             if item.get("thumb_url") == thumb_url:
+                idx = self.index(i, 0)
+                self.dataChanged.emit(idx, idx, [Qt.DecorationRole])
+
+    def _on_remote_waveform_peaks_loaded(self, waveform_url: str, peaks: list):
+        """Se llama cuando los picos de forma de onda de un origen web con JSON ya calculado
+        (ej. waveform_url de Openverse) terminan de descargarse."""
+        for i, item in enumerate(self._media_items):
+            if item.get("waveform_url") == waveform_url:
                 idx = self.index(i, 0)
                 self.dataChanged.emit(idx, idx, [Qt.DecorationRole])
 

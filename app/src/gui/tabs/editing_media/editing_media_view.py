@@ -207,11 +207,15 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         from core.tabs.editing_media.web_sources.freesound_provider import FreesoundProvider
         from core.tabs.editing_media.web_sources.wikimedia_provider import WikimediaProvider
         from core.tabs.editing_media.web_sources.openverse_provider import OpenverseProvider
+        from core.tabs.editing_media.web_sources.pixabay_provider import PixabayProvider
+        from core.tabs.editing_media.web_sources.pexels_provider import PexelsProvider
         self.freesound_client = FreesoundClient()
         self.web_providers = {
             "freesound": FreesoundProvider(self.freesound_client, self.controller),
             "wikimedia": WikimediaProvider(),
             "openverse": OpenverseProvider(),
+            "pixabay": PixabayProvider(),
+            "pexels": PexelsProvider(),
         }
         self.active_web_source_id = None
         self.search_timer = QTimer(self)
@@ -502,9 +506,9 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                 background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')};
             }}
         """)
-        self.btn_freesound_login.clicked.connect(self._on_freesound_login_clicked)
+        self.btn_freesound_login.clicked.connect(self._on_web_account_button_clicked)
         self.btn_freesound_login.setVisible(False)
-        self._update_freesound_login_button()
+        self._update_web_account_button()
         search_layout.addWidget(self.btn_freesound_login)
 
         layout.addLayout(search_layout)
@@ -708,9 +712,17 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         login_page_layout.addWidget(self.freesound_login_msg_label)
         login_page_layout.addWidget(self.btn_freesound_login_big, 0, Qt.AlignCenter)
 
+        # 4. Página genérica de "necesitás una API key" para orígenes sin OAuth (Pixabay,
+        # Pexels, ...) -- una sola instancia, se reconfigura por proveedor antes de mostrarse
+        # (ver ApiKeyLoginWidget.configure()).
+        from gui.tabs.editing_media.api_key_login_widget import ApiKeyLoginWidget
+        self.api_key_login_page = ApiKeyLoginWidget()
+        self.api_key_login_page.key_saved.connect(self._on_web_api_key_saved)
+
         self.media_stack.addWidget(self.media_table) # Index 0: Lista Tabular SoundQ
         self.media_stack.addWidget(self.media_list)  # Index 1: Cuadrícula Cards
         self.media_stack.addWidget(self.freesound_login_page)  # Index 2: Inicia sesión Freesound
+        self.media_stack.addWidget(self.api_key_login_page)  # Index 3: API key genérica (Pixabay, Pexels, ...)
 
         layout.addWidget(self.media_stack, 1)
 

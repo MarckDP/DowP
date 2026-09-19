@@ -19,9 +19,25 @@ class WebSourceProvider:
     # devolver para ese ítem.
     license_filter_options: list = []
 
+    # Contrato opcional para orígenes con auth por API key simple (a diferencia de Freesound,
+    # que usa OAuth2 con su propia página de login) -- ver
+    # gui/tabs/editing_media/api_key_login_widget.py::ApiKeyLoginWidget, que reconfigura una
+    # única instancia genérica con estos dos campos más set_api_key()/validate_api_key().
+    api_key_url = ""
+    api_key_instructions = ""
+
     def is_authenticated(self) -> bool:
         """True si no requiere sesión, o si ya hay una sesión activa."""
         return True
+
+    def set_api_key(self, key: str):
+        """Persiste la API key ya validada. Solo relevante si requires_auth y el origen usa
+        el flujo genérico de API key (ver api_key_url arriba)."""
+        raise NotImplementedError
+
+    def validate_api_key(self, key: str) -> tuple:
+        """Verifica la key contra la API real (una llamada mínima). Devuelve (ok, mensaje_error)."""
+        raise NotImplementedError
 
     def normalize_license(self, raw_license: str) -> str:
         """Agrupa la licencia cruda del ítem en uno de los bucket_key de license_filter_options."""

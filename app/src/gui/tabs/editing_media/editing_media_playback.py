@@ -730,6 +730,25 @@ class PlaybackMixin:
                     self.remote_waveform_thread.finished.connect(_on_remote_waveform_finished)
                     self.remote_waveform_thread.start()
 
+            elif is_remote and item_data.get("waveform_url"):
+                # Origen con picos ya calculados como JSON puro (ej. Openverse, ver
+                # RemoteWaveformPeaksCacheManager) -- a diferencia de la rama de arriba
+                # (imagen que hay que decodificar) o de la rama 'else' (descargar el audio
+                # real y extraer picos con ffmpeg), acá alcanza con bajar y parsear un JSON
+                # chico, sin tocar el archivo real.
+                waveform_url = item_data["waveform_url"]
+                from core.tabs.editing_media.remote_waveform_peaks_cache_manager import RemoteWaveformPeaksCacheManager
+                remote_wf_peaks_mgr = RemoteWaveformPeaksCacheManager.get_instance()
+
+                cached_peaks = remote_wf_peaks_mgr.get_cached_peaks(waveform_url)
+                if cached_peaks is not None:
+                    self.waveform_widget.set_peaks(cached_peaks)
+                else:
+                    if not getattr(self, "_remote_waveform_peaks_connected", False):
+                        remote_wf_peaks_mgr.peaks_ready.connect(self._on_remote_waveform_peaks_ready)
+                        self._remote_waveform_peaks_connected = True
+                    remote_wf_peaks_mgr.request_peaks(waveform_url)
+
             else:
                 from core.tabs.editing_media.waveform_cache_manager import WaveformCacheManager
                 wf_mgr = WaveformCacheManager.get_instance()
@@ -921,6 +940,20 @@ class PlaybackMixin:
                     title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
                 )
                 icon_name = "warning.svg"
+            elif bucket in ("pixabay_license", "pexels_license"):
+                # Ni Pixabay ni Pexels usan licencias CC -- tienen una licencia propia única
+                # para todo su catálogo (no varía por ítem como en Freesound/Wikimedia), libre
+                # de atribución pero con un par de restricciones puntuales (no revender el
+                # archivo sin modificar, no usarlo implicando el aval de personas/marcas
+                # identificables en él). Mismo tratamiento visual que CC0 por ser "libre sin
+                # atribución obligatoria", pero con su propio texto y link a la licencia real.
+                site_name = "Pixabay" if bucket == "pixabay_license" else "Pexels"
+                lic_title = QCoreApplication.translate("PlaybackMixin", "Licencia de {0}").format(site_name)
+                lic_desc = QCoreApplication.translate("PlaybackMixin", "Gratis para uso personal y comercial, sin necesidad de dar créditos. No puedes revender el archivo sin modificar, ni usarlo de forma que implique el aval de personas o marcas identificables en él.")
+                lic_color = "#1DC038" # Green -- mismo trato que CC0: libre sin atribución, sin
+                # texto de créditos que copiar (a diferencia de attribution/attribution_nc/nd).
+                tasl = ""
+                icon_name = "check_circle.svg"
             elif bucket == "attribution":
                 lic_title = QCoreApplication.translate("PlaybackMixin", "Requiere Atribución")
                 lic_desc = QCoreApplication.translate("PlaybackMixin", "Uso comercial y modificaciones permitidas, pero es obligatorio dar crédito al autor copiando el texto TASL.")
@@ -1014,7 +1047,15 @@ class PlaybackMixin:
 
         self.preview_box.show_default_state()
         self._ensure_remote_thumb_connected(remote_thumb_mgr)
-        remote_thumb_mgr.request_thumbnail(thumb_url)
+        remote_thumb_mgr.request_thumbnail(thumb_url, fallback_url=item_data.get("ruta"))
+
+    def _on_remote_waveform_peaks_ready(self, url: str, peaks: list):
+        """Se llama cuando los picos JSON de un origen web (ej. waveform_url de Openverse)
+        terminan de descargarse. Solo actualiza el widget si sigue siendo el ítem activo."""
+        item_data = self._get_current_media_data() if hasattr(self, "_get_current_media_data") else None
+        if not item_data or item_data.get("waveform_url") != url:
+            return
+        self.waveform_widget.set_peaks(peaks)
 
     def _on_remote_thumb_preview_ready(self, url: str, local_path: str):
         """Se llama cuando una miniatura remota (imagen o poster de video) termina de
