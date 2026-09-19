@@ -26,114 +26,114 @@ from PySide6.QtCore import QCoreApplication
 
 VIDEO_ENCODER_PROFILES = {
     "libx264": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad (CRF 18)"), "args": ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 23)"), "args": ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Rápida (CRF 28)"), "args": ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad (CRF 18)"), "tier": "alta", "args": ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 23)"), "tier": "media", "args": ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Rápida (CRF 28)"), "tier": "rapida", "args": ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "h264_nvenc": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad (CQ 18)"), "args": ["-c:v", "h264_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "18", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 23)"), "args": ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "23", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad (CQ 18)"), "tier": "alta", "args": ["-c:v", "h264_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "18", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 23)"), "tier": "media", "args": ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "23", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "h264_qsv": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "h264_qsv", "-preset", "veryslow", "-global_quality", "18", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "h264_qsv", "-preset", "medium", "-global_quality", "23", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "h264_qsv", "-preset", "veryslow", "-global_quality", "18", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "h264_qsv", "-preset", "medium", "-global_quality", "23", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "h264_amf": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "h264_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "18", "-qp_p", "18", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "args": ["-c:v", "h264_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "23", "-qp_p", "23", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "h264_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "18", "-qp_p", "18", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "tier": "media", "args": ["-c:v", "h264_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "23", "-qp_p", "23", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "h264_videotoolbox": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "h264_videotoolbox", "-profile:v", "high", "-q:v", "70"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "h264_videotoolbox", "-profile:v", "main", "-q:v", "50"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "h264_videotoolbox", "-profile:v", "high", "-q:v", "70"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "h264_videotoolbox", "-profile:v", "main", "-q:v", "50"]},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "libx265": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 20)"), "args": ["-c:v", "libx265", "-preset", "slow", "-crf", "20", "-tag:v", "hvc1"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 24)"), "args": ["-c:v", "libx265", "-preset", "medium", "-crf", "24", "-tag:v", "hvc1"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 20)"), "tier": "alta", "args": ["-c:v", "libx265", "-preset", "slow", "-crf", "20", "-tag:v", "hvc1"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 24)"), "tier": "media", "args": ["-c:v", "libx265", "-preset", "medium", "-crf", "24", "-tag:v", "hvc1"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "hevc_nvenc": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CQ 20)"), "args": ["-c:v", "hevc_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "20", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 24)"), "args": ["-c:v", "hevc_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "24", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CQ 20)"), "tier": "alta", "args": ["-c:v", "hevc_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "20", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 24)"), "tier": "media", "args": ["-c:v", "hevc_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "24", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "hevc_qsv": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "hevc_qsv", "-preset", "veryslow", "-global_quality", "20"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "hevc_qsv", "-preset", "medium", "-global_quality", "24"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "hevc_qsv", "-preset", "veryslow", "-global_quality", "20"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "hevc_qsv", "-preset", "medium", "-global_quality", "24"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "hevc_amf": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "hevc_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "20", "-pix_fmt", "yuv420p"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "args": ["-c:v", "hevc_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "24", "-qp_p", "24", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "hevc_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "20", "-pix_fmt", "yuv420p"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "tier": "media", "args": ["-c:v", "hevc_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "24", "-qp_p", "24", "-pix_fmt", "yuv420p"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "hevc_videotoolbox": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "hevc_videotoolbox", "-profile:v", "main", "-q:v", "80"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "hevc_videotoolbox", "-profile:v", "main", "-q:v", "65"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "hevc_videotoolbox", "-profile:v", "main", "-q:v", "80"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "hevc_videotoolbox", "-profile:v", "main", "-q:v", "65"]},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "libsvtav1": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "args": ["-c:v", "libsvtav1", "-preset", "4", "-crf", "28"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 35)"), "args": ["-c:v", "libsvtav1", "-preset", "6", "-crf", "35"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "tier": "alta", "args": ["-c:v", "libsvtav1", "-preset", "4", "-crf", "28"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 35)"), "tier": "media", "args": ["-c:v", "libsvtav1", "-preset", "6", "-crf", "35"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
     ],
     "libaom-av1": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "args": ["-c:v", "libaom-av1", "-cpu-used", "4", "-crf", "28"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 35)"), "args": ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "35"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "tier": "alta", "args": ["-c:v", "libaom-av1", "-cpu-used", "4", "-crf", "28"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 35)"), "tier": "media", "args": ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "35"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
     ],
     "av1_nvenc": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CQ 24)"), "args": ["-c:v", "av1_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "24"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 28)"), "args": ["-c:v", "av1_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "28"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CQ 24)"), "tier": "alta", "args": ["-c:v", "av1_nvenc", "-preset", "p7", "-rc", "vbr", "-cq", "24"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CQ 28)"), "tier": "media", "args": ["-c:v", "av1_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "28"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "av1_qsv": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta"), "args": ["-c:v", "av1_qsv", "-global_quality", "25", "-preset", "slow"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "av1_qsv", "-global_quality", "30", "-preset", "medium"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta"), "tier": "alta", "args": ["-c:v", "av1_qsv", "-global_quality", "25", "-preset", "slow"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "av1_qsv", "-global_quality", "30", "-preset", "medium"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "av1_amf": [
-        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "args": ["-c:v", "av1_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "28", "-qp_p", "28"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "args": ["-c:v", "av1_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "32", "-qp_p", "32"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Alta Calidad"), "tier": "alta", "args": ["-c:v", "av1_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "28", "-qp_p", "28"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Balanceada"), "tier": "media", "args": ["-c:v", "av1_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "32", "-qp_p", "32"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
     ],
     "libvpx-vp9": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "args": ["-c:v", "libvpx-vp9", "-crf", "28", "-b:v", "0"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 33)"), "args": ["-c:v", "libvpx-vp9", "-crf", "33", "-b:v", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (CRF 28)"), "tier": "alta", "args": ["-c:v", "libvpx-vp9", "-crf", "28", "-b:v", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (CRF 33)"), "tier": "media", "args": ["-c:v", "libvpx-vp9", "-crf", "33", "-b:v", "0"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
     ],
     "vp9_qsv": [
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta"), "args": ["-c:v", "vp9_qsv", "-global_quality", "25", "-preset", "slow"]},
-        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "args": ["-c:v", "vp9_qsv", "-global_quality", "30", "-preset", "medium"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta"), "tier": "alta", "args": ["-c:v", "vp9_qsv", "-global_quality", "25", "-preset", "slow"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media"), "tier": "media", "args": ["-c:v", "vp9_qsv", "-global_quality", "30", "-preset", "medium"]},
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Constante Personalizada (CRF/CQ)"), "custom": "cq"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (VBR)"), "custom": "vbr"},
         {"label": QCoreApplication.translate("codec_profiles", "Bitrate Personalizado (CBR)"), "custom": "cbr"},
@@ -421,6 +421,46 @@ def extract_bitrate_kbps(args: list[str], flag: str = "-b:v") -> float | None:
 def _default_profile(kind: str, encoder: str) -> list[dict]:
     flag = "-c:v" if kind == "video" else "-c:a"
     return [{"label": QCoreApplication.translate("codec_profiles", "Predeterminado"), "args": [flag, encoder]}]
+
+
+# Niveles de calidad comparables ENTRE encoders distintos, de mejor a peor. Cada perfil
+# de los codecs con variante de hardware (h264/hevc/av1/vp9) lleva su "tier": es lo que
+# permite guardar un preajuste como "H.264, calidad media" y resolverlo al usarlo con el
+# encoder que tenga ESE equipo, en vez de dejar escrito "-c:v h264_nvenc" y que falle en
+# una AMD (ver recode_guard.resolve_video_encoding). No todos los encoders tienen los
+# tres: x264 llega a "rapida", NVENC/AMF/QSV se quedan en "media", así que al pedir un
+# nivel que no existe se cae al más cercano hacia arriba.
+QUALITY_TIERS = ("alta", "media", "rapida")
+
+
+def profile_for_tier(encoder: str | None, tier: str) -> dict | None:
+    """El perfil de `encoder` para ese nivel de calidad, o el más cercano disponible.
+    None si el encoder no tiene perfiles con nivel (ej. ProRes, que se organiza por
+    perfiles propios 422/4444, no por calidad)."""
+    perfiles = [p for p in get_profiles("video", encoder) if p.get("tier")]
+    if not perfiles:
+        return None
+    exacto = next((p for p in perfiles if p["tier"] == tier), None)
+    if exacto:
+        return exacto
+    # El pedido no existe en este encoder: se elige el más cercano, priorizando el
+    # inmediatamente MEJOR (más calidad) antes que uno peor.
+    orden = list(QUALITY_TIERS)
+    objetivo = orden.index(tier) if tier in orden else 1
+    return min(perfiles, key=lambda p: (abs(orden.index(p["tier"]) - objetivo),
+                                        orden.index(p["tier"]) > objetivo))
+
+
+def tier_of_args(encoder: str | None, args: list | None) -> str | None:
+    """Nivel de calidad de unos args ya armados, comparando con la tabla de perfiles --
+    se usa al guardar un preajuste desde Avanzado para saber qué nivel eligió el usuario
+    sin tener que arrastrar el índice del combo."""
+    if not args:
+        return None
+    for perfil in get_profiles("video", encoder):
+        if perfil.get("tier") and list(perfil.get("args") or []) == list(args):
+            return perfil["tier"]
+    return None
 
 
 def get_profiles(kind: str, encoder: str | None) -> list[dict]:

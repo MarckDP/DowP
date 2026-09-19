@@ -2002,6 +2002,11 @@ class AdvancedRecodePanel(QWidget):
 
         combo = getattr(self, f"combo_{prefix}_profile")
         lbl = getattr(self, f"lbl_{prefix}_profile")
+        # Nivel de calidad que estaba elegido, para no perderlo al repoblar: los labels
+        # cambian entre encoders ("Calidad Media (CRF 23)" vs "Calidad Balanceada"),
+        # pero el "tier" es el mismo -- así, alternar GPU/CPU mantiene la calidad
+        # elegida en vez de saltar siempre al primer perfil de la lista.
+        tier_previo = (combo.currentData() or {}).get("tier") if combo.currentData() else None
         self._building = True
         try:
             combo.clear()
@@ -2014,6 +2019,10 @@ class AdvancedRecodePanel(QWidget):
             profiles = get_profiles(prefix, encoder)
             for p in profiles:
                 combo.addItem(p["label"], p)
+            if tier_previo:
+                idx = next((i for i, p in enumerate(profiles) if p.get("tier") == tier_previo), -1)
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
             combo.setEnabled(bool(profiles))
             lbl.setVisible(True)
             combo.setVisible(True)
@@ -2028,6 +2037,13 @@ class AdvancedRecodePanel(QWidget):
 
     def _toggle_engine_mode(self):
         self._force_cpu_engine = not self._force_cpu_engine
+        # El combo de perfiles se repuebla por CÓDEC (ver _refresh_profile_combo, que
+        # corta si el codec_id no cambió), pero alternar GPU/CPU cambia el ENCODER, no
+        # el códec: sin invalidar ese cache, el combo seguía mostrando -- y usando -- los
+        # perfiles del encoder anterior. O sea que apagar la GPU cambiaba la etiqueta
+        # pero seguía recodificando con "-c:v h264_nvenc". Mismo truco que ya usa
+        # _on_variant_changed al cambiar entre prores_ks/prores_aw.
+        self._last_profile_codec["video"] = None
         self._on_video_codec_changed()
 
     def _update_engine_label(self):
@@ -2302,11 +2318,25 @@ class AdvancedRecodePanel(QWidget):
         watermark_image_path, watermark_overlay_filter = (
             self._build_image_watermark_settings() if video_recode_active else (None, None)
         )
+        # Intención del motor de video, para que un preajuste guardado aquí siga
+        # funcionando en OTRO equipo (o en este mismo tras cambiar de tarjeta): además
+        # de los args ya resueltos, se guarda "qué códec, qué nivel de calidad y si
+        # quería GPU". Al aplicar el preajuste, presets_panel.py vuelve a resolver el
+        # encoder con la GPU de ESE equipo (ver recode_guard.resolve_video_encoding).
+        # video_tier es None cuando el usuario eligió un perfil sin nivel comparable
+        # (bitrate personalizado, ProRes, GIF...): ahí se guardan los args tal cual,
+        # como siempre.
+        from core.tabs.video_tools.codec_profiles import tier_of_args
+        video_tier = tier_of_args(self._effective_encoder("video", v_codec),
+                                  self._effective_args("video")) if video_recode_active else None
+
         settings = {
             "stream_mode": stream_mode,
             "video_mode": "copy" if self.rb_video_copy.isChecked() else "recode",
             "video_codec": v_codec,
             "video_args": video_args,
+            "video_tier": video_tier,
+            "video_engine_mode": ("cpu" if self._force_cpu_engine else "auto") if video_tier else "fixed",
             "video_passes": passes,
             "audio_mode": "copy" if self.rb_audio_copy.isChecked() else "recode",
             "audio_codec": self._current_audio_codec() if not is_gif else None,

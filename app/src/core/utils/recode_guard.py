@@ -204,6 +204,146 @@ def software_encoder(codec_id: str | None) -> str | None:
     return entry.get("encoder") if entry else None
 
 
+# Modos de motor que puede guardar un preajuste de Recodificación (ver
+# advanced_recode_panel.get_settings / presets_panel.get_recode_settings).
+ENGINE_MODE_AUTO = "auto"        # GPU si la hay en ESTE equipo, si no CPU
+ENGINE_MODE_CPU = "cpu"          # siempre software, aunque haya GPU
+ENGINE_MODE_FIXED = "fixed"      # los args guardados, tal cual (comportamiento histórico)
+
+
+def resolve_video_encoding(codec_id: str | None, tier: str,
+                           engine_mode: str = ENGINE_MODE_AUTO) -> tuple[list, str | None]:
+    """(args de ffmpeg, encoder elegido) para ese códec y nivel de calidad EN ESTE equipo.
+
+    Es lo que hace que un preajuste sea portable: se guarda la intención ("H.264, calidad
+    media, usa GPU si hay") en vez de "-c:v h264_nvenc -preset p5 ...", que solo funciona
+    en la máquina donde se guardó. Con engine_mode "auto" se usa el encoder que
+    hardware_detector.py confirmó por probe real (NVENC/AMF/QSV según la marca), y si no
+    hay ninguno se cae a software sin fallar.
+
+    Devuelve ([], None) si no se puede resolver nada; quien llame decide qué hacer
+    (normalmente, seguir con los args guardados del preajuste)."""
+    if not codec_id:
+        return [], None
+    from core.tabs.video_tools.codec_profiles import profile_for_tier
+
+    if engine_mode == ENGINE_MODE_CPU:
+        encoder = software_encoder(codec_id)
+    else:
+        encoder = resolve_encoder(codec_id)
+    if not encoder:
+        return [], None
+
+    perfil = profile_for_tier(encoder, tier)
+    if not perfil and encoder != software_encoder(codec_id):
+        # El encoder de hardware existe pero no tiene perfiles de calidad curados --
+        # antes que inventar flags, se usa el de software, que siempre los tiene.
+        encoder = software_encoder(codec_id)
+        perfil = profile_for_tier(encoder, tier)
+    if not perfil:
+        return [], encoder
+    return list(perfil["args"]), encoder
+
+
+def _args_without(args: list, a_quitar: list) -> list:
+    """`args` sin los elementos de `a_quitar` (una sola vez cada uno, en orden). Separa
+    lo que puso el perfil de códec de lo que agregó el usuario aparte (escalado, fps,
+    recorte, marca de agua de texto...)."""
+    restantes = list(a_quitar)
+    salida = []
+    for arg in args:
+        if arg in restantes:
+            restantes.remove(arg)
+        else:
+            salida.append(arg)
+    return salida
+
+
+def encoder_in_args(args: list | None) -> str | None:
+    """El encoder que llevan unos args de ffmpeg ya armados ("-c:v X" -> "X")."""
+    args = list(args or [])
+    if "-c:v" not in args:
+        return None
+    idx = args.index("-c:v")
+    return args[idx + 1] if idx + 1 < len(args) else None
+
+
+def swap_video_encoder(args: list, codec_id: str | None, engine_mode: str,
+                       tier: str | None = None) -> tuple[list, str | None]:
+    """Cambia el encoder de unos args ya armados por el que corresponde a ESTE equipo,
+    conservando todo lo demás (escalado, fps constante, recorte...).
+
+    Lo usan dos caminos distintos: aplicar un preajuste portable (ver
+    presets_panel._resolve_engine_for_this_pc) y el reintento por CPU cuando la GPU
+    falla en plena recodificación (ver QueueWorker._run_ffmpeg_command). Devuelve
+    (args, encoder) sin tocar nada si no hay nada que cambiar."""
+    from core.tabs.video_tools.codec_profiles import profile_for_tier, tier_of_args
+
+    args = list(args or [])
+    encoder_actual = encoder_in_args(args)
+    tier = tier or tier_of_args(encoder_actual, args)
+    if not tier or not codec_id:
+        return args, encoder_actual
+
+    nuevos, encoder = resolve_video_encoding(codec_id, tier, engine_mode)
+    if not nuevos or not encoder or encoder == encoder_actual:
+        return args, encoder_actual
+
+    perfil_viejo = profile_for_tier(encoder_actual, tier)
+    extras = _args_without(args, list(perfil_viejo["args"])) if perfil_viejo else []
+    return list(nuevos) + extras, encoder
+
+
+# Última resolución registrada, para no repetir la misma línea de log: los ajustes de
+# un preajuste se consultan varias veces por trabajo (validar la combinación, estimar el
+# tamaño, ejecutar), y el mensaje salía tres veces seguidas por lo mismo.
+_ultima_resolucion_logueada: tuple | None = None
+
+
+def resolve_preset_for_this_pc(settings: dict) -> dict:
+    """Ajustes de un preajuste de Recodificación con el encoder de video resuelto para
+    ESTE equipo, cuando el preajuste guardó su intención ("video_tier" +
+    "video_engine_mode", ver advanced_recode_panel.get_settings).
+
+    Es lo que hace portables los preajustes: uno guardado en un PC con NVIDIA lleva
+    "-c:v h264_nvenc" adentro y fallaba al importarlo en uno con AMD, y uno guardado
+    cuando la detección de GPU estaba rota se quedaba en CPU para siempre. Los
+    preajustes viejos no traen esos campos y se devuelven tal cual, sin tocar nada.
+
+    Vive aquí y lo llama PresetManager.get_settings() porque los preajustes se
+    consumen desde varios sitios (la pestaña Preajustes, Modo Rápido y Proceso
+    Avanzado con su recodificación posterior a la descarga): resolviéndolo en el único
+    punto por el que pasan todos, ninguno se queda con el encoder del PC donde se
+    guardó."""
+    from core.tabs.video_tools.codec_profiles import build_pass_args
+
+    if not isinstance(settings, dict):
+        return settings
+    tier = settings.get("video_tier")
+    modo = settings.get("video_engine_mode")
+    args_guardados = list(settings.get("video_args") or [])
+    if not tier or modo not in (ENGINE_MODE_AUTO, ENGINE_MODE_CPU) or not args_guardados:
+        return settings
+
+    encoder_guardado = encoder_in_args(args_guardados)
+    nuevos_args, encoder = swap_video_encoder(args_guardados, settings.get("video_codec"), modo, tier)
+    if encoder == encoder_guardado:
+        return settings
+
+    settings = dict(settings)
+    settings["video_args"] = nuevos_args
+    if settings.get("video_passes") == 2:
+        settings["video_args_pass1"] = build_pass_args(nuevos_args, 1)
+        settings["video_args_pass2"] = build_pass_args(nuevos_args, 2)
+    global _ultima_resolucion_logueada
+    resolucion = (encoder_guardado, encoder, tier, modo)
+    if resolucion != _ultima_resolucion_logueada:
+        _ultima_resolucion_logueada = resolucion
+        logger.info(f"Preajustes: encoder resuelto para este equipo -- '{encoder_guardado}' -> "
+                    f"'{encoder}' (nivel {tier}, modo {modo}).")
+    return settings
+
+
 def has_hardware_encoder(codec_id: str | None) -> bool:
     """True si HAY un encoder acelerado por hardware confirmado (probe-encode real, ver
     hardware_detector.py) para este codec_id en ESTE equipo."""

@@ -1137,7 +1137,10 @@ class QuickDownloadController(QObject):
                 else:
                     row.mark_completed(filepath=final_path)
 
-        # El job RECODE interno ya cumplió su propósito - no debe quedar visible ni
-        # reintentable en la cola compartida con Proceso Avanzado / Herramientas
-        # Multimedia (no es algo que el usuario haya encolado directamente).
-        self.queue_mgr.remove_job(job_id)
+        # El job RECODE interno ya se quitó de la cola más arriba, en el tramo común
+        # de esta misma función (no debe quedar visible ni reintentable en la cola
+        # compartida con Proceso Avanzado / Herramientas Multimedia: no es algo que el
+        # usuario haya encolado directamente). Aquí NO se vuelve a quitar: llamar dos
+        # veces a remove_job() con el mismo job_id emitía job_removed dos veces, y la
+        # segunda llegaba cuando la tarjeta ya no existía -- de ahí los "Tarjeta para
+        # ... NO encontrada en self.cards!" y los "Cola pausada" duplicados del log.

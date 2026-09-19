@@ -4,9 +4,12 @@ Preajustes que vienen EMPAQUETADOS con la app (ver conversación) - a diferencia
 preajuste que un usuario guarda desde Avanzado en su propia máquina, estos se instalan en
 la de cualquiera, así que:
 
-- Los códecs de video con variante de hardware (h264/hevc) usan SIEMPRE encoder de
+- Los códecs de video con variante de hardware (h264/hevc) guardan SIEMPRE args de
   software (libx264/libx265): un preajuste empaquetado con "-c:v h264_nvenc" adentro
-  rompería directo en cualquier PC sin esa GPU especifica. ProRes/DNxHR/CineForm no
+  rompería directo en cualquier PC sin esa GPU especifica. Los dos preajustes
+  "Acelerado por GPU" (ver _gpu_auto_preset) no son la excepción: guardan los mismos
+  args de software y, además, la intención ("este códec, este nivel de calidad, usa
+  GPU si hay"), que se resuelve al aplicarlos en cada equipo. ProRes/DNxHR/CineForm no
   tienen ese problema (nunca tuvieron variante de hardware en ffmpeg, ver conversación).
 - Los argumentos de cada perfil se toman llamando a codec_profiles.py (la misma tabla que
   ya usan Comprimir/Edición/Avanzado), nunca copiados a mano - si esos valores cambian
@@ -27,7 +30,7 @@ _NAMESPACE = "video_tools/avanzado"
 # preajuste aquí, para que PresetManager sepa que hay defaults nuevos para sembrar sin
 # resembrar (ni resucitar) los que el usuario ya haya modificado o borrado - ver
 # PresetManager.seed_defaults().
-DEFAULT_PRESETS_VERSION = 1
+DEFAULT_PRESETS_VERSION = 2
 
 
 def _video_profile_args(encoder: str, label_hint: str) -> list[str]:
@@ -56,6 +59,37 @@ def _compress_preset(name: str, video_encoder: str, crf_hint: str) -> dict:
             "audio_mode": "recode",
             "audio_codec": "aac",
             "audio_args": build_custom_audio_bitrate_args("aac", 128),
+            "container": "mp4",
+        },
+    }
+
+
+def _gpu_auto_preset(name: str, codec_id: str, software_encoder: str, label_hint: str) -> dict:
+    """Preajuste que usa la GPU del equipo donde se APLICA, y cae a CPU si no hay.
+
+    A diferencia del resto de los empaquetados (que fijan libx264/libx265 justamente
+    para no romper en un PC sin esa GPU), aquí los args guardados son los de software
+    PERO llevan "video_tier"/"video_engine_mode": al aplicarlos, PresetsPanel resuelve
+    el encoder real contra la GPU detectada en ese equipo -- NVENC, AMF o QuickSync
+    según la marca (ver presets_panel._resolve_engine_for_this_pc). Los args de
+    software siguen ahí como respaldo: si el equipo no tiene GPU, o el preajuste se lee
+    con una versión vieja de DowP, se usa el camino de siempre."""
+    video_args = _video_profile_args(software_encoder, label_hint)
+    return {
+        "namespace": _NAMESPACE,
+        "name": name,
+        "function": "convertir",
+        "job_type": "RECODE",
+        "settings": {
+            "stream_mode": "video+audio",
+            "video_mode": "recode",
+            "video_codec": codec_id,
+            "video_args": video_args,
+            "video_tier": "media",
+            "video_engine_mode": "auto",
+            "audio_mode": "recode",
+            "audio_codec": "aac",
+            "audio_args": build_custom_audio_bitrate_args("aac", 192),
             "container": "mp4",
         },
     }
@@ -132,6 +166,9 @@ def build_default_presets() -> list[dict]:
     return [
         _compress_preset("H264 Equilibrado", "libx264", "Media (CRF 23)"),
         _compress_preset("H265 Equilibrado", "libx265", "Media (CRF 24)"),
+
+        _gpu_auto_preset("H264 Acelerado por GPU", "h264", "libx264", "Media (CRF 23)"),
+        _gpu_auto_preset("H265 Acelerado por GPU", "hevc", "libx265", "Media (CRF 24)"),
 
         _proxy_preset("Proxy Apple ProRes", "prores", "prores_aw", "422 Proxy"),
         _proxy_preset("Proxy DNxHR", "dnxhd", "dnxhd", "DNxHR LB"),

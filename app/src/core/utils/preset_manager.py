@@ -227,7 +227,15 @@ class PresetManager(QObject):
         if not isinstance(entry, dict):
             return {}
         settings = entry.get("settings", {})
-        return dict(settings) if isinstance(settings, dict) else {}
+        if not isinstance(settings, dict):
+            return {}
+        # El encoder de video de un preajuste "portable" se resuelve aquí, contra la GPU
+        # de ESTE equipo (ver recode_guard.resolve_preset_for_this_pc). Se hace en
+        # get_settings y no en cada pantalla porque los preajustes se ejecutan desde
+        # varias (Preajustes, Modo Rápido, Proceso Avanzado): en una sola de ellas, las
+        # otras seguirían usando el encoder del PC donde se guardó el preajuste.
+        from core.utils.recode_guard import resolve_preset_for_this_pc
+        return resolve_preset_for_this_pc(dict(settings))
 
     def get_preset(self, namespace: str, name: str) -> dict | None:
         """El sobre completo ({function, job_type, settings}) - para UI de

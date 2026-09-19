@@ -1271,118 +1271,118 @@
         <translation>~ {0:.1f} MB</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2046"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2062"/>
         <source>CPU</source>
         <translation>CPU</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2060"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2076"/>
         <source>Clic para usar aceleración por GPU</source>
         <translation>Clique para usar aceleração por GPU</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2064"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2080"/>
         <source>GPU Acelerado</source>
         <translation>GPU Acelerada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2077"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2093"/>
         <source>Clic para usar codificación por CPU</source>
         <translation>Clique para usar codificação por CPU</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2195"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2211"/>
         <source>No hay ningún contenedor compatible con la combinación de codecs elegida.</source>
         <translation>Não há nenhum contêiner compatível com a combinação de códecs escolhida.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2197"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2213"/>
         <source>Sin contenedor compatible</source>
         <translation>Sem contêiner compatível</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2204"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2220"/>
         <source>Configuración compatible y lista para procesar.</source>
         <translation>Configuração compatível e pronta para processar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2218"/>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2286"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2234"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2302"/>
         <source>Combinación no compatible</source>
         <translation>Combinação incompatível</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2246"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2262"/>
         <source>ffmpeg permite generar este archivo, pero el estándar del contenedor no contempla esta combinación de codec</source>
         <translation>o ffmpeg consegue gerar este arquivo, mas o padrão do contêiner não prevê esta combinação de códec</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2251"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2267"/>
         <source>soporte restringido a un perfil, versión o subformato específico</source>
         <translation>suporte restrito a um perfil, versão ou subformato específico</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2252"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2268"/>
         <source>soporte indirecto a través de un mecanismo externo, no nativo del contenedor</source>
         <translation>suporte indireto via um mecanismo externo, não nativo do contêiner</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2253"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2269"/>
         <source>requiere un componente o codec adicional instalado aparte</source>
         <translation>exige um componente ou códec adicional instalado à parte</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2254"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2270"/>
         <source>implementación privada o no estandarizada del contenedor</source>
         <translation>implementação privada ou não padronizada do contêiner</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2255"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2271"/>
         <source>reconocido por algunos reproductores/editores pero no forma parte del estándar</source>
         <translation>reconhecido por alguns reprodutores/editores, mas não faz parte do padrão</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2256"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2272"/>
         <source>técnicamente posible pero problemático o poco fiable en la práctica</source>
         <translation>tecnicamente possível, mas problemático ou pouco confiável na prática</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2257"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2273"/>
         <source>soporte en fase beta, puede ser inestable</source>
         <translation>suporte em fase beta, pode ser instável</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2260"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2276"/>
         <source>ffmpeg acepta este mux, pero no es un uso estándar del contenedor ({0})</source>
         <translation>o ffmpeg aceita este mux, mas não é um uso padrão do contêiner ({0})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2265"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2281"/>
         <source>Video Compression Manager (VCM)</source>
         <translation>Video Compression Manager (VCM)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2266"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2282"/>
         <source>Audio Compression Manager (ACM)</source>
         <translation>Audio Compression Manager (ACM)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2268"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2284"/>
         <source>vía {0}</source>
         <translation>via {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2270"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2286"/>
         <source>requiere {0}</source>
         <translation>exige {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2276"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2292"/>
         <source>Podría no reproducirse en todos los reproductores/dispositivos.</source>
         <translation>Pode não ser reproduzido em todos os reprodutores/dispositivos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2287"/>
+        <location filename="../../gui/tabs/video_tools/advanced_recode_panel.py" line="2303"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
@@ -7096,47 +7096,47 @@ Se guarda una sola vez: la próxima vez ya estará listo para usar.</source>
 <context>
     <name>PresetsPanel</name>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="56"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="95"/>
         <source>Preajustes de Recodificación</source>
         <translation>Predefinições de Recodificação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="66"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="105"/>
         <source>Preajustes de Herramientas IA</source>
         <translation>Predefinições de Ferramentas IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="88"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="127"/>
         <source>Seleccionar otra imagen…</source>
         <translation>Selecionar outra imagem…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="140"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="179"/>
         <source>Seleccionar imagen de marca de agua</source>
         <translation>Selecionar imagem da marca d&apos;água</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="141"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="180"/>
         <source>Imágenes (*.png *.jpg *.jpeg *.webp *.bmp);;Todos los archivos (*.*)</source>
         <translation>Imagens (*.png *.jpg *.jpeg *.webp *.bmp);;Todos os arquivos (*.*)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="199"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="239"/>
         <source>Selecciona al menos un preajuste</source>
         <translation>Selecione ao menos uma predefinição</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="201"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="241"/>
         <source>Resuelve el aviso de la marca de agua</source>
         <translation>Resolva o aviso da marca d&apos;água</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="203"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="243"/>
         <source>Iniciar Reescalado</source>
         <translation>Iniciar Ampliação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="204"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="244"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
@@ -7383,68 +7383,68 @@ para reproduzi-lo ou ver os detalhes</translation>
 <context>
     <name>QueueWorker</name>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="344"/>
+        <location filename="../../core/utils/queue_manager.py" line="375"/>
         <source>Procesando final...</source>
         <translation>Processamento final...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="363"/>
+        <location filename="../../core/utils/queue_manager.py" line="394"/>
         <source>Descargando miniatura...</source>
         <translation>Baixando a miniatura...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="386"/>
+        <location filename="../../core/utils/queue_manager.py" line="417"/>
         <source>No se pudo obtener la miniatura para este video.</source>
         <translation>Não foi possível obter a miniatura deste vídeo.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="477"/>
+        <location filename="../../core/utils/queue_manager.py" line="508"/>
         <source>Omitido: el archivo ya existe</source>
         <translation>Ignorado: o arquivo já existe</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="504"/>
+        <location filename="../../core/utils/queue_manager.py" line="535"/>
         <source>La playlist no tiene medios seleccionados.</source>
         <translation>A playlist não tem mídias selecionadas.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="789"/>
+        <location filename="../../core/utils/queue_manager.py" line="827"/>
         <source>No se encontró ffmpeg.</source>
         <translation>O ffmpeg não foi encontrado.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="996"/>
+        <location filename="../../core/utils/queue_manager.py" line="1068"/>
         <source>Cancelado por el usuario</source>
         <translation>Cancelado pelo usuário</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1051"/>
+        <location filename="../../core/utils/queue_manager.py" line="1158"/>
         <source>Error desconocido en FFmpeg</source>
         <translation>Erro desconhecido no FFmpeg</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1071"/>
-        <location filename="../../core/utils/queue_manager.py" line="1101"/>
+        <location filename="../../core/utils/queue_manager.py" line="1178"/>
+        <location filename="../../core/utils/queue_manager.py" line="1208"/>
         <source>Extrayendo fotogramas...</source>
         <translation>Extraindo quadros...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1107"/>
+        <location filename="../../core/utils/queue_manager.py" line="1214"/>
         <source>Reescalando fotogramas...</source>
         <translation>Ampliando quadros...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1112"/>
+        <location filename="../../core/utils/queue_manager.py" line="1219"/>
         <source>Recomponiendo video...</source>
         <translation>Remontando vídeo...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1129"/>
+        <location filename="../../core/utils/queue_manager.py" line="1236"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1134"/>
+        <location filename="../../core/utils/queue_manager.py" line="1241"/>
         <source>Error desconocido en Reescalado de Video IA</source>
         <translation>Erro desconhecido na Ampliação de Vídeo com IA</translation>
     </message>
@@ -8001,22 +8001,22 @@ para reproduzi-lo ou ver os detalhes</translation>
 <context>
     <name>RecodeMessages</name>
     <message>
-        <location filename="../../core/utils/recode_guard.py" line="439"/>
+        <location filename="../../core/utils/recode_guard.py" line="529"/>
         <source>&apos;%1&apos; no esta en la matriz verificada.</source>
         <translation>&apos;%1&apos; não está na matriz verificada.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/recode_guard.py" line="441"/>
+        <location filename="../../core/utils/recode_guard.py" line="531"/>
         <source>No se pudo verificar empiricamente con este ffmpeg.</source>
         <translation>Não foi possível verificar empiricamente com este ffmpeg.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/recode_guard.py" line="548"/>
+        <location filename="../../core/utils/recode_guard.py" line="638"/>
         <source>Contenedor &apos;%1&apos; no evaluado para &apos;%2&apos;.</source>
         <translation>Contêiner &apos;%1&apos; não avaliado para &apos;%2&apos;.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/recode_guard.py" line="551"/>
+        <location filename="../../core/utils/recode_guard.py" line="641"/>
         <source>Este contenedor no acepta este codec en el ffmpeg instalado.</source>
         <translation>Este contêiner não aceita este códec no ffmpeg instalado.</translation>
     </message>
@@ -13231,7 +13231,7 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Outros</translation>
     </message>
     <message>
-        <location filename="../../core/utils/recode_guard.py" line="492"/>
+        <location filename="../../core/utils/recode_guard.py" line="582"/>
         <source>Sin datos de hardware para este codec (correr deteccion de hardware).</source>
         <translation>Sem dados de hardware para este códec (rode a detecção de hardware).</translation>
     </message>

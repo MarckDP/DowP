@@ -674,17 +674,22 @@ class QueuePanel(QWidget):
             self.card_clicked_signal.emit(job_id)
 
     def _on_job_removed(self, job_id):
-        logger.info(f"QueuePanel: _on_job_removed llamada para {job_id}. Tarjetas actuales: {list(self.cards.keys())}")
         card = self.cards.pop(job_id, None)
-        if card:
-            logger.info(f"QueuePanel: Tarjeta para {job_id} encontrada. Removiendo...")
-            card.hide()
-            self.scroll_layout.removeWidget(card)
-            card.setParent(None)
-            card.deleteLater()
-        else:
-            logger.warning(f"QueuePanel: Tarjeta para {job_id} NO encontrada en self.cards!")
-            
+        if card is None:
+            # Normal, no es un error: este panel solo crea tarjetas para DOWNLOAD y
+            # PLAYLIST (ver el filtro de _on_job_added), pero la señal job_removed llega
+            # por TODOS los trabajos de la cola compartida -- entre ellos los RECODE que
+            # encolan Modo Rápido y Herramientas Multimedia. Antes esto se registraba
+            # como WARNING y parecía un fallo en cada recodificación.
+            logger.debug(f"QueuePanel: {job_id} no tenía tarjeta aquí (trabajo de otra pestaña).")
+            return
+
+        logger.debug(f"QueuePanel: quitando la tarjeta de {job_id}.")
+        card.hide()
+        self.scroll_layout.removeWidget(card)
+        card.setParent(None)
+        card.deleteLater()
+
         if not self.cards:
             self.empty_lbl.show()
 

@@ -23,6 +23,63 @@ def _extract_vf_value(args: list) -> tuple:
     return value, remaining
 
 
+# Contenedores de salida que admiten una carátula incrustada (attached_pic). El resto
+# (webm, avi, gif...) no la guarda: mapearla ahí haría fallar el mux o la recodificaría
+# como un segundo video de verdad.
+COVER_ART_CONTAINERS = {".mp4", ".m4v", ".m4a", ".mov", ".mkv", ".mka"}
+
+
+def output_supports_cover_art(output_file: str) -> bool:
+    return os.path.splitext(output_file or "")[1].lower() in COVER_ART_CONTAINERS
+
+
+def probe_video_streams(input_file: str) -> tuple[bool, int | None]:
+    """(tiene_video_real, índice_absoluto_de_la_carátula) del archivo, con UN solo ffprobe.
+
+    Las dos respuestas salen del mismo dato -- la disposición `attached_pic` de cada
+    stream de video -- así que se sondea una vez y se reparte, en vez de pagar dos
+    arranques de ffprobe por archivo recodificado.
+
+    Se devuelve el índice absoluto y no un simple "sí/no" porque es lo que hace falta
+    para mapear la carátula de forma portable: el selector por disposición
+    ("0:disp:attached_pic") solo existe desde ffmpeg 7.0, y DowP admite que el usuario
+    apunte a su propio ffmpeg, que puede ser más viejo. Un "-map 0:2" funciona en
+    cualquier versión.
+
+    Ante la duda (sin ffprobe, salida ilegible) devuelve (True, None): se mantiene el
+    comportamiento de siempre, que es no tocar el video ni mapear carátula alguna."""
+    import json
+    import subprocess
+    from core.setup.ffmpeg_setup import get_ffprobe_path
+
+    try:
+        ffprobe = get_ffprobe_path()
+        if not ffprobe or not os.path.exists(ffprobe):
+            return True, None
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        salida = subprocess.run(
+            [ffprobe, "-v", "quiet", "-print_format", "json", "-show_streams",
+             "-select_streams", "v", input_file],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30, startupinfo=startupinfo,
+        )
+        if salida.returncode != 0:
+            return True, None
+        streams = (json.loads(salida.stdout or "{}") or {}).get("streams") or []
+        if not streams:
+            return False, None
+        caratulas = [st for st in streams if (st.get("disposition") or {}).get("attached_pic", 0)]
+        hay_video_real = len(caratulas) < len(streams)
+        indice = caratulas[0].get("index") if caratulas else None
+        return hay_video_real, (int(indice) if isinstance(indice, int) else None)
+    except Exception as e:
+        logger.warning(f"QueueWorker: No se pudo sondear el video de '{input_file}': {e}")
+        return True, None
+
+
 def source_has_real_video(input_file: str) -> bool:
     """True si el archivo tiene un stream de video de verdad.
 
@@ -43,33 +100,7 @@ def source_has_real_video(input_file: str) -> bool:
     Ante la duda (sin ffprobe, salida ilegible) devuelve True: se mantiene el
     comportamiento de siempre en vez de tirar el video de un archivo que sí lo tenía.
     """
-    import json
-    import subprocess
-    from core.setup.ffmpeg_setup import get_ffprobe_path
-
-    try:
-        ffprobe = get_ffprobe_path()
-        if not ffprobe or not os.path.exists(ffprobe):
-            return True
-        startupinfo = None
-        if os.name == 'nt':
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        salida = subprocess.run(
-            [ffprobe, "-v", "quiet", "-print_format", "json", "-show_streams",
-             "-select_streams", "v", input_file],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=30, startupinfo=startupinfo,
-        )
-        if salida.returncode != 0:
-            return True
-        streams = (json.loads(salida.stdout or "{}") or {}).get("streams") or []
-        if not streams:
-            return False
-        return any(not (st.get("disposition") or {}).get("attached_pic", 0) for st in streams)
-    except Exception as e:
-        logger.warning(f"QueueWorker: No se pudo sondear el video de '{input_file}': {e}")
-        return True
+    return probe_video_streams(input_file)[0]
 
 
 # Job types que compiten por GPU/CPU local (a diferencia de DOWNLOAD/PLAYLIST,
@@ -768,7 +799,8 @@ class QueueWorker(QThread):
             logger.warning(f"QueueWorker: [Playlist] Recodificación falló para '{input_path}': {error or 'cancelado'}")
 
     def _run_ffmpeg_command(self, input_file, output_file, settings, duration_sec,
-                             cancellation_event, progress_callback=None, worker_ref=None):
+                             cancellation_event, progress_callback=None, worker_ref=None,
+                             allow_cpu_fallback=True):
         """
         Arma y ejecuta el comando ffmpeg de recodificación a partir de (input_file,
         output_file, settings, duration_sec) — motor compartido por un job RECODE async
@@ -780,6 +812,12 @@ class QueueWorker(QThread):
         de un job propio, o el progreso agregado de una playlist).
 
         Devuelve (success: bool, error_message: str | None).
+
+        allow_cpu_fallback: si el comando usaba un encoder de GPU y ffmpeg falla, se
+        reintenta UNA vez por CPU (ver el final de esta función). El escaneo de
+        hardware confirma que el encoder existe y funciona, pero eso no cubre un driver
+        que se cuelga, la GPU ocupada por otro programa o un formato que ese encoder no
+        acepta -- sin el reintento, el usuario se queda sin resultado.
         """
         import subprocess
         from core.setup.ffmpeg_setup import get_ffmpeg_dir
@@ -833,8 +871,9 @@ class QueueWorker(QThread):
         # incrustada) hacía que ffmpeg intentase codificar la carátula y el job entero
         # fallaba. Con una playlist de audio eso tumbaba la recodificación de todos los
         # ítems, uno por uno.
+        tiene_video_real, indice_caratula = probe_video_streams(input_file)
         sin_video_real = (stream_mode != "audio_only" and video_mode != "none"
-                          and not source_has_real_video(input_file))
+                          and not tiene_video_real)
         if sin_video_real:
             logger.info(f"QueueWorker: '{os.path.basename(input_file)}' no tiene video "
                         f"(solo audio o carátula incrustada): se recodifica solo el audio.")
@@ -842,6 +881,27 @@ class QueueWorker(QThread):
             if audio_mode_previo == "none" or stream_mode == "video_only" or is_gif:
                 return False, ("El archivo no tiene pista de video y el ajuste elegido "
                                "descarta el audio: no quedaría nada que guardar.")
+
+        # Carátula incrustada (attached_pic): sin mapeo explícito, ffmpeg elige un video
+        # y un audio y la DESCARTA -- el archivo recodificado perdía la miniatura que la
+        # propia app había incrustado al descargar. Se copia tal cual (nunca se
+        # recodifica) y solo cuando hay un video de verdad que siga siendo el stream
+        # principal: con -vn (solo audio) ffmpeg la descarta igual, y en gif/webm/avi el
+        # contenedor no la admite.
+        conservar_caratula = (
+            indice_caratula is not None
+            and tiene_video_real
+            and not is_gif
+            and stream_mode != "audio_only"
+            and video_mode != "none"
+            and not sin_video_real
+            and output_supports_cover_art(output_file)
+            # Con marca de agua de imagen NO se conserva: esa rama usa -shortest (ver
+            # más abajo, por el input en loop infinito) y -shortest corta la salida al
+            # stream más corto, que sería la carátula -- un único fotograma. Probado:
+            # el archivo salía con 0 KiB de video y audio, solo la carátula.
+            and not use_watermark_image
+        )
 
         if stream_mode == "audio_only" or video_mode == "none" or sin_video_real:
             cmd.append("-vn")
@@ -859,8 +919,10 @@ class QueueWorker(QThread):
             else:
                 cmd.extend(["-c:v", "libx264", "-crf", "23"])
         else:
-            if explicit_mapping:
-                cmd.extend(["-map", "0:v:0?"])
+            if explicit_mapping or conservar_caratula:
+                # "V" mayúscula = streams de video que NO son carátula. Con "v" minúscula,
+                # un archivo cuya carátula va primero mapearía la carátula como "el video".
+                cmd.extend(["-map", "0:V:0?"])
             if video_mode == "copy":
                 cmd.extend(["-c:v", "copy"])
             else:
@@ -879,10 +941,11 @@ class QueueWorker(QThread):
                 cmd.extend(["-map", "0:a"])
             elif isinstance(audio_track_selection, int):
                 cmd.extend(["-map", f"0:a:{audio_track_selection}"])
-            elif use_watermark_image and video_mode != "copy":
-                # El -map "[vout]" de arriba ya apagó la auto-selección de streams de
-                # ffmpeg para TODO el output (ver comentario más arriba) — sin este mapeo
-                # explícito, el audio desaparecería en vez de incluirse automáticamente.
+            elif (use_watermark_image and video_mode != "copy") or conservar_caratula:
+                # El -map de arriba (sea "[vout]" de la marca de agua o el del video por
+                # la carátula) ya apagó la auto-selección de streams de ffmpeg para TODO
+                # el output (ver comentario más arriba) — sin este mapeo explícito, el
+                # audio desaparecería en vez de incluirse automáticamente.
                 cmd.extend(["-map", "0:a?"])
 
             audio_mode = settings.get("audio_mode", "recode")
@@ -894,6 +957,15 @@ class QueueWorker(QThread):
                     cmd.extend(a_args)
                 else:
                     cmd.extend(["-c:a", "aac", "-b:a", "192k"])
+
+        if conservar_caratula:
+            # Va después del video/audio para que quede como segundo stream de video de
+            # la salida (v:1). "-c:v:1 copy" pisa al "-c:v <encoder>" de los args del
+            # perfil solo para ESE stream (el especificador más preciso manda), así que
+            # la carátula se copia en vez de recodificarse, y -disposition la vuelve a
+            # marcar como carátula para que los reproductores la muestren como tal.
+            cmd.extend(["-map", f"0:{indice_caratula}", "-c:v:1", "copy",
+                        "-disposition:v:1", "attached_pic"])
 
         if use_watermark_image:
             # La imagen de marca de agua entra con -loop 1 (stream infinito, ver más
@@ -1000,11 +1072,46 @@ class QueueWorker(QThread):
             else:
                 error = f"FFmpeg terminó con código {proc.returncode}"
                 logger.error(f"QueueWorker: [FFmpeg] {error}")
-                return False, error
+                reintento = self._retry_on_cpu(input_file, output_file, settings, duration_sec,
+                                                cancellation_event, progress_callback, worker_ref,
+                                                allow_cpu_fallback)
+                return reintento if reintento is not None else (False, error)
 
         except Exception as e:
             logger.error(f"QueueWorker: Error ejecutando FFmpeg: {e}")
             return False, str(e)
+
+    def _retry_on_cpu(self, input_file, output_file, settings, duration_sec,
+                       cancellation_event, progress_callback, worker_ref, allow_cpu_fallback):
+        """Reintenta la recodificación por CPU si la que falló usaba un encoder de GPU.
+
+        Devuelve el resultado del reintento, o None si no corresponde reintentar (no
+        había GPU de por medio, ya era el reintento, el usuario canceló, o no se pudo
+        armar un equivalente por software)."""
+        if not allow_cpu_fallback or cancellation_event.is_set():
+            return None
+        from core.utils.recode_guard import ENGINE_MODE_CPU, encoder_in_args, swap_video_encoder
+
+        video_args = list(settings.get("video_args") or [])
+        encoder = encoder_in_args(video_args)
+        if not encoder or encoder.startswith("lib") or encoder in ("gif", "prores_ks", "prores_aw"):
+            return None  # ya era software: el fallo no es de la GPU
+
+        nuevos_args, nuevo_encoder = swap_video_encoder(
+            video_args, settings.get("video_codec"), ENGINE_MODE_CPU, settings.get("video_tier"))
+        if not nuevo_encoder or nuevo_encoder == encoder:
+            return None
+
+        logger.warning(f"QueueWorker: '{encoder}' (GPU) falló -- reintentando por CPU con "
+                       f"'{nuevo_encoder}'.")
+        settings_cpu = dict(settings)
+        settings_cpu["video_args"] = nuevos_args
+        settings_cpu.pop("video_args_pass1", None)
+        settings_cpu.pop("video_args_pass2", None)
+        return self._run_ffmpeg_command(
+            input_file, output_file, settings_cpu, duration_sec, cancellation_event,
+            progress_callback=progress_callback, worker_ref=worker_ref, allow_cpu_fallback=False,
+        )
 
     def _execute_recode(self, job, cancellation_event=None, worker_ref=None):
         if cancellation_event is None:
@@ -1196,14 +1303,23 @@ class QueueManager(QObject):
     def start_queue(self):
         """Inicia o reanuda el procesamiento de la cola."""
         with QMutexLocker(self._mutex):
+            cambio = self._is_paused
             self._is_paused = False
-        logger.info("QueueManager: Cola iniciada/reanudada.")
+        if cambio:
+            logger.info("QueueManager: Cola iniciada/reanudada.")
 
     def pause_queue(self):
-        """Pausa el procesamiento de la cola (las descargas activas continúan, pero no empezará ninguna nueva)."""
+        """Pausa el procesamiento de la cola (las descargas activas continúan, pero no empezará ninguna nueva).
+
+        Solo se registra el CAMBIO de estado: al vaciarse la cola, pausan tanto el hilo
+        despachador (al quedarse sin trabajos activos) como el controlador de Proceso
+        Avanzado al recibir finished_all -- las dos llamadas son correctas, pero en el
+        log se leían como una pausa duplicada."""
         with QMutexLocker(self._mutex):
+            cambio = not self._is_paused
             self._is_paused = True
-        logger.info("QueueManager: Cola pausada.")
+        if cambio:
+            logger.info("QueueManager: Cola pausada.")
 
     def add_job(self, config: dict, job_type: str = "DOWNLOAD") -> str:
         """Añade un nuevo trabajo a la cola."""
