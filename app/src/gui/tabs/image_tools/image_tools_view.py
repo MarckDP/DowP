@@ -1179,6 +1179,11 @@ class ImageToolsTab(QWidget):
         layout.addWidget(sep)
 
         self.convert_panel = ConvertPanel()
+        # La casilla "Mapa de profundidad: 16 bits" de las páginas PNG/TIFF solo se
+        # muestra con la profundidad activa (ver ConvertPanel.set_depth_active).
+        self.depth_popover_content.selection_changed.connect(
+            lambda _family, _model, is_valid: self.convert_panel.set_depth_active(is_valid))
+        self.convert_panel.set_depth_active(self.depth_popover_content.is_valid_selection())
         self.convert_panel.validity_changed.connect(self._on_convert_validity_changed)
         layout.addWidget(self.convert_panel, 0)
 

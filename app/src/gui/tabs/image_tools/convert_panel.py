@@ -32,8 +32,10 @@ class ConvertPanel(QWidget):
         super().__init__(parent)
         self._ico_checkboxes = {}
         self._icns_checkboxes = {}
+        self._depth_active = False
         self._init_ui()
         self._on_format_changed()
+        self.set_depth_active(False)
 
     # ─── UI ──────────────────────────────────────────────────────
 
@@ -154,6 +156,8 @@ class ConvertPanel(QWidget):
         self.chk_png_transparency = QCheckBox(self.tr("Mantener transparencia"), page)
         self.chk_png_transparency.setChecked(True)
         v.addWidget(self.chk_png_transparency)
+        self.chk_png_depth16 = self._make_depth16_checkbox(page)
+        v.addWidget(self.chk_png_depth16)
         v.addWidget(QLabel(self.tr("Compresión:"), page))
         self.slider_png_compression = QSlider(Qt.Horizontal, page)
         self.slider_png_compression.setRange(0, 9)
@@ -346,8 +350,36 @@ class ConvertPanel(QWidget):
         self.chk_tiff_transparency = QCheckBox(self.tr("Mantener transparencia"), page)
         self.chk_tiff_transparency.setChecked(True)
         v.addWidget(self.chk_tiff_transparency)
+        self.chk_tiff_depth16 = self._make_depth16_checkbox(page)
+        v.addWidget(self.chk_tiff_depth16)
         v.addStretch()
         return page
+
+    def _make_depth16_checkbox(self, page) -> QCheckBox:
+        """Casilla "Mapa de profundidad: 16 bits", compartida por las páginas de PNG y
+        TIFF (son los únicos formatos que guardan gris de 16 bits: WEBP y AVIF lo
+        bajan a 8 en silencio, y JPG/BMP ni lo admiten). Nace marcada -- para un mapa de
+        profundidad 16 bits es lo correcto casi siempre -- y oculta: solo se muestra
+        mientras Mapa de Profundidad está activo (ver set_depth_active), porque Pillow
+        no guarda RGB de 16 bits, así que para una foto normal no haría nada."""
+        chk = QCheckBox(self.tr("Mapa de profundidad: 16 bits"), page)
+        chk.setChecked(True)
+        chk.setToolTip(self.tr(
+            "Guarda el mapa con 65.536 niveles de gris en vez de 256: evita los "
+            "escalones al usarlo como desplazamiento en DaVinci o Blender.\n\n"
+            "No se aplica si el mapa lleva transparencia (por ejemplo, si también se "
+            "eliminó el fondo) ni si después pasa por Reescalar o Canvas: en esos "
+            "casos se guarda en 8 bits."))
+        chk.setVisible(False)
+        return chk
+
+    def set_depth_active(self, active: bool):
+        """Muestra u oculta la casilla de 16 bits según Mapa de Profundidad esté
+        activo. Lo llama ImageToolsTab al cambiar la selección del popover -- un solo
+        sentido: el panel nunca le dice nada al popover."""
+        self._depth_active = bool(active)
+        self.chk_png_depth16.setVisible(self._depth_active)
+        self.chk_tiff_depth16.setVisible(self._depth_active)
 
     def _build_ico_page(self, parent) -> QWidget:
         page = QWidget(parent)
@@ -423,6 +455,7 @@ class ConvertPanel(QWidget):
         if fmt == "PNG":
             settings["png_transparency"] = self.chk_png_transparency.isChecked()
             settings["png_compression"] = self.slider_png_compression.value()
+            settings["depth_16bit"] = self._depth_active and self.chk_png_depth16.isChecked()
         elif fmt == "JPG":
             settings["jpg_quality"] = self.slider_jpg_quality.value()
             settings["jpg_subsampling"] = self.combo_jpg_subsampling.currentData()
@@ -448,6 +481,7 @@ class ConvertPanel(QWidget):
         elif fmt == "TIFF":
             settings["tiff_compression"] = self.combo_tiff_compression.currentData()
             settings["tiff_transparency"] = self.chk_tiff_transparency.isChecked()
+            settings["depth_16bit"] = self._depth_active and self.chk_tiff_depth16.isChecked()
         elif fmt == "ICO":
             settings["ico_sizes"] = {size: chk.isChecked() for size, chk in self._ico_checkboxes.items()}
         elif fmt == "ICNS":

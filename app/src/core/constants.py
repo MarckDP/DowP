@@ -730,6 +730,19 @@ REMBG_MODEL_FAMILIES = {
 # "size_bytes" es el peso real de cada archivo (medido contra el archivo
 # descargado de cada URL); el peso que ve el usuario es la suma con extra_files.
 _DEPTH_ANYTHING_URL = "https://huggingface.co/onnx-community/{0}/resolve/main/onnx/{1}"
+_DEPTH_ANYTHING_V1_URL = "https://huggingface.co/Xenova/depth-anything-large-hf/resolve/main/onnx/{0}"
+
+# Licencia de los pesos de cada modelo, tal como la declara el repositorio ORIGINAL (no la
+# conversión ONNX, que a veces copia la etiqueta de otra variante: la conversión de DA3
+# Large dice Apache y deriva de un checkpoint CC BY-NC). Verificada en la API de Hugging
+# Face y en los repositorios oficiales el 2026-09-19. Solo se MUESTRA (etiqueta pequeña
+# en el popover y en Ajustes > Modelos, y una nota al descargar): DowP no aloja ningún
+# peso, cada usuario los baja directamente de Hugging Face. "license_note", si existe,
+# es una aclaración que sale como tooltip de esa etiqueta.
+LICENSE_APACHE = "Apache 2.0"
+LICENSE_MIT = "MIT"
+LICENSE_CC_NC = "CC BY-NC 4.0"
+
 DEPTH_MODEL_FAMILIES = {
     "Depth Anything V2": {
         QCoreApplication.translate("constants", "Small (Recomendado)"): {
@@ -737,6 +750,7 @@ DEPTH_MODEL_FAMILIES = {
             "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-small", "model.onnx"),
             "folder": "depth/da2-small",
             "size_bytes": 99060839,
+            "license": LICENSE_APACHE,
             "input_layout": "4d",
             "output_kind": "disparity",
             "process_mode": "short_side",
@@ -747,6 +761,51 @@ DEPTH_MODEL_FAMILIES = {
             "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-small", "model_fp16.onnx"),
             "folder": "depth/da2-small",
             "size_bytes": 49642442,
+            "license": LICENSE_APACHE,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Base"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-base", "model.onnx"),
+            "folder": "depth/da2-base",
+            "size_bytes": 388917010,
+            "license": LICENSE_CC_NC,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Base FP16 (Ligero, ideal con GPU)"): {
+            "file": "model_fp16.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-base", "model_fp16.onnx"),
+            "folder": "depth/da2-base",
+            "size_bytes": 194570657,
+            "license": LICENSE_CC_NC,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-large", "model.onnx"),
+            "folder": "depth/da2-large",
+            "size_bytes": 1336922232,
+            "license": LICENSE_CC_NC,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large FP16 (Ligero, ideal con GPU)"): {
+            "file": "model_fp16.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-large", "model_fp16.onnx"),
+            "folder": "depth/da2-large",
+            "size_bytes": 668656405,
+            "license": LICENSE_CC_NC,
             "input_layout": "4d",
             "output_kind": "disparity",
             "process_mode": "short_side",
@@ -764,6 +823,7 @@ DEPTH_MODEL_FAMILIES = {
                  "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx_data"),
                  "size_bytes": 104702464},
             ],
+            "license": LICENSE_APACHE,
             "input_layout": "5d",
             "output_kind": "depth",
             "process_mode": "short_side",
@@ -779,8 +839,53 @@ DEPTH_MODEL_FAMILIES = {
                  "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx_data"),
                  "size_bytes": 412068352},
             ],
+            "license": LICENSE_APACHE,
             "input_layout": "5d",
             "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large (Más potente)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx"),
+            "folder": "depth/da3-large",
+            "size_bytes": 1093118,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx_data"),
+                 "size_bytes": 1381741568},
+            ],
+            "license": LICENSE_CC_NC,
+            "license_note": QCoreApplication.translate(
+                "constants",
+                "La conversión ONNX indica Apache 2.0, pero deriva del modelo DA3-Large "
+                "original, que es CC BY-NC 4.0."),
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+    },
+    "Depth Anything V1": {
+        QCoreApplication.translate("constants", "Large"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_V1_URL.format("model.onnx"),
+            "folder": "depth/da1-large",
+            "size_bytes": 1337136946,
+            "license": LICENSE_APACHE,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large FP16 (Ligero, ideal con GPU)"): {
+            "file": "model_fp16.onnx",
+            "url": _DEPTH_ANYTHING_V1_URL.format("model_fp16.onnx"),
+            "folder": "depth/da1-large",
+            "size_bytes": 669066744,
+            "license": LICENSE_APACHE,
+            "input_layout": "4d",
+            "output_kind": "disparity",
             "process_mode": "short_side",
             "process_size": 518,
         },
@@ -791,6 +896,7 @@ DEPTH_MODEL_FAMILIES = {
             "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Base-onnx/resolve/main/Distill%20Any%20Depth%20Base/model.onnx",
             "folder": "depth/dad-base",
             "size_bytes": 388874697,
+            "license": LICENSE_MIT,
             "input_layout": "4d",
             "output_kind": "disparity",
             "process_mode": "square",
@@ -801,6 +907,7 @@ DEPTH_MODEL_FAMILIES = {
             "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Large-onnx/resolve/main/Distill%20Any%20Depth%20Large/model.onnx",
             "folder": "depth/dad-large",
             "size_bytes": 1336858580,
+            "license": LICENSE_MIT,
             "input_layout": "4d",
             "output_kind": "disparity",
             "process_mode": "square",

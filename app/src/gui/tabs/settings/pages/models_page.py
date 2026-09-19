@@ -15,6 +15,7 @@ from core.constants import DEPTH_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCALING
 from core.setup.models_setup import (
     is_depth_model_installed, download_depth_model, delete_depth_model,
     get_depth_model_size_bytes, get_depth_model_disk_size, get_depth_model_path,
+    get_depth_model_license, get_depth_model_license_note, is_depth_model_noncommercial,
     is_rembg_model_installed, is_rembg_model_gated, download_rembg_model, delete_rembg_model,
     is_upscaling_engine_installed, download_upscaling_engine, delete_upscaling_engine,
     get_folder_size, get_custom_rembg_models, import_custom_rembg_model,
@@ -136,7 +137,9 @@ class ModelRow(QFrame):
     download_requested = Signal(str)  # row_id
 
     def __init__(self, row_id: str, title: str, path_for_size: str, gated: bool = False,
-                 no_download: bool = False, installed_check=None, disk_size=None, parent=None):
+                 no_download: bool = False, installed_check=None, disk_size=None,
+                 license_text: str = "", license_noncommercial: bool = False,
+                 license_note: str = "", parent=None):
         super().__init__(parent)
         self.row_id = row_id
         self.path_for_size = path_for_size
@@ -148,6 +151,10 @@ class ModelRow(QFrame):
         # la fila se comporta como siempre.
         self._installed_check = installed_check
         self._disk_size = disk_size
+        # Etiqueta pequeña de licencia junto al nombre (solo modelos de profundidad, hoy).
+        self._license_text = license_text
+        self._license_noncommercial = license_noncommercial
+        self._license_note = license_note
         # no_download: modelos importados a mano (ver _add_custom_row) -- ya están
         # instalados por definición (se copiaron al importar), no tiene sentido
         # ofrecer "Descargar"/"Reinstalar" para algo que no viene de una URL.
@@ -166,7 +173,19 @@ class ModelRow(QFrame):
 
         self.lbl_title = QLabel(title)
         self.lbl_title.setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;")
-        info_vbox.addWidget(self.lbl_title)
+        if self._license_text:
+            title_row = QHBoxLayout()
+            title_row.setSpacing(8)
+            title_row.addWidget(self.lbl_title)
+            self.lbl_license = QLabel(self._license_text)
+            color = get_theme_token("estado_aviso", "#d8c94a") if self._license_noncommercial else "#888888"
+            self.lbl_license.setStyleSheet(f"color: {color}; font-size: 10px;")
+            self.lbl_license.setToolTip(self._license_note)
+            title_row.addWidget(self.lbl_license, 0, Qt.AlignBottom)
+            title_row.addStretch()
+            info_vbox.addLayout(title_row)
+        else:
+            info_vbox.addWidget(self.lbl_title)
 
         self.lbl_status = QLabel()
         self.lbl_status.setStyleSheet("font-size: 11px;")
@@ -590,6 +609,12 @@ class ModelsPage(QWidget):
         self.row_kind[row_id] = "rembg"
         self.content_layout.addWidget(row)
 
+    def _license_row_text(self, model_info: dict) -> str:
+        license_name = get_depth_model_license(model_info)
+        if license_name and is_depth_model_noncommercial(model_info):
+            return self.tr("{0} · no comercial").format(license_name)
+        return license_name
+
     def _add_depth_row(self, model_name: str, model_info: dict):
         row_id = f"depth::{model_info['folder']}::{model_info['file']}"
         row = ModelRow(
@@ -597,6 +622,9 @@ class ModelsPage(QWidget):
             get_depth_model_path(model_info),
             installed_check=lambda info=model_info: is_depth_model_installed(info),
             disk_size=lambda info=model_info: get_depth_model_disk_size(info),
+            license_text=self._license_row_text(model_info),
+            license_noncommercial=is_depth_model_noncommercial(model_info),
+            license_note=get_depth_model_license_note(model_info),
         )
         row.download_requested.connect(self._on_download_requested)
         row.btn_delete.clicked.connect(lambda: self._on_delete_depth(row_id, model_name))

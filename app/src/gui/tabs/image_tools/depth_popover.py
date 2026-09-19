@@ -11,9 +11,10 @@ Sin checkbox de "activar": con Motor y Modelo elegidos la función se aplica
 Opciones propias:
   - Invertir: por defecto el mapa sale con "cerca = blanco" (la convención de
     DaVinci/Blender para desplazamiento); invertido, cerca = negro.
-  - Salida de 16 bits: un mapa de 8 bits se ve escalonado al usarlo como
-    desplazamiento. Solo PNG y TIFF guardan 16 bits, y solo sin transparencia
-    (ver ImageConverter._save_as_png / depth_engine.estimate_depth).
+  - El ancho de bits (8 o 16) NO se elige aquí sino en las opciones de PNG y TIFF
+    del panel Formato de salida (ver ConvertPanel._make_depth16_checkbox): es una
+    propiedad del formato de guardado -- solo PNG y TIFF guardan 16 bits, y solo sin
+    transparencia -- y tenerla también en este popover chocaba con el formato elegido.
 
 La resolución a la que calcula cada modelo es fija a propósito (ver la nota de
 DEPTH_MODEL_FAMILIES en core/constants.py) -- aquí solo se informa."""
@@ -32,8 +33,9 @@ from gui.widgets.model_download_prompt import (
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from core.constants import AI_ENGINE_HOLDER, AI_MODEL_HOLDER
 from core.setup.models_setup import (
-    delete_depth_model, download_depth_model, get_depth_families, get_depth_model_size_bytes,
-    is_depth_model_installed,
+    delete_depth_model, download_depth_model, get_depth_families, get_depth_model_license,
+    get_depth_model_license_note, get_depth_model_size_bytes, is_depth_model_installed,
+    is_depth_model_noncommercial,
 )
 
 _GPU_MACOS_WARNING = QCoreApplication.translate(
@@ -56,14 +58,6 @@ _INVERT_TOOLTIP = QCoreApplication.translate(
     "DepthPopoverContent",
     "Por defecto lo cercano sale blanco y lo lejano negro.\n"
     "Marca esta opción si tu programa espera lo contrario."
-)
-_16BIT_TOOLTIP = QCoreApplication.translate(
-    "DepthPopoverContent",
-    "Guarda el mapa con 65.536 niveles de gris en vez de 256: evita los "
-    "escalones al usarlo como desplazamiento en DaVinci o Blender.\n\n"
-    "Solo se aplica al guardar en PNG o TIFF, y si la imagen no tiene "
-    "transparencia (por ejemplo, si también se eliminó el fondo). En los demás "
-    "casos se guarda en 8 bits."
 )
 
 
@@ -131,6 +125,11 @@ class DepthPopoverContent(QFrame):
         self.lbl_process.setVisible(False)
         layout.addWidget(self.lbl_process)
 
+        # Licencia del modelo elegido: una línea pequeña (ver _update_license_label).
+        self.lbl_license = QLabel()
+        self.lbl_license.setVisible(False)
+        layout.addWidget(self.lbl_license)
+
         # Descargas en curso por clave de modelo -- ver RembgPopoverContent._downloads.
         self._downloads: dict[str, ModelDownloadWorker] = {}
 
@@ -153,9 +152,13 @@ class DepthPopoverContent(QFrame):
         self.check_invert.setToolTip(_INVERT_TOOLTIP)
         layout.addWidget(self.check_invert)
 
-        self.check_16bit = QCheckBox(self.tr("Salida de 16 bits (PNG/TIFF)"))
-        self.check_16bit.setToolTip(_16BIT_TOOLTIP)
-        layout.addWidget(self.check_16bit)
+        lbl_bits = QLabel(self.tr(
+            "El ancho de bits (8 o 16) se elige en las opciones de PNG y TIFF, "
+            "en Formato de salida."))
+        lbl_bits.setWordWrap(True)
+        lbl_bits.setStyleSheet(
+            f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        layout.addWidget(lbl_bits)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -208,6 +211,8 @@ class DepthPopoverContent(QFrame):
                 icon = get_colored_svg_icon(
                     "download.svg", get_theme_token('texto_secundario', '#888888'), size=14)
                 tooltip = self.tr("No descargado")
+            license_line = self.tr("Licencia: {0}").format(get_depth_model_license(model_info))
+            tooltip = tooltip + " · " + license_line
             self.combo_model.addItem(
                 icon, format_model_label(model_name, get_depth_model_size_bytes(model_info)), model_name)
             self.combo_model.setItemData(self.combo_model.count() - 1, tooltip, Qt.ToolTipRole)
@@ -240,9 +245,30 @@ class DepthPopoverContent(QFrame):
         self.lbl_process.setText(text)
         self.lbl_process.setVisible(True)
 
+    def _update_license_label(self, model_info):
+        """Etiqueta pequeña con la licencia del modelo elegido. En gris si permite uso
+        comercial; en ámbar y con "solo uso no comercial" si es CC BY-NC -- así se ve de
+        un vistazo sin llenar el popover. Si el catálogo trae una aclaración
+        ("license_note"), sale como tooltip."""
+        license_name = get_depth_model_license(model_info) if model_info else ""
+        if not license_name:
+            self.lbl_license.setVisible(False)
+            return
+        if is_depth_model_noncommercial(model_info):
+            text = self.tr("Licencia: {0} · solo uso no comercial").format(license_name)
+            color = get_theme_token('estado_aviso', '#d8c94a')
+        else:
+            text = self.tr("Licencia: {0}").format(license_name)
+            color = get_theme_token('texto_secundario', '#888888')
+        self.lbl_license.setText(text)
+        self.lbl_license.setStyleSheet(f"color: {color}; font-size: 10px;")
+        self.lbl_license.setToolTip(get_depth_model_license_note(model_info))
+        self.lbl_license.setVisible(True)
+
     def _update_status(self):
         model_info = self._current_model_info()
         self._update_process_label(model_info)
+        self._update_license_label(model_info)
         if not model_info:
             self.status_row.clear()
             self.actions_row.set_delete_enabled(False)
@@ -299,8 +325,14 @@ class DepthPopoverContent(QFrame):
             return
         if self.combo_model.currentData() != model_name:
             return
+        # Los CC BY-NC llevan el aviso en el propio diálogo de descarga, con el peso.
+        extra_note = ""
+        if is_depth_model_noncommercial(model_info):
+            extra_note = self.tr("Licencia {0}: solo permite uso no comercial.").format(
+                get_depth_model_license(model_info))
         accepted = confirm_model_download(
-            self, model_name, get_depth_model_size_bytes(model_info), subject=self.tr("modelo"))
+            self, model_name, get_depth_model_size_bytes(model_info), subject=self.tr("modelo"),
+            extra_note=extra_note)
         if not accepted:
             self._update_status()
             return
@@ -361,5 +393,4 @@ class DepthPopoverContent(QFrame):
             "depth_model": self.combo_model.currentData(),
             "depth_gpu": self.gpu_enabled(),
             "depth_invert": self.check_invert.isChecked(),
-            "depth_16bit": self.check_16bit.isChecked(),
         }

@@ -324,6 +324,26 @@ def get_depth_model_size_bytes(model_info: dict) -> int:
     return sum(int(entry.get("size_bytes") or 0) for entry in _depth_files(model_info))
 
 
+def get_depth_model_license(model_info: dict) -> str:
+    """Licencia de los pesos del modelo ("Apache 2.0", "MIT", "CC BY-NC 4.0"), tal como
+    la declara el catálogo (ver LICENSE_* en core/constants.py). Cadena vacía si el
+    modelo no la declara."""
+    return str(model_info.get("license") or "")
+
+
+def is_depth_model_noncommercial(model_info: dict) -> bool:
+    """True si la licencia del modelo restringe el uso a fines NO comerciales (CC BY-NC).
+    DowP no lo impide -- los pesos los baja el propio usuario de Hugging Face -- pero la
+    interfaz se lo avisa antes de descargarlo."""
+    return "-NC" in get_depth_model_license(model_info).upper().replace(" ", "-")
+
+
+def get_depth_model_license_note(model_info: dict) -> str:
+    """Aclaración opcional sobre la licencia, para el tooltip de la etiqueta (ej. una
+    conversión ONNX que declara una licencia distinta de la de su modelo original)."""
+    return str(model_info.get("license_note") or "")
+
+
 def get_depth_model_disk_size(model_info: dict) -> int:
     """Lo que ocupa en disco lo instalado de ESTE modelo. No sirve medir la
     carpeta: los dos Depth Anything V2 Small (FP32 y FP16) comparten carpeta y

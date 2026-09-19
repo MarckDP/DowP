@@ -105,8 +105,9 @@ def _is_gpu_failure(error: Exception) -> bool:
 
 def estimate_depth(img: Image.Image, options: dict, progress_callback=None) -> tuple[Image.Image, tuple[int, int]]:
     """Calcula el mapa de profundidad de `img` según options (depth_family/
-    depth_model/depth_gpu/depth_invert/depth_16bit -- ver
-    DepthPopoverContent.get_settings()). Devuelve (mapa, (ancho, alto) de
+    depth_model/depth_gpu/depth_invert -- ver DepthPopoverContent.get_settings(); y
+    depth_16bit, que viene de las opciones de PNG/TIFF, ver ConvertPanel.get_settings()).
+    Devuelve (mapa, (ancho, alto) de
     proceso). El mapa sale en modo "I;16" con depth_16bit y sin alfa, "LA" si
     `img` traía alfa (PNG no admite gris de 16 bits con alfa) y "L" si no."""
     model_info = _model_info(options.get("depth_family"), options.get("depth_model"))
