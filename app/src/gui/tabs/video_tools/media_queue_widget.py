@@ -98,8 +98,8 @@ def _accent_rgba(alpha: int) -> str:
     color = QColor(get_theme_token('acento_primario', '#B9E640'))
     return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})"
 
-VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".wmv", ".m4v"}
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma"}
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".wmv", ".m4v", ".dv"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
 SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 
 # Mismos colores que usa el Gestor de Medios (media_model.py) para estos íconos.
@@ -546,7 +546,7 @@ class MediaQueueWidget(QFrame):
 
     def _on_add_files_clicked(self):
         from PySide6.QtWidgets import QFileDialog
-        filter_str = self.tr("Archivos Multimedia (*.mp4 *.mkv *.mov *.avi *.webm *.mp3 *.wav *.aac *.flac *.ogg);;Todos los archivos (*.*)")
+        filter_str = self.tr("Archivos Multimedia (*.mp4 *.mkv *.mov *.avi *.webm *.dv *.mp3 *.wav *.aac *.flac *.ogg *.adts *.dts *.thd *.mlp *.mpc *.w64 *.shn);;Todos los archivos (*.*)")
         files, _ = QFileDialog.getOpenFileNames(self, self.tr("Seleccionar Archivos Multimedia"), "", filter_str)
         if files:
             self.add_files(files)

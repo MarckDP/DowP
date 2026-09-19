@@ -1,7 +1,7 @@
 VIDEO_EXTENSIONS = {'mp4', 'mkv', 'webm', 'mov', 'flv', 'avi', 'gif'}
 from PySide6.QtCore import QCoreApplication
-AUDIO_EXTENSIONS = {'m4a', 'mp3', 'ogg', 'opus', 'flac', 'wav'}
-SINGLE_STREAM_AUDIO_CONTAINERS = {'.mp3', '.wav', '.flac', '.ac3'}
+AUDIO_EXTENSIONS = {'m4a', 'mp3', 'ogg', 'opus', 'flac', 'wav', 'adts', 'aac'}
+SINGLE_STREAM_AUDIO_CONTAINERS = {'.mp3', '.wav', '.flac', '.ac3', '.adts', '.aac'}
 
 # Dominios que funcionan bien con extracción plana (Modo Rápido)
 FAST_MODE_SUPPORTED_DOMAINS = ["youtube.com", "youtu.be", "soundcloud.com", "x.com", "twitter.com", 
@@ -407,7 +407,9 @@ COMPATIBILITY_RULES = {
     ".mp3": { "video": [], "audio": ["libmp3lame"] },
     ".m4a": { "video": [], "audio": ["aac", "alac"] },
     ".opus": { "video": [], "audio": ["libopus"] },
-    ".wav": { "video": [], "audio": ["pcm_s16le", "pcm_s24le"] }
+    ".wav": { "video": [], "audio": ["pcm_s16le", "pcm_s24le"] },
+    ".adts": { "video": [], "audio": ["aac"] },
+    ".aac": { "video": [], "audio": ["aac"] }
 }
 
 # --- NUEVO: Definir formatos RAW ---
