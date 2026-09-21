@@ -5,7 +5,7 @@ import threading
 from PySide6.QtCore import QThread, Signal
 
 from core.logger.logger_manager import logger
-from core.tabs.image_tools import depth_engine, rembg_engine
+from core.tabs.image_tools import depth_engine, normal_engine, rembg_engine
 from core.tabs.image_tools.image_converter import ImageConverter
 from core.utils import onnx_sessions
 from core.utils.config_manager import get_config
@@ -39,6 +39,9 @@ class ImageConvertWorker(QThread):
     # Profundidad de ese archivo. Se emite ANTES de file_completed, así quien la
     # use ya la tiene al mostrar el resultado (ver ImageToolsTab._depth_process_sizes).
     file_depth_info = Signal(str, int, int)
+    # Igual que file_depth_info, para Mapa de Normales (solo MoGe-2: DeepBump trabaja a
+    # resolución completa y no emite nada).
+    file_normal_info = Signal(str, int, int)
     finished_signal = Signal(int, int)        # completados, total
 
     def __init__(self, filepaths: list[str], options: dict, titles: dict | None = None,
@@ -83,6 +86,8 @@ class ImageConvertWorker(QThread):
         # es parte del nombre de archivo, no texto de la interfaz.
         if self.options.get("depth_enabled", False):
             base_name = f"{base_name}_depth"
+        elif self.options.get("normals_enabled", False):
+            base_name = f"{base_name}_normal"
         filename = base_name + ext
 
         output_folder = (self.options.get("output_folder") or "").strip()
@@ -105,10 +110,13 @@ class ImageConvertWorker(QThread):
         # Profundidad), la caché compartida tiene que poder tener los dos modelos
         # a la vez durante el lote -- con el límite por defecto de 1, cada imagen
         # cargaría y tiraría ambos (ver onnx_sessions.set_min_capacity).
+        # (Profundidad y Normales son excluyentes: cuentan como un solo motor.)
         onnx_sessions.set_min_capacity(
-            int(bool(self.options.get("rembg_enabled"))) + int(bool(self.options.get("depth_enabled"))))
+            int(bool(self.options.get("rembg_enabled")))
+            + int(bool(self.options.get("depth_enabled") or self.options.get("normals_enabled"))))
         rembg_engine.prepare_session(self.options)
         depth_engine.prepare_session(self.options)
+        normal_engine.prepare_session(self.options)
         try:
             self._run_batch()
         finally:
@@ -177,6 +185,9 @@ class ImageConvertWorker(QThread):
                 depth_size = info.get("depth_process_size")
                 if depth_size:
                     self.file_depth_info.emit(filepath, int(depth_size[0]), int(depth_size[1]))
+                normal_size = info.get("normal_process_size")
+                if normal_size:
+                    self.file_normal_info.emit(filepath, int(normal_size[0]), int(normal_size[1]))
                 self.file_completed.emit(filepath, output_path)
             else:
                 rollback_backup(backup_path)

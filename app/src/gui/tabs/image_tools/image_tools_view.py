@@ -30,6 +30,7 @@ from gui.tabs.image_tools.image_queue_widget import ImageQueueWidget
 from gui.tabs.image_tools.upscale_popover import UpscalePopoverContent
 from gui.tabs.image_tools.rembg_popover import RembgPopoverContent
 from gui.tabs.image_tools.depth_popover import DepthPopoverContent
+from gui.tabs.image_tools.normal_popover import NormalPopoverContent
 from gui.tabs.image_tools.canvas_popover import CanvasPopoverContent
 from gui.tabs.image_tools.resize_popover import ResizePopoverContent
 from gui.tabs.image_tools.convert_panel import ConvertPanel
@@ -117,8 +118,10 @@ class ImageToolsTab(QWidget):
         # amarilla "920×518 calculado" sobre el resultado (ver
         # _show_compare_view). _pending_depth_sizes guarda lo que manda el
         # worker hasta que el archivo termina y se sabe qué lote era.
-        self._depth_process_sizes: dict[str, tuple[int, int]] = {}
-        self._pending_depth_sizes: dict[str, tuple[int, int]] = {}
+        # Cada valor es (ancho, alto, tipo), con tipo "depth" o "normals": la nota es la
+        # misma para los dos mapas, pero su tooltip dice qué se calculó.
+        self._depth_process_sizes: dict[str, tuple[int, int, str]] = {}
+        self._pending_depth_sizes: dict[str, tuple[int, int, str]] = {}
         self._active_convert_settings: dict | None = None
         self._build_ui()
         # Acepta arrastrar archivos desde fuera de la app (o desde otra pestaña de
@@ -219,6 +222,23 @@ class ImageToolsTab(QWidget):
             lambda: self.btn_depth.set_open(False))
         top_layout.addWidget(self.btn_depth)
         self._popover_buttons.append(self.btn_depth)
+
+        self.normal_popover_content = NormalPopoverContent()
+        self.normal_popover_content.selection_changed.connect(self._on_normal_selection_changed)
+
+        self.btn_normals = PopoverTriggerButton(
+            host=self, content=self.normal_popover_content,
+            on_right_click=lambda: self._deactivate_on_right_click(
+                self.btn_normals, self.normal_popover_content),
+        )
+        self.btn_normals.setFixedSize(32, 32)
+        self.btn_normals.setIconSize(QSize(18, 18))
+        self.btn_normals.setCursor(Qt.PointingHandCursor)
+        self._style_normals_button(is_valid=False)
+        self.normal_popover_content.close_popover_requested.connect(
+            lambda: self.btn_normals.set_open(False))
+        top_layout.addWidget(self.btn_normals)
+        self._popover_buttons.append(self.btn_normals)
 
         top_layout.addWidget(_make_sep())
 
@@ -328,6 +348,7 @@ class ImageToolsTab(QWidget):
         self.btn_upscale.opened.connect(self._reset_to_select_tool)
         self.btn_rembg.opened.connect(self._reset_to_select_tool)
         self.btn_depth.opened.connect(self._reset_to_select_tool)
+        self.btn_normals.opened.connect(self._reset_to_select_tool)
         self.btn_resize.opened.connect(self._reset_to_select_tool)
 
         top_layout.addStretch()
@@ -482,6 +503,16 @@ class ImageToolsTab(QWidget):
 
     def _on_depth_selection_changed(self, _family_key: str, _model_key: str, is_valid: bool):
         self._style_depth_button(is_valid)
+        # Profundidad y Normales son excluyentes (las dos producen una imagen nueva que
+        # reemplaza a la foto): encender una apaga la otra. deactivate() vuelve a emitir
+        # selection_changed con is_valid=False, que no apaga nada más -- no hay bucle.
+        if is_valid and self.normal_popover_content.is_active():
+            self.normal_popover_content.deactivate()
+
+    def _on_normal_selection_changed(self, _family_key: str, _model_key: str, is_valid: bool):
+        self._style_normals_button(is_valid)
+        if is_valid and self.depth_popover_content.is_active():
+            self.depth_popover_content.deactivate()
 
     def _on_resize_selection_changed(self, is_active: bool):
         self._style_resize_button(is_active)
@@ -580,6 +611,41 @@ class ImageToolsTab(QWidget):
             self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", "#6c7086", size=18))
             self.btn_depth.setToolTip(self.tr("Mapa de Profundidad (IA)"))
             self.btn_depth.setStyleSheet(f"""
+                QPushButton {{
+                    min-width: 30px; max-width: 30px;
+                    min-height: 30px; max-height: 30px;
+                    background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
+                    border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
+                    border-radius: 6px;
+                    padding: 0px;
+                }}
+                QPushButton:hover {{
+                    background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')};
+                }}
+            """)
+
+    def _style_normals_button(self, is_valid: bool):
+        """Mismo criterio visual que _style_depth_button -- ver ese método."""
+        if is_valid:
+            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", "#000000", size=18))
+            self.btn_normals.setToolTip(self.tr("Mapa de Normales (IA) — configuración lista (clic derecho: desactivar). Al activarlo se apaga el Mapa de Profundidad."))
+            self.btn_normals.setStyleSheet(f"""
+                QPushButton {{
+                    min-width: 32px; max-width: 32px;
+                    min-height: 32px; max-height: 32px;
+                    background-color: {get_theme_token('acento_secundario', '#1DC038')};
+                    border: none;
+                    border-radius: 6px;
+                    padding: 0px;
+                }}
+                QPushButton:hover {{
+                    background-color: {get_theme_token('acento_primario', '#B9E640')};
+                }}
+            """)
+        else:
+            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", "#6c7086", size=18))
+            self.btn_normals.setToolTip(self.tr("Mapa de Normales (IA)"))
+            self.btn_normals.setStyleSheet(f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -1040,16 +1106,22 @@ class ImageToolsTab(QWidget):
         if not size or after.isNull():
             cv.set_after_note("")
             return
-        process_w, process_h = size
+        process_w, process_h, kind = size
         result_w, result_h = after.width(), after.height()
         if process_w >= result_w * 0.9 and process_h >= result_h * 0.9:
             cv.set_after_note("")
             return
-        tooltip = self.tr(
-            "El modelo calculó la profundidad a {0}×{1} y el resultado se amplió a "
-            "{2}×{3}: los bordes tendrán menos detalle que la imagen original."
-        ).format(process_w, process_h, result_w, result_h)
-        if process_w == process_h and abs(result_w / max(1, result_h) - 1.0) > 0.05:
+        if kind == "normals":
+            tooltip = self.tr(
+                "El modelo calculó las normales a {0}×{1} y el resultado se amplió a "
+                "{2}×{3}: los bordes tendrán menos detalle que la imagen original."
+            ).format(process_w, process_h, result_w, result_h)
+        else:
+            tooltip = self.tr(
+                "El modelo calculó la profundidad a {0}×{1} y el resultado se amplió a "
+                "{2}×{3}: los bordes tendrán menos detalle que la imagen original."
+            ).format(process_w, process_h, result_w, result_h)
+        if kind == "depth" and process_w == process_h and abs(result_w / max(1, result_h) - 1.0) > 0.05:
             tooltip += "\n" + self.tr(
                 "Este modelo calcula en cuadrado, así que la imagen se deformó durante el cálculo.")
         cv.set_after_note(self.tr("{0}×{1} calculado").format(process_w, process_h), tooltip)
@@ -1524,6 +1596,7 @@ class ImageToolsTab(QWidget):
             **self.resize_popover_content.get_settings(),
             **self.rembg_popover_content.get_settings(),
             **self.depth_popover_content.get_settings(),
+            **self.normal_popover_content.get_settings(),
             **self.upscale_popover_content.get_settings(),
             **self.canvas_popover_content.get_settings(),
             **self.convert_panel.get_settings(),
@@ -1549,6 +1622,7 @@ class ImageToolsTab(QWidget):
         self._convert_worker.file_progress.connect(self._on_convert_file_progress)
         self._convert_worker.busy_indeterminate.connect(self._on_convert_busy_indeterminate)
         self._convert_worker.file_depth_info.connect(self._on_convert_file_depth_info)
+        self._convert_worker.file_normal_info.connect(self._on_convert_file_normal_info)
         self._convert_worker.file_completed.connect(self._on_convert_file_completed)
         self._convert_worker.finished_signal.connect(self._on_convert_finished)
 
@@ -1595,6 +1669,7 @@ class ImageToolsTab(QWidget):
             "resize": self.tr("Redimensionando"),
             "rembg": self.tr("Eliminando fondo"),
             "depth": self.tr("Calculando profundidad"),
+            "normals": self.tr("Calculando normales"),
             "upscale": self.tr("Reescalando con IA"),
             "canvas": self.tr("Ajustando canvas"),
             "saving": self.tr("Guardando"),
@@ -1650,7 +1725,10 @@ class ImageToolsTab(QWidget):
         self._update_progress_bar()
 
     def _on_convert_file_depth_info(self, input_path: str, width: int, height: int):
-        self._pending_depth_sizes[input_path] = (width, height)
+        self._pending_depth_sizes[input_path] = (width, height, "depth")
+
+    def _on_convert_file_normal_info(self, input_path: str, width: int, height: int):
+        self._pending_depth_sizes[input_path] = (width, height, "normals")
 
     def _on_convert_file_completed(self, input_path: str, output_path: str):
         """Registra el resultado de una conversión exitosa -- a propósito NO
@@ -1663,14 +1741,14 @@ class ImageToolsTab(QWidget):
         self._compare_cache.invalidate(input_path)
         settings = self._active_convert_settings or {}
         uses_ai = bool(settings.get("upscale_enabled") or settings.get("rembg_enabled")
-                       or settings.get("depth_enabled"))
+                       or settings.get("depth_enabled") or settings.get("normals_enabled"))
         self._files_with_ai_edit[input_path] = uses_ai
 
-        # La nota "calculado" solo aplica si el mapa de profundidad ES el
-        # resultado: con otro paso de tamaño o de IA encima, el tamaño final ya
-        # no depende solo del cálculo de profundidad.
+        # La nota "calculado" solo aplica si el mapa (de profundidad o de normales) ES
+        # el resultado: con otro paso de tamaño o de IA encima, el tamaño final ya no
+        # depende solo del cálculo del mapa.
         depth_size = self._pending_depth_sizes.pop(input_path, None)
-        depth_only = bool(settings.get("depth_enabled")) and not any(
+        depth_only = bool(settings.get("depth_enabled") or settings.get("normals_enabled")) and not any(
             settings.get(key) for key in ("rembg_enabled", "upscale_enabled", "resize_enabled", "canvas_enabled"))
         if depth_size and depth_only:
             self._depth_process_sizes[input_path] = depth_size
@@ -1799,6 +1877,12 @@ class ImageToolsTab(QWidget):
                 "desc": self.tr("Genera un mapa en escala de grises con la distancia de cada zona de la imagen (lo cercano en blanco). Sirve para efectos de desenfoque, niebla o desplazamiento en DaVinci Resolve o Blender."),
                 "widgets": [self.btn_depth],
                 "on_enter": lambda: self.btn_depth.set_open(True)
+            },
+            {
+                "title": self.tr("Mapa de Normales"),
+                "desc": self.tr("Genera un normal map: de una foto o escena con MoGe-2, o de una textura plana para materiales 3D con DeepBump. Sirve para relighting en DaVinci Resolve o para texturas en Blender. Si activas esta herramienta se apaga el Mapa de Profundidad."),
+                "widgets": [self.btn_normals],
+                "on_enter": lambda: self.btn_normals.set_open(True)
             },
             {
                 "title": self.tr("Redimensionar"),

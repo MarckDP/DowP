@@ -742,6 +742,7 @@ _DEPTH_ANYTHING_V1_URL = "https://huggingface.co/Xenova/depth-anything-large-hf/
 LICENSE_APACHE = "Apache 2.0"
 LICENSE_MIT = "MIT"
 LICENSE_CC_NC = "CC BY-NC 4.0"
+LICENSE_GPL3 = "GPL 3.0"
 
 DEPTH_MODEL_FAMILIES = {
     "Depth Anything V2": {
@@ -912,6 +913,63 @@ DEPTH_MODEL_FAMILIES = {
             "output_kind": "disparity",
             "process_mode": "square",
             "process_size": 518,
+        },
+    },
+}
+
+# Catálogo de modelos de Mapa de Normales -- misma forma que DEPTH_MODEL_FAMILIES (mismos
+# campos file/url/folder/size_bytes/license, y por eso las mismas funciones de instalación
+# de models_setup.py), más un campo "engine" que dice cómo se ejecuta (ver
+# core/tabs/image_tools/normal_engine.py): "moge" o "deepbump". Se distingue por ese campo
+# y no por el nombre de la familia porque los nombres son texto traducido.
+#
+#   - MoGe-2 (Microsoft, MIT): normales de una ESCENA o foto, en el espacio de la cámara
+#     (rojo = derecha, verde = arriba, azul = hacia el espectador). ONNX oficial del
+#     autor, tamaño de imagen libre; el detalle lo fija "num_tokens" (rango sugerido
+#     por sus autores: 1200-2500). Verificado con DowP el 2026-09-19: entrada en [0,1]
+#     (con normalización ImageNet las normales salen deformadas), salidas unitarias, y
+#     convención de ejes tipo OpenCV (x derecha, y abajo, z hacia dentro de la escena).
+#   - DeepBump (Hugo Tini, GPL-3.0): normal map de una TEXTURA plana a partir de su
+#     brillo, para materiales 3D. Modelo de 27 MB que trabaja por bloques de 256 px.
+#
+# El ONNX de DeepBump se baja del repositorio del autor (GitHub, rama master).
+_MOGE2_URL = "https://huggingface.co/Ruicheng/moge-2-{0}-normal-onnx/resolve/main/model.onnx"
+
+NORMAL_MODEL_FAMILIES = {
+    QCoreApplication.translate("constants", "MoGe-2 (Escenas)"): {
+        QCoreApplication.translate("constants", "Small (Rápido)"): {
+            "file": "model.onnx",
+            "url": _MOGE2_URL.format("vits"),
+            "folder": "normals/moge2-s",
+            "size_bytes": 140852051,
+            "license": LICENSE_MIT,
+            "engine": "moge",
+        },
+        QCoreApplication.translate("constants", "Base (Recomendado)"): {
+            "file": "model.onnx",
+            "url": _MOGE2_URL.format("vitb"),
+            "folder": "normals/moge2-b",
+            "size_bytes": 419411850,
+            "license": LICENSE_MIT,
+            "engine": "moge",
+        },
+        QCoreApplication.translate("constants", "Large (Máximo detalle)"): {
+            "file": "model.onnx",
+            "url": _MOGE2_URL.format("vitl"),
+            "folder": "normals/moge2-l",
+            "size_bytes": 1324265014,
+            "license": LICENSE_MIT,
+            "engine": "moge",
+        },
+    },
+    QCoreApplication.translate("constants", "DeepBump (Texturas)"): {
+        QCoreApplication.translate("constants", "Estándar"): {
+            "file": "deepbump256.onnx",
+            "url": "https://github.com/HugoTini/DeepBump/raw/master/deepbump256.onnx",
+            "folder": "normals/deepbump",
+            "size_bytes": 26706979,
+            "license": LICENSE_GPL3,
+            "engine": "deepbump",
         },
     },
 }

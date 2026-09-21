@@ -136,6 +136,15 @@ class ImageConverter:
                     if info is not None:
                         info["depth_process_size"] = process_size
                     report(72, "depth")
+                # Mapa de Normales -- mismo hueco y mismas razones que la profundidad (ver
+                # arriba). Son excluyentes: la interfaz apaga una al encender la otra, y
+                # si llegaran las dos, manda la profundidad.
+                elif options.get("normals_enabled", False):
+                    report(70, "normals")
+                    img, process_size = self._apply_normals(img, options, report)
+                    if info is not None and process_size:
+                        info["normal_process_size"] = process_size
+                    report(72, "normals")
                 if cancellation_event and cancellation_event.is_set():
                     return False, QCoreApplication.translate("ImageConverter", "Cancelado por el usuario.")
 
@@ -431,6 +440,20 @@ class ImageConverter:
         # Una fuente de 16 bits (PNG/TIFF en gris) se baja a 8 bits antes: el
         # convert("RGB") del motor recortaría sus valores en vez de escalarlos.
         return estimate_depth(self._downconvert_16bit(img), options, progress_callback=depth_cb)
+
+    def _apply_normals(self, img, options: dict, progress_callback=None):
+        """Corre Mapa de Normales (ver core/tabs/image_tools/normal_engine.py) sobre `img`.
+        Devuelve (mapa, (ancho, alto) de proceso o None si fue a resolución completa)."""
+        from core.tabs.image_tools.normal_engine import estimate_normals
+
+        def normals_cb(pct=None, *args):
+            if progress_callback:
+                try:
+                    progress_callback(pct, "normals")
+                except TypeError:
+                    progress_callback(pct)
+
+        return estimate_normals(self._downconvert_16bit(img), options, progress_callback=normals_cb)
 
     @staticmethod
     def _downconvert_16bit(img):

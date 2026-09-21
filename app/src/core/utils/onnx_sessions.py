@@ -18,7 +18,9 @@ import os
 import threading
 
 from core.logger.logger_manager import logger
-from core.utils.onnx_providers import build_session_options, get_execution_providers
+from core.utils.onnx_providers import (build_session_options, describe_providers,
+                                       get_execution_providers, provider_name,
+                                       providers_signature)
 
 _sessions: dict = {}
 _sessions_lock = threading.Lock()
@@ -43,6 +45,28 @@ def _max_sessions() -> int:
     return max(1, configured, _min_capacity)
 
 
+def _warn_if_gpu_was_dropped(providers, session, label: str) -> None:
+    """Avisa en el log si se pidió GPU y la sesión terminó corriendo por CPU.
+
+    Hace falta porque onnxruntime NO lanza excepción cuando un execution provider no
+    se puede inicializar: imprime "EP Error ... Falling back to ['CPUExecutionProvider']"
+    y devuelve una sesión funcional por CPU. Comprobado con un device_id inexistente en
+    onnxruntime 1.24. Sin esta comprobación, DowP creería estar usando la GPU mientras
+    procesa por CPU, que es justo la confusión que este arreglo viene a terminar (y el
+    reintento de is_gpu_failure tampoco salta, porque nunca hubo excepción)."""
+    requested = provider_name(providers[0]) if providers else None
+    if not requested or requested == "CPUExecutionProvider":
+        return
+    try:
+        active = session.get_providers()
+    except Exception:
+        return
+    if requested not in active:
+        logger.warning(f"{label}: se pidió {describe_providers(providers)} pero la sesión "
+                       f"quedó en {active} -- onnxruntime descartó el provider de GPU y "
+                       f"siguió por CPU. El procesado va a funcionar, pero lento.")
+
+
 def get_session(model_path: str, use_gpu: bool, label: str = "IA"):
     """Devuelve la sesión cacheada o la crea.
 
@@ -52,7 +76,12 @@ def get_session(model_path: str, use_gpu: bool, label: str = "IA"):
     SimplifiedLayerNormFusion busca un nodo que no existe) y sí con EXTENDED --
     probado con onnxruntime 1.24. Para el resto de modelos el primer intento
     funciona y este reintento nunca corre."""
-    key = f"{model_path}_{'gpu' if use_gpu else 'cpu'}"
+    # Los providers se resuelven ANTES de armar la clave porque la clave depende de
+    # ellos: incluye el device_id de la GPU elegida, no un "gpu" genérico (ver
+    # providers_signature). Resolverlos fuera del lock no cuesta nada -- la
+    # enumeración de adaptadores está cacheada en gpu_adapters.
+    providers = get_execution_providers(use_gpu)
+    key = f"{model_path}_{providers_signature(providers)}"
     with _sessions_lock:
         session = _sessions.get(key)
         if session is not None:
@@ -70,9 +99,9 @@ def get_session(model_path: str, use_gpu: bool, label: str = "IA"):
             del _sessions[oldest_key]
 
         import onnxruntime as ort
-        providers = get_execution_providers(use_gpu)
         sess_options = build_session_options(providers)
-        logger.info(f"{label}: cargando sesión ONNX ({providers[0]}): {os.path.basename(model_path)}")
+        logger.info(f"{label}: cargando sesión ONNX ({describe_providers(providers)}): "
+                    f"{os.path.basename(model_path)}")
         try:
             session = ort.InferenceSession(model_path, providers=providers, sess_options=sess_options)
         except Exception as e:
@@ -83,6 +112,7 @@ def get_session(model_path: str, use_gpu: bool, label: str = "IA"):
             sess_options = build_session_options(providers)
             sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
             session = ort.InferenceSession(model_path, providers=providers, sess_options=sess_options)
+        _warn_if_gpu_was_dropped(providers, session, label)
         _sessions[key] = session
         return session
 

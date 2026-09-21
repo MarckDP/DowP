@@ -19,7 +19,7 @@ from PIL import Image, ImageFilter
 from core.logger.logger_manager import logger
 from core.setup.models_setup import get_all_rembg_families
 from core.utils import onnx_sessions
-from core.utils.onnx_providers import DML_FAILURE_HINTS
+from core.utils.onnx_providers import is_gpu_failure
 from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
 
@@ -165,8 +165,7 @@ def remove_background(img: Image.Image, options: dict, progress_callback=None) -
         session = _get_session(model_path, use_gpu)
         return _run_inference(session, model_info, img)
     except Exception as e:
-        error_msg = repr(e)
-        if use_gpu and any(hint in error_msg for hint in DML_FAILURE_HINTS):
+        if use_gpu and is_gpu_failure(e):
             logger.warning(f"Eliminar Fondo: la GPU falló o se colgó ({e}) -- reintentando por CPU.")
             return remove_background(img, {**options, "rembg_gpu": False}, progress_callback)
         raise

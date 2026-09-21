@@ -63,6 +63,12 @@ def get_config():
         "update_channel": "beta" if IS_BETA else "stable",  # "stable" | "beta" (incluye prereleases de GitHub)
         "max_concurrent_downloads": 3,  # Número máximo de descargas simultáneas (1 a 10)
         "hardware_info": {},            # Información del sistema y GPU detectada
+        # GPU para los modelos de IA. Vacío = se elige sola (la dedicada). Sin interfaz
+        # a propósito: el automático acierta en los equipos híbridos normales y esto es
+        # la salida de emergencia para los casos raros (dos tarjetas dedicadas, o querer
+        # la integrada para dejar libre la dedicada). Acepta el nombre de la tarjeta o
+        # un trozo -- ej. "nvidia". Ver core/utils/gpu_adapters.GPU_OVERRIDE_CONFIG_KEY.
+        "ai_gpu_adapter": "",
         "analyze_playlist": True,       # Estado de casilla de análisis de playlist
         "fast_mode": True,              # Estado de casilla de modo rápido
     }

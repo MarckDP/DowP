@@ -13,9 +13,12 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 import zipfile
 import requests
-from core.constants import DEPTH_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES
+from core.constants import (
+    DEPTH_MODEL_FAMILIES, NORMAL_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES,
+)
 from core.logger.logger_manager import logger
 from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
@@ -352,6 +355,9 @@ def get_depth_model_disk_size(model_info: dict) -> int:
     return sum(get_folder_size(os.path.join(folder, entry["file"])) for entry in _depth_files(model_info))
 
 
+_DOWNLOAD_ATTEMPTS = 3
+
+
 def download_depth_model(model_info: dict, progress_callback=None) -> tuple[bool, str]:
     """Descarga todos los archivos del modelo, uno detrás de otro, cada uno con
     su .part temporal y rename al terminar (mismo criterio que
@@ -370,20 +376,37 @@ def download_depth_model(model_info: dict, progress_callback=None) -> tuple[bool
             part_path = target_path + ".part"
             expected = int(entry.get("size_bytes") or 0)
 
-            logger.info(f"Descargando modelo de profundidad desde {entry['url']}")
-            r = requests.get(entry["url"], stream=True, timeout=30)
-            r.raise_for_status()
-            file_total = int(r.headers.get("content-length", 0)) or expected
-            downloaded = 0
-            with open(part_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if progress_callback and file_total > 0:
-                            share = expected if expected else file_total
-                            done = done_before + share * min(1.0, downloaded / file_total)
-                            progress_callback(min(100, int(done / total_expected * 100)))
+            logger.info(f"Descargando modelo de IA desde {entry['url']}")
+            # El CDN de Hugging Face corta la conexión a mitad de un archivo grande de vez en
+            # cuando ("Read timed out": pasó 3 veces en las pruebas de esta misma
+            # función). Con reintentos, un corte puntual no le cuesta al usuario un error
+            # y volver a empezar a mano; el archivo se descarga de nuevo desde cero.
+            error_previo = None
+            for intento in range(1, _DOWNLOAD_ATTEMPTS + 1):
+                try:
+                    r = requests.get(entry["url"], stream=True, timeout=30)
+                    r.raise_for_status()
+                    file_total = int(r.headers.get("content-length", 0)) or expected
+                    downloaded = 0
+                    with open(part_path, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                if progress_callback and file_total > 0:
+                                    share = expected if expected else file_total
+                                    done = done_before + share * min(1.0, downloaded / file_total)
+                                    progress_callback(min(100, int(done / total_expected * 100)))
+                    error_previo = None
+                    break
+                except (requests.exceptions.RequestException, OSError) as e:
+                    error_previo = e
+                    logger.warning(f"Descarga de '{entry['file']}' cortada (intento {intento}/"
+                                   f"{_DOWNLOAD_ATTEMPTS}): {e}")
+                    if intento < _DOWNLOAD_ATTEMPTS:
+                        time.sleep(2 * intento)
+            if error_previo is not None:
+                raise error_previo
 
             if os.path.exists(target_path):
                 os.remove(target_path)
@@ -420,6 +443,25 @@ def delete_depth_model(model_info: dict) -> bool:
     except Exception as e:
         logger.error(f"Error eliminando modelo de profundidad '{model_info.get('folder')}': {e}")
         return False
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MAPA DE NORMALES -- mismo formato de catálogo que Mapa de Profundidad (file, folder,
+# extra_files, size_bytes, license), así que reutiliza sus funciones tal cual; estos
+# nombres solo existen para que el código de normales no lea "depth" donde habla de
+# normales. NORMAL_MODEL_FAMILIES vive en core/constants.py.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def get_normal_families() -> dict:
+    return dict(NORMAL_MODEL_FAMILIES)
+
+
+is_normal_model_installed = is_depth_model_installed
+download_normal_model = download_depth_model
+delete_normal_model = delete_depth_model
+get_normal_model_path = get_depth_model_path
+get_normal_model_size_bytes = get_depth_model_size_bytes
+get_normal_model_disk_size = get_depth_model_disk_size
 
 
 def _engine_dir(tool_info: dict) -> str:

@@ -11,7 +11,7 @@ from core.utils.i18n import logger
 from core.utils.cache_manager import format_bytes
 from core.utils.paths import get_models_dir
 from core.utils.config_manager import get_config, save_config
-from core.constants import DEPTH_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCALING_TOOLS
+from core.constants import DEPTH_MODEL_FAMILIES, NORMAL_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCALING_TOOLS
 from core.setup.models_setup import (
     is_depth_model_installed, download_depth_model, delete_depth_model,
     get_depth_model_size_bytes, get_depth_model_disk_size, get_depth_model_path,
@@ -23,7 +23,7 @@ from core.setup.models_setup import (
     get_rembg_model_size_bytes, get_upscaling_engine_size_bytes,
 )
 from core.tabs.image_tools import rembg_engine
-from core.utils.onnx_providers import get_gpu_provider_label
+from core.utils.onnx_providers import get_gpu_adapter_name, get_gpu_provider_label
 from core.utils.hardware_detector import get_cached_gpu_name
 from gui.widgets.toggle_switch import ToggleSwitch
 # ModelDownloadWorker vivía aquí, pero los popovers del Editor de Imagen ahora
@@ -316,7 +316,7 @@ class ModelsPage(QWidget):
         super().__init__(parent)
         self.rows: dict[str, ModelRow] = {}
         self.row_info: dict[str, dict] = {}          # row_id -> info dict (model_info / tool_info)
-        self.row_kind: dict[str, str] = {}            # row_id -> "rembg" | "upscaling"
+        self.row_kind: dict[str, str] = {}            # row_id -> "rembg" | "depth" | "normals" | "upscaling"
         self._workers: dict[str, ModelDownloadWorker] = {}
         self._build_ui()
 
@@ -389,6 +389,13 @@ class ModelsPage(QWidget):
             self._add_family_header(family_name)
             for model_name, model_info in models.items():
                 self._add_depth_row(model_name, model_info)
+
+        self.content_layout.addSpacing(8)
+        self._add_section_header(self.tr("Mapas de Normales"))
+        for family_name, models in NORMAL_MODEL_FAMILIES.items():
+            self._add_family_header(family_name)
+            for model_name, model_info in models.items():
+                self._add_depth_row(model_name, model_info, kind="normals")
 
         self.content_layout.addSpacing(8)
         self._add_section_header(self.tr("Motores de Reescalado (Upscaling)"))
@@ -466,7 +473,12 @@ class ModelsPage(QWidget):
         row.addWidget(self.btn_free_memory, 0, Qt.AlignVCenter)
 
         self._gpu_label = get_gpu_provider_label()
-        self._gpu_name = get_cached_gpu_name()
+        # El adaptador elegido antes que el nombre cacheado del escaneo: en un equipo
+        # con dos tarjetas, get_cached_gpu_name() las une con " / " ("NVIDIA ... /
+        # Intel ...") y deja sin responder cuál se está usando, que es justo lo que
+        # esta frase tiene que decir. Se conserva como respaldo para macOS y Linux,
+        # donde no hay un adaptador DXGI que nombrar.
+        self._gpu_name = get_gpu_adapter_name() or get_cached_gpu_name()
         self.switch_persist.setChecked(bool(get_config().get("rembg_persist_sessions", False)))
         self._refresh_persist_row()
         return container
@@ -615,8 +627,11 @@ class ModelsPage(QWidget):
             return self.tr("{0} · no comercial").format(license_name)
         return license_name
 
-    def _add_depth_row(self, model_name: str, model_info: dict):
-        row_id = f"depth::{model_info['folder']}::{model_info['file']}"
+    def _add_depth_row(self, model_name: str, model_info: dict, kind: str = "depth"):
+        """Fila de un modelo de Mapa de Profundidad ("depth") o de Mapa de Normales
+        ("normals"): comparten formato de catálogo, y por eso las mismas funciones de
+        instalación, descarga y borrado (ver "MAPA DE NORMALES" en models_setup.py)."""
+        row_id = f"{kind}::{model_info['folder']}::{model_info['file']}"
         row = ModelRow(
             row_id, format_model_label(model_name, get_depth_model_size_bytes(model_info)),
             get_depth_model_path(model_info),
@@ -630,7 +645,7 @@ class ModelsPage(QWidget):
         row.btn_delete.clicked.connect(lambda: self._on_delete_depth(row_id, model_name))
         self.rows[row_id] = row
         self.row_info[row_id] = model_info
-        self.row_kind[row_id] = "depth"
+        self.row_kind[row_id] = kind
         self.content_layout.addWidget(row)
 
     # ── Modelos personalizados (importados) ─────────────────────────────────
@@ -717,6 +732,7 @@ class ModelsPage(QWidget):
         download_func = {
             "rembg": download_rembg_model,
             "depth": download_depth_model,
+            "normals": download_depth_model,
         }.get(kind, download_upscaling_engine)
 
         row.set_downloading(True)

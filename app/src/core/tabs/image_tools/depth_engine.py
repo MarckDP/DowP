@@ -21,7 +21,7 @@ from PIL import Image
 from core.logger.logger_manager import logger
 from core.setup.models_setup import get_depth_families, get_depth_model_path, is_depth_model_installed
 from core.utils import onnx_sessions
-from core.utils.onnx_providers import DML_FAILURE_HINTS
+from core.utils.onnx_providers import is_gpu_failure
 from PySide6.QtCore import QCoreApplication
 
 _IMAGENET_MEAN = np.array((0.485, 0.456, 0.406), dtype=np.float32)
@@ -91,18 +91,6 @@ def _to_near_bright(raw, output_kind: str):
     return (depth - lo) / (hi - lo + 1e-8)
 
 
-def _is_gpu_failure(error: Exception) -> bool:
-    """Errores de la GPU que justifican reintentar por CPU. Además de las firmas
-    de DirectML ya conocidas, un UnicodeDecodeError: con Windows en español,
-    onnxruntime a veces no llega a entregar el mensaje de error de DirectML
-    (trae acentos en la codificación de Windows, no en UTF-8) y Python lanza
-    esto en su lugar -- visto en la prueba de estos mismos modelos."""
-    if isinstance(error, UnicodeDecodeError):
-        return True
-    error_msg = repr(error)
-    return any(hint in error_msg for hint in DML_FAILURE_HINTS)
-
-
 def estimate_depth(img: Image.Image, options: dict, progress_callback=None) -> tuple[Image.Image, tuple[int, int]]:
     """Calcula el mapa de profundidad de `img` según options (depth_family/
     depth_model/depth_gpu/depth_invert -- ver DepthPopoverContent.get_settings(); y
@@ -135,7 +123,7 @@ def estimate_depth(img: Image.Image, options: dict, progress_callback=None) -> t
                                                           model_info.get("input_layout", "4d"))}
         raw = session.run([session.get_outputs()[0].name], feed)[0]
     except Exception as e:
-        if use_gpu and _is_gpu_failure(e):
+        if use_gpu and is_gpu_failure(e):
             logger.warning(f"Mapa de Profundidad: la GPU falló o se colgó ({e!r}) -- reintentando por CPU.")
             return estimate_depth(img, {**options, "depth_gpu": False}, progress_callback)
         raise
