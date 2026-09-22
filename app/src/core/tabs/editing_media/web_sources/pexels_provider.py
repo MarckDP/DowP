@@ -8,7 +8,9 @@ from PySide6.QtCore import QCoreApplication
 
 PHOTO_URL = "https://api.pexels.com/v1/search"
 VIDEO_URL = "https://api.pexels.com/videos/search"
-PAGE_SIZE = 20
+# El límite de las APIs se cuenta por petición, no por resultado: pedir 60 cuesta lo mismo
+# que pedir 20 (máximo por página: Pexels 80, Pixabay 200). En "Todos" se reparte 30/30.
+PAGE_SIZE = 60
 
 
 class PexelsProvider(WebSourceProvider):

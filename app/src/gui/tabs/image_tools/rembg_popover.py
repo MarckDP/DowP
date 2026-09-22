@@ -58,7 +58,7 @@ from PySide6.QtGui import QFontMetrics
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.model_download_prompt import (
-    ModelActionsRow, ModelDownloadWorker, ModelStatusRow, confirm_model_download,
+    ModelActionsRow, model_downloads, ModelStatusRow, confirm_model_download,
     format_model_label, open_models_settings,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
@@ -169,11 +169,16 @@ class RembgPopoverContent(QFrame):
         layout.addLayout(model_row)
 
         # Estado del modelo elegido (listo / no descargado / descargando N% /
-        # requiere cuenta). Las descargas en curso se guardan por clave de modelo:
-        # el popover se esconde al clickear afuera, pero el QThread sigue vivo
-        # mientras el widget exista -- volver a abrirlo tiene que reencontrar su
-        # progreso, no arrancar de cero ni ofrecer bajar algo que ya se está bajando.
-        self._downloads: dict[str, ModelDownloadWorker] = {}
+        # requiere cuenta). Las descargas en curso viven en el gestor común
+        # (model_downloads()), no en el popover: volver a abrirlo -- o abrir Ajustes >
+        # Modelos -- tiene que reencontrar su progreso, no arrancar de cero ni ofrecer
+        # bajar algo que ya se está bajando desde otra pantalla.
+        # Aquí solo se recuerdan las claves que lanzó ESTE popover: solo quien lanza
+        # una descarga avisa con un diálogo si falla.
+        self._started_here: set[str] = set()
+        model_downloads().started.connect(self._on_download_started)
+        model_downloads().progress_changed.connect(self._on_download_progress)
+        model_downloads().finished.connect(self._on_download_finished)
 
         self.actions_row = ModelActionsRow(
             delete_tooltip=self.tr("Borrar del disco el modelo seleccionado"))
@@ -340,7 +345,7 @@ class RembgPopoverContent(QFrame):
             self.status_row.clear()
             self.actions_row.set_delete_enabled(False)
             return
-        downloading = self._model_id(model_info) in self._downloads
+        downloading = model_downloads().is_downloading(self._model_id(model_info))
         # Borrar a media descarga dejaría el .part huérfano y el worker escribiendo
         # sobre un archivo recién borrado.
         #
@@ -354,6 +359,7 @@ class RembgPopoverContent(QFrame):
             and not downloading)
         if downloading:
             # Descarga en curso: manda el porcentaje, no el estado en disco.
+            self.status_row.show_progress(model_downloads().progress(self._model_id(model_info)))
             return
         if is_rembg_model_installed(model_info):
             self.status_row.show_ready(self.tr("Modelo listo para usar."))
@@ -428,7 +434,7 @@ class RembgPopoverContent(QFrame):
         # volver a importarlo, y eso ya lo dice _update_status().
         if is_rembg_model_custom(model_info):
             return
-        if self._model_id(model_info) in self._downloads:
+        if model_downloads().is_downloading(self._model_id(model_info)):
             return
         model_name = self.combo_model.currentData()
         QTimer.singleShot(0, lambda: self._ask_and_download(model_name, model_info))
@@ -437,7 +443,7 @@ class RembgPopoverContent(QFrame):
         # Revalidar: entre el singleShot y este momento el usuario pudo cambiar de
         # modelo, o pudo terminar una descarga lanzada desde Ajustes > Modelos.
         model_id = self._model_id(model_info)
-        if model_id in self._downloads or is_rembg_model_installed(model_info):
+        if model_downloads().is_downloading(model_id) or is_rembg_model_installed(model_info):
             self._update_status()
             return
         if self.combo_model.currentData() != model_name:
@@ -448,32 +454,35 @@ class RembgPopoverContent(QFrame):
             self._update_status()
             return
 
-        worker = ModelDownloadWorker(model_id, download_rembg_model, model_info, parent=self)
-        worker.numeric_progress_signal.connect(self._on_download_progress)
-        worker.finished_signal.connect(self._on_download_finished)
-        self._downloads[model_id] = worker
-        self.status_row.show_progress(0)
-        worker.start()
+        # Si ya se estaba bajando (lanzada desde otra pantalla), start() no hace nada
+        # y el progreso llega igual por las señales del gestor.
+        self._started_here.add(model_id)
+        if not model_downloads().start(model_id, download_rembg_model, model_info):
+            self._started_here.discard(model_id)
 
     def _is_current_model(self, model_id: str) -> bool:
         model_info = self._current_model_info()
         return bool(model_info) and self._model_id(model_info) == model_id
+
+    def _on_download_started(self, model_id: str):
+        if self._is_current_model(model_id):
+            self._update_status()
 
     def _on_download_progress(self, pct: int, model_id: str):
         if self._is_current_model(model_id):
             self.status_row.show_progress(pct)
 
     def _on_download_finished(self, success: bool, message: str, model_id: str):
-        worker = self._downloads.pop(model_id, None)
-        if worker is not None:
-            worker.deleteLater()
+        started_here = model_id in self._started_here
+        self._started_here.discard(model_id)
         self._refresh_model_items()
         if success:
             self._update_status()
             return
         if self._is_current_model(model_id):
             self.status_row.show_error(self.tr("No se pudo descargar: {0}").format(message))
-        QMessageBox.warning(self, self.tr("Error de descarga"), message)
+        if started_here:
+            QMessageBox.warning(self, self.tr("Error de descarga"), message)
 
     def is_valid_selection(self) -> bool:
         return self.combo_family.currentData() is not None and self.combo_model.currentData() is not None

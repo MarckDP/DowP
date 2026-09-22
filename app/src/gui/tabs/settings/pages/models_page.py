@@ -26,10 +26,10 @@ from core.tabs.image_tools import rembg_engine
 from core.utils.onnx_providers import get_gpu_adapter_name, get_gpu_provider_label
 from core.utils.hardware_detector import get_cached_gpu_name
 from gui.widgets.toggle_switch import ToggleSwitch
-# ModelDownloadWorker vivía aquí, pero los popovers del Editor de Imagen ahora
-# también descargan modelos (ver gui/widgets/model_download_prompt.py) y no tiene
-# sentido tener dos copias del mismo QThread.
-from gui.widgets.model_download_prompt import ModelDownloadWorker, format_model_label
+# Las descargas no se lanzan desde aquí sino desde el gestor común (model_downloads(),
+# ver gui/widgets/model_download_prompt.py): los popovers del Editor de Imagen también
+# descargan modelos, y así el progreso de cada descarga se ve en las dos pantallas.
+from gui.widgets.model_download_prompt import format_model_label, model_download_key, model_downloads
 from gui.styles import (
     get_theme_token,
     set_button_variant,
@@ -317,8 +317,13 @@ class ModelsPage(QWidget):
         self.rows: dict[str, ModelRow] = {}
         self.row_info: dict[str, dict] = {}          # row_id -> info dict (model_info / tool_info)
         self.row_kind: dict[str, str] = {}            # row_id -> "rembg" | "depth" | "normals" | "upscaling"
-        self._workers: dict[str, ModelDownloadWorker] = {}
+        # Claves (model_download_key) de las descargas lanzadas desde esta página:
+        # solo quien lanza una descarga avisa con un diálogo si falla.
+        self._started_here: set[str] = set()
         self._build_ui()
+        model_downloads().started.connect(self._on_download_started)
+        model_downloads().progress_changed.connect(self._on_progress)
+        model_downloads().finished.connect(self._on_download_finished)
 
     def _build_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -411,8 +416,14 @@ class ModelsPage(QWidget):
         instala/borra modelos: los popovers del Editor de Imagen también lo hacen
         (ver gui/widgets/model_download_prompt.py). Sin esto, borrar un modelo ahí y
         entrar aquí lo seguiría mostrando como instalado."""
-        for row in self.rows.values():
+        for row_id, row in self.rows.items():
             row.refresh_status()
+            # refresh_status mira el disco, donde una descarga en curso todavía no
+            # está: sin esto la fila diría "No descargado" a media descarga.
+            key = model_download_key(self.row_info[row_id])
+            if model_downloads().is_downloading(key):
+                row.set_downloading(True)
+                row.set_progress(model_downloads().progress(key))
         self._refresh_custom_rows()
 
     # ── Mantener modelos en memoria ─────────────────────────────────────────
@@ -726,7 +737,6 @@ class ModelsPage(QWidget):
 
     # ── Descarga ─────────────────────────────────────────────────────────────
     def _on_download_requested(self, row_id: str):
-        row = self.rows[row_id]
         info = self.row_info[row_id]
         kind = self.row_kind[row_id]
         download_func = {
@@ -735,25 +745,35 @@ class ModelsPage(QWidget):
             "normals": download_depth_model,
         }.get(kind, download_upscaling_engine)
 
-        row.set_downloading(True)
-        worker = ModelDownloadWorker(row_id, download_func, info, parent=self)
-        worker.numeric_progress_signal.connect(self._on_progress)
-        worker.finished_signal.connect(self._on_download_finished)
-        self._workers[row_id] = worker
-        worker.start()
+        # Si ya se estaba bajando (lanzada desde un popover), start() no hace nada: la
+        # fila ya muestra ese progreso.
+        key = model_download_key(info)
+        self._started_here.add(key)
+        if not model_downloads().start(key, download_func, info):
+            self._started_here.discard(key)
 
-    def _on_progress(self, pct: int, row_id: str):
-        row = self.rows.get(row_id)
-        if row:
+    def _rows_for_key(self, key: str) -> list:
+        """Filas de la descarga `key` -- normalmente una; varias si un mismo archivo
+        apareciera en más de una sección."""
+        return [self.rows[row_id] for row_id, info in self.row_info.items()
+                if model_download_key(info) == key]
+
+    def _on_download_started(self, key: str):
+        for row in self._rows_for_key(key):
+            row.set_downloading(True)
+            row.set_progress(model_downloads().progress(key))
+
+    def _on_progress(self, pct: int, key: str):
+        for row in self._rows_for_key(key):
             row.set_progress(pct)
 
-    def _on_download_finished(self, success: bool, msg: str, row_id: str):
-        row = self.rows.get(row_id)
-        self._workers.pop(row_id, None)
-        if row:
+    def _on_download_finished(self, success: bool, msg: str, key: str):
+        started_here = key in self._started_here
+        self._started_here.discard(key)
+        for row in self._rows_for_key(key):
             row.set_downloading(False)
             row.refresh_status()
-        if not success:
+        if not success and started_here:
             QMessageBox.warning(self, self.tr("Error de Descarga"), msg)
 
     # ── Eliminar ─────────────────────────────────────────────────────────────

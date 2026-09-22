@@ -11,9 +11,10 @@ mismo, sin importar en qué parte de la app esté:
     salidas, Descargar y Cancelar. Nada se baja sin pasar por aquí -- mismo criterio
     que el resto de la app con los modelos (a diferencia de las dependencias, que sí
     se bajan solas al arrancar, ver core/setup/ffmpeg_setup.py).
-  - `ModelDownloadWorker`: la descarga en un QThread, para que la UI siga viva. El
-    worker no depende del popover que lo lanzó: si el usuario cierra el popover o se
-    va a otra pestaña, la descarga sigue.
+  - `ModelDownloadWorker` + `model_downloads()`: la descarga en un QThread, para que
+    la UI siga viva, registrada en un gestor único para que su progreso se vea desde
+    cualquier pantalla que muestre ese modelo. La descarga no depende del popover que
+    la lanzó: si el usuario cierra el popover o se va a otra pestaña, sigue.
   - `ModelStatusRow`: la línea de estado (icono + texto) que dice si el modelo está
     o no, y que durante la descarga muestra el porcentaje.
 
@@ -21,7 +22,7 @@ Los iconos salen de assets/icons/svg (teñidos con el token de color que toque),
 de emojis: un emoji se ve distinto en cada SO -- o directamente no se ve -- y no
 respeta el color del tema.
 """
-from PySide6.QtCore import QThread, Signal, Qt, QCoreApplication, QTimer
+from PySide6.QtCore import QObject, QThread, Signal, Qt, QCoreApplication, QTimer
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMessageBox, QPushButton
 
 from core.logger.logger_manager import logger
@@ -150,6 +151,86 @@ class ModelDownloadWorker(QThread):
         except Exception as e:
             logger.error(f"ModelDownloadWorker: Error descargando '{self.row_id}': {e}")
             self.finished_signal.emit(False, str(e), self.row_id)
+
+
+def model_download_key(info: dict) -> str:
+    """Clave de una descarga, común a TODOS los sitios que bajan modelos (Ajustes >
+    Modelos y los popovers del Editor de Imagen): carpeta + archivo destino. Tiene que
+    salir del info y no del nombre visible ni de un id propio de cada pantalla -- si
+    no, cada una llamaría distinto a la misma descarga y no podrían reconocerla. Los
+    motores de reescalado no tienen "file": su clave queda en la carpeta."""
+    return f"{info.get('folder', '')}/{info.get('file', '')}"
+
+
+class ModelDownloadManager(QObject):
+    """Registro único de las descargas de modelos en curso, para toda la app.
+
+    Antes cada pantalla (Ajustes > Modelos y cada popover) creaba y guardaba sus
+    propios ModelDownloadWorker, y el progreso solo le llegaba a quien lo lanzó: una
+    descarga iniciada en el popover no se veía en Ajustes (ni al revés), y desde la
+    otra pantalla se podía lanzar la MISMA descarga otra vez -- dos hilos escribiendo
+    el mismo archivo. Ahora todas lanzan aquí y todas escuchan estas señales; las
+    claves salen de model_download_key().
+
+    Quien lanza una descarga es el único que debe avisar del error con un diálogo
+    (los demás solo actualizan su estado): para eso cada pantalla recuerda qué claves
+    lanzó ella."""
+    started = Signal(str)                  # key
+    progress_changed = Signal(int, str)    # percent, key
+    finished = Signal(bool, str, str)      # success, message, key
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._workers: dict[str, ModelDownloadWorker] = {}
+        self._progress: dict[str, int] = {}
+
+    def is_downloading(self, key: str) -> bool:
+        return key in self._workers
+
+    def progress(self, key: str) -> int:
+        """Último porcentaje recibido -- para que una pantalla que se abre a mitad de
+        una descarga la muestre bien desde el primer momento, sin esperar al próximo
+        avance."""
+        return self._progress.get(key, 0)
+
+    def start(self, key: str, download_func, info: dict) -> bool:
+        """Lanza la descarga. Devuelve False (y no lanza nada) si esa clave ya se está
+        bajando: quien llama ya recibe su progreso por las señales."""
+        if key in self._workers:
+            return False
+        worker = ModelDownloadWorker(key, download_func, info, parent=self)
+        worker.numeric_progress_signal.connect(self._on_progress)
+        worker.finished_signal.connect(self._on_finished)
+        # deleteLater recién cuando el QThread terminó de verdad: finished_signal sale
+        # desde dentro de run(), con el hilo todavía vivo.
+        worker.finished.connect(worker.deleteLater)
+        self._workers[key] = worker
+        self._progress[key] = 0
+        worker.start()
+        self.started.emit(key)
+        return True
+
+    def _on_progress(self, pct: int, key: str):
+        self._progress[key] = pct
+        self.progress_changed.emit(pct, key)
+
+    def _on_finished(self, success: bool, message: str, key: str):
+        self._workers.pop(key, None)
+        self._progress.pop(key, None)
+        self.finished.emit(success, message, key)
+
+
+_manager: ModelDownloadManager | None = None
+
+
+def model_downloads() -> ModelDownloadManager:
+    """El ModelDownloadManager de la app (se crea al primer uso, ya con la
+    QApplication en marcha). Sin padre a propósito: tiene que sobrevivir a
+    cualquier pantalla que se cierre o se destruya a mitad de una descarga."""
+    global _manager
+    if _manager is None:
+        _manager = ModelDownloadManager()
+    return _manager
 
 
 def confirm_model_download(parent, display_name: str, size_bytes: int,

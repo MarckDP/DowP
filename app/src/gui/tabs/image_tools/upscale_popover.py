@@ -39,7 +39,7 @@ from PySide6.QtGui import QFontMetrics
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.model_download_prompt import (
-    ModelActionsRow, ModelDownloadWorker, ModelStatusRow, confirm_model_download,
+    ModelActionsRow, ModelStatusRow, confirm_model_download, model_download_key, model_downloads,
     format_model_label, open_models_settings,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
@@ -176,11 +176,15 @@ class UpscalePopoverContent(QFrame):
         layout.addWidget(self.check_tta)
 
         # Estado del motor elegido (instalado / no descargado / descargando N%).
-        # Las descargas en curso se guardan por clave de motor: el popover se
-        # esconde al clickear afuera, pero el QThread sigue vivo mientras el widget
-        # exista -- volver a abrirlo tiene que reencontrar su progreso, no arrancar
-        # de cero ni ofrecer descargar algo que ya se está bajando.
-        self._downloads: dict[str, ModelDownloadWorker] = {}
+        # Las descargas en curso viven en el gestor común (model_downloads()), no en
+        # el popover: volver a abrirlo -- o abrir Ajustes > Modelos -- tiene que
+        # reencontrar su progreso, no arrancar de cero ni ofrecer descargar algo que
+        # ya se está bajando desde otra pantalla. Aquí solo se recuerdan las claves
+        # que lanzó ESTE popover: solo quien lanza una descarga avisa si falla.
+        self._started_here: set[str] = set()
+        model_downloads().started.connect(self._on_download_started)
+        model_downloads().progress_changed.connect(self._on_download_progress)
+        model_downloads().finished.connect(self._on_download_finished)
 
         # "Eliminar" borra el MOTOR entero (binario + sus modelos), que es como se
         # instaló -- los modelos de la lista de arriba no existen por separado.
@@ -252,6 +256,16 @@ class UpscalePopoverContent(QFrame):
 
     def _current_engine_key(self):
         return self.combo_engine.currentData()
+
+    @staticmethod
+    def _download_key(engine_key):
+        """Clave del motor en el gestor de descargas -- la misma que usa Ajustes >
+        Modelos (ver model_download_key), no el engine_key de este popover."""
+        info = UPSCALING_TOOLS.get(engine_key)
+        return model_download_key(info) if info else None
+
+    def _is_current_download(self, key: str) -> bool:
+        return self._download_key(self._current_engine_key()) == key
 
     def _set_denoise_visible(self, visible: bool):
         for w in self._denoise_widgets:
@@ -377,13 +391,14 @@ class UpscalePopoverContent(QFrame):
             self.status_row.clear()
             self.actions_row.set_delete_enabled(False)
             return
-        downloading = engine_key in self._downloads
+        downloading = model_downloads().is_downloading(self._download_key(engine_key))
         # Borrar a media descarga dejaría al worker extrayendo sobre una carpeta
         # recién borrada.
         self.actions_row.set_delete_enabled(
             is_upscaling_engine_installed(info) and not downloading)
         if downloading:
             # Descarga en curso: manda el porcentaje, no el estado en disco.
+            self.status_row.show_progress(model_downloads().progress(self._download_key(engine_key)))
             return
         if is_upscaling_engine_installed(info):
             self.status_row.show_ready(self.tr("Motor instalado y listo para usar."))
@@ -423,7 +438,7 @@ class UpscalePopoverContent(QFrame):
         todavía cerrándose -- abrir un modal justo ahí deja el popup a medio cerrar
         por encima del diálogo."""
         info = UPSCALING_TOOLS.get(engine_key)
-        if not info or engine_key in self._downloads or is_upscaling_engine_installed(info):
+        if not info or model_downloads().is_downloading(model_download_key(info)) or is_upscaling_engine_installed(info):
             return
         QTimer.singleShot(0, lambda: self._ask_and_download(engine_key))
 
@@ -431,7 +446,7 @@ class UpscalePopoverContent(QFrame):
         info = UPSCALING_TOOLS.get(engine_key)
         # Revalidar: entre el singleShot y este momento el usuario pudo cambiar de
         # motor, o pudo terminar una descarga lanzada desde Ajustes > Modelos.
-        if not info or engine_key in self._downloads or is_upscaling_engine_installed(info):
+        if not info or model_downloads().is_downloading(model_download_key(info)) or is_upscaling_engine_installed(info):
             self._update_status()
             return
         if self._current_engine_key() != engine_key:
@@ -448,28 +463,32 @@ class UpscalePopoverContent(QFrame):
             self._update_status()
             return
 
-        worker = ModelDownloadWorker(engine_key, download_upscaling_engine, info, parent=self)
-        worker.numeric_progress_signal.connect(self._on_download_progress)
-        worker.finished_signal.connect(self._on_download_finished)
-        self._downloads[engine_key] = worker
-        self.status_row.show_progress(0)
-        worker.start()
+        # Si ya se estaba bajando (lanzada desde otra pantalla), start() no hace nada
+        # y el progreso llega igual por las señales del gestor.
+        key = model_download_key(info)
+        self._started_here.add(key)
+        if not model_downloads().start(key, download_upscaling_engine, info):
+            self._started_here.discard(key)
 
-    def _on_download_progress(self, pct: int, engine_key: str):
-        if self._current_engine_key() == engine_key:
+    def _on_download_started(self, key: str):
+        if self._is_current_download(key):
+            self._update_status()
+
+    def _on_download_progress(self, pct: int, key: str):
+        if self._is_current_download(key):
             self.status_row.show_progress(pct)
 
-    def _on_download_finished(self, success: bool, message: str, engine_key: str):
-        worker = self._downloads.pop(engine_key, None)
-        if worker is not None:
-            worker.deleteLater()
+    def _on_download_finished(self, success: bool, message: str, key: str):
+        started_here = key in self._started_here
+        self._started_here.discard(key)
         self._refresh_engine_items()
         if success:
             self._update_status()
             return
-        if self._current_engine_key() == engine_key:
+        if self._is_current_download(key):
             self.status_row.show_error(self.tr("No se pudo descargar: {0}").format(message))
-        QMessageBox.warning(self, self.tr("Error de descarga"), message)
+        if started_here:
+            QMessageBox.warning(self, self.tr("Error de descarga"), message)
 
     def is_valid_selection(self) -> bool:
         return self.combo_engine.currentData() is not None and self.combo_model.currentData() is not None

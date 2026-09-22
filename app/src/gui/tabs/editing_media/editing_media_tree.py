@@ -275,55 +275,25 @@ class TreeListMixin:
             self.media_table.setColumnHidden(6, not is_online) # Tipo de Archivo (Web)
             self.media_table.setColumnHidden(7, not is_online) # Detalles (Web)
 
-        # Si el origen web activo solo soporta un tipo de medio (ej. Freesound = solo audio),
-        # forzar ese filtro y deshabilitar los demás, igual que antes. Si soporta varios pero
-        # no todos (ej. Pixabay/Pexels = imagen+video, SIN audio -- su API pública no expone
-        # búsqueda de audio/música aunque el sitio sí la tenga, ver PixabayProvider), no forzar
-        # nada pero sí apagar el filtro que no aplica -- dejarlo clickeable solo hacía creer
-        # que "no hay resultados" cuando en realidad ese tipo no existe ahí. Si soporta los 3
-        # (ej. Wikimedia), dejar los 4 filtros habilitados como siempre.
-        was_forced = getattr(self, "_filter_forced_by_online", False)
+        # En un origen web solo se muestran "Todos" + los filtros de los tipos que ese origen
+        # realmente entrega (ej. Freesound = Todos/Audios; Openverse = Todos/Imágenes/Audios;
+        # Pixabay/Pexels = Todos/Imágenes/Videos -- su API pública no expone audio aunque el
+        # sitio sí lo tenga, ver PixabayProvider; Wikimedia = los 4). Mostrar un filtro que no
+        # aplica solo hacía creer que "no hay resultados" cuando ese tipo no existe ahí.
+        # En medios locales se muestran los 4.
         supported_types = provider.supported_media_types if (is_online and provider) else None
-        forced_type = None
-        if supported_types and len(supported_types) == 1:
-            forced_type = next(iter(supported_types))
-
-        if forced_type:
+        active_type = resolve_filter_type(getattr(self, "active_filter", "Todos"))
+        if supported_types and active_type is not None and active_type not in supported_types:
+            # El filtro activo (ej. "Videos") quedó de otro origen y no aplica acá.
             for btn in self.filter_buttons:
                 key = btn.property("filter_key") or btn.text()
-                if resolve_filter_type(key) == forced_type:
-                    btn.setChecked(True)
-                    btn.setEnabled(True)
-                    self.active_filter = key
-                else:
-                    btn.setChecked(False)
-                    btn.setEnabled(False)
-            self._filter_forced_by_online = True
-        elif supported_types:
-            self._filter_forced_by_online = False
-            active_type = resolve_filter_type(getattr(self, "active_filter", "Todos"))
-            if active_type is not None and active_type not in supported_types:
-                # El filtro activo (ej. "Audios") quedó de otro origen y no aplica acá.
-                for btn in self.filter_buttons:
-                    key = btn.property("filter_key") or btn.text()
-                    btn.setChecked(resolve_filter_type(key) is None)
-                self.active_filter = "Todos"
-            for btn in self.filter_buttons:
-                key = btn.property("filter_key") or btn.text()
-                btn_type = resolve_filter_type(key)
-                btn.setEnabled(btn_type is None or btn_type in supported_types)
-        else:
-            for btn in self.filter_buttons:
-                btn.setEnabled(True)
-            # Si un filtro único quedó forzado por haber estado en un origen de un solo tipo
-            # (ej. Freesound), al salir de ahí se restablece a "Todos" (dejarlo forzado sería
-            # confuso tanto en medios locales como en un origen web multi-tipo como Wikimedia).
-            if was_forced:
-                self._filter_forced_by_online = False
-                for btn in self.filter_buttons:
-                    key = btn.property("filter_key") or btn.text()
-                    btn.setChecked(resolve_filter_type(key) is None)
-                self.active_filter = "Todos"
+                btn.setChecked(resolve_filter_type(key) is None)
+            self.active_filter = "Todos"
+        for btn in self.filter_buttons:
+            key = btn.property("filter_key") or btn.text()
+            btn_type = resolve_filter_type(key)
+            btn.setEnabled(True)
+            btn.setVisible(not supported_types or btn_type is None or btn_type in supported_types)
 
     def _get_cached_media_icon(self, icon_name: str, color: str) -> QIcon:
         """Obtiene un icono coloreado desde la cache o lo crea si no existe."""

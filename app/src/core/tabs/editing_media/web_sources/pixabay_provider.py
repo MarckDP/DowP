@@ -8,7 +8,9 @@ from PySide6.QtCore import QCoreApplication
 
 IMAGE_URL = "https://pixabay.com/api/"
 VIDEO_URL = "https://pixabay.com/api/videos/"
-PAGE_SIZE = 20
+# El límite de las APIs se cuenta por petición, no por resultado: pedir 60 cuesta lo mismo
+# que pedir 20 (máximo por página: Pexels 80, Pixabay 200). En "Todos" se reparte 30/30.
+PAGE_SIZE = 60
 
 
 class PixabayProvider(WebSourceProvider):
