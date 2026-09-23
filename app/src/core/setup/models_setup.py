@@ -5,21 +5,21 @@ A diferencia de las dependencias (ffmpeg, yt-dlp, etc., ver core/setup/ffmpeg_se
 los modelos NUNCA se descargan solos al abrir la app -- solo cuando el usuario los pide
 a mano, sea desde Ajustes > Modelos o desde los popovers del Editor de Imagen (ahí se
 le pregunta primero, con el peso real por delante: ver
-gui/widgets/model_download_prompt.py::confirm_model_download). Mismo patrón de
-descarga que el resto de core/setup/*.py (requests streamed + callback de porcentaje,
-sin checksum -- DowP 1 tampoco lo hacía)."""
+gui/widgets/model_download_prompt.py::confirm_model_download). Las descargas pasan
+por core/utils/http_download.py, igual que el resto de core/setup/*.py (reconexión si
+la conexión se atasca o se corta, varias conexiones en archivos grandes, sin checksum
+-- DowP 1 tampoco lo hacía)."""
 import os
 import re
 import shutil
 import sys
 import tempfile
-import time
 import zipfile
-import requests
 from core.constants import (
     DEPTH_MODEL_FAMILIES, NORMAL_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCAYL_LEGACY_MODEL_SOURCES,
 )
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
 
@@ -100,18 +100,7 @@ def download_rembg_model(model_info: dict, progress_callback=None) -> tuple[bool
         part_path = target_path + ".part"
 
         logger.info(f"Descargando modelo rembg desde {model_info['url']}")
-        r = requests.get(model_info["url"], stream=True, timeout=30)
-        r.raise_for_status()
-
-        total_size = int(r.headers.get("content-length", 0))
-        downloaded = 0
-        with open(part_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        progress_callback(int((downloaded / total_size) * 100))
+        download_file(model_info["url"], part_path, progress_callback=progress_callback)
 
         if os.path.exists(target_path):
             os.remove(target_path)
@@ -355,9 +344,6 @@ def get_depth_model_disk_size(model_info: dict) -> int:
     return sum(get_folder_size(os.path.join(folder, entry["file"])) for entry in _depth_files(model_info))
 
 
-_DOWNLOAD_ATTEMPTS = 3
-
-
 def download_depth_model(model_info: dict, progress_callback=None) -> tuple[bool, str]:
     """Descarga todos los archivos del modelo, uno detrás de otro, cada uno con
     su .part temporal y rename al terminar (mismo criterio que
@@ -377,36 +363,14 @@ def download_depth_model(model_info: dict, progress_callback=None) -> tuple[bool
             expected = int(entry.get("size_bytes") or 0)
 
             logger.info(f"Descargando modelo de IA desde {entry['url']}")
-            # El CDN de Hugging Face corta la conexión a mitad de un archivo grande de vez en
-            # cuando ("Read timed out": pasó 3 veces en las pruebas de esta misma
-            # función). Con reintentos, un corte puntual no le cuesta al usuario un error
-            # y volver a empezar a mano; el archivo se descarga de nuevo desde cero.
-            error_previo = None
-            for intento in range(1, _DOWNLOAD_ATTEMPTS + 1):
-                try:
-                    r = requests.get(entry["url"], stream=True, timeout=30)
-                    r.raise_for_status()
-                    file_total = int(r.headers.get("content-length", 0)) or expected
-                    downloaded = 0
-                    with open(part_path, "wb") as f:
-                        for chunk in r.iter_content(chunk_size=8192):
-                            if chunk:
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                                if progress_callback and file_total > 0:
-                                    share = expected if expected else file_total
-                                    done = done_before + share * min(1.0, downloaded / file_total)
-                                    progress_callback(min(100, int(done / total_expected * 100)))
-                    error_previo = None
-                    break
-                except (requests.exceptions.RequestException, OSError) as e:
-                    error_previo = e
-                    logger.warning(f"Descarga de '{entry['file']}' cortada (intento {intento}/"
-                                   f"{_DOWNLOAD_ATTEMPTS}): {e}")
-                    if intento < _DOWNLOAD_ATTEMPTS:
-                        time.sleep(2 * intento)
-            if error_previo is not None:
-                raise error_previo
+            # El CDN de Hugging Face corta la conexión a mitad de un archivo grande de vez
+            # en cuando ("Read timed out"): download_file reconecta y sigue desde donde iba.
+            # Cada archivo ocupa en la barra el tramo que le toca según su peso; sin peso
+            # conocido, todo lo que queda.
+            start_pct = min(100, int(done_before / total_expected * 100))
+            end_pct = min(100, int((done_before + expected) / total_expected * 100)) if expected else 100
+            download_file(entry["url"], part_path, progress_callback=progress_callback,
+                          progress_range=(start_pct, end_pct))
 
             if os.path.exists(target_path):
                 os.remove(target_path)
@@ -504,23 +468,10 @@ def _download_and_extract_zip(url: str, dest_dir: str, progress_callback=None, w
     """Descarga un zip a un temporal, lo extrae, y fusiona su contenido en dest_dir --
     si el zip trae todo envuelto en una única subcarpeta (patrón común de releases de
     GitHub), fusiona esa subcarpeta directo en vez de crear un nivel de anidación extra."""
-    start_pct, end_pct = weight
-    span = end_pct - start_pct
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         temp_zip = os.path.join(tmp_dir, "download.zip")
-        r = requests.get(url, stream=True, timeout=30)
-        r.raise_for_status()
-        total_size = int(r.headers.get("content-length", 0))
-        downloaded = 0
-        with open(temp_zip, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        pct = start_pct + int((downloaded / total_size) * span)
-                        progress_callback(pct)
+        download_file(url, temp_zip, progress_callback=progress_callback, progress_range=weight)
 
         extract_dir = os.path.join(tmp_dir, "extracted")
         with zipfile.ZipFile(temp_zip, "r") as zip_ref:
@@ -573,14 +524,17 @@ def _sanitize_upscayl_models(models_dir: str):
                     logger.warning(f"Upscayl: no se pudo purgar {name}{ext}: {e}")
 
 
-def _download_upscayl_legacy_models(models_dir: str, progress_callback=None):
+def _download_upscayl_legacy_models(models_dir: str, progress_callback=None, weight=(0, 100)):
     """Descarga los modelos de Real-ESRGAN/RealSR que NO vienen en custom-models --
     mismo criterio que DowP1 (canario: si el archivo ya está, se salta la descarga
     completa, evita re-bajar ~60-80MB en cada instalación). Se filtran solo .bin/
     .param del zip completo (que también trae el ejecutable/LICENSE/README de ese
     proyecto, irrelevantes aquí)."""
     os.makedirs(models_dir, exist_ok=True)
-    for name, url, canary, _size in UPSCAYL_LEGACY_MODEL_SOURCES:
+    start_pct, end_pct = weight
+    step = (end_pct - start_pct) / max(1, len(UPSCAYL_LEGACY_MODEL_SOURCES))
+    for i, (name, url, canary, _size) in enumerate(UPSCAYL_LEGACY_MODEL_SOURCES):
+        source_weight = (int(start_pct + i * step), int(start_pct + (i + 1) * step))
         if os.path.exists(os.path.join(models_dir, canary)):
             logger.info(f"Upscayl: modelos de {name} ya presentes, se omite su descarga.")
             continue
@@ -588,7 +542,7 @@ def _download_upscayl_legacy_models(models_dir: str, progress_callback=None):
             with tempfile.TemporaryDirectory() as tmp_dir:
                 extract_dir = os.path.join(tmp_dir, "extracted")
                 logger.info(f"Upscayl: descargando modelos legacy de {name} desde {url}")
-                _download_and_extract_zip(url, extract_dir, progress_callback)
+                _download_and_extract_zip(url, extract_dir, progress_callback, weight=source_weight)
                 for root, _dirs, files in os.walk(extract_dir):
                     for fname in files:
                         if not fname.endswith((".bin", ".param")):
@@ -640,7 +594,8 @@ def download_upscaling_engine(tool_info: dict, progress_callback=None) -> tuple[
                                        weight=(40, 70) if is_upscayl else (40, 100))
 
         if is_upscayl:
-            _download_upscayl_legacy_models(os.path.join(dest_dir, "models"), progress_callback)
+            _download_upscayl_legacy_models(os.path.join(dest_dir, "models"), progress_callback,
+                                            weight=(70, 100))
 
         if not is_upscaling_engine_installed(tool_info):
             return False, QCoreApplication.translate("models_setup", "No se encontró {0} tras la instalación.").format(_platform_value(tool_info["exe"]))

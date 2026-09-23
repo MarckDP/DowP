@@ -12,6 +12,7 @@ import zipfile
 import subprocess
 import requests
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_bin_root_dir
 from PySide6.QtCore import QCoreApplication
@@ -156,22 +157,10 @@ def download_potprovider(progress_callback=None):
 
         # ── Paso 1: Descargar el binario motor ─────────────────────────────
         logger.info(f"PotProvider: descargando binario desde {binary_url}")
-        r = requests.get(binary_url, stream=True, timeout=60)
-        r.raise_for_status()
-
-        total_size = int(r.headers.get("content-length", 0))
-        downloaded = 0
         binary_path = get_binary_path()
-
-        with open(binary_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        # Reportamos el binario como el 80% del progreso total
-                        pct = int((downloaded / total_size) * 80)
-                        progress_callback(pct)
+        # El binario es el 80% del progreso total; el plugin, el 20% restante.
+        download_file(binary_url, binary_path, progress_callback=progress_callback,
+                      progress_range=(0, 80))
 
         # Permisos de ejecución en Unix
         if platform.system().lower() != "windows":
@@ -186,22 +175,9 @@ def download_potprovider(progress_callback=None):
 
         # ── Paso 2: Descargar y descomprimir el plugin Python ──────────────
         logger.info(f"PotProvider: descargando plugin desde {plugin_url}")
-        r2 = requests.get(plugin_url, stream=True, timeout=30)
-        r2.raise_for_status()
-
-        plugin_total = int(r2.headers.get("content-length", 0))
-        plugin_downloaded = 0
         temp_plugin_zip = os.path.join(plugin_dir, "_pot_plugin_temp.zip")
-
-        with open(temp_plugin_zip, "wb") as f:
-            for chunk in r2.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    plugin_downloaded += len(chunk)
-                    if progress_callback and plugin_total > 0:
-                        # El plugin ocupa el 20% restante (80→100)
-                        pct = 80 + int((plugin_downloaded / plugin_total) * 20)
-                        progress_callback(pct)
+        download_file(plugin_url, temp_plugin_zip, progress_callback=progress_callback,
+                      progress_range=(80, 100))
 
         logger.info("PotProvider: descomprimiendo plugin...")
         with zipfile.ZipFile(temp_plugin_zip, "r") as zf:

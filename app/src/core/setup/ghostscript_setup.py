@@ -34,6 +34,7 @@ import zipfile
 import requests
 
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.paths import get_bin_root_dir
 from PySide6.QtCore import QCoreApplication
 
@@ -103,17 +104,8 @@ def _ensure_7zip_tool(progress_callback=None) -> str | None:
     try:
         with tempfile.TemporaryDirectory(prefix="dowp_7zip_") as tmp_dir:
             temp_zip = os.path.join(tmp_dir, "7zip.nupkg")
-            r = requests.get(_SEVENZIP_NUGET_URL, stream=True, timeout=30)
-            r.raise_for_status()
-            total_size = int(r.headers.get("content-length", 0))
-            downloaded = 0
-            with open(temp_zip, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if progress_callback and total_size > 0:
-                            progress_callback(int((downloaded / total_size) * 10))
+            download_file(_SEVENZIP_NUGET_URL, temp_zip, progress_callback=progress_callback,
+                          progress_range=(0, 10))
 
             with zipfile.ZipFile(temp_zip, "r") as zip_ref:
                 zip_ref.extract("tools/7z.exe", tmp_dir)
@@ -295,18 +287,8 @@ def download_ghostscript(progress_callback=None) -> tuple[bool, str]:
         with tempfile.TemporaryDirectory(prefix="dowp_ghostscript_") as tmp_dir:
             installer_path = os.path.join(tmp_dir, "gs_installer.exe")
             logger.info(f"Ghostscript: descargando instalador desde {installer_url}")
-            r = requests.get(installer_url, stream=True, timeout=60)
-            r.raise_for_status()
-            total_size = int(r.headers.get("content-length", 0))
-            downloaded = 0
-            with open(installer_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=16384):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if progress_callback and total_size > 0:
-                            pct = 10 + int((downloaded / total_size) * 60)
-                            progress_callback(pct)
+            download_file(installer_url, installer_path, progress_callback=progress_callback,
+                          progress_range=(10, 70))
 
             extract_dir = os.path.join(tmp_dir, "extracted")
             logger.info("Ghostscript: extrayendo el instalador con 7-Zip (sin ejecutarlo)...")

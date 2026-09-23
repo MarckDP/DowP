@@ -9,6 +9,7 @@ import stat
 import subprocess
 import re
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_bin_root_dir
 from PySide6.QtCore import QCoreApplication
@@ -281,20 +282,7 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
 
         # 1. Descarga
         logger.info(f"Descargando FFmpeg ({variant} / {channel}) desde {download_url}")
-        r = requests.get(download_url, stream=True, timeout=30)
-        r.raise_for_status()
-
-        total_size = int(r.headers.get('content-length', 0))
-        downloaded = 0
-
-        with open(temp_file, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=16384):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        percent = int((downloaded / total_size) * 100)
-                        progress_callback(percent)
+        download_file(download_url, temp_file, progress_callback=progress_callback)
 
         # 2. Extracción temporal
         logger.info("Extrayendo paquete de FFmpeg...")

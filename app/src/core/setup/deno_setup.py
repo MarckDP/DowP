@@ -6,6 +6,7 @@ import shutil
 import platform
 import stat
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.paths import get_bin_root_dir
 
 DENO_API_URL = "https://api.github.com/repos/denoland/deno/releases/latest"
@@ -70,7 +71,7 @@ def download_deno(progress_callback=None):
     try:
         asset_name, binary_name = get_platform_info()
         logger.info(f"Fetching latest Deno release info from {DENO_API_URL} for {asset_name}")
-        response = requests.get(DENO_API_URL)
+        response = requests.get(DENO_API_URL, timeout=15)
         response.raise_for_status()
         data = response.json()
         
@@ -89,20 +90,7 @@ def download_deno(progress_callback=None):
         
         # 1. Download
         logger.info(f"Downloading Deno from {download_url}")
-        r = requests.get(download_url, stream=True)
-        r.raise_for_status()
-        
-        total_size = int(r.headers.get('content-length', 0))
-        downloaded = 0
-        
-        with open(temp_zip, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        percent = int((downloaded / total_size) * 100)
-                        progress_callback(percent)
+        download_file(download_url, temp_zip, progress_callback=progress_callback)
         
         # 2. Extraction
         logger.info("Extracting Deno package...")

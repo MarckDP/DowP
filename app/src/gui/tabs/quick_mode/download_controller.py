@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QDialog
 
 from core.logger.logger_manager import logger
 from core.utils.cleanup_manager import CleanupManager
+from core.utils.download_history import download_history
 from core.utils.config_manager import get_config
 from core.utils.queue_manager import get_queue_manager
 from core.utils.output_artifacts import find_actual_downloaded_file
@@ -134,6 +135,10 @@ class QuickDownloadController(QObject):
                                            chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
                 return
 
+            # Historial: con el selector de playlist activado, UNA tarjeta para toda la
+            # playlist (aunque luego se cancele la selección: el análisis se hizo).
+            history_key = download_history().record_analysis(data, url, as_playlist=True)
+
             dialog = PlaylistSelectionDialog(data, self.tab)
             if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.result_data:
                 self.busy_state_changed.emit(False, "")
@@ -170,7 +175,8 @@ class QuickDownloadController(QObject):
             selected_entries = [entries[i] for i in selected if 0 <= i < len(entries)]
             # Una descarga por ítem en vez de una sola con playlist_items: así el 403 de
             # cada vídeo se reintenta al momento y no al terminar la pasada entera.
-            self.start_playlist_workers(req, selected_entries, selected, req["mode"], item_quality)
+            self.start_playlist_workers(req, selected_entries, selected, req["mode"], item_quality,
+                                        history_key=history_key)
 
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
@@ -191,14 +197,17 @@ class QuickDownloadController(QObject):
                 self.progress_updated.emit(0, self.tr("Error al analizar: {0}").format(error) if hasattr(self, "tr") else f"Error al analizar: {error}", "error")
                 return
                 
+            history_key = download_history().record_analysis(data, url, as_playlist=False)
             self.open_cut_dialog_and_download(url, data, mode, quality, output_path, speed_limit_val,
-                                              chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
+                                              chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
+                                              history_key=history_key)
 
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
 
     def open_cut_dialog_and_download(self, url, data, mode, quality, output_path, speed_limit_val,
-                                     chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None):
+                                     chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
+                                     history_key=None):
         """Abre el diálogo de fragmento de corte."""
         thumb_url = None
         thumbs = data.get("thumbnails") or []
@@ -285,7 +294,7 @@ class QuickDownloadController(QObject):
             # _on_task_finished encola una recodificación por archivo, todas
             # reportando su "Recodificando N de M" a ESTA fila (ver
             # _queue_fragment_recodes).
-            self.start_worker(req, selected_entries=[data], selected_indices=[0])
+            self.start_worker(req, selected_entries=[data], selected_indices=[0], history_key=history_key)
         else:
             self.busy_state_changed.emit(False, "")
             self.progress_updated.emit(0, self.tr("Recorte cancelado") if hasattr(self, "tr") else "Recorte cancelado", "wait")
@@ -325,7 +334,7 @@ class QuickDownloadController(QObject):
             self._emit_batch_progress()
         return task_data
 
-    def start_playlist_workers(self, base_request, entries, selected_indices, mode, quality):
+    def start_playlist_workers(self, base_request, entries, selected_indices, mode, quality, history_key=None):
         """Descarga una playlist con UNA descarga por ítem, no con una sola llamada.
 
         Es el mismo patrón que ya usa Proceso Avanzado (_execute_playlist en
@@ -375,12 +384,15 @@ class QuickDownloadController(QObject):
             child["format_selector"] = quick_format_selector(mode, quality, url=item_url)
 
             self._batch_total += 1
-            self._enqueue_task(child, [row], [key])
+            task = self._enqueue_task(child, [row], [key])
+            # Todos los ítems apuntan a la tarjeta de la playlist ("" si el historial está
+            # apagado): así _history_note_info no crea una tarjeta suelta por cada video.
+            task["_history_key"] = history_key or ""
 
         if not self.active_workers and not self.pending_tasks:
             self.busy_state_changed.emit(False, "")
 
-    def start_worker(self, request_data, selected_entries=None, selected_indices=None):
+    def start_worker(self, request_data, selected_entries=None, selected_indices=None, history_key=None):
         """Inicia un DownloadWorker respectando la concurrencia global."""
         self._reset_batch_if_idle()
         self._batch_total += 1
@@ -399,7 +411,18 @@ class QuickDownloadController(QObject):
         self.current_item_rows.extend(item_rows)
         self.current_item_keys.extend(item_keys)
 
-        self._enqueue_task(request_data, item_rows, item_keys)
+        task = self._enqueue_task(request_data, item_rows, item_keys)
+        if history_key is not None:
+            task["_history_key"] = history_key or ""
+
+    def _history_note_info(self, task_data, info):
+        """Descarga directa (sin análisis previo): la primera vez que yt-dlp entrega los
+        datos del medio, se registra su tarjeta en el historial. Las tareas que ya vienen
+        de un análisis (playlist, recorte) traen su clave puesta y no pasan por aquí."""
+        if "_history_key" in task_data or not info:
+            return
+        url = task_data["request_data"].get("url", "")
+        task_data["_history_key"] = download_history().record_analysis(info, url, as_playlist=False) or ""
 
     def _emit_batch_progress(self):
         """
@@ -469,6 +492,7 @@ class QuickDownloadController(QObject):
 
     def _on_task_progress(self, data, task_data):
         has_fragments = bool(task_data["request_data"].get("selected_fragments"))
+        self._history_note_info(task_data, data.get("info_dict"))
 
         if data.get("status") == "fragment_progress":
             idx = data.get("fragment_index")
@@ -681,6 +705,9 @@ class QuickDownloadController(QObject):
             else:
                 row.update_progress(0, status=self.tr("Error") if hasattr(self, "tr") else "Error")
                 row.mark_error()
+
+        if success and task_data.get("_history_key"):
+            download_history().mark_downloaded(task_data["_history_key"], task_data.get("_last_path"))
 
         if success:
             title = task_data["request_data"].get("title", "").strip()

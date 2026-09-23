@@ -109,7 +109,7 @@ class ImageThumbnailCacheProvider(BaseCacheProvider):
 
     @property
     def description(self) -> str:
-        return QCoreApplication.translate("ImageThumbnailCacheProvider", "Miniaturas en disco generadas para previas rápidas de imágenes, videos y audios.")
+        return QCoreApplication.translate("ImageThumbnailCacheProvider", "Miniaturas en disco generadas para previas rápidas de imágenes, videos y audios, y las del historial de descargas.")
 
     def get_stats(self) -> Dict[str, Any]:
         thumb_dir = get_thumbnail_cache_dir()
@@ -125,6 +125,14 @@ class ImageThumbnailCacheProvider(BaseCacheProvider):
                     except Exception:
                         pass
 
+        # Miniaturas del historial de descargas: viven en su propia subcarpeta
+        # (thumbnails/history/, ver download_history.py) -- el scandir de arriba no entra
+        # en subcarpetas, así que se suman aparte para que esta fila muestre el total.
+        from core.utils.download_history import history_thumbnail_stats
+        hist_count, hist_size = history_thumbnail_stats()
+        file_count += hist_count
+        total_size += hist_size
+
         return {
             "key": self.key,
             "name": self.name,
@@ -138,6 +146,10 @@ class ImageThumbnailCacheProvider(BaseCacheProvider):
         stats_before = self.get_stats()
         from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManager
         deleted_count = ThumbnailCacheManager.get_instance().clear_cache()
+        # Solo los archivos de imagen: las entradas del historial se conservan y cada
+        # tarjeta vuelve a pedir su miniatura la próxima vez que se muestra.
+        from core.utils.download_history import clear_history_thumbnails
+        deleted_count += clear_history_thumbnails()
         return {
             "files_removed": deleted_count,
             "bytes_freed": stats_before["size_bytes"]

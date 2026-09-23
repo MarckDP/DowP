@@ -39,6 +39,7 @@ import tarfile
 import zipfile
 import requests
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_bytes
 from core.setup.potprovider_setup import get_plugin_dir
 from PySide6.QtCore import QCoreApplication
 
@@ -119,13 +120,7 @@ def get_latest_remote_version() -> str | None:
 
 def _download_and_extract_wheel(url: str, dest_dir: str) -> None:
     """Descarga una wheel (.whl) en memoria y la descomprime (es un ZIP) en dest_dir."""
-    r = requests.get(url, stream=True, timeout=60)
-    r.raise_for_status()
-    buf = io.BytesIO()
-    for chunk in r.iter_content(chunk_size=8192):
-        if chunk:
-            buf.write(chunk)
-    buf.seek(0)
+    buf = io.BytesIO(download_bytes(url))
     with zipfile.ZipFile(buf) as zf:
         zf.extractall(dest_dir)
 
@@ -198,13 +193,7 @@ def _download_and_extract_sdist_package(url: str, dest_dir: str, import_name: st
     ignorando fuentes de extensiones C (.c/.pyx) que no hacen falta porque el
     paquete cae a su fallback puro-Python si esa extensión no está compilada.
     """
-    r = requests.get(url, stream=True, timeout=60)
-    r.raise_for_status()
-    buf = io.BytesIO()
-    for chunk in r.iter_content(chunk_size=8192):
-        if chunk:
-            buf.write(chunk)
-    buf.seek(0)
+    buf = io.BytesIO(download_bytes(url))
 
     with tarfile.open(fileobj=buf, mode="r:gz") as tf:
         marker = f"/{import_name}/__init__.py"

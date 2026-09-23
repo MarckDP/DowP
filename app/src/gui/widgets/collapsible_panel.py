@@ -68,13 +68,17 @@ class EdgeTabButton(QWidget):
                 p.drawRect(w - 3, 0, 3, h)
 
         # Flecha: cerrado invita a abrir (apunta hacia el contenido), abierto invita a cerrar.
+        # Centrada en el ancho de la pestaña: con el ancho por defecto (20) queda en los mismos
+        # píxeles de siempre, y con una pestaña más ancha (ver history_panel.py) no se corre
+        # hacia un costado.
         points_right = (self.edge == "left") != self._is_open
         p.setPen(Qt.NoPen)
         p.setBrush(QColor("#B9E640") if self._hovered else QColor("#888888"))
+        cx = w // 2
         if points_right:
-            triangle = QPolygon([QPoint(6, h // 2 - 8), QPoint(6, h // 2 + 8), QPoint(14, h // 2)])
+            triangle = QPolygon([QPoint(cx - 4, h // 2 - 8), QPoint(cx - 4, h // 2 + 8), QPoint(cx + 4, h // 2)])
         else:
-            triangle = QPolygon([QPoint(w - 6, h // 2 - 8), QPoint(w - 6, h // 2 + 8), QPoint(w - 14, h // 2)])
+            triangle = QPolygon([QPoint(cx + 4, h // 2 - 8), QPoint(cx + 4, h // 2 + 8), QPoint(cx - 4, h // 2)])
         p.drawPolygon(triangle)
 
 

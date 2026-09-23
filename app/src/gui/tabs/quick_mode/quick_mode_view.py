@@ -52,6 +52,11 @@ class QuickModeTab(QWidget):
         self.controller.download_text_changed.connect(self._set_download_text)
         self.controller.progress_updated.connect(self.output_options.set_progress)
 
+        # Historial de descargas (compartido con Proceso Avanzado): panel oculto en el
+        # borde derecho; al elegir una tarjeta, su URL reemplaza la del campo de URL.
+        from gui.widgets.history_panel import HistoryDrawer
+        self.history_drawer = HistoryDrawer(self, self.url_input)
+
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(10, 10, 10, 10)

@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject, QCoreApplication
 from core.logger.logger_manager import logger
 from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config
+from core.utils.download_history import download_history, entry_key
 from core.utils.preset_manager import build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE
 from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file
 from core.utils.file_conflict_manager import quarantine_for_recode, commit_backup, rollback_backup, predict_final_extension
@@ -133,6 +134,10 @@ class DownloadController(QObject):
         self.cancellation_event.clear()
         self.solo_worker = DownloadWorker(req_data, self.cancellation_event)
         self.solo_request_data = req_data.copy()
+        # Tarjeta del historial de ESTE medio, tomada ahora: mientras se descarga, el
+        # usuario puede analizar otra URL y _current_video_data pasaría a ser la de esa.
+        video_data = self.tab._current_video_data
+        self._solo_history_key = entry_key(video_data) if video_data else None
 
         # Empieza un proceso nuevo: lo que se pudiera arrastrar de la descarga anterior
         # ya no corresponde a lo que muestra la barra.
@@ -205,6 +210,8 @@ class DownloadController(QObject):
                     CleanupManager.cleanup_ytdlp_temp_files(output_dir, title, keep_thumbnail=keep_thumb)
                     CleanupManager.deferred_cleanup(output_dir, title, keep_thumbnail=keep_thumb)
                 logger.info("AdvancedProcessTab: Descarga directa SOLO finalizada con éxito.")
+                download_history().mark_downloaded(getattr(self, "_solo_history_key", None),
+                                                   self.last_downloaded_filepath)
 
                 # self.solo_worker.request_data es el MISMO dict que DownloadWorker pasó a
                 # DownloaderMaster.download() (sin copiar, ver workers.py::DownloadWorker) -
@@ -456,6 +463,9 @@ class DownloadController(QObject):
 
         if status == "COMPLETED":
             job = self.queue_mgr.get_job(job_id)
+            # Historial: fuera del `if job.request_data` de abajo, porque los jobs de
+            # PLAYLIST no tienen request_data y también cuentan como descargados.
+            download_history().mark_job_downloaded(job_id, job.final_filepath if job else None)
             if job and job.request_data:
                 title = job.request_data.get("title", "").strip()
                 output_dir = job.request_data.get("output_path", "")

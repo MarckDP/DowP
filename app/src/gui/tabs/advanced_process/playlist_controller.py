@@ -3,6 +3,7 @@ from PySide6.QtCore import QObject, QCoreApplication
 from PySide6.QtWidgets import QDialog
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config
+from core.utils.download_history import download_history
 from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
 
 class PlaylistController(QObject):
@@ -95,6 +96,8 @@ class PlaylistController(QObject):
                 "playlist_index": entry.get("playlist_index", i)
             }
             new_job_id = self.tab.queue_mgr.add_job(new_config, "DOWNLOAD")
+            # Cada video desempaquetado sigue apuntando a la tarjeta de la playlist.
+            download_history().bind_job(new_job_id, download_history().key_for_job(job_id))
             new_job = self.tab.queue_mgr.get_job(new_job_id)
             if new_job:
                 new_job.request_data = self.tab._build_default_request_data(entry, entry_title)

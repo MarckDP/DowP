@@ -1,8 +1,10 @@
 # src/core/setup/ytdlp_setup.py
 import os
+import shutil
 import sys
 import requests
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_bin_root_dir
 
@@ -101,21 +103,19 @@ def download_ytdlp(channel=None, progress_callback=None):
 
         target_path = get_ytdlp_path()
         logger.info(f"Downloading yt-dlp ({channel}) from {download_url}")
-        r = requests.get(download_url, headers=headers, stream=True, timeout=30)
-        r.raise_for_status()
-        
-        total_size = int(r.headers.get('content-length', 0))
-        downloaded = 0
-        
-        with open(target_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        percent = int((downloaded / total_size) * 100)
-                        progress_callback(percent)
-                
+        # A un .part y luego se reemplaza: si la descarga falla a medias, el yt-dlp que
+        # ya estaba instalado sigue intacto en vez de quedar truncado.
+        part_path = target_path + ".part"
+        download_file(download_url, part_path, progress_callback=progress_callback)
+        try:
+            os.replace(part_path, target_path)
+        except PermissionError:
+            # Windows no deja reemplazar un archivo que otro proceso tiene abierto sin
+            # permiso de borrado, pero sí sobrescribirlo (lo que hacía el código viejo).
+            with open(part_path, "rb") as src, open(target_path, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+            os.remove(part_path)
+
         # Limpieza de shebang (Lógica DowP Viejo)
         try:
             with open(target_path, "rb") as f:

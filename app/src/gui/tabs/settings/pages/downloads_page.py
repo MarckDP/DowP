@@ -1,9 +1,12 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSpinBox
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSpinBox, QPushButton, QMessageBox,
+)
 from PySide6.QtCore import Qt
 from core.utils.i18n import logger
 from core.utils.config_manager import get_config, save_config
 from gui.widgets.toggle_switch import ToggleSwitch
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, set_button_variant
+from core.utils.download_history import download_history, DEFAULT_MAX_ENTRIES
 
 
 class DownloadsPage(QWidget):
@@ -144,6 +147,8 @@ class DownloadsPage(QWidget):
         self.concurrent_row.addWidget(self.concurrent_spin)
         self.content_layout.addLayout(self.concurrent_row)
 
+        self._build_history_section()
+
         # Finalizar setup del scroll area
         self.scroll_area.setWidget(self.scroll_content)
         self.main_layout.addWidget(self.scroll_area)
@@ -157,6 +162,99 @@ class DownloadsPage(QWidget):
         self.sponsors_switch.toggled.connect(self.on_remove_sponsors_toggled)
         self.imp_switch.toggled.connect(self.on_impersonate_toggled)
         self.concurrent_spin.valueChanged.connect(self.on_concurrent_downloads_changed)
+        self.history_switch.toggled.connect(self.on_history_enabled_toggled)
+        self.history_limit_spin.valueChanged.connect(self.on_history_limit_changed)
+        self.btn_clear_history.clicked.connect(self.on_clear_history_clicked)
+        download_history().entries_changed.connect(self._update_history_usage)
+
+    def _build_history_section(self):
+        """Historial de descargas (panel del borde izquierdo de Modo Rápido y Proceso
+        Avanzado, ver gui/widgets/history_panel.py)."""
+        section = QLabel(self.tr("Historial de descargas"))
+        section.setObjectName("settingsSectionTitle")
+        self.content_layout.addWidget(section)
+
+        # Switch: guardar historial
+        row = QHBoxLayout()
+        vbox = QVBoxLayout()
+        label = QLabel(self.tr("Guardar historial"))
+        label.setObjectName("settingsLabel")
+        desc = QLabel(self.tr("Guarda lo que analizas o descargas en Modo Rápido y Proceso Avanzado."))
+        desc.setStyleSheet("color: #888888; font-size: 11px;")
+        vbox.addWidget(label)
+        vbox.addWidget(desc)
+        self.history_switch = ToggleSwitch()
+        row.addLayout(vbox, 1)
+        row.addWidget(self.history_switch)
+        self.content_layout.addLayout(row)
+
+        # SpinBox: máximo de entradas (0 = sin límite)
+        row = QHBoxLayout()
+        vbox = QVBoxLayout()
+        label = QLabel(self.tr("Máximo de entradas"))
+        label.setObjectName("settingsLabel")
+        desc = QLabel(self.tr("Al superarlo se borran las más antiguas. 0 = sin límite."))
+        desc.setStyleSheet("color: #888888; font-size: 11px;")
+        vbox.addWidget(label)
+        vbox.addWidget(desc)
+        self.history_limit_spin = QSpinBox()
+        self.history_limit_spin.setRange(0, 10_000_000)
+        self.history_limit_spin.setSingleStep(100)
+        self.history_limit_spin.setSpecialValueText(self.tr("Sin límite"))
+        # Sin keyboardTracking, escribir "1000" no aplica 1, 10, 100... por el camino
+        # (con un límite más bajo que lo guardado, cada paso pediría confirmar un borrado).
+        self.history_limit_spin.setKeyboardTracking(False)
+        self.history_limit_spin.setFixedWidth(110)
+        self.history_limit_spin.setFixedHeight(28)
+        self.history_limit_spin.setStyleSheet(self.concurrent_spin.styleSheet())
+        row.addLayout(vbox, 1)
+        row.addWidget(self.history_limit_spin)
+        self.content_layout.addLayout(row)
+
+        # Uso actual + borrar
+        row = QHBoxLayout()
+        self.history_usage_label = QLabel()
+        self.history_usage_label.setStyleSheet("color: #888888; font-size: 11px;")
+        self.btn_clear_history = QPushButton(self.tr("Borrar historial"))
+        set_button_variant(self.btn_clear_history, "danger")
+        row.addWidget(self.history_usage_label, 1)
+        row.addWidget(self.btn_clear_history)
+        self.content_layout.addLayout(row)
+
+    def _update_history_usage(self):
+        count = download_history().count()
+        self.history_usage_label.setText(self.tr("{0} entradas guardadas").format(count))
+        self.btn_clear_history.setEnabled(count > 0)
+
+    def on_history_enabled_toggled(self, checked):
+        if self._is_loading: return
+        download_history().set_enabled(checked)
+        logger.info(f"DownloadsPage: Guardar historial cambiado a: {checked}")
+
+    def on_history_limit_changed(self, value):
+        if self._is_loading: return
+        history = download_history()
+        over = history.entries_over_limit(value)
+        if over > 0:
+            answer = QMessageBox.question(
+                self, self.tr("Reducir el historial"),
+                self.tr("Con este límite se borrarán las {0} entradas más antiguas del historial. "
+                        "No se puede deshacer.\n\n¿Continuar?").format(over))
+            if answer != QMessageBox.Yes:
+                self._is_loading = True
+                self.history_limit_spin.setValue(history.max_entries())
+                self._is_loading = False
+                return
+        history.set_max_entries(value)
+        logger.info(f"DownloadsPage: Máximo de entradas del historial cambiado a: {value}")
+
+    def on_clear_history_clicked(self):
+        answer = QMessageBox.question(
+            self, self.tr("Borrar historial"),
+            self.tr("¿Borrar todo el historial de descargas?\n\nNo borra ningún archivo "
+                    "descargado, solo las tarjetas del historial. No se puede deshacer."))
+        if answer == QMessageBox.Yes:
+            download_history().clear()
 
     def update_switch_colors(self):
         config = get_config()
@@ -165,6 +263,7 @@ class DownloadsPage(QWidget):
         self.thumb_switch.setTrackColors("#333333", accent)
         self.sponsors_switch.setTrackColors("#333333", accent)
         self.imp_switch.setTrackColors("#333333", accent)
+        self.history_switch.setTrackColors("#333333", accent)
 
     def load_current_settings(self):
         config = get_config()
@@ -173,6 +272,9 @@ class DownloadsPage(QWidget):
         self.sponsors_switch.setChecked(config.get("remove_sponsors", False))
         self.imp_switch.setChecked(config.get("use_impersonate", False))
         self.concurrent_spin.setValue(config.get("max_concurrent_downloads", 3))
+        self.history_switch.setChecked(config.get("history_enabled", True))
+        self.history_limit_spin.setValue(config.get("history_max_entries", DEFAULT_MAX_ENTRIES))
+        self._update_history_usage()
 
     def on_embed_metadata_toggled(self, checked):
         if self._is_loading: return

@@ -7,6 +7,7 @@ import time
 import threading
 from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config, save_config
+from core.utils.download_history import download_history
 from core.ytdlp_logic.analyzer import strip_ansi_codes
 
 
@@ -211,6 +212,13 @@ class AdvancedProcessTab(QWidget):
 
         # Aplicar estado inicial de modo SOLO
         self._on_solo_toggled(self.url_bar.solo_btn.isChecked())
+
+        # Historial de descargas (compartido con Modo Rápido): panel oculto en el borde
+        # derecho (el izquierdo lo ocupa el tirador de la cola); al elegir una tarjeta, su
+        # URL reemplaza la del campo de URL. Se crea al final para que su pestaña del
+        # borde quede por encima del resto de la UI.
+        from gui.widgets.history_panel import HistoryDrawer
+        self.history_drawer = HistoryDrawer(self, self.url_bar.url_input)
 
     def _build_analysis_options_bar(self):
         bar = QFrame()
@@ -902,6 +910,7 @@ class AdvancedProcessTab(QWidget):
                 else:
                     title = data.get('title', "Video")
                     self._current_video_data = data
+                    download_history().record_analysis(data, url, as_playlist=False)
                     
                     self.video_details.combo_video.blockSignals(True)
                     self.video_details.combo_audio.blockSignals(True)
@@ -989,6 +998,11 @@ class AdvancedProcessTab(QWidget):
                         self._on_card_selected(j_id)
                 else:
                     if self.playlist_controller.is_playlist_result(data):
+                        # Una tarjeta para toda la playlist; el job (y los que salgan de
+                        # desempaquetarla, ver unpack_slow_playlist_result) quedan
+                        # ligados a ella para marcarla como descargada.
+                        history = download_history()
+                        history.bind_job(j_id, history.record_analysis(data, url, as_playlist=True))
                         if worker.fast_mode:
                             self.playlist_controller.handle_playlist_analysis_result(j_id, data)
                         else:
@@ -997,6 +1011,8 @@ class AdvancedProcessTab(QWidget):
                         return
 
                     title = data.get('title', "Video")
+                    download_history().bind_job(
+                        j_id, download_history().record_analysis(data, url, as_playlist=False))
                     j = self.queue_mgr.get_job(j_id)
                     if j:
                         j.title = title

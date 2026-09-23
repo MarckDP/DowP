@@ -24,6 +24,7 @@ import zipfile
 import requests
 
 from core.logger.logger_manager import logger
+from core.utils.http_download import download_file
 from core.utils.paths import get_bin_root_dir
 
 VTRACER_API_URL = "https://api.github.com/repos/visioncortex/vtracer/releases/latest"
@@ -114,20 +115,7 @@ def download_vtracer(progress_callback=None) -> tuple[bool, str]:
 
         # 1. Descarga
         logger.info(f"Downloading vtracer from {download_url}")
-        r = requests.get(download_url, stream=True, timeout=30)
-        r.raise_for_status()
-
-        total_size = int(r.headers.get("content-length", 0))
-        downloaded = 0
-
-        with open(temp_file, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        percent = int((downloaded / total_size) * 100)
-                        progress_callback(percent)
+        download_file(download_url, temp_file, progress_callback=progress_callback)
 
         # 2. Extracción (el binario vive suelto en la raíz del archivo, sin
         # subcarpeta, tanto en el .zip de Windows como en el .tar.gz de Mac/Linux)
