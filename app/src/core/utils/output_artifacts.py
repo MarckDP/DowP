@@ -322,6 +322,11 @@ class OutputArtifactTracker:
         carpeta no reclame sus archivos (ver collect_output_artifacts)."""
         return list(self._stems)
 
+    def known(self):
+        """Todas las rutas registradas (el historial de descargas las copia tal cual, ver
+        core/utils/download_history.py::record_outputs)."""
+        return list(self._known)
+
     def collect(self, foreign_stems=None):
         return collect_output_artifacts(self._known, stem_paths=self._stems,
                                         foreign_stems=foreign_stems)

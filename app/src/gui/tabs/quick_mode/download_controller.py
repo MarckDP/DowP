@@ -415,6 +415,12 @@ class QuickDownloadController(QObject):
         if history_key is not None:
             task["_history_key"] = history_key or ""
 
+    def _history_sync_row(self, row):
+        """Copia al historial el rastro de archivos de la fila (ver record_outputs)."""
+        key = getattr(row, "history_key", None)
+        if key:
+            download_history().record_outputs(key, row.output_known(), row.output_stems())
+
     def _history_note_info(self, task_data, info):
         """Descarga directa (sin análisis previo): la primera vez que yt-dlp entrega los
         datos del medio, se registra su tarjeta en el historial. Las tareas que ya vienen
@@ -707,7 +713,13 @@ class QuickDownloadController(QObject):
                 row.mark_error()
 
         if success and task_data.get("_history_key"):
-            download_history().mark_downloaded(task_data["_history_key"], task_data.get("_last_path"))
+            download_history().mark_downloaded(task_data["_history_key"])
+            # Al historial van los MISMOS archivos que usa el arrastre de cada fila (ver
+            # DownloadRow.add_output_files): se resuelven igual al consultarlos. La fila
+            # recuerda su tarjeta para sumar después lo que deje la recodificación.
+            for row in task_data["item_rows"]:
+                row.history_key = task_data["_history_key"]
+                self._history_sync_row(row)
 
         if success:
             title = task_data["request_data"].get("title", "").strip()
@@ -1101,6 +1113,7 @@ class QuickDownloadController(QObject):
             # is_stem_source=False: el nombre del recodificado lleva el prefijo/sufijo
             # elegido por el usuario, no sirve como base para buscar sidecars.
             row.add_output_files([final_path], is_stem_source=False)
+            self._history_sync_row(row)
 
         if final_path:
             from core.services.editor_integration_manager import EditorIntegrationManager
@@ -1159,6 +1172,7 @@ class QuickDownloadController(QObject):
                 # fallida -- se pintaba de verde y el grupo la contaba dos veces.
                 row.downloaded_filepath = final_path
                 row.add_output_files([final_path])
+                self._history_sync_row(row)
                 if row.is_error():
                     row.refresh_reveal_button()
                 else:

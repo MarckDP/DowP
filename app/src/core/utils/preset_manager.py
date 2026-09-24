@@ -44,6 +44,15 @@ PRESET_FUNCTIONS = {
 # vive bajo la tarjeta "Preajustes de Herramientas IA", repetir "IA" ahí es ruido.
 IA_TOOL_FUNCTIONS = {
     "ia_reescalar": QT_TRANSLATE_NOOP("preset_manager", "Reescalado"),
+    "ia_profundidad": QT_TRANSLATE_NOOP("preset_manager", "Mapa de profundidad"),
+}
+
+# Solo las funciones de IA que Modo Rápido y Proceso Avanzado saben ejecutar después de
+# una descarga (hoy, el Reescalado: ver core/tabs/video_tools/upscale_chain.py). Sus
+# pickers usan esta lista, así un preajuste de Mapa de Profundidad (que solo corre en
+# Herramientas Multimedia) no aparece ahí: PresetBar solo lista las funciones que recibe.
+IA_POST_DOWNLOAD_FUNCTIONS = {
+    "ia_reescalar": IA_TOOL_FUNCTIONS["ia_reescalar"],
 }
 
 # Namespace único (ver PresetManager) para TODO preset de IA -- constante acá, no un

@@ -76,8 +76,19 @@ def _preprocess(rgb: Image.Image, size: tuple[int, int], layout: str):
     return np.ascontiguousarray(arr, dtype=np.float32)
 
 
-def _to_near_bright(raw, output_kind: str):
-    """Salida cruda del modelo -> mapa 2D en 0..1 con cerca = 1."""
+def normalize_rgb_array(rgb: np.ndarray) -> np.ndarray:
+    """Fotograma RGB uint8 (alto, ancho, 3) YA al tamaño de proceso -> tensor CHW
+    normalizado con la media/desvío de ImageNet. Lo usa el Mapa de Profundidad de
+    video (core/tabs/video_tools/video_depth_engine.py), que recibe los fotogramas ya
+    escalados por ffmpeg en vez de una imagen de Pillow."""
+    arr = rgb.astype(np.float32) / 255.0
+    return ((arr - _IMAGENET_MEAN) / _IMAGENET_STD).transpose(2, 0, 1)
+
+
+def raw_to_disparity(raw, output_kind: str):
+    """Salida cruda del modelo -> mapa 2D de disparidad (cerca = valor alto), SIN
+    normalizar. El video necesita la escala cruda para mantenerla estable entre
+    fotogramas; la imagen normaliza enseguida (ver _to_near_bright)."""
     depth = np.squeeze(raw).astype(np.float32)
     if depth.ndim != 2:
         raise ValueError(f"forma de salida inesperada {tuple(np.shape(raw))}")
@@ -87,6 +98,12 @@ def _to_near_bright(raw, output_kind: str):
         depth = 1.0 / np.maximum(depth, 1e-6)
     if not np.isfinite(depth).all():
         raise ValueError("el modelo devolvió valores no numéricos")
+    return depth
+
+
+def _to_near_bright(raw, output_kind: str):
+    """Salida cruda del modelo -> mapa 2D en 0..1 con cerca = 1."""
+    depth = raw_to_disparity(raw, output_kind)
     lo, hi = float(depth.min()), float(depth.max())
     return (depth - lo) / (hi - lo + 1e-8)
 

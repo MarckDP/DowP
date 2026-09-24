@@ -9,7 +9,7 @@ from PySide6.QtCore import QObject, QCoreApplication
 from core.logger.logger_manager import logger
 from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config
-from core.utils.download_history import download_history, entry_key
+from core.utils.download_history import download_history
 from core.utils.preset_manager import build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE
 from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file
 from core.utils.file_conflict_manager import quarantine_for_recode, commit_backup, rollback_backup, predict_final_extension
@@ -134,10 +134,11 @@ class DownloadController(QObject):
         self.cancellation_event.clear()
         self.solo_worker = DownloadWorker(req_data, self.cancellation_event)
         self.solo_request_data = req_data.copy()
-        # Tarjeta del historial de ESTE medio, tomada ahora: mientras se descarga, el
-        # usuario puede analizar otra URL y _current_video_data pasaría a ser la de esa.
-        video_data = self.tab._current_video_data
-        self._solo_history_key = entry_key(video_data) if video_data else None
+        # Tarjeta del historial de ESTE análisis, tomada ahora: mientras se descarga, el
+        # usuario puede analizar otra URL. Si esa tarjeta ya se descargó (otra descarga
+        # desde el mismo análisis), esta va a una tarjeta nueva.
+        self._solo_history_key = download_history().key_for_new_download(
+            getattr(self.tab, "_current_history_key", None))
 
         # Empieza un proceso nuevo: lo que se pudiera arrastrar de la descarga anterior
         # ya no corresponde a lo que muestra la barra.
@@ -210,8 +211,7 @@ class DownloadController(QObject):
                     CleanupManager.cleanup_ytdlp_temp_files(output_dir, title, keep_thumbnail=keep_thumb)
                     CleanupManager.deferred_cleanup(output_dir, title, keep_thumbnail=keep_thumb)
                 logger.info("AdvancedProcessTab: Descarga directa SOLO finalizada con éxito.")
-                download_history().mark_downloaded(getattr(self, "_solo_history_key", None),
-                                                   self.last_downloaded_filepath)
+                download_history().mark_downloaded(getattr(self, "_solo_history_key", None))
 
                 # self.solo_worker.request_data es el MISMO dict que DownloadWorker pasó a
                 # DownloaderMaster.download() (sin copiar, ver workers.py::DownloadWorker) -
@@ -265,6 +265,7 @@ class DownloadController(QObject):
                     tracker.add([actual_path])
                     self._set_solo_drag_ready(True)
                     self._send_to_editor_if_enabled(actual_path or self.last_downloaded_filepath, self.solo_request_data)
+                self._history_sync(_SOLO_RECODE_KEY)
             else:
                 self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error: {0}").format(message), "wait")
                 logger.error(f"AdvancedProcessTab: Error en descarga directa SOLO: {message}")
@@ -465,7 +466,8 @@ class DownloadController(QObject):
             job = self.queue_mgr.get_job(job_id)
             # Historial: fuera del `if job.request_data` de abajo, porque los jobs de
             # PLAYLIST no tienen request_data y también cuentan como descargados.
-            download_history().mark_job_downloaded(job_id, job.final_filepath if job else None)
+            download_history().mark_job_downloaded(job_id)
+            self._history_sync(job_id)
             if job and job.request_data:
                 title = job.request_data.get("title", "").strip()
                 output_dir = job.request_data.get("output_path", "")
@@ -489,6 +491,7 @@ class DownloadController(QObject):
                     [path for path, _suffix in self._resolve_fragment_download_paths(job.request_data)]
                 )
                 job.add_output_files([self._find_actual_downloaded_file(job.final_filepath)])
+                self._history_sync(job_id)
 
                 if job.job_type == "DOWNLOAD" and (job.request_data.get("recode_enabled") or job.request_data.get("upscale_enabled")):
                     # job.final_filepath ya viene resuelto correctamente aquí (ver
@@ -616,10 +619,26 @@ class DownloadController(QObject):
             return
         if download_key == _SOLO_RECODE_KEY:
             self._init_solo_artifacts().add(paths, is_stem_source=not succeeded)
-            return
-        job = self.queue_mgr.get_job(download_key)
-        if job:
-            job.add_output_files(paths, is_stem_source=not succeeded)
+        else:
+            job = self.queue_mgr.get_job(download_key)
+            if job:
+                job.add_output_files(paths, is_stem_source=not succeeded)
+        self._history_sync(download_key)
+
+    def _history_sync(self, download_key):
+        """Copia al historial de descargas el rastro de archivos de la descarga directa
+        (modo SOLO) o de un job de la cola: los MISMOS que usa su arrastre, que el
+        historial resuelve igual al consultarlos (ver download_history.record_outputs)."""
+        history = download_history()
+        if download_key == _SOLO_RECODE_KEY:
+            key = getattr(self, "_solo_history_key", None)
+            tracker = self._init_solo_artifacts()
+        else:
+            key = history.key_for_job(download_key)
+            job = self.queue_mgr.get_job(download_key)
+            tracker = job.artifacts if job else None
+        if key and tracker is not None:
+            history.record_outputs(key, tracker.known(), tracker.stems())
 
     def _note_group_skip(self, download_key, fragment_total):
         """Descuenta del grupo un fragmento cuya recodificación ni llegó a encolarse

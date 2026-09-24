@@ -106,7 +106,7 @@ def source_has_real_video(input_file: str) -> bool:
 # Job types que compiten por GPU/CPU local (a diferencia de DOWNLOAD/PLAYLIST,
 # limitados por ancho de banda) -- máximo 1 a la vez, ver QueueWorker.run() y
 # QueueManager._get_next_runnable_job.
-_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO"})
+_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO"})
 
 
 class JobStatus:
@@ -173,6 +173,8 @@ class SingleJobWorker(QThread):
                 self.queue_worker._execute_recode(self.job, self.cancellation_event, self)
             elif self.job.job_type == "UPSCALE_VIDEO":
                 self.queue_worker._execute_upscale_video(self.job, self.cancellation_event, self)
+            elif self.job.job_type == "DEPTH_VIDEO":
+                self.queue_worker._execute_depth_video(self.job, self.cancellation_event, self)
         except Exception as e:
             import traceback
             logger.error(f"SingleJobWorker: Error inesperado en job {self.job.job_id}: {traceback.format_exc()}")
@@ -1159,6 +1161,60 @@ class QueueWorker(QThread):
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             logger.error(f"QueueWorker: [RECODE] FFmpeg falló: {job.error_message} ({job.title})")
 
+    def _execute_depth_video(self, job, cancellation_event=None, worker_ref=None):
+        """Mapa de Profundidad de video -- ver core/tabs/video_tools/video_depth_engine.py.
+        Mismo molde de estados que _execute_upscale_video; el progreso es por fotograma
+        (la cuenta la lleva el motor) y el tiempo restante va en el campo de ETA."""
+        if cancellation_event is None:
+            cancellation_event = self._cancellation_event
+
+        job.status = JobStatus.RUNNING
+        job.progress = 0.0
+        label = self.tr("Calculando profundidad...")
+        self.job_status_changed.emit(job.job_id, JobStatus.RUNNING)
+        self.job_progress_changed.emit(job.job_id, 0.0, label, "")
+
+        config = job.config
+        output_file = config.get("output_path")
+
+        def on_progress(pct, eta_sec):
+            job.progress = pct
+            eta = ""
+            if eta_sec is not None:
+                minutes, seconds = divmod(int(eta_sec), 60)
+                hours, minutes = divmod(minutes, 60)
+                eta = f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes:02d}:{seconds:02d}"
+            self.job_progress_changed.emit(job.job_id, pct, label, eta)
+
+        from core.tabs.video_tools.video_depth_engine import run_depth_video
+        success, error = run_depth_video(
+            config.get("input_path"), output_file, config.get("depth_options", {}),
+            config.get("fps") or 0.0, config.get("duration_sec", 0.0),
+            trim_in=config.get("trim_in_sec"), trim_out=config.get("trim_out_sec"),
+            cancellation_event=cancellation_event, progress_callback=on_progress,
+            worker_ref=worker_ref,
+        )
+
+        if cancellation_event.is_set():
+            job.status = JobStatus.CANCELLED
+            self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
+            logger.info(f"QueueWorker: [DEPTH_VIDEO] Trabajo cancelado por el usuario: {job.title}")
+            return
+
+        if success:
+            job.status = JobStatus.COMPLETED
+            job.progress = 100.0
+            job.final_filepath = output_file
+            job.add_output_files([output_file], is_stem_source=False)
+            self.job_progress_changed.emit(job.job_id, 100.0, self.tr("Completado"), "")
+            self.job_status_changed.emit(job.job_id, JobStatus.COMPLETED)
+            logger.info(f"QueueWorker: [DEPTH_VIDEO] Mapa de profundidad terminado: {output_file}")
+        else:
+            job.status = JobStatus.FAILED
+            job.error_message = error or self.tr("Error desconocido en Mapa de Profundidad de video")
+            self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
+            logger.error(f"QueueWorker: [DEPTH_VIDEO] Falló: {job.error_message} ({job.title})")
+
     def _execute_upscale_video(self, job, cancellation_event=None, worker_ref=None):
         """Reescalado de Video con IA: extrae fotogramas (ffmpeg) -> los
         reescala TODOS en un solo proceso con el motor NCNN elegido -> rearma
@@ -1182,13 +1238,25 @@ class QueueWorker(QThread):
         output_file = config.get("output_path")
         options = config.get("upscale_options", {})
         fps = config.get("fps") or 30.0
+        # duration_sec ya es la del tramo recortado (ver video_tools_view.py); trim_in/
+        # trim_out son el recorte de Herramientas Multimedia, None = video entero.
         duration_sec = config.get("duration_sec", 0.0)
+        trim_in = config.get("trim_in_sec")
+        trim_out = config.get("trim_out_sec")
 
         import shutil
         import tempfile
+        from core.tabs.video_tools.ia_video_common import container_of, probe_video_source
         from core.tabs.video_tools.video_upscale_engine import (
             extract_frames, upscale_frames_batch, reassemble_video,
         )
+
+        # Transparencia: solo si el usuario la pidió, la salida es MOV (ProRes 4444) y
+        # el video la trae de verdad -- sin cualquiera de las tres, JPG + H.264.
+        source = probe_video_source(input_file)
+        keep_alpha = (bool(options.get("keep_alpha")) and container_of(output_file) == "mov"
+                      and source["has_alpha"])
+        keep_audio = options.get("keep_audio", True)
 
         temp_root = tempfile.mkdtemp(prefix="dowp_upscale_video_")
         frames_dir = os.path.join(temp_root, "frames")
@@ -1206,7 +1274,8 @@ class QueueWorker(QThread):
             success, error = extract_frames(
                 input_file, frames_dir, fps, duration_sec, cancellation_event,
                 progress_callback=stage_progress(0.0, 15.0, self.tr("Extrayendo fotogramas...")),
-                worker_ref=worker_ref,
+                worker_ref=worker_ref, keep_alpha=keep_alpha, trim_in=trim_in, trim_out=trim_out,
+                decoder_args=source["decoder_args"] if keep_alpha else None,
             )
             if success:
                 success, error = upscale_frames_batch(
@@ -1217,7 +1286,8 @@ class QueueWorker(QThread):
                 success, error = reassemble_video(
                     upscaled_dir, input_file, output_file, fps, duration_sec, cancellation_event,
                     progress_callback=stage_progress(85.0, 15.0, self.tr("Recomponiendo video...")),
-                    worker_ref=worker_ref,
+                    worker_ref=worker_ref, keep_audio=keep_audio, alpha=keep_alpha,
+                    trim_in=trim_in, trim_out=trim_out,
                 )
         finally:
             shutil.rmtree(temp_root, ignore_errors=True)

@@ -200,5 +200,10 @@ class PresetsPanel(QWidget):
         if has_recode and self._warning_text:
             return False, self.tr("Resuelve el aviso de la marca de agua")
         if has_upscale and not has_recode:
+            # El mismo combo de IA trae preajustes de Reescalado y de Mapa de
+            # Profundidad (ver upscale_ia_panel.ia_function_of).
+            from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_DEPTH, ia_function_of
+            if ia_function_of(self.get_upscale_settings()) == FUNCTION_DEPTH:
+                return True, self.tr("Iniciar Mapa de Profundidad")
             return True, self.tr("Iniciar Reescalado")
         return True, self.tr("Iniciar Recodificación")

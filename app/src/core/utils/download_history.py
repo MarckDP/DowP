@@ -3,9 +3,9 @@
 
 Guarda una "tarjeta" por cada medio o playlist que se analizó o descargó: título, URL,
 duración, si solo se analizó o también se descargó, y una miniatura chica. Es un
-registro de lo que se hizo, NO un gestor de archivos: no comprueba si lo descargado
-sigue en disco. Aun así guarda la ruta del resultado (`output_path`) para que más
-adelante se pueda ofrecer "abrir carpeta" sin perder las entradas viejas.
+registro de lo que se hizo: una tarjeta "Descargado" lo sigue siendo aunque el archivo
+ya no exista. Además guarda los archivos que produjo, para que el panel pueda ofrecer
+abrirlos, mostrar su ubicación o arrastrarlos MIENTRAS sigan en disco (ver abajo).
 
 Detalles de diseño:
 
@@ -21,15 +21,26 @@ Detalles de diseño:
     tarjeta la vuelve a pedir la próxima vez que se muestra (ensure_thumbnail), usando
     la URL guardada -- en sitios cuyos enlaces caducan ya no se podrá, y la tarjeta
     queda con el marcador genérico.
-  - Una misma URL/medio no se duplica: la clave es "extractor:id" de yt-dlp; volver a
-    analizarlo actualiza su tarjeta y la sube arriba. El estado solo avanza
-    (analyzed -> downloaded), nunca retrocede.
+  - Archivos: se guardan las MISMAS dos listas que el arrastre de las pestañas
+    (OutputArtifactTracker / fila de Modo Rápido): todas las rutas conocidas y cuáles
+    sirven como nombre base para encontrar los hermanos (sidecars). "¿Sigue en disco?",
+    "cuál es el medio principal" y "qué se arrastra" se resuelven igual que en la cola,
+    con find_actual_downloaded_file / collect_output_artifacts, y nunca al dibujar: ver
+    resolve_disk_files y el chequeo en segundo plano del panel.
+  - Una tarjeta por OPERACIÓN, no por URL: descargar la misma URL 100 veces deja 100
+    tarjetas. Cada análisis crea la suya (clave única), y la descarga que le sigue la
+    pasa de "Analizado" a "Descargado" en vez de crear otra. Si esa misma tarjeta se
+    vuelve a descargar (varias descargas desde un solo análisis en Proceso Avanzado, o
+    un job de la cola que se reintenta), la nueva descarga sale en una tarjeta aparte
+    (ver duplicate / mark_job_downloaded). Las tarjetas de una misma URL comparten el
+    archivo de miniatura (se nombra por la URL de la imagen, no por la tarjeta).
 """
 import hashlib
 import os
 import sqlite3
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
@@ -39,6 +50,7 @@ from PySide6.QtGui import QImage
 
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
+from core.utils.output_artifacts import collect_output_artifacts, find_actual_downloaded_file
 from core.utils.paths import get_app_data_dir, get_thumbnail_cache_dir
 
 STATUS_ANALYZED = "analyzed"
@@ -93,15 +105,15 @@ def _playlist_thumbnail(info: dict):
     return None
 
 
-def entry_key(info: dict, source_url: str = "") -> str:
-    """Clave estable de una tarjeta. "extractor:id" identifica el medio aunque la URL
-    venga con parámetros distintos (?t=, &si=, etc.); sin eso, la URL."""
-    extractor = info.get("extractor_key") or info.get("ie_key") or info.get("extractor")
-    media_id = info.get("id")
-    if extractor and media_id:
-        return f"{str(extractor).lower()}:{media_id}"
-    url = info.get("webpage_url") or info.get("original_url") or source_url or ""
-    return f"url:{url}"
+def _new_key() -> str:
+    """Clave de una tarjeta: única por operación (ver docstring del módulo)."""
+    return uuid.uuid4().hex
+
+
+def _thumb_file_name(thumb_url: str) -> str:
+    """Nombre del archivo de miniatura a partir de la URL de la imagen: todas las tarjetas
+    de un mismo medio comparten un solo archivo en disco."""
+    return hashlib.sha1(thumb_url.encode("utf-8")).hexdigest()[:20] + ".jpg"
 
 
 def _is_playlist(info: dict) -> bool:
@@ -141,12 +153,24 @@ class DownloadHistory(QObject):
                 updated_at REAL NOT NULL
             )""")
         self._db.execute("CREATE INDEX IF NOT EXISTS idx_entries_updated ON entries(updated_at DESC)")
+        # Archivos de cada tarjeta. is_stem = 1: su nombre base sirve para barrer hermanos
+        # (el medio descargado); 0: no (la salida recodificada, sidecars sueltos).
+        self._db.execute("""
+            CREATE TABLE IF NOT EXISTS entry_files (
+                key TEXT NOT NULL,
+                path TEXT NOT NULL,
+                is_stem INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (key, path)
+            )""")
         self._db.commit()
 
         # job_id de la cola (Proceso Avanzado) -> clave de su tarjeta.
         self._job_keys: dict[str, str] = {}
-        # Miniaturas pedidas y todavía en curso (o que ya fallaron en esta sesión): evita
-        # repetir la descarga cada vez que la tarjeta se repinta.
+        # Jobs que ya marcaron su tarjeta como descargada: si el mismo job vuelve a
+        # completarse (se reintentó), esa descarga va a una tarjeta nueva.
+        self._jobs_marked: set[str] = set()
+        # Archivos de miniatura pedidos y todavía en curso (o que ya fallaron en esta
+        # sesión): evita repetir la descarga cada vez que una tarjeta se repinta.
         self._thumb_requested: set[str] = set()
         self._thumb_lock = threading.Lock()
         self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="history_thumb")
@@ -179,13 +203,13 @@ class DownloadHistory(QObject):
 
     # ── Registro ─────────────────────────────────────────────────────────────
     def record_analysis(self, info: dict, source_url: str = "", as_playlist: bool = None):
-        """Registra (o sube arriba) la tarjeta de un análisis. `as_playlist` None =
-        decidirlo por el propio resultado. Devuelve la clave, o None si el historial está
-        desactivado o no hay datos útiles."""
+        """Crea la tarjeta de un análisis -- SIEMPRE una nueva, aunque la URL ya esté en
+        el historial. `as_playlist` None = decidirlo por el propio resultado. Devuelve la
+        clave, o None si el historial está desactivado o no hay datos útiles."""
         if not info or not self.is_enabled():
             return None
         playlist = _is_playlist(info) if as_playlist is None else (as_playlist and _is_playlist(info))
-        key = entry_key(info, source_url)
+        key = _new_key()
         if playlist:
             url = info.get("original_url") or info.get("webpage_url") or source_url
             thumb_url = _playlist_thumbnail(info)
@@ -201,20 +225,11 @@ class DownloadHistory(QObject):
         title = info.get("title") or url
         now = time.time()
 
-        existing = self._db.execute("SELECT status, thumb_url FROM entries WHERE key = ?", (key,)).fetchone()
-        if existing:
-            self._db.execute(
-                """UPDATE entries SET url = ?, title = ?, duration = COALESCE(?, duration),
-                   kind = ?, item_count = COALESCE(?, item_count),
-                   thumb_url = COALESCE(?, thumb_url), updated_at = ? WHERE key = ?""",
-                (url, title, duration, KIND_PLAYLIST if playlist else KIND_MEDIA, item_count,
-                 thumb_url, now, key))
-        else:
-            self._db.execute(
-                """INSERT INTO entries (key, url, title, duration, kind, item_count, status,
-                   thumb_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (key, url, title, duration, KIND_PLAYLIST if playlist else KIND_MEDIA,
-                 item_count, STATUS_ANALYZED, thumb_url, now, now))
+        self._db.execute(
+            """INSERT INTO entries (key, url, title, duration, kind, item_count, status,
+               thumb_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (key, url, title, duration, KIND_PLAYLIST if playlist else KIND_MEDIA,
+             item_count, STATUS_ANALYZED, thumb_url, now, now))
         self._db.commit()
         self.enforce_limit(emit=False)
         self.entries_changed.emit()
@@ -222,27 +237,94 @@ class DownloadHistory(QObject):
         return key
 
     def mark_downloaded(self, key: str, output_path: str = None):
-        """Pasa la tarjeta a "Descargado" (y la sube arriba). La ruta se guarda pero el
-        historial nunca la comprueba."""
+        """Pasa la tarjeta a "Descargado" (y la sube arriba). Los archivos llegan aparte,
+        por record_outputs, con el mismo rastro que usa el arrastre de las pestañas."""
         if not key or not self.is_enabled():
             return
         cur = self._db.execute(
-            """UPDATE entries SET status = ?, output_path = COALESCE(?, output_path),
-               updated_at = ? WHERE key = ?""",
-            (STATUS_DOWNLOADED, output_path, time.time(), key))
+            "UPDATE entries SET status = ?, updated_at = ? WHERE key = ?",
+            (STATUS_DOWNLOADED, time.time(), key))
         self._db.commit()
+        if output_path:
+            self.record_outputs(key, [output_path], [output_path])
         if cur.rowcount:
             self.entries_changed.emit()
+
+    def record_outputs(self, key: str, known_paths, stem_paths=None):
+        """Suma los archivos de una tarjeta: las rutas que el proceso fue registrando
+        (incluidas las pistas intermedias de yt-dlp, que se resuelven al consultarlas) y
+        cuáles sirven como nombre base. Se puede llamar varias veces (al terminar la
+        descarga y otra vez al terminar la recodificación): solo agrega."""
+        if not key or not self.is_enabled():
+            return
+        stems = set(p for p in (stem_paths if stem_paths is not None else known_paths) or [] if p)
+        rows = [(key, p, 1 if p in stems else 0) for p in dict.fromkeys(known_paths or []) if p]
+        if not rows:
+            return
+        if not self._db.execute("SELECT 1 FROM entries WHERE key = ?", (key,)).fetchone():
+            return
+        self._db.executemany(
+            """INSERT INTO entry_files (key, path, is_stem) VALUES (?, ?, ?)
+               ON CONFLICT(key, path) DO UPDATE SET is_stem = MAX(is_stem, excluded.is_stem)""",
+            rows)
+        self._db.commit()
+        self.entry_updated.emit(key)
+
+    def files_for(self, key: str):
+        """(rutas conocidas, rutas base) de la tarjeta. Las tarjetas anteriores a la tabla
+        entry_files solo tienen output_path: se usa como única ruta."""
+        rows = self._db.execute(
+            "SELECT path, is_stem FROM entry_files WHERE key = ? ORDER BY rowid", (key,)).fetchall()
+        if rows:
+            return [r["path"] for r in rows], [r["path"] for r in rows if r["is_stem"]]
+        row = self._db.execute("SELECT output_path FROM entries WHERE key = ?", (key,)).fetchone()
+        legacy = row["output_path"] if row else None
+        return ([legacy], [legacy]) if legacy else ([], [])
+
+    def duplicate(self, key: str):
+        """Tarjeta nueva ("Analizado") con los mismos datos que `key`, sin sus archivos:
+        para una descarga más desde un análisis que ya se descargó. Devuelve la clave
+        nueva (o la misma si el historial está apagado o `key` ya no existe)."""
+        row = self.get(key) if key else None
+        if not row or not self.is_enabled():
+            return key
+        new_key = _new_key()
+        now = time.time()
+        self._db.execute(
+            """INSERT INTO entries (key, url, title, duration, kind, item_count, status,
+               thumb_url, thumb_file, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (new_key, row["url"], row["title"], row["duration"], row["kind"], row["item_count"],
+             STATUS_ANALYZED, row["thumb_url"], row["thumb_file"], now, now))
+        self._db.commit()
+        self.enforce_limit(emit=False)
+        self.entries_changed.emit()
+        return new_key
+
+    def key_for_new_download(self, key: str):
+        """La clave a la que debe ir una descarga que EMPIEZA ahora desde el análisis
+        `key`: la misma si esa tarjeta todavía no se descargó, o una copia nueva si ya."""
+        row = self.get(key) if key else None
+        if row and row["status"] == STATUS_DOWNLOADED:
+            return self.duplicate(key)
+        return key
 
     def bind_job(self, job_id: str, key: str):
         if job_id and key:
             self._job_keys[job_id] = key
+            self._jobs_marked.discard(job_id)
 
     def key_for_job(self, job_id: str):
         return self._job_keys.get(job_id)
 
     def mark_job_downloaded(self, job_id: str, output_path: str = None):
-        self.mark_downloaded(self._job_keys.get(job_id), output_path)
+        key = self._job_keys.get(job_id)
+        if key and job_id in self._jobs_marked:
+            # El mismo job se completó otra vez (se reintentó): es otra descarga.
+            key = self.duplicate(key)
+            self._job_keys[job_id] = key
+        self._jobs_marked.add(job_id)
+        self.mark_downloaded(key, output_path)
 
     # ── Consulta ─────────────────────────────────────────────────────────────
     @staticmethod
@@ -269,29 +351,35 @@ class DownloadHistory(QObject):
         return dict(row) if row else None
 
     # ── Borrado ──────────────────────────────────────────────────────────────
-    def _delete_thumb_files(self, rows):
-        for row in rows:
-            name = row["thumb_file"]
-            if name:
-                try:
-                    os.remove(os.path.join(get_history_thumbnail_dir(), name))
-                except OSError:
-                    pass
+    def _drop_unreferenced_thumbs(self, names):
+        """Borra los archivos de miniatura que ya no use NINGUNA tarjeta: varias tarjetas
+        de una misma URL comparten el mismo archivo. Llamar después de borrar las filas."""
+        for name in set(n for n in names if n):
+            if self._db.execute("SELECT 1 FROM entries WHERE thumb_file = ? LIMIT 1", (name,)).fetchone():
+                continue
+            try:
+                os.remove(os.path.join(get_history_thumbnail_dir(), name))
+            except OSError:
+                pass
 
     def remove(self, key: str):
-        rows = self._db.execute("SELECT thumb_file FROM entries WHERE key = ?", (key,)).fetchall()
-        self._delete_thumb_files(rows)
+        names = [r["thumb_file"] for r in
+                 self._db.execute("SELECT thumb_file FROM entries WHERE key = ?", (key,)).fetchall()]
         self._db.execute("DELETE FROM entries WHERE key = ?", (key,))
+        self._db.execute("DELETE FROM entry_files WHERE key = ?", (key,))
         self._db.commit()
+        self._drop_unreferenced_thumbs(names)
         self.entries_changed.emit()
 
     def clear(self):
         """Borra TODO el historial y sus miniaturas."""
-        rows = self._db.execute("SELECT thumb_file FROM entries").fetchall()
-        self._delete_thumb_files(rows)
+        names = [r["thumb_file"] for r in self._db.execute("SELECT thumb_file FROM entries").fetchall()]
         self._db.execute("DELETE FROM entries")
+        self._db.execute("DELETE FROM entry_files")
         self._db.commit()
+        self._drop_unreferenced_thumbs(names)
         self._job_keys.clear()
+        self._jobs_marked.clear()
         with self._thumb_lock:
             self._thumb_requested.clear()
         logger.info("DownloadHistory: historial borrado.")
@@ -313,9 +401,10 @@ class DownloadHistory(QObject):
             (limit,)).fetchall()
         if not rows:
             return
-        self._delete_thumb_files(rows)
         self._db.executemany("DELETE FROM entries WHERE key = ?", [(r["key"],) for r in rows])
+        self._db.executemany("DELETE FROM entry_files WHERE key = ?", [(r["key"],) for r in rows])
         self._db.commit()
+        self._drop_unreferenced_thumbs([r["thumb_file"] for r in rows])
         logger.info(f"DownloadHistory: {len(rows)} entrada(s) antiguas borradas por el límite de {limit}.")
         if emit:
             self.entries_changed.emit()
@@ -331,17 +420,23 @@ class DownloadHistory(QObject):
 
     def ensure_thumbnail(self, key: str):
         """Si la tarjeta no tiene su miniatura en disco (nueva, o se vació la caché), la
-        pide en segundo plano -- una sola vez por sesión y clave."""
+        consigue: si otra tarjeta del mismo medio ya la tiene, la comparte; si no, la pide
+        en segundo plano -- una sola vez por sesión y archivo."""
         entry = self.get(key)
         if not entry or not entry.get("thumb_url") or self.thumbnail_path(entry):
             return
+        url = entry["thumb_url"]
+        name = _thumb_file_name(url)
+        if os.path.isfile(os.path.join(get_history_thumbnail_dir(), name)):
+            self._on_thumbnail_done(url, name)
+            return
         with self._thumb_lock:
-            if key in self._thumb_requested:
+            if name in self._thumb_requested:
                 return
-            self._thumb_requested.add(key)
-        self._pool.submit(self._download_thumbnail, key, entry["thumb_url"])
+            self._thumb_requested.add(name)
+        self._pool.submit(self._download_thumbnail, url, name)
 
-    def _download_thumbnail(self, key: str, url: str):
+    def _download_thumbnail(self, url: str, name: str):
         """Hilo aparte: baja la imagen, la reduce a THUMB_SAVE_WIDTH y la guarda como JPEG.
         QImage (a diferencia de QPixmap) se puede usar fuera del hilo principal."""
         try:
@@ -352,27 +447,29 @@ class DownloadHistory(QObject):
                 raise ValueError("imagen no reconocida")
             if img.width() > THUMB_SAVE_WIDTH:
                 img = img.scaledToWidth(THUMB_SAVE_WIDTH, Qt.SmoothTransformation)
-            name = hashlib.sha1(key.encode("utf-8")).hexdigest()[:20] + ".jpg"
             path = os.path.join(get_history_thumbnail_dir(), name)
             if not img.save(path, "JPG", THUMB_JPEG_QUALITY):
                 raise OSError("no se pudo guardar")
-            self._thumbnail_done.emit(key, name)
+            self._thumbnail_done.emit(url, name)
         except Exception as e:
             logger.debug(f"DownloadHistory: sin miniatura para {urlparse(url).netloc} ({e})")
 
-    def _on_thumbnail_done(self, key: str, name: str):
+    def _on_thumbnail_done(self, url: str, name: str):
+        """La miniatura `name` está en disco: la toman TODAS las tarjetas de esa imagen."""
         with self._thumb_lock:
-            self._thumb_requested.discard(key)
-        cur = self._db.execute("UPDATE entries SET thumb_file = ? WHERE key = ?", (name, key))
-        self._db.commit()
-        if cur.rowcount:
-            self.entry_updated.emit(key)
+            self._thumb_requested.discard(name)
+        keys = [r["key"] for r in self._db.execute(
+            "SELECT key FROM entries WHERE thumb_url = ? AND (thumb_file IS NULL OR thumb_file != ?)",
+            (url, name)).fetchall()]
+        if keys:
+            self._db.execute(
+                "UPDATE entries SET thumb_file = ? WHERE thumb_url = ?", (name, url))
+            self._db.commit()
+            for key in keys:
+                self.entry_updated.emit(key)
         else:
-            # La entrada se borró mientras se descargaba su miniatura.
-            try:
-                os.remove(os.path.join(get_history_thumbnail_dir(), name))
-            except OSError:
-                pass
+            # Las tarjetas se borraron mientras se descargaba su miniatura.
+            self._drop_unreferenced_thumbs([name])
 
     def forget_thumbnails(self):
         """Llamado al vaciar la caché de miniaturas desde Ajustes: los archivos ya se
@@ -380,6 +477,48 @@ class DownloadHistory(QObject):
         with self._thumb_lock:
             self._thumb_requested.clear()
         self.entries_changed.emit()
+
+
+# Extensiones de archivos que acompañan al medio (miniatura, subtítulos, metadatos).
+_SIDECAR_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".srt", ".vtt", ".ass", ".ssa", ".lrc",
+                 ".json", ".description"}
+
+
+def _is_sidecar(path: str) -> bool:
+    return os.path.splitext(path or "")[1].lower() in _SIDECAR_EXTS
+
+
+def resolve_disk_files(known_paths, stem_paths):
+    """Estado en disco de una tarjeta: (medio principal, archivos a arrastrar).
+
+    - Medio principal: el DESCARGADO, resuelto con find_actual_downloaded_file igual que
+      las pestañas (la pista de yt-dlp suele ser un intermedio que ffmpeg borra al
+      fusionar). Si ya no existe, lo procesado (la salida recodificada). Un sidecar solo
+      cuenta como principal si lo descargado ERA ese tipo de archivo (modo "solo
+      miniatura"): una miniatura huérfana no significa que el video siga en disco.
+      None = nada de esta tarjeta sigue en disco.
+    - Arrastre: todo lo que aún existe, como en la cola (collect_output_artifacts: medio,
+      procesados, miniatura, subtítulos), con el principal primero.
+
+    Toca el disco: nunca llamarla al dibujar. Es segura fuera del hilo principal."""
+    primary = None
+    for path in stem_paths or []:
+        real = find_actual_downloaded_file(path)
+        if real and os.path.isfile(real) and not (_is_sidecar(real) and not _is_sidecar(path)):
+            primary = os.path.abspath(real)
+            break
+    if primary is None:
+        stems = set(stem_paths or [])
+        for path in known_paths or []:
+            if path not in stems and path and os.path.isfile(path) and not _is_sidecar(path):
+                primary = os.path.abspath(path)
+                break
+    if primary is None:
+        return None, []
+    drag = collect_output_artifacts(known_paths, stem_paths=stem_paths)
+    first = os.path.normcase(primary)
+    drag = [primary] + [p for p in drag if os.path.normcase(p) != first]
+    return primary, drag
 
 
 _history = None

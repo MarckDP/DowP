@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from gui.widgets.preset_bar import PresetBar
 from gui.styles import get_theme_token
-from core.utils.preset_manager import IA_TOOL_FUNCTIONS, IA_TOOLS_NAMESPACE
+from core.utils.preset_manager import IA_POST_DOWNLOAD_FUNCTIONS, IA_TOOLS_NAMESPACE
 
 _PRESET_NAMESPACE = "video_tools/avanzado"
 _UPSCALE_PRESET_NAMESPACE = IA_TOOLS_NAMESPACE
@@ -34,8 +34,9 @@ class RecodeOptionsWidget(QFrame):
     independientes y COMBINABLES -- Recodificación (switch + PresetBar sobre
     "video_tools/avanzado") y "Herramientas IA" (switch + PresetBar sobre
     "video_tools/ia_tools", namespace compartido -- ver
-    core.utils.preset_manager.IA_TOOL_FUNCTIONS; hoy la sección solo trae
-    Reescalado) -- elegir solo una corre solo esa al terminar la
+    core.utils.preset_manager.IA_POST_DOWNLOAD_FUNCTIONS: solo Reescalado; los
+    preajustes de Mapa de Profundidad no se listan aquí porque solo corren en
+    Herramientas Multimedia) -- elegir solo una corre solo esa al terminar la
     descarga; elegir las dos las encadena (Reescalado IA primero,
     Recodificación después, mismo orden y mismas razones que en Herramientas
     Multimedia -- ver core/tabs/video_tools/upscale_chain.py). Antes se
@@ -198,7 +199,7 @@ class RecodeOptionsWidget(QFrame):
         self.preset_bar_upscale = PresetBar(
             _UPSCALE_PRESET_NAMESPACE, get_settings=None, parent=self.body_container,
             show_picker=True, show_save_button=False,
-            function_choices=IA_TOOL_FUNCTIONS,
+            function_choices=IA_POST_DOWNLOAD_FUNCTIONS,
         )
         self.preset_bar_upscale.setEnabled(False)
         self.preset_bar_upscale.preset_applied.connect(self._update_header_highlight)

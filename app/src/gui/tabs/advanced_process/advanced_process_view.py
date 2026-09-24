@@ -910,7 +910,7 @@ class AdvancedProcessTab(QWidget):
                 else:
                     title = data.get('title', "Video")
                     self._current_video_data = data
-                    download_history().record_analysis(data, url, as_playlist=False)
+                    self._current_history_key = download_history().record_analysis(data, url, as_playlist=False)
                     
                     self.video_details.combo_video.blockSignals(True)
                     self.video_details.combo_audio.blockSignals(True)

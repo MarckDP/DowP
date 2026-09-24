@@ -63,12 +63,20 @@ _INVERT_TOOLTIP = QCoreApplication.translate(
 
 class DepthPopoverContent(QFrame):
     """selection_changed(family_key, model_key, is_valid) -- ver
-    RembgPopoverContent.selection_changed."""
+    RembgPopoverContent.selection_changed.
+
+    video_mode=True: el mismo selector dentro de Herramientas IA de Herramientas
+    Multimedia (ver upscale_ia_panel.py). Oculta la nota del ancho de bits, que es de
+    las opciones de PNG/TIFF del Editor de Imagen (en video lo decide la casilla "16
+    bits" del contenedor), y marca como "recomendado para video" las familias
+    multivista (entrada "5d", hoy Depth Anything 3), que calculan varios fotogramas a la
+    vez en una escala común y así no parpadean (ver video_depth_engine.py)."""
     selection_changed = Signal(str, str, bool)
     close_popover_requested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, video_mode: bool = False):
         super().__init__(parent)
+        self._video_mode = video_mode
         self.setObjectName("depthPopover")
         bg = get_theme_token('fondo_secundario', '#1e1e1e')
         border = get_theme_token('borde_normal', '#2d2d2d')
@@ -103,8 +111,11 @@ class DepthPopoverContent(QFrame):
         family_row.addWidget(self._label(self.tr("Motor:")))
         self.combo_family = AutoPopupComboBox(fit_contents=True)
         self.combo_family.addItem(AI_ENGINE_HOLDER, None)
-        for family_name in get_depth_families().keys():
-            self.combo_family.addItem(family_name, family_name)
+        for family_name, models in get_depth_families().items():
+            label = family_name
+            if video_mode and any(m.get("input_layout") == "5d" for m in models.values()):
+                label = self.tr("{0} (recomendado para video)").format(family_name)
+            self.combo_family.addItem(label, family_name)
         self.combo_family.currentIndexChanged.connect(self._on_family_changed)
         family_row.addWidget(self.combo_family, 1)
         layout.addLayout(family_row)
@@ -162,6 +173,7 @@ class DepthPopoverContent(QFrame):
         lbl_bits.setWordWrap(True)
         lbl_bits.setStyleSheet(
             f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        lbl_bits.setVisible(not video_mode)
         layout.addWidget(lbl_bits)
 
     def showEvent(self, event):

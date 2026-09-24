@@ -305,6 +305,10 @@ class QuickDownloadRow(QFrame):
             if is_stem_source and path not in self._stem_paths:
                 self._stem_paths.append(path)
 
+    def output_known(self):
+        """Todas las rutas registradas por esta fila (ver download_history.record_outputs)."""
+        return list(self._known_paths)
+
     def output_stems(self):
         """Rutas cuyo nombre base identifica a ESTA fila, para que otra fila de la lista
         no reclame sus archivos (ver collect_output_artifacts)."""

@@ -88,7 +88,11 @@ class CollapsiblePanel(QFrame):
     opened = Signal()
     closed = Signal()
 
-    def __init__(self, content: QWidget, edge: str, docked_size: int, overlay_max_width: int = None, parent=None):
+    def __init__(self, content: QWidget, edge: str, docked_size: int, overlay_max_width: int = None,
+                 parent=None, edge_tab_class=None):
+        """edge_tab_class: otra pestaña del borde en lugar de EdgeTabButton (misma
+        interfaz: clicked + set_open). La usa el historial de descargas para mostrar su
+        nombre en vertical en vez de la flecha."""
         super().__init__(parent)
         assert edge in ("left", "right")
         self.edge = edge
@@ -140,7 +144,7 @@ class CollapsiblePanel(QFrame):
         self.setMinimumWidth(docked_size)
         self.setMaximumWidth(self._dock_max_width)
 
-        self.edge_tab = EdgeTabButton(edge)
+        self.edge_tab = (edge_tab_class or EdgeTabButton)(edge)
         self.edge_tab.clicked.connect(self._on_edge_tab_clicked)
         self.edge_tab.hide()
 

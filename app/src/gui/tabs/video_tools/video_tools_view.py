@@ -31,6 +31,8 @@ from core.tabs.editing_media.ffprobe_metadata_manager import FFprobeMetadataMana
 from core.utils.queue_manager import get_queue_manager, JobStatus
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup, find_available_rename
 from core.utils.recode_guard import container_supports_multi_audio, CONTAINER_TO_EXTENSION
+from core.tabs.video_tools.ia_video_common import trimmed_duration
+from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_DEPTH, ia_function_of
 
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
 
@@ -1123,6 +1125,25 @@ class VideoToolsTab(QWidget):
         self.progress_bar.style().polish(self.progress_bar)
         qm.start_queue()
 
+    def _ia_job_spec(self, settings: dict, base_name: str):
+        """(job_type, clave de opciones en job.config, título) del job de Herramientas
+        IA según la función de los ajustes (ver upscale_ia_panel.ia_function_of)."""
+        if ia_function_of(settings) == FUNCTION_DEPTH:
+            return "DEPTH_VIDEO", "depth_options", self.tr("Mapa de profundidad: {0}").format(base_name)
+        return "UPSCALE_VIDEO", "upscale_options", f"Reescalado IA: {base_name}"
+
+    def _trim_for(self, entry_key: str, duration_sec: float):
+        """(inicio, fin) del recorte de esa fila de la cola, o (None, None) si no tiene
+        o si cubre el video entero -- mismo criterio que la Recodificación
+        (_on_start_recoding_clicked), para que las Herramientas IA respeten el recorte
+        igual que el resto de procesos."""
+        cached_trim = self._trim_cache.get(entry_key)
+        if cached_trim:
+            trim_in_sec, trim_out_sec = cached_trim
+            if trim_in_sec > 0.05 or (duration_sec > 0 and trim_out_sec < (duration_sec - 0.05)):
+                return trim_in_sec, trim_out_sec
+        return None, None
+
     def _has_enough_space_for_upscale(self, meta: dict, fps: float, duration_sec: float, settings: dict) -> bool:
         """Estimación gruesa antes de encolar (ver
         video_upscale_engine.estimate_temp_space_bytes) -- los frames
@@ -1155,13 +1176,17 @@ class VideoToolsTab(QWidget):
 
     def _start_upscale_ia_jobs(self, files, settings, out_dir, same_path):
         """Arma un job UPSCALE_VIDEO por archivo -- versión simplificada del
-        loop de RECODE (_on_start_recoding_clicked): sin trim/marca de agua/
-        selección de pista de audio, esas opciones no aplican al Reescalado
-        IA. Reusa self._recode_jobs/_recode_backups para el progreso/estado/
+        loop de RECODE (_on_start_recoding_clicked): respeta el recorte de cada
+        fila igual que la Recodificación (ver _trim_for), pero no la marca de agua
+        ni la selección de pista de audio. Reusa self._recode_jobs/_recode_backups para el progreso/estado/
         cancelación -- _on_job_progress/_on_job_status/_on_cancel_recoding_
         clicked ya son genéricos (no miran job_type), así que no hace falta
-        duplicarlos para este job_type nuevo."""
-        if not self._confirm_upscale_engine_if_needed(settings.get("upscale_engine")):
+        duplicarlos para este job_type nuevo.
+
+        Sirve para las dos funciones de Herramientas IA: con ajustes de Mapa de
+        Profundidad (ia_function "depth") crea jobs DEPTH_VIDEO -- ver _ia_job_spec."""
+        is_depth = ia_function_of(settings) == FUNCTION_DEPTH
+        if not is_depth and not self._confirm_upscale_engine_if_needed(settings.get("upscale_engine")):
             return
 
         qm = get_queue_manager()
@@ -1189,8 +1214,12 @@ class VideoToolsTab(QWidget):
             meta = FFprobeMetadataManager.get_instance()._extract_ffprobe_json(filepath, "video")
             duration_sec = self._parse_duration_to_seconds(meta.get("duración", "0"))
             fps = self._parse_fps(meta.get("fps", "30"))
+            trim_in, trim_out = self._trim_for(entry_key, duration_sec)
+            duration_sec = trimmed_duration(duration_sec, trim_in, trim_out)
 
-            if not self._has_enough_space_for_upscale(meta, fps, duration_sec, settings):
+            # El Mapa de Profundidad no guarda fotogramas en disco: no hace falta el
+            # chequeo de espacio temporal del Reescalado.
+            if not is_depth and not self._has_enough_space_for_upscale(meta, fps, duration_sec, settings):
                 logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
                 self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
                 continue
@@ -1212,16 +1241,19 @@ class VideoToolsTab(QWidget):
                 continue
             claimed_out_paths.add(out_file)
 
+            job_type, options_key, title = self._ia_job_spec(settings, base_name)
             config = {
                 "input_path": filepath,
                 "output_path": out_file,
-                "upscale_options": settings,
+                options_key: settings,
                 "fps": fps,
                 "duration_sec": duration_sec,
-                "title": f"Reescalado IA: {base_name}",
+                "trim_in_sec": trim_in,
+                "trim_out_sec": trim_out,
+                "title": title,
                 "queue_entry_key": entry_key,
             }
-            job_id = qm.add_job(config, "UPSCALE_VIDEO")
+            job_id = qm.add_job(config, job_type)
             self._recode_jobs.add(job_id)
             self._recode_backups[job_id] = backup_path
             queued_any = True
@@ -1249,8 +1281,12 @@ class VideoToolsTab(QWidget):
         etapa 1) vive en self._chain_temp_dir, invisible para el usuario --
         NO pasa por resolve_conflict (no es un destino real), y se borra
         apenas la etapa 2 termina sea cual sea el resultado (ver
-        self._chain_cleanup)."""
-        if not self._confirm_upscale_engine_if_needed(upscale_settings.get("upscale_engine")):
+        self._chain_cleanup).
+
+        Igual con Mapa de Profundidad (ia_function "depth"): la etapa 1 es un job
+        DEPTH_VIDEO -- ver _ia_job_spec."""
+        is_depth = ia_function_of(upscale_settings) == FUNCTION_DEPTH
+        if not is_depth and not self._confirm_upscale_engine_if_needed(upscale_settings.get("upscale_engine")):
             return
 
         import tempfile
@@ -1277,8 +1313,12 @@ class VideoToolsTab(QWidget):
             meta = FFprobeMetadataManager.get_instance()._extract_ffprobe_json(filepath, "video")
             duration_sec = self._parse_duration_to_seconds(meta.get("duración", "0"))
             fps = self._parse_fps(meta.get("fps", "30"))
+            # El recorte se aplica en la etapa de IA: la Recodificación de la etapa 2
+            # trabaja sobre el intermedio, que ya es solo el tramo recortado.
+            trim_in, trim_out = self._trim_for(entry_key, duration_sec)
+            duration_sec = trimmed_duration(duration_sec, trim_in, trim_out)
 
-            if not self._has_enough_space_for_upscale(meta, fps, duration_sec, upscale_settings):
+            if not is_depth and not self._has_enough_space_for_upscale(meta, fps, duration_sec, upscale_settings):
                 logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
                 self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
                 continue
@@ -1306,16 +1346,25 @@ class VideoToolsTab(QWidget):
                 self._chain_temp_dir = tempfile.mkdtemp(prefix="dowp_chain_")
             intermediate_path = os.path.join(self._chain_temp_dir, f"{idx}_{base_name}.mp4")
 
+            job_type, options_key, title = self._ia_job_spec(upscale_settings, base_name)
+            if is_depth:
+                # El intermedio sale del contenedor del preajuste de profundidad (puede
+                # ser 16 bits, que MP4 no admite); la Recodificación define el final.
+                inter_container = upscale_settings.get("container", "mkv")
+                intermediate_path = os.path.splitext(intermediate_path)[0] + "." + \
+                    CONTAINER_TO_EXTENSION.get(inter_container, inter_container)
             config = {
                 "input_path": filepath,
                 "output_path": intermediate_path,
-                "upscale_options": upscale_settings,
+                options_key: upscale_settings,
                 "fps": fps,
                 "duration_sec": duration_sec,
-                "title": f"Reescalado IA: {base_name}",
+                "trim_in_sec": trim_in,
+                "trim_out_sec": trim_out,
+                "title": title,
                 "queue_entry_key": entry_key,
             }
-            job_id = qm.add_job(config, "UPSCALE_VIDEO")
+            job_id = qm.add_job(config, job_type)
             self._recode_jobs.add(job_id)
             self._chain_pending[job_id] = {
                 "recode_settings": recode_settings,

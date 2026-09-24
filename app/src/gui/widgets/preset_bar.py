@@ -127,6 +127,12 @@ class PresetBar(QWidget):
 
     # ─── Estado / API pública ────────────────────────────────────
 
+    def set_save_defaults(self, default_function: str | None, job_type: str):
+        """Cambia con qué función y job_type se guarda el próximo preajuste -- para un
+        panel con varias funciones (Herramientas IA: Reescalado o Mapa de Profundidad)."""
+        self._default_function = default_function
+        self._job_type = job_type
+
     def current_preset_settings(self):
         """Ajustes del preset activo, o None si no hay ninguno seleccionado
         ("Sin preset"). El panel host debe preferir esto sobre leer sus

@@ -7,7 +7,13 @@ cual. Tres funciones, una por etapa -- las invoca
 core/utils/queue_manager.py::QueueWorker._execute_upscale_video, que arma el
 peso de progreso entre las tres (0-15% extracción, 15-85% reescalado, 85-100%
 rearmado -- mismo peso que usaba DowP1 para esta misma función, ver el
-comentario en core/tabs/image_tools/image_converter.py::_apply_ai_upscale)."""
+comentario en core/tabs/image_tools/image_converter.py::_apply_ai_upscale).
+
+Fotogramas intermedios: JPG de máxima calidad y sin submuestreo de color por defecto
+(ocupan de 5 a 10 veces menos que PNG, y el video de origen ya viene comprimido), o PNG
+con canal alfa cuando hay que conservar la transparencia. La salida de los motores
+NCNN es siempre PNG. El recorte, el audio y el códec de salida se resuelven igual que
+en Mapa de Profundidad, ver core/tabs/video_tools/ia_video_common.py."""
 import os
 import re
 import subprocess
@@ -18,9 +24,12 @@ from PySide6.QtCore import QCoreApplication
 
 from core.logger.logger_manager import logger
 from core.setup.ffmpeg_setup import get_ffmpeg_path
+from core.tabs.video_tools.ia_video_common import build_video_encode_args, container_of, trim_input_args
 
+# Los motores NCNN escriben siempre PNG (-f png); la extracción, JPG o PNG (ver arriba).
 _FRAME_NAME_PATTERN = "frame_%06d.png"
-_FRAME_GLOB_EXT = ".png"
+_FRAME_NAME_PATTERN_JPG = "frame_%06d.jpg"
+_FRAME_EXTS = (".png", ".jpg")
 
 _time_regex = re.compile(r"time=\s*(\d+):(\d+):(\d+\.\d+|\d+)")
 
@@ -88,24 +97,36 @@ def _run_ffmpeg_with_progress(cmd, duration_sec, cancellation_event, progress_ca
 
 
 def extract_frames(input_path: str, frames_dir: str, fps: float, duration_sec: float,
-                    cancellation_event=None, progress_callback=None, worker_ref=None) -> tuple[bool, str]:
-    """Extrae TODOS los fotogramas de `input_path` a PNG en `frames_dir`, al fps
-    real del video (-vsync 0, sin conversión de framerate) -- extraer más o
-    menos fotogramas que los originales desincroniza el resultado final del
-    audio remuxado en reassemble_video()."""
+                    cancellation_event=None, progress_callback=None, worker_ref=None,
+                    keep_alpha: bool = False, trim_in=None, trim_out=None,
+                    decoder_args=None) -> tuple[bool, str]:
+    """Extrae TODOS los fotogramas de `input_path` (o del tramo recortado) en
+    `frames_dir`, al fps real del video (sin conversión de framerate) -- extraer más o
+    menos fotogramas que los originales desincroniza el resultado final del audio
+    remuxado en reassemble_video().
+
+    keep_alpha: PNG con canal alfa (rgba); si no, JPG de máxima calidad (-q:v 2) sin
+    submuestreo de color (yuvj444p). `decoder_args` es el decodificador que hace falta
+    para no perder la transparencia de un WebM VP8/VP9 (ver probe_video_source).
+    `duration_sec` debe ser la duración del tramo recortado (es la base del progreso)."""
     ffmpeg_exe = get_ffmpeg_path()
     if not ffmpeg_exe or not os.path.exists(ffmpeg_exe):
         return False, QCoreApplication.translate("video_upscale_engine", "No se encontró ffmpeg.")
 
     os.makedirs(frames_dir, exist_ok=True)
+    if keep_alpha:
+        frame_args = ["-pix_fmt", "rgba", os.path.join(frames_dir, _FRAME_NAME_PATTERN)]
+    else:
+        frame_args = ["-q:v", "2", "-pix_fmt", "yuvj444p",
+                      os.path.join(frames_dir, _FRAME_NAME_PATTERN_JPG)]
     cmd = [
-        ffmpeg_exe, "-y", "-i", input_path,
+        ffmpeg_exe, "-y", *(decoder_args or []), *trim_input_args(trim_in, trim_out),
+        "-i", input_path,
         # -fps_mode passthrough (reemplazo moderno de -vsync 0, removido en el
         # ffmpeg que empaqueta la app -- confirmado en vivo, "Unrecognized
         # option 'vsync'"): extrae cada fotograma tal cual viene, sin duplicar
         # ni descartar ninguno por conversión de framerate.
-        "-fps_mode", "passthrough", "-q:v", "1",
-        os.path.join(frames_dir, _FRAME_NAME_PATTERN),
+        "-map", "0:v:0", "-fps_mode", "passthrough", *frame_args,
     ]
     logger.info(f"Reescalar Video IA: extrayendo fotogramas -- {' '.join(cmd)}")
 
@@ -118,7 +139,7 @@ def extract_frames(input_path: str, frames_dir: str, fps: float, duration_sec: f
 
 def count_frames(frames_dir: str) -> int:
     try:
-        return sum(1 for f in os.listdir(frames_dir) if f.lower().endswith(_FRAME_GLOB_EXT))
+        return sum(1 for f in os.listdir(frames_dir) if f.lower().endswith(_FRAME_EXTS))
     except OSError:
         return 0
 
@@ -161,26 +182,27 @@ def upscale_frames_batch(frames_dir: str, out_dir: str, options: dict,
 
 def reassemble_video(frames_dir: str, original_input_path: str, output_path: str, fps: float,
                       duration_sec: float, cancellation_event=None, progress_callback=None,
-                      worker_ref=None) -> tuple[bool, str]:
-    """Rearma el video a partir de los fotogramas reescalados de `frames_dir`,
-    al fps original, remuxando el audio de `original_input_path` SIN
-    recodificarlo (-c:a copy) -- si el original no tiene audio, -map 1:a?
+                      worker_ref=None, keep_audio: bool = True, alpha: bool = False,
+                      trim_in=None, trim_out=None) -> tuple[bool, str]:
+    """Rearma el video a partir de los fotogramas reescalados de `frames_dir`, al fps
+    original. El códec sale de build_video_encode_args (H.264 yuv420p, o ProRes 4444
+    con alfa si `alpha` y el contenedor es MOV).
+
+    keep_audio: remuxa el audio de `original_input_path` SIN recodificarlo (-c:a copy),
+    con el mismo recorte que los fotogramas -- si el original no tiene audio, -map 1:a?
     simplemente no mapea nada, ffmpeg no falla por eso."""
     ffmpeg_exe = get_ffmpeg_path()
     if not ffmpeg_exe or not os.path.exists(ffmpeg_exe):
         return False, QCoreApplication.translate("video_upscale_engine", "No se encontró ffmpeg.")
 
     frame_pattern = os.path.join(frames_dir, _FRAME_NAME_PATTERN)
-    cmd = [
-        ffmpeg_exe, "-y",
-        "-framerate", str(fps or 30.0), "-i", frame_pattern,
-        "-i", original_input_path,
-        "-map", "0:v:0", "-map", "1:a:0?",
-        "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-        "-c:a", "copy",
-        "-shortest",
-        output_path,
-    ]
+    cmd = [ffmpeg_exe, "-y", "-framerate", str(fps or 30.0), "-i", frame_pattern]
+    if keep_audio:
+        cmd += [*trim_input_args(trim_in, trim_out), "-i", original_input_path,
+                "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy", "-shortest"]
+    else:
+        cmd += ["-map", "0:v:0", "-an"]
+    cmd += [*build_video_encode_args(container_of(output_path), alpha=alpha), output_path]
     logger.info(f"Reescalar Video IA: rearmando video -- {' '.join(cmd)}")
 
     cancellation_event = cancellation_event or threading.Event()

@@ -13,8 +13,13 @@ tarjetas visibles y se van pidiendo a la base por páginas (fetchMore).
 
 Clic en una tarjeta: su URL REEMPLAZA lo que haya en el campo de URL de la pestaña donde
 está el panel -- solo se pega, no se analiza.
+
+Lo descargado que SIGUE en disco se ve con borde verde (mismo criterio que las listas de
+las pestañas) y se puede abrir, mostrar en su carpeta o arrastrar a otra aplicación, con
+los mismos archivos que arrastraría la cola (ver download_history.resolve_disk_files).
 """
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -28,19 +33,22 @@ from PySide6.QtWidgets import (
     QStyle, QStyledItemDelegate, QVBoxLayout, QWidget,
 )
 
+from core.tabs.quick_mode.quick_mode_logic import reveal_in_file_manager
 from core.utils.download_history import (
-    KIND_PLAYLIST, STATUS_DOWNLOADED, download_history,
+    KIND_PLAYLIST, STATUS_DOWNLOADED, download_history, resolve_disk_files,
 )
 from gui.styles import get_theme_token, set_button_variant
-from gui.widgets.collapsible_panel import CollapsiblePanel
+from gui.widgets.collapsible_panel import CollapsiblePanel, EdgeTabButton
 
 PANEL_WIDTH = 390
-# Más ancha que la pestaña por defecto de CollapsiblePanel (20x90): es el único acceso al
-# historial, así que se busca que se vea y se atine fácil.
+# Más grande que la pestaña por defecto de CollapsiblePanel (20x90): es el único acceso al
+# historial, y en ese espacio va su nombre en vertical (ver HistoryEdgeTab).
 EDGE_TAB_SIZE = (28, 120)
 CARD_HEIGHT = 76
 THUMB_W, THUMB_H = 96, 54
 _ROLE_ENTRY = Qt.UserRole + 1
+# True/False: lo descargado sigue / ya no sigue en disco; None: todavía sin comprobar.
+_ROLE_ON_DISK = Qt.UserRole + 2
 
 
 def _format_duration(seconds) -> str:
@@ -82,12 +90,22 @@ def _domain(url: str) -> str:
 class HistoryListModel(QAbstractListModel):
     PAGE_SIZE = 200
 
+    # Resultado del chequeo en disco, desde el hilo de fondo: {clave: sigue en disco}.
+    _disk_checked = Signal(dict)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._history = download_history()
         self._rows: list = []
         self._total = 0
         self._search = ""
+        # {clave: True/False} -- si lo descargado sigue en disco. Se conserva entre
+        # recargas para que la tarjeta no parpadee de gris a verde cada vez que se abre.
+        self._on_disk: dict = {}
+        # Solo se consulta el disco con el panel abierto (ver set_active).
+        self._active = False
+        self._disk_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="history_disk")
+        self._disk_checked.connect(self._on_disk_checked, Qt.QueuedConnection)
         self._history.entries_changed.connect(self.reload)
         self._history.entry_updated.connect(self._on_entry_updated)
         self.reload()
@@ -97,6 +115,51 @@ class HistoryListModel(QAbstractListModel):
         self._total = self._history.count(self._search)
         self._rows = self._history.fetch(0, self.PAGE_SIZE, self._search)
         self.endResetModel()
+        self._check_disk(self._rows)
+
+    # ── ¿Sigue en disco? ────────────────────────────────────────────────────
+    def set_active(self, active: bool):
+        """Al abrir el panel se vuelve a comprobar lo cargado: el usuario pudo mover o
+        borrar archivos mientras estaba cerrado."""
+        self._active = active
+        if active:
+            self._check_disk(self._rows)
+
+    def _check_disk(self, entries):
+        """Comprueba en segundo plano (nunca al dibujar: toca el disco, que puede ser de
+        red o estar lento) qué tarjetas descargadas siguen teniendo su medio."""
+        if not self._active:
+            return
+        jobs = [(e["key"],) + tuple(self._history.files_for(e["key"]))
+                for e in entries if e.get("status") == STATUS_DOWNLOADED]
+        if jobs:
+            self._disk_pool.submit(self._run_disk_check, jobs)
+
+    def _run_disk_check(self, jobs):
+        result = {}
+        for key, known, stems in jobs:
+            try:
+                result[key] = resolve_disk_files(known, stems)[0] is not None
+            except Exception:
+                result[key] = False
+        self._disk_checked.emit(result)
+
+    def _on_disk_checked(self, result: dict):
+        self._on_disk.update(result)
+        self._emit_changed(result.keys())
+
+    def set_on_disk(self, key: str, on_disk: bool):
+        """Resultado de un chequeo hecho en el momento (menú contextual, arrastre)."""
+        if self._on_disk.get(key) != on_disk:
+            self._on_disk[key] = on_disk
+            self._emit_changed([key])
+
+    def _emit_changed(self, keys):
+        keys = set(keys)
+        for i, entry in enumerate(self._rows):
+            if entry.get("key") in keys:
+                idx = self.index(i)
+                self.dataChanged.emit(idx, idx)
 
     def set_search(self, text: str):
         text = (text or "").strip()
@@ -121,6 +184,7 @@ class HistoryListModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), len(self._rows), len(self._rows) + len(more) - 1)
         self._rows.extend(more)
         self.endInsertRows()
+        self._check_disk(more)
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid() or not (0 <= index.row() < len(self._rows)):
@@ -128,6 +192,8 @@ class HistoryListModel(QAbstractListModel):
         entry = self._rows[index.row()]
         if role == _ROLE_ENTRY:
             return entry
+        if role == _ROLE_ON_DISK:
+            return self._on_disk.get(entry.get("key"))
         if role == Qt.DisplayRole:
             return entry.get("title")
         if role == Qt.ToolTipRole:
@@ -142,6 +208,9 @@ class HistoryListModel(QAbstractListModel):
                     self._rows[i] = fresh
                     idx = self.index(i)
                     self.dataChanged.emit(idx, idx)
+                    # Pueden haber llegado archivos nuevos (fin de la descarga o de la
+                    # recodificación).
+                    self._check_disk([fresh])
                 return
 
 
@@ -215,7 +284,10 @@ class HistoryCardDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing)
         card = option.rect.adjusted(2, 3, -2, -3)
         hovered = bool(option.state & QStyle.State_MouseOver)
-        painter.setPen(self.c_border)
+        downloaded = entry.get("status") == STATUS_DOWNLOADED
+        on_disk = downloaded and index.data(_ROLE_ON_DISK) is True
+        # Mismo criterio que las listas de las pestañas: verde = terminado y en disco.
+        painter.setPen(self.c_done if on_disk else self.c_border)
         painter.setBrush(self.c_hover if hovered else self.c_card)
         painter.drawRoundedRect(card, 6, 6)
 
@@ -272,9 +344,12 @@ class HistoryCardDelegate(QStyledItemDelegate):
         painter.setFont(meta_font)
         mfm = QFontMetrics(meta_font)
 
-        downloaded = entry.get("status") == STATUS_DOWNLOADED
         status_text = QCoreApplication.translate("HistoryPanel", "Descargado") if downloaded else QCoreApplication.translate("HistoryPanel", "Analizado")
-        status_color = self.c_done if downloaded else self.c_analyzed
+        # "Descargado" en gris: se descargó en su momento, pero ya no está en disco.
+        if downloaded:
+            status_color = self.c_done if on_disk else self.c_muted
+        else:
+            status_color = self.c_analyzed
         sw, sh = mfm.horizontalAdvance(status_text) + 12, mfm.height() + 2
         bottom = card.bottom() - 6
         srect = QRect(card.right() - 8 - sw, bottom - sh, sw, sh)
@@ -362,6 +437,11 @@ class HistoryPanelContent(QFrame):
         self.list_view.setStyleSheet("QListView { background: transparent; border: none; }")
         self.list_view.clicked.connect(self._on_clicked)
         self.list_view.customContextMenuRequested.connect(self._on_context_menu)
+        # Arrastre de los archivos de una tarjeta hacia otra aplicación (ver eventFilter).
+        self._press_pos = None
+        self._press_index = None
+        self._dragged = False
+        self.list_view.viewport().installEventFilter(self)
         layout.addWidget(self.list_view, 1)
 
         self.empty_label = QLabel()
@@ -385,6 +465,55 @@ class HistoryPanelContent(QFrame):
         """Al abrir el panel: el interruptor de Ajustes pudo cambiar mientras estaba cerrado."""
         self._update_empty_state()
 
+    def set_active(self, active: bool):
+        """Abierto: se comprueba qué sigue en disco (cerrado no se toca el disco)."""
+        self.model.set_active(active)
+
+    def _resolve_files(self, entry: dict):
+        """Chequeo en el momento de UNA tarjeta (menú contextual, arrastre): así lo que
+        se ofrece nunca depende de un chequeo viejo. Actualiza también su color."""
+        if entry.get("status") != STATUS_DOWNLOADED:
+            return None, []
+        known, stems = self._history.files_for(entry["key"])
+        try:
+            primary, files = resolve_disk_files(known, stems)
+        except Exception:
+            primary, files = None, []
+        self.model.set_on_disk(entry["key"], primary is not None)
+        return primary, files
+
+    def eventFilter(self, obj, event):
+        if obj is self.list_view.viewport():
+            etype = event.type()
+            if etype == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                self._press_pos = event.position().toPoint()
+                self._press_index = self.list_view.indexAt(self._press_pos)
+                self._dragged = False
+            elif etype == QEvent.MouseMove and self._press_pos is not None and event.buttons() & Qt.LeftButton:
+                moved = (event.position().toPoint() - self._press_pos).manhattanLength()
+                if moved >= QApplication.startDragDistance():
+                    index, self._press_pos = self._press_index, None
+                    self._start_drag(index)
+                    return True
+            elif etype == QEvent.MouseButtonRelease:
+                self._press_pos = None
+        return super().eventFilter(obj, event)
+
+    def _start_drag(self, index):
+        """Arrastra todo lo que siga en disco de la tarjeta (medio descargado primero,
+        luego lo procesado, miniatura y subtítulos). Si ya no queda nada, no pasa nada: el
+        clic sigue sirviendo para pegar la URL."""
+        entry = index.data(_ROLE_ENTRY) if index is not None and index.isValid() else None
+        if not entry:
+            return
+        _primary, files = self._resolve_files(entry)
+        if not files:
+            return
+        self._dragged = True
+        badge = "" if len(files) == 1 else self.tr("{0} archivos").format(len(files))
+        from gui.widgets.native_file_drag import start_native_file_drag
+        start_native_file_drag(self.list_view.viewport(), files, badge_text=badge)
+
     def _update_empty_state(self, *args):
         empty = self.model.rowCount() == 0
         self.list_view.setVisible(not empty)
@@ -402,6 +531,10 @@ class HistoryPanelContent(QFrame):
                 "Aquí aparecerán los medios y playlists que analices o descargues."))
 
     def _on_clicked(self, index):
+        if self._dragged:
+            # El gesto fue un arrastre, no un clic: no se pega la URL.
+            self._dragged = False
+            return
         entry = index.data(_ROLE_ENTRY)
         if entry and entry.get("url"):
             self.url_selected.emit(entry["url"])
@@ -412,12 +545,32 @@ class HistoryPanelContent(QFrame):
         if not entry:
             return
         menu = QMenu(self)
+        act_file = act_folder = None
+        primary = None
+        if entry.get("status") == STATUS_DOWNLOADED:
+            primary, _files = self._resolve_files(entry)
+            if primary is None:
+                missing = menu.addAction(self.tr("No se encuentra en disco"))
+                missing.setEnabled(False)
+            # "Abrir archivo" no aplica a una playlist (no hay UN archivo); "Abrir
+            # ubicación" sí: muestra la carpeta con el primero seleccionado.
+            act_file = menu.addAction(self.tr("Abrir archivo"))
+            act_file.setEnabled(primary is not None and entry.get("kind") != KIND_PLAYLIST)
+            act_folder = menu.addAction(self.tr("Abrir ubicación"))
+            act_folder.setEnabled(primary is not None)
+            menu.addSeparator()
         act_copy = menu.addAction(self.tr("Copiar URL"))
         act_open = menu.addAction(self.tr("Abrir en el navegador"))
         menu.addSeparator()
         act_remove = menu.addAction(self.tr("Quitar del historial"))
         chosen = menu.exec(self.list_view.viewport().mapToGlobal(pos))
-        if chosen is act_copy:
+        if chosen is None:
+            return
+        if chosen is act_file and primary:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(primary))
+        elif chosen is act_folder and primary:
+            reveal_in_file_manager(primary)
+        elif chosen is act_copy:
             QApplication.clipboard().setText(entry["url"])
         elif chosen is act_open:
             QDesktopServices.openUrl(QUrl(entry["url"]))
@@ -433,6 +586,42 @@ class HistoryPanelContent(QFrame):
             self._history.clear()
 
 
+class HistoryEdgeTab(EdgeTabButton):
+    """Pestaña del borde del historial: el mismo fondo y hover que la de los paneles de
+    Editor de Imagen y Herramientas Multimedia, pero con "HISTORIAL" en vertical en vez de
+    la flecha -- como el tirador "PROCESO POR LOTES" de la cola (queue_trigger_bar.py), del
+    que copia fuente, tamaño y sentido de lectura (de abajo hacia arriba)."""
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#2a2a2a" if self._hovered else "#1a1a1a"))
+        if self.edge == "left":
+            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
+        else:
+            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
+        if self._hovered:
+            p.setBrush(QColor("#1DC038"))
+            if self.edge == "left":
+                p.drawRect(0, 0, 3, h)
+            else:
+                p.drawRect(w - 3, 0, 3, h)
+
+        from core.utils.font_manager import get_active_font_family
+        font = QFont(get_active_font_family(), 9)
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(QColor("#B9E640") if (self._hovered or self._is_open) else QColor("#888888"))
+        p.translate(w / 2, h / 2)
+        p.rotate(-90.0)
+        # Rect rotado: su ancho es el alto de la pestaña y su alto, el ancho.
+        p.drawText(QRect(-h // 2, -w // 2, h, w), Qt.AlignCenter,
+                   QCoreApplication.translate("HistoryEdgeTab", "HISTORIAL"))
+
+
 class HistoryDrawer(QObject):
     """Monta el panel del historial sobre `host` (la pestaña entera), desde su borde
     derecho, y lo conecta con su campo de URL. Se cierra al hacer clic fuera de él, al
@@ -444,7 +633,8 @@ class HistoryDrawer(QObject):
         self._url_input = url_input
         self.content = HistoryPanelContent()
         self.panel = CollapsiblePanel(self.content, edge="right",
-                                      docked_size=PANEL_WIDTH, overlay_max_width=PANEL_WIDTH)
+                                      docked_size=PANEL_WIDTH, overlay_max_width=PANEL_WIDTH,
+                                      edge_tab_class=HistoryEdgeTab)
         self.panel.edge_tab.setFixedSize(*EDGE_TAB_SIZE)
         # CollapsiblePanel espera un layout donde "acoplarse"; este panel nunca se acopla,
         # así que recibe uno propio que no pertenece a ninguna ventana.
@@ -453,6 +643,8 @@ class HistoryDrawer(QObject):
         self.panel.set_mode(False)
         self.panel.edge_tab.setToolTip(QCoreApplication.translate("HistoryPanelContent", "Historial"))
         self.panel.opened.connect(self.content.refresh)
+        self.panel.opened.connect(lambda: self.content.set_active(True))
+        self.panel.closed.connect(lambda: self.content.set_active(False))
         self.content.url_selected.connect(self._on_url_selected)
 
         host.installEventFilter(self)
