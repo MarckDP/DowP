@@ -121,6 +121,13 @@ class DependencyCheckWorker(QThread):
                     version = version_fn(force_check=True) or "OK"
                     self.dependency_finished.emit(dep_id, True, version)
 
+            # macOS: completar ffprobe si falta (ver ffmpeg_setup.ensure_mac_ffprobe).
+            try:
+                from core.setup.ffmpeg_setup import ensure_mac_ffprobe
+                ensure_mac_ffprobe()
+            except Exception as e:
+                logger.debug(f"SplashScreen: no se pudo comprobar ffprobe ({e})")
+
             # 2. Auto-actualización transparente de yt-dlp si hay nueva versión en el canal activo
             try:
                 cfg = get_config()

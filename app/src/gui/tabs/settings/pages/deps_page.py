@@ -650,9 +650,20 @@ class FFmpegOptionsPanel(QFrame):
         self._check_worker.start()
 
     def _on_remote_check_done(self, remote_ver):
+        local_ver = ffmpeg_local() or ""
+        # Mac Apple Silicon con el FFmpeg de Intel (de antes de que DowP bajara el nativo):
+        # las dos fuentes suelen estar en la misma versión, así que la comparación de abajo
+        # nunca avisaría. No se reemplaza solo: se ofrece como actualización.
+        from core.setup.ffmpeg_setup import mac_native_ffmpeg_available
+        if mac_native_ffmpeg_available():
+            self._version_summary.setText(
+                self.tr("Versión: {0} (hay una versión nativa para tu Mac)").format(local_ver))
+            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            self._btn_download.setText(self.tr("Actualizar"))
+            set_button_variant(self._btn_download, "accent-blue")
+            return
         if not remote_ver:
             return
-        local_ver = ffmpeg_local() or ""
         r_ver = str(remote_ver).strip().lstrip('v')
         l_ver = str(local_ver).strip().lstrip('v')
 

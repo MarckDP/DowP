@@ -16,10 +16,11 @@ Formatos de salida (ver build_video_encode_args):
 """
 import json
 import os
+import re
 import subprocess
 
 from core.logger.logger_manager import logger
-from core.setup.ffmpeg_setup import get_ffprobe_path
+from core.setup.ffmpeg_setup import get_ffmpeg_path, get_ffprobe_path
 
 # Formatos de píxel con canal alfa que puede entregar un decodificador de ffmpeg.
 _ALPHA_PIX_FMTS = {
@@ -50,6 +51,81 @@ def _parse_rate(value) -> float:
         return 0.0
 
 
+def _run(cmd) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
+        startupinfo=_startupinfo(),
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+    )
+
+
+def _split_top_level(text: str) -> list:
+    """Parte por comas que no estén dentro de paréntesis: "yuv420p(tv, bt709), 720x1280"
+    son 2 partes, no 3."""
+    parts, depth, current = [], 0, ""
+    for ch in text:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        if ch == "," and depth == 0:
+            parts.append(current.strip())
+            current = ""
+        else:
+            current += ch
+    if current.strip():
+        parts.append(current.strip())
+    return parts
+
+
+_STREAM_RE = re.compile(r"^\s*Stream #\d+:\d+(?:\[[^\]]*\])?(?:\([^)]*\))?:\s*(Video|Audio|Subtitle|Data|Attachment):\s*(.*)$")
+_META_RE = re.compile(r"^\s{6,}([^:]+?)\s*:\s(.*)$")
+
+
+def _streams_from_ffmpeg(path: str) -> list:
+    """Streams al estilo de ffprobe (lo mínimo que usa probe_video_source), leídos de la
+    salida de "ffmpeg -i". Plan B para cuando no hay ffprobe: el FFmpeg de macOS
+    (evermeet) no lo traía hasta que DowP empezó a bajarlo aparte, y un FFmpeg
+    personalizado puede no tenerlo. Mismo recurso que el gestor de metadatos
+    (FFprobeMetadataManager._fallback_ffmpeg_i)."""
+    ffmpeg = get_ffmpeg_path()
+    if not ffmpeg or not os.path.exists(ffmpeg):
+        return []
+    try:
+        text = _run([ffmpeg, "-hide_banner", "-i", path]).stderr or ""
+    except Exception as e:
+        logger.warning(f"IA video: no se pudo leer {path} con ffmpeg: {e}")
+        return []
+
+    streams, current = [], None
+    for line in text.splitlines():
+        m = _STREAM_RE.match(line)
+        if m:
+            kind, desc = m.group(1).lower(), m.group(2)
+            current = {"codec_type": kind, "tags": {}, "disposition": {}}
+            parts = _split_top_level(desc)
+            current["codec_name"] = parts[0].split()[0] if parts and parts[0] else ""
+            if kind == "video":
+                if "(attached pic)" in desc:
+                    current["disposition"]["attached_pic"] = 1
+                if len(parts) > 1:
+                    current["pix_fmt"] = parts[1].split("(")[0].strip()
+                size = re.search(r"\b(\d{2,5})x(\d{2,5})\b", desc)
+                if size:
+                    current["width"], current["height"] = int(size.group(1)), int(size.group(2))
+                fps = re.search(r"([\d.]+)\s*fps", desc) or re.search(r"([\d.]+)\s*tbr", desc)
+                if fps:
+                    current["avg_frame_rate"] = fps.group(1)
+            streams.append(current)
+            continue
+        meta = _META_RE.match(line)
+        if current is not None and meta and meta.group(1).strip().lower() != "metadata":
+            current["tags"][meta.group(1).strip()] = meta.group(2).strip()
+        elif not line.startswith(" " * 4):
+            current = None
+    return streams
+
+
 def probe_video_source(path: str) -> dict:
     """Datos del primer stream de video: ancho, alto, fps, formato de píxel, si trae
     transparencia y, si hace falta, qué decodificador usar para no perderla.
@@ -57,23 +133,21 @@ def probe_video_source(path: str) -> dict:
     WebM VP8/VP9 guarda el alfa aparte (etiqueta alpha_mode=1) y el formato de píxel
     que informa es "yuv420p": el decodificador nativo de ffmpeg lo descarta en
     silencio, solo libvpx lo entrega. Por eso `decoder_args` trae "-c:v libvpx..." en
-    ese caso, para ponerlo ANTES del -i de la fuente."""
+    ese caso, para ponerlo ANTES del -i de la fuente.
+
+    Con ffprobe si está; si no (o si falla), leyendo la salida de "ffmpeg -i"."""
     info = {"width": 0, "height": 0, "fps": 0.0, "pix_fmt": "", "has_alpha": False,
             "decoder_args": [], "has_audio": False}
+    streams = []
     ffprobe = get_ffprobe_path()
-    if not ffprobe or not os.path.exists(ffprobe):
-        return info
-    try:
-        out = subprocess.run(
-            [ffprobe, "-v", "error", "-show_streams", "-of", "json", path],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
-            startupinfo=_startupinfo(),
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-        ).stdout
-        streams = json.loads(out or "{}").get("streams", [])
-    except Exception as e:
-        logger.warning(f"IA video: no se pudo sondear {path}: {e}")
-        return info
+    if ffprobe and os.path.exists(ffprobe):
+        try:
+            out = _run([ffprobe, "-v", "error", "-show_streams", "-of", "json", path]).stdout
+            streams = json.loads(out or "{}").get("streams", [])
+        except Exception as e:
+            logger.warning(f"IA video: ffprobe no pudo sondear {path}: {e}")
+    if not streams:
+        streams = _streams_from_ffmpeg(path)
 
     info["has_audio"] = any(s.get("codec_type") == "audio" for s in streams)
     video = next((s for s in streams if s.get("codec_type") == "video"

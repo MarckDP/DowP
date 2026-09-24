@@ -161,9 +161,12 @@ def get_platform_info(variant="essentials", channel="recommended", version=None)
             "extract_method": "zip_gyand"
         }
     elif system == "darwin":
+        # La fuente depende del procesador (ver _resolve_mac_download): Apple Silicon ->
+        # Martin Riedl (nativo arm64); Intel -> evermeet.
         return {
             "os": "mac",
-            "api_url": "https://evermeet.cx/ffmpeg/info/ffmpeg/release",
+            "channel": channel,
+            "arm64": _mac_is_arm64(),
             "binary_name": "ffmpeg",
             "extract_method": "zip_direct"
         }
@@ -267,9 +270,7 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
                 target_ver = version or (FFMPEG_RECOMMENDED_VERSION if channel == "recommended" else None)
                 download_url = _resolve_windows_download_url(variant, channel, version=target_ver)
             elif info["os"] == "mac":
-                res = requests.get(info["api_url"], timeout=12)
-                res.raise_for_status()
-                download_url = res.json().get("download", {}).get("zip", {}).get("url")
+                download_url, _ver = _resolve_mac_download("ffmpeg", channel)
 
         if not download_url:
             logger.error("No se pudo resolver la URL de descarga para FFmpeg.")
@@ -343,6 +344,12 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
                     shutil.move(src_file, dst_file)
                     logger.info(f"Conservado binario opcional: {target_ffplay}")
 
+        # 3b. macOS: evermeet publica ffprobe en un zip APARTE (Windows/gyan.dev y
+        # Linux/BtbN lo traen en el mismo paquete que ffmpeg). No es fatal si falla: lo
+        # que usa ffprobe tiene un plan B con "ffmpeg -i", más pobre.
+        if exe_found and info["os"] == "mac":
+            _install_mac_ffprobe(ffmpeg_dir, channel)
+
         # 4. Permisos Unix si aplica
         if exe_found and info["os"] != "windows":
             logger.info("Configurando permisos de ejecución para binarios de FFmpeg...")
@@ -371,6 +378,127 @@ def download_ffmpeg(variant=None, channel=None, keep_ffplay=None, version=None, 
     except Exception as e:
         logger.error(f"FFmpeg: Error durante la descarga o configuración: {e}", exc_info=True)
         return False, str(e)
+
+
+# ── macOS: fuente según el procesador ────────────────────────────────────────
+# evermeet.cx solo publica builds para Intel: en Apple Silicon corren bajo Rosetta (más
+# lento) y, en un Mac que no tiene Rosetta instalado, directamente no arrancan. Para
+# Apple Silicon se usan los builds de Martin Riedl, nativos arm64 (verificado: traen
+# libx264/x265/vpx/svtav1/dav1d/aom/opus/mp3lame/webp/ass/zimg y VideoToolbox). Las dos
+# fuentes publican ffmpeg y ffprobe en zips SEPARADOS, con "release" (estable) y
+# "snapshot" (desarrollo, el canal "nightly" de DowP).
+_EVERMEET_INFO_URL = "https://evermeet.cx/ffmpeg/info/{tool}/{kind}"
+_MARTIN_RIEDL_URL = "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/{kind}/{tool}.zip"
+
+
+def _mac_is_arm64() -> bool:
+    """Procesador REAL del Mac. platform.machine() dice "x86_64" si la app (o su Python)
+    corre bajo Rosetta aunque el Mac sea Apple Silicon; sysctl hw.optional.arm64 no."""
+    if platform.system() != "Darwin":
+        return False
+    try:
+        out = subprocess.run(["sysctl", "-n", "hw.optional.arm64"], capture_output=True,
+                             text=True, timeout=5).stdout.strip()
+        if out in ("0", "1"):
+            return out == "1"
+    except Exception:
+        pass
+    return platform.machine().lower() in ("arm64", "aarch64")
+
+
+def _mac_build_kind(channel) -> str:
+    return "snapshot" if channel == "nightly" else "release"
+
+
+def _resolve_mac_download(tool: str, channel) -> tuple:
+    """(URL del zip, versión) de `tool` ("ffmpeg" o "ffprobe") para este Mac y canal. Las
+    dos fuentes solo ofrecen la última estable o la última de desarrollo: "recommended"
+    y "latest" usan la estable."""
+    kind = _mac_build_kind(channel)
+    if _mac_is_arm64():
+        url = _MARTIN_RIEDL_URL.format(kind=kind, tool=tool)
+        # El enlace fijo redirige al archivo real, cuya ruta lleva la versión:
+        # /download/macos/arm64/<id>_9.0.2/ffmpeg.zip (o <id>_N-126556-g639ee84952).
+        # GET sin seguir la redirección y cerrando enseguida (no baja el zip): a HEAD este
+        # servidor responde 404 (comprobado).
+        with requests.get(url, allow_redirects=False, stream=True, timeout=12) as res:
+            location = res.headers.get("Location", "")
+        version = location.rstrip("/").split("/")[-2].split("_", 1)[-1] if location.count("/") >= 2 else ""
+        return url, version
+    res = requests.get(_EVERMEET_INFO_URL.format(tool=tool, kind=kind), timeout=12)
+    res.raise_for_status()
+    data = res.json()
+    return data.get("download", {}).get("zip", {}).get("url"), data.get("version", "")
+
+
+def _macho_cpu(path: str) -> str:
+    """"arm64", "x86_64", "universal" o "" leyendo la cabecera Mach-O del ejecutable."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(8)
+    except OSError:
+        return ""
+    if head[:4] in (b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"):
+        return "universal"
+    if head[:4] == b"\xcf\xfa\xed\xfe":
+        return {0x0100000C: "arm64", 0x01000007: "x86_64"}.get(int.from_bytes(head[4:8], "little"), "")
+    return ""
+
+
+def mac_native_ffmpeg_available() -> bool:
+    """True si es un Mac Apple Silicon con el FFmpeg gestionado por DowP para Intel (de
+    antes de que DowP bajara el nativo). No se reemplaza solo: Ajustes > Dependencias lo
+    ofrece como actualización (ver FFmpegOptionsPanel._on_remote_check_done)."""
+    if not _mac_is_arm64() or get_ffmpeg_config()["mode"] == "custom":
+        return False
+    return _macho_cpu(os.path.join(get_managed_ffmpeg_dir(), "ffmpeg")) == "x86_64"
+
+
+def _install_mac_ffprobe(ffmpeg_dir: str, channel="recommended") -> bool:
+    """Descarga ffprobe (misma fuente y canal que el ffmpeg de este Mac) junto a ffmpeg.
+    Devuelve True si quedó instalado."""
+    temp_zip = os.path.join(ffmpeg_dir, "ffprobe_temp.zip")
+    try:
+        url, _ver = _resolve_mac_download("ffprobe", channel)
+        if not url:
+            logger.warning("FFmpeg: no se obtuvo el enlace de ffprobe para macOS.")
+            return False
+        logger.info(f"FFmpeg: descargando ffprobe (macOS) desde {url}")
+        download_file(url, temp_zip)
+        target = os.path.join(ffmpeg_dir, "ffprobe")
+        with zipfile.ZipFile(temp_zip, "r") as zf:
+            member = next((n for n in zf.namelist() if os.path.basename(n) == "ffprobe"), None)
+            if member is None:
+                logger.warning("FFmpeg: el zip de ffprobe no trae el ejecutable.")
+                return False
+            with zf.open(member) as src, open(target, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+        st = os.stat(target)
+        os.chmod(target, st.st_mode | stat.S_IEXEC)
+        logger.info(f"FFmpeg: ffprobe instalado en {target}")
+        return True
+    except Exception as e:
+        logger.warning(f"FFmpeg: no se pudo instalar ffprobe en macOS ({e}) -- se usará "
+                       f"'ffmpeg -i' para leer los datos de los medios.")
+        return False
+    finally:
+        try:
+            if os.path.exists(temp_zip):
+                os.remove(temp_zip)
+        except OSError:
+            pass
+
+
+def ensure_mac_ffprobe() -> None:
+    """Instalaciones de macOS anteriores a que DowP bajara ffprobe: tienen ffmpeg pero no
+    ffprobe. Se completa al arrancar (lo llama el splash), solo con el FFmpeg gestionado
+    por DowP -- uno personalizado es responsabilidad del usuario."""
+    if platform.system() != "Darwin" or get_ffmpeg_config()["mode"] == "custom":
+        return
+    ffmpeg_dir = get_managed_ffmpeg_dir()
+    if (os.path.isfile(os.path.join(ffmpeg_dir, "ffmpeg"))
+            and not os.path.isfile(os.path.join(ffmpeg_dir, "ffprobe"))):
+        _install_mac_ffprobe(ffmpeg_dir, get_ffmpeg_config().get("channel", "recommended"))
 
 
 def get_local_version(force_check=False):
@@ -433,10 +561,7 @@ def get_latest_remote_version(channel="recommended", variant="essentials"):
                         return tag.lstrip("v")
                 return FFMPEG_RECOMMENDED_VERSION
         elif info["os"] == "mac":
-            url = "https://evermeet.cx/ffmpeg/info/ffmpeg/release"
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            return response.json().get("version", "")
+            return _resolve_mac_download("ffmpeg", channel)[1]
         else:
             url = "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
             response = requests.get(url, timeout=10)

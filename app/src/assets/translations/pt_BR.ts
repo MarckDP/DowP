@@ -2454,7 +2454,7 @@ LOCALLY no formato NetScape e depois carregar esse arquivo .txt pela opção &ap
 <context>
     <name>DenoCardPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1273"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1284"/>
         <source>Deno es un entorno de ejecución de JavaScript de alto rendimiento y seguro.
 yt-dlp lo utiliza para interpretar y resolver los challenges criptográficos (EJS)
 que YouTube aplica dinámicamente en sus transmisiones.</source>
@@ -2463,87 +2463,87 @@ O yt-dlp o utiliza para interpretar e resolver os desafios criptográficos (EJS)
 que o YouTube aplica dinamicamente às suas transmissões.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1298"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1309"/>
         <source>Deno (Runtime JavaScript)</source>
         <translation>Deno (Runtime JavaScript)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1313"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1324"/>
         <source>Chequeando...</source>
         <translation>Verificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1319"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1330"/>
         <source>Versión: Calculando...</source>
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1335"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1346"/>
         <source>Entorno de ejecución de JavaScript. Necesario por yt-dlp para resolver los challenges de YouTube (EJS).</source>
         <translation>Runtime de JavaScript. Necessário para o yt-dlp resolver os desafios do YouTube (EJS).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1341"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1389"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1352"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1400"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1376"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1387"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1378"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1401"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1413"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1389"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1412"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1424"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1378"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1389"/>
         <source>Versión: Desconocida</source>
         <translation>Versão: Desconhecida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1381"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1415"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1392"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1426"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1385"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1396"/>
         <source>✗ Falta</source>
         <translation>✗ Ausente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1387"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1398"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1395"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1406"/>
         <source>Versión: {0} (Buscando...)</source>
         <translation>Versão: {0} (Buscando...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1407"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1418"/>
         <source>Versión: {0} (Nueva: {1})</source>
         <translation>Versão: {0} (Nova: {1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1409"/>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1420"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1431"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1430"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1441"/>
         <source>Iniciando...</source>
         <translation>Iniciando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1432"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1443"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
@@ -2551,43 +2551,43 @@ que o YouTube aplica dinamicamente às suas transmissões.</translation>
 <context>
     <name>DependenciesPage</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1970"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1981"/>
         <source>Gestor de Dependencias</source>
         <translation>Gerenciador de Dependências</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1980"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1991"/>
         <source>Configura y administra los motores y dependencias externas de DowP 2.0.</source>
         <translation>Configure e administre os motores e dependências externas do DowP 2.0.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2030"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2041"/>
         <source>Carpeta de Dependencias</source>
         <translation>Pasta de Dependências</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2033"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2044"/>
         <source>Abrir la carpeta donde se almacenan los binarios de las dependencias</source>
         <translation>Abrir a pasta onde ficam os binários das dependências</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2037"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2109"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2048"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2120"/>
         <source>Buscar Actualizaciones</source>
         <translation>Buscar Atualizações</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2058"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2069"/>
         <source>Buscando...</source>
         <translation>Buscando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2208"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2219"/>
         <source>Error de Descarga</source>
         <translation>Erro de Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2208"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="2219"/>
         <source>Fallo al descargar {0}:
 {1}</source>
         <translation>Falha ao baixar {0}:
@@ -3797,11 +3797,17 @@ resolução, extrair faixas de áudio, gerar formas de onda e recodificar mídia
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="660"/>
+        <source>Versión: {0} (hay una versión nativa para tu Mac)</source>
+        <translation>Versão: {0} (há uma versão nativa para o seu Mac)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="671"/>
         <source>Versión: {0} (Nueva: {1})</source>
         <translation>Versão: {0} (Nova: {1})</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="662"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="673"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
@@ -4362,7 +4368,7 @@ Todas (inclui experimentais): você recebe também compilações de teste, antes
 <context>
     <name>GhostscriptCardPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1652"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1663"/>
         <source>Ghostscript es el intérprete de PostScript que permite convertir archivos
 EPS/PS en el Editor de Imagen -- ningún formato más de DowP lo necesita.
 
@@ -4383,156 +4389,156 @@ build oficial para empacotar: em vez disso é detectado um Ghostscript já insta
 (via Homebrew no macOS, ou o gerenciador de pacotes da sua distro no Linux).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1684"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1695"/>
         <source>Ghostscript (EPS/PS del Editor de Imagen)</source>
         <translation>Ghostscript (EPS/PS do Editor de Imagem)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1699"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1710"/>
         <source>Chequeando...</source>
         <translation>Verificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1705"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1716"/>
         <source>Versión: Calculando...</source>
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1723"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1734"/>
         <source>Opcional -- solo hace falta para convertir archivos EPS/PS. El resto del Editor de Imagen no lo necesita.</source>
         <translation>Opcional -- só é necessário para converter arquivos EPS/PS. O resto do Editor de Imagem não precisa dele.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1729"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1857"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1740"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1868"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1747"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1758"/>
         <source>Opcional -- solo hace falta para convertir archivos EPS/PS. DowP no lo empaqueta en este sistema operativo: instálalo desde tu terminal con el comando de abajo y después presiona &quot;Verificar&quot;.</source>
         <translation>Opcional -- só é necessário para converter arquivos EPS/PS. O DowP não o empacota neste sistema operacional: instale pelo terminal com o comando abaixo e depois clique em &quot;Verificar&quot;.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1767"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1910"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1778"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1921"/>
         <source>Copiar</source>
         <translation>Copiar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1771"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1782"/>
         <source>Copiar el comando al portapapeles</source>
         <translation>Copiar o comando para a área de transferência</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1775"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1786"/>
         <source>Verificar</source>
         <translation>Verificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1779"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1790"/>
         <source>Volver a comprobar si Ghostscript ya está instalado</source>
         <translation>Conferir de novo se o Ghostscript já está instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1819"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1830"/>
         <source>✓ Instalado (Sistema)</source>
         <translation>✓ Instalado (Sistema)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1821"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1847"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1893"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1832"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1858"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1904"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1821"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1847"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1893"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1832"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1858"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1904"/>
         <source>Versión: Desconocida</source>
         <translation>Versão: Desconhecida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1825"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1836"/>
         <source>Detectado en el sistema -- DowP no lo gestiona aquí, actualízalo con {0} cuando quieras.</source>
         <translation>Detectado no sistema -- o DowP não o gerencia aqui, atualize com {0} quando quiser.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1829"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1853"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1840"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1864"/>
         <source>✗ Falta</source>
         <translation>✗ Ausente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1831"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1855"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1842"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1866"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1834"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1845"/>
         <source>No se detectó Ghostscript vía {0}. Copia el comando, ejecútalo en tu terminal y después presiona &quot;Verificar&quot;.</source>
         <translation>O Ghostscript não foi detectado via {0}. Copie o comando, rode no seu terminal e depois clique em &quot;Verificar&quot;.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1841"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1852"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1849"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1899"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1860"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1910"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1866"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1877"/>
         <source>Versión: {0} (Buscando...)</source>
         <translation>Versão: {0} (Buscando...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1886"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1897"/>
         <source>Versión: {0} (Nueva: {1})</source>
         <translation>Versão: {0} (Nova: {1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1888"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1899"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1909"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1920"/>
         <source>¡Copiado!</source>
         <translation>Copiado!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1918"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1929"/>
         <source>Ghostscript detectado</source>
         <translation>Ghostscript detectado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1919"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1930"/>
         <source>Ghostscript {0} detectado correctamente. Ya puedes convertir archivos EPS/PS en el Editor de Imagen.</source>
         <translation>Ghostscript {0} detectado corretamente. Agora você já pode converter arquivos EPS/PS no Editor de Imagem.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1924"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1935"/>
         <source>No detectado</source>
         <translation>Não detectado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1925"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1936"/>
         <source>Todavía no se detecta Ghostscript. Verifica que el comando haya terminado sin errores -- si acabas de instalarlo, puede que necesites reiniciar DowP para que tome el PATH actualizado del sistema.</source>
         <translation>O Ghostscript ainda não foi detectado. Confira se o comando terminou sem erros -- se você acabou de instalá-lo, talvez precise reiniciar o DowP para ele pegar o PATH atualizado do sistema.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1936"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1947"/>
         <source>Iniciando...</source>
         <translation>Iniciando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1938"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1949"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
@@ -8996,37 +9002,37 @@ Você pode baixá-lo de novo quando quiser.</translation>
         <translation>Erro ao instalar {0}: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="154"/>
+        <location filename="../../gui/splash_screen.py" line="161"/>
         <source>Todo listo</source>
         <translation>Tudo pronto</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="480"/>
+        <location filename="../../gui/splash_screen.py" line="487"/>
         <source>Descargando... 0%</source>
         <translation>Baixando... 0%</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="524"/>
+        <location filename="../../gui/splash_screen.py" line="531"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="534"/>
+        <location filename="../../gui/splash_screen.py" line="541"/>
         <source>Iniciando aplicación...</source>
         <translation>Iniciando o aplicativo...</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="562"/>
+        <location filename="../../gui/splash_screen.py" line="569"/>
         <source>Error: {0}</source>
         <translation>Erro: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="615"/>
+        <location filename="../../gui/splash_screen.py" line="622"/>
         <source>Error desconocido.</source>
         <translation>Erro desconhecido.</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="618"/>
+        <location filename="../../gui/splash_screen.py" line="625"/>
         <source>No se pudieron preparar las dependencias que DowP necesita para funcionar.
 
 {0}
@@ -10507,7 +10513,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
 <context>
     <name>VtracerCardPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1458"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1469"/>
         <source>vtracer convierte imágenes raster (PNG/JPG/etc.) a vectores SVG.
 Lo usa el Editor de Imagen para el formato de salida SVG -- es opcional,
 solo hace falta si vas a exportar a ese formato.</source>
@@ -10516,87 +10522,87 @@ O Editor de Imagem o usa para o formato de saída SVG -- é opcional,
 só é necessário se você for exportar para esse formato.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1483"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1494"/>
         <source>vtracer (Vectorizado a SVG)</source>
         <translation>vtracer (Vetorizar para SVG)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1498"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1509"/>
         <source>Chequeando...</source>
         <translation>Verificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1504"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1515"/>
         <source>Versión: Calculando...</source>
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1520"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1531"/>
         <source>Vectoriza imágenes a SVG. Necesario en el Editor de Imagen para exportar a ese formato.</source>
         <translation>Vetoriza imagens para SVG. Necessário no Editor de Imagem para exportar nesse formato.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1526"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1574"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1537"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1585"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1561"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1572"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1563"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1586"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1598"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1574"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1597"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1609"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1563"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1574"/>
         <source>Versión: Desconocida</source>
         <translation>Versão: Desconhecida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1566"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1600"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1577"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1611"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1570"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1581"/>
         <source>✗ Falta</source>
         <translation>✗ Ausente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1572"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1583"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1580"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1591"/>
         <source>Versión: {0} (Buscando...)</source>
         <translation>Versão: {0} (Buscando...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1592"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1603"/>
         <source>Versión: {0} (Nueva: {1})</source>
         <translation>Versão: {0} (Nova: {1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1594"/>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1605"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1616"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1615"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1626"/>
         <source>Iniciando...</source>
         <translation>Iniciando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1617"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1628"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
@@ -10768,7 +10774,7 @@ só é necessário se você for exportar para esse formato.</translation>
 <context>
     <name>YTDLPAndPOTPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="690"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="701"/>
         <source>yt-dlp es el motor central de DowP para la extracción de metadatos, análisis de formatos
 y descarga de transmisiones de video y audio desde YouTube y más de 1000 sitios soportados.
 
@@ -10781,7 +10787,7 @@ e download de transmissões de vídeo e áudio do YouTube e de mais de 1000 site
   • Canal Nightly: Compilação diária automática com as últimas correções e ajustes anti-bot do YouTube.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="698"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="709"/>
         <source>El PO Token es requerido por YouTube para autenticar descargas y prevenir bloqueos anti-bot.
 DowP permite elegir entre:
 
@@ -10796,7 +10802,7 @@ O DowP permite escolher entre:
   • Nenhum: Sem token (pode falhar com erro HTTP 429 / bot-check no YouTube).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="707"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="718"/>
         <source>WPC (WebPoClient) usa un navegador real basado en Chromium para generar
 los PO Tokens que YouTube requiere. Cualquier navegador Chromium funciona:
 
@@ -10819,251 +10825,251 @@ Se você deixar o campo vazio, o WPC vai tentar detectar seu navegador automatic
 Clique em &apos;...&apos; para selecionar o executável manualmente.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="741"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="752"/>
         <source>yt-dlp (Motor Principal de Descargas)</source>
         <translation>yt-dlp (Motor Principal de Downloads)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="756"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="867"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="889"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="767"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="878"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="900"/>
         <source>Chequeando...</source>
         <translation>Verificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="762"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="773"/>
         <source>Versión: Calculando...</source>
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="773"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="784"/>
         <source>Canal:</source>
         <translation>Canal:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="779"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="790"/>
         <source>Estable</source>
         <translation>Estável</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="780"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="791"/>
         <source>Última Release oficial y probada</source>
         <translation>Última Release oficial e testada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="782"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="793"/>
         <source>Nightly</source>
         <translation>Nightly</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="783"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="794"/>
         <source>Versión actualizada a diario con parches y nuevos extractores (Git / Recomendado)</source>
         <translation>Versão atualizada diariamente com correções e novos extratores (Git / Recomendado)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="798"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="809"/>
         <source>El núcleo de descargas, maneja la extracción de datos de YouTube y otras plataformas.</source>
         <translation>O núcleo dos downloads; cuida da extração de dados do YouTube e de outras plataformas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="804"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1019"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="815"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1030"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="837"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="848"/>
         <source>PO Token Provider (Bypass Anti-Bot YouTube)</source>
         <translation>PO Token Provider (Bypass Anti-Bot do YouTube)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="855"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="866"/>
         <source>bgutil-pot (recomendado)</source>
         <translation>bgutil-pot (recomendado)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="856"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="867"/>
         <source>WPC – WebPoClient</source>
         <translation>WPC – WebPoClient</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="857"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="868"/>
         <source>Ninguno</source>
         <translation>Nenhum</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="871"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="882"/>
         <source>Comprobando...</source>
         <translation>Verificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="893"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1107"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1124"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="904"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1118"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1135"/>
         <source>Instalar</source>
         <translation>Instalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="913"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="924"/>
         <source>Navegador para WPC:</source>
         <translation>Navegador para o WPC:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="932"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="943"/>
         <source>Auto-detectado: deja vacío o elige un ejecutable</source>
         <translation>Autodetectado: deixe vazio ou escolha um executável</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="941"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="952"/>
         <source>Seleccionar ejecutable del navegador (chrome.exe, brave.exe, msedge.exe...)</source>
         <translation>Selecionar o executável do navegador (chrome.exe, brave.exe, msedge.exe...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1006"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1017"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1008"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1031"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1057"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1019"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1042"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1068"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1008"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1019"/>
         <source>Versión: Desconocida</source>
         <translation>Versão: Desconhecida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1011"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1059"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1100"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1118"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1189"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1240"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1022"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1070"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1111"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1129"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1200"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1251"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1015"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1026"/>
         <source>✗ Falta</source>
         <translation>✗ Ausente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1017"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1028"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1025"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1036"/>
         <source>Versión: {0} (Buscando...)</source>
         <translation>Versão: {0} (Buscando...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1042"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1053"/>
         <source>Versión: {0} (Nueva: {1})</source>
         <translation>Versão: {0} (Nova: {1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1047"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1058"/>
         <source>Cambiar a Nightly</source>
         <translation>Mudar para Nightly</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1049"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1060"/>
         <source>Cambiar a Estable</source>
         <translation>Mudar para Estável</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1051"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1183"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1234"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1062"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1194"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1245"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1066"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1077"/>
         <source>Descargando yt-dlp ({0})...</source>
         <translation>Baixando o yt-dlp ({0})...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1075"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1086"/>
         <source>Iniciando...</source>
         <translation>Iniciando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1077"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1088"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1105"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1122"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1116"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1133"/>
         <source>✗ No instalado</source>
         <translation>✗ Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1131"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1142"/>
         <source>✓ Ruta configurada: {0}</source>
         <translation>✓ Caminho configurado: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1135"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1146"/>
         <source>Auto-detectado: {0}</source>
         <translation>Autodetectado: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1139"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1150"/>
         <source>⚠ No se detectó ningún navegador Chromium (Chrome, Brave, Edge...)</source>
         <translation>⚠ Nenhum navegador Chromium detectado (Chrome, Brave, Edge...)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1161"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1172"/>
         <source>Seleccionar ejecutable del navegador</source>
         <translation>Selecionar o executável do navegador</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1163"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1174"/>
         <source>Ejecutables (*.exe);;Todos los archivos (*)</source>
         <translation>Executáveis (*.exe);;Todos os arquivos (*)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1164"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1175"/>
         <source>Todos los archivos (*)</source>
         <translation>Todos os arquivos (*)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1181"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1232"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1192"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1243"/>
         <source>✓ Instalado  v{0} (Nueva: {1})</source>
         <translation>✓ Instalado  v{0} (Nova: {1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1195"/>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1246"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1206"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1257"/>
         <source>Instalando...</source>
         <translation>Instalando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1218"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1229"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1218"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1229"/>
         <source>No se pudo descargar bgutil-pot:
 {0}</source>
         <translation>Não foi possível baixar o bgutil-pot:
 {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1260"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1271"/>
         <source>Error instalando WPC</source>
         <translation>Erro ao instalar o WPC</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1262"/>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1273"/>
         <source>WPC instalado</source>
         <translation>WPC instalado</translation>
     </message>
@@ -13432,12 +13438,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Erro ao executar o FFmpeg: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/setup/ffmpeg_setup.py" line="276"/>
+        <location filename="../../core/setup/ffmpeg_setup.py" line="277"/>
         <source>No se encontró el enlace de descarga de FFmpeg.</source>
         <translation>O link de download do FFmpeg não foi encontrado.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/ffmpeg_setup.py" line="364"/>
+        <location filename="../../core/setup/ffmpeg_setup.py" line="371"/>
         <source>No se encontró el ejecutable en el paquete de FFmpeg.</source>
         <translation>O executável não foi encontrado dentro do pacote do FFmpeg.</translation>
     </message>
