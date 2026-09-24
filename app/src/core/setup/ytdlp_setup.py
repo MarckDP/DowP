@@ -69,6 +69,36 @@ def purge_ytdlp_cache():
         if mod == 'yt_dlp' or mod.startswith('yt_dlp.'):
             del sys.modules[mod]
 
+    _unwrap_urllib3_percent_re()
+
+
+def _unwrap_urllib3_percent_re():
+    """Deshace el parche que yt-dlp aplica sobre urllib3 al importarse.
+
+    yt_dlp/networking/_requests.py envuelve urllib3.util.url._PERCENT_RE en su clase
+    Urllib3PercentREOverride CADA VEZ que se importa. Como purge_ytdlp_cache() borra
+    yt-dlp de sys.modules para recargarlo, la siguiente importación envuelve el
+    envoltorio: el de afuera reenvía los atributos con __getattribute__, que no pasa por
+    el __getattr__ del de adentro, así que `_PERCENT_RE.sub` deja de existir. urllib3
+    2.8 llama a `.sub` en CADA petición (url._idna_encode), y desde ese momento todo
+    `requests` de la app falla con "'Urllib3PercentREOverride' object has no attribute
+    'sub'" -- pasó en la primera ejecución en un Mac: se descarga yt-dlp, se importa
+    para leer su versión y se vuelve a importar, y la descarga de FFmpeg ya no pudo
+    hacer ninguna petición. Restaurando el patrón original antes de reimportar, yt-dlp
+    lo vuelve a envolver una sola vez, como espera."""
+    try:
+        import urllib3.util.url as urllib3_url
+    except Exception:
+        return
+    current = getattr(urllib3_url, "_PERCENT_RE", None)
+    original = current
+    # Solo los envoltorios de yt-dlp (tienen el patrón real en .re); se desenvuelve
+    # hasta llegar al re.Pattern, por si ya se había apilado más de uno.
+    while type(original).__name__ == "Urllib3PercentREOverride" and hasattr(original, "re"):
+        original = original.re
+    if original is not current:
+        urllib3_url._PERCENT_RE = original
+
 def download_ytdlp(channel=None, progress_callback=None):
     """Downloads the version of yt-dlp according to the specified channel and cleans shebang."""
     try:

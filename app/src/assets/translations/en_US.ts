@@ -9003,24 +9003,42 @@ You can download it again whenever you want.</translation>
         <translation>All set</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="479"/>
+        <location filename="../../gui/splash_screen.py" line="480"/>
         <source>Descargando... 0%</source>
         <translation>Downloading... 0%</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="523"/>
+        <location filename="../../gui/splash_screen.py" line="524"/>
         <source>Error</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="533"/>
+        <location filename="../../gui/splash_screen.py" line="534"/>
         <source>Iniciando aplicación...</source>
         <translation>Starting application...</translation>
     </message>
     <message>
-        <location filename="../../gui/splash_screen.py" line="560"/>
+        <location filename="../../gui/splash_screen.py" line="562"/>
         <source>Error: {0}</source>
         <translation>Error: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/splash_screen.py" line="615"/>
+        <source>Error desconocido.</source>
+        <translation>Unknown error.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/splash_screen.py" line="618"/>
+        <source>No se pudieron preparar las dependencias que DowP necesita para funcionar.
+
+{0}
+
+Revisa tu conexión a internet y vuelve a abrir DowP.</source>
+        <translation>The dependencies DowP needs to run could not be set up.
+
+{0}
+
+Check your internet connection and open DowP again.</translation>
     </message>
 </context>
 <context>

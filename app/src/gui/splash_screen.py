@@ -13,7 +13,7 @@ import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QProgressBar, QFrame, QGraphicsOpacityEffect, QApplication,
-    QSizePolicy, QSpacerItem
+    QSizePolicy, QSpacerItem, QMessageBox
 )
 from PySide6.QtCore import (
     Qt, Signal, Slot, QThread, QTimer, QPropertyAnimation,
@@ -179,6 +179,7 @@ class SplashScreen(QWidget):
         self.setFixedSize(420, 120)
 
         self.worker = None
+        self._fail_message = ""
         self.dep_rows = {}
         self._main_window = None  # Pre-construida durante el splash
         self._drag_active = False
@@ -555,6 +556,7 @@ class SplashScreen(QWidget):
 
     @Slot(str)
     def _on_failed(self, msg):
+        self._fail_message = msg
         self.loading_bar.setRange(0, 100)
         self.loading_bar.setValue(0)
         self.status_label.setText(self.tr("Error: {0}").format(msg))
@@ -604,6 +606,18 @@ class SplashScreen(QWidget):
         self.worker.all_ready.connect(self._on_all_ready, Qt.QueuedConnection)
         self.worker.failed.connect(self._on_failed, Qt.QueuedConnection)
         self.worker.start()
+
+    def show_failure_dialog(self):
+        """Explica en un diálogo por qué DowP no puede arrancar: la línea de error del
+        splash dura unos segundos y en letra chica, y justo antes la app se cerraba de
+        golpe. Lo llama main.py antes de salir."""
+        self.hide()
+        detail = self._fail_message or self.tr("Error desconocido.")
+        QMessageBox.critical(
+            None, "DowP",
+            self.tr("No se pudieron preparar las dependencias que DowP necesita para "
+                    "funcionar.\n\n{0}\n\nRevisa tu conexión a internet y vuelve a abrir "
+                    "DowP.").format(detail))
 
     def cleanup(self):
         """Detiene el worker si sigue corriendo."""

@@ -151,7 +151,13 @@ def main():
     def on_splash_failed():
         logger.error("Dependency installation failed. Exiting.")
         splash.cleanup()
-        sys.exit(1)
+        splash.show_failure_dialog()
+        # app.exit(1), NO sys.exit(1): esto corre dentro del bucle de eventos, y sys.exit
+        # cerraba Python con hilos todavía vivos (el despachador de la cola, los servicios
+        # de editores) -> "QThread: Destroyed while thread is still running" y abort (visto
+        # en macOS). Con app.exit, app.exec() termina, aboutToQuit (on_app_exit) detiene
+        # esos servicios y el sys.exit(app.exec()) del final sale con código 1.
+        app.exit(1)
     
     splash.ready.connect(on_splash_ready)
     splash.failed.connect(on_splash_failed)
