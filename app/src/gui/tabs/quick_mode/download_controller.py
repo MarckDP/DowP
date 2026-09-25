@@ -20,7 +20,7 @@ from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_a
 from core.tabs.quick_mode.quick_mode_logic import build_quick_request_data, reveal_in_file_manager
 from gui.tabs.advanced_process.workers import AnalysisWorker, DownloadWorker
 from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
-from gui.dialogs.media_search_dialog import confirm_live_download, ask_cut_one_by_one
+from gui.dialogs.media_search_dialog import confirm_live_download, ask_cut_one_by_one, confirm_playlist_mode
 from core.ytdlp_logic.media_search import is_live_now
 
 
@@ -121,8 +121,12 @@ class QuickDownloadController(QObject):
         self.start_worker(req, selected_entries=[{"title": row_title}], selected_indices=[0])
 
     def start_playlist_selection(self, url, mode, quality, output_path, speed_limit_val,
-                                 chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None):
-        """Inicia el análisis de la lista de reproducción para posterior selección."""
+                                 chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
+                                 on_done=None):
+        """Inicia el análisis de la lista de reproducción para posterior selección. on_done()
+        se llama cuando esta playlist ya terminó su paso por aquí (encolada, cancelada o sin
+        selección): lo usa start_search_downloads para abrir el selector de varias playlists
+        una tras otra, ya que self.analysis_worker es uno solo."""
         self.busy_state_changed.emit(True, self.tr("Analizando playlist...") if hasattr(self, "tr") else "Analizando playlist...")
         self.analysis_worker = AnalysisWorker(url, analyze_playlist=True, fast_mode=True)
 
@@ -130,10 +134,12 @@ class QuickDownloadController(QObject):
             if self.analysis_worker:
                 self.analysis_worker.deleteLater()
             self.analysis_worker = None
-            
+
             if error:
                 self.busy_state_changed.emit(False, "")
                 self.progress_updated.emit(0, self.tr("Error: {0}").format(error) if hasattr(self, "tr") else f"Error: {error}", "error")
+                if on_done:
+                    on_done()
                 return
 
             entries = data.get("entries") or []
@@ -141,6 +147,8 @@ class QuickDownloadController(QObject):
                 self.busy_state_changed.emit(False, "")
                 self.start_direct_download(url, mode, quality, output_path, speed_limit_val,
                                            chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
+                if on_done:
+                    on_done()
                 return
 
             # Historial: con el selector de playlist activado, UNA tarjeta para toda la
@@ -151,12 +159,16 @@ class QuickDownloadController(QObject):
             if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.result_data:
                 self.busy_state_changed.emit(False, "")
                 self.progress_updated.emit(0, self.tr("Selección cancelada") if hasattr(self, "tr") else "Selección cancelada", "wait")
+                if on_done:
+                    on_done()
                 return
 
             selected = dialog.result_data.get("selected_indices", [])
             if not selected:
                 self.busy_state_changed.emit(False, "")
                 self.progress_updated.emit(0, self.tr("No se seleccionaron medios") if hasattr(self, "tr") else "No se seleccionaron medios", "error")
+                if on_done:
+                    on_done()
                 return
 
             req = build_quick_request_data(
@@ -185,6 +197,13 @@ class QuickDownloadController(QObject):
             # cada vídeo se reintenta al momento y no al terminar la pasada entera.
             self.start_playlist_workers(req, selected_entries, selected, req["mode"], item_quality,
                                         history_key=history_key)
+            # Bug preexistente (ver conversación): esta rama de éxito nunca avisaba que se
+            # dejó de estar "ocupado" -- a diferencia de las otras 4 salidas de este mismo
+            # método (error/redirigido/cancelado/sin selección), que sí lo hacen. Con una
+            # playlist pegada a mano casi no se notaba; la búsqueda lo hizo fácil de topar.
+            self.busy_state_changed.emit(False, "")
+            if on_done:
+                on_done()
 
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
@@ -236,15 +255,33 @@ class QuickDownloadController(QObject):
                                chk_thumb_file_checked, chk_thumb_only_checked, btn_cut_checked,
                                recode_data=None):
         """Encola los resultados elegidos en la ventana de búsqueda (lupa). Solo se usan sus
-        URLs y títulos: cada video se analiza/descarga como si se hubiera pegado a mano.
-        El selector de playlist no aplica (cada resultado es un video suelto)."""
-        items = [item for item in items if item.get("url")]
+        URLs y títulos: cada video/playlist se analiza/descarga como si se hubiera pegado a
+        mano. Las tarjetas de canal nunca llegan aquí -- no son seleccionables en la ventana
+        de búsqueda (ver media_search_dialog.py)."""
+        items = [item for item in items if item.get("url") and item.get("kind") != "channel"]
         if not items:
             return
 
+        playlists = [item for item in items if item.get("kind") == "playlist"]
+        items = [item for item in items if item.get("kind") != "playlist"]
+
+        activate_playlist_mode = False
+        if playlists:
+            if self.tab.chk_playlist_selector.isChecked():
+                activate_playlist_mode = True
+            elif confirm_playlist_mode(self.tab, len(playlists)):
+                self.tab.chk_playlist_selector.setChecked(True)
+                activate_playlist_mode = True
+            if not activate_playlist_mode:
+                # "No": cada playlist se descarga solo con su primer video, igual que hace
+                # SOLO en Proceso Avanzado con cualquier URL de playlist (noplaylist=True ya
+                # lo hace el flujo normal de descarga directa -- ver conversación).
+                items = items + playlists
+                playlists = []
+
         live_items = [item for item in items if item.get("is_live")]
         if live_items:
-            if not confirm_live_download(self.tab, len(live_items), cut_enabled=btn_cut_checked, total=len(items)):
+            if not confirm_live_download(self.tab, len(live_items), cut_enabled=btn_cut_checked, total=len(items) + len(playlists)):
                 live_items = []
         normal_items = [item for item in items if not item.get("is_live")]
 
@@ -260,9 +297,21 @@ class QuickDownloadController(QObject):
         for item in live_items:
             self.start_direct_download(item["url"], *common, recode_data, display_title=item.get("title"))
 
+        def start_playlists():
+            if not playlists:
+                return
+            pending_pl = [item["url"] for item in playlists]
+
+            def next_playlist():
+                if pending_pl:
+                    self.start_playlist_selection(pending_pl.pop(0), *common, recode_data, on_done=next_playlist)
+
+            next_playlist()
+
         if not cut_one_by_one:
             for item in normal_items:
                 self.start_direct_download(item["url"], *common, recode_data, display_title=item.get("title"))
+            start_playlists()
             return
 
         pending = [item["url"] for item in normal_items]
@@ -270,6 +319,8 @@ class QuickDownloadController(QObject):
         def next_cut():
             if pending:
                 self.start_cut_analysis(pending.pop(0), *common, recode_data, on_done=next_cut)
+            else:
+                start_playlists()
 
         next_cut()
 

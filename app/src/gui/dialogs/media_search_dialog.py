@@ -27,6 +27,7 @@ from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
 from core.utils.search_thumbnail_cache import SearchThumbnailCache
 from core.ytdlp_logic import media_search
+from core.ytdlp_logic.media_search import KIND_VIDEO, KIND_PLAYLIST, KIND_CHANNEL
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox
@@ -45,6 +46,19 @@ def format_duration(seconds):
     h, rem = divmod(seconds, 3600)
     m, s = divmod(rem, 60)
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+def format_count(n):
+    """2700000 -> '2.7M', 4320 -> '4.3K', 38 -> '38'."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return ""
+    if n < 1000:
+        return str(n)
+    if n < 1_000_000:
+        return f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "K"
+    return f"{n / 1_000_000:.1f}".rstrip("0").rstrip(".") + "M"
 
 
 def _clean_error(text: str) -> str:
@@ -134,6 +148,13 @@ class _ResultDelegate(QStyledItemDelegate):
         return title_font, small_font
 
     def layout(self, rect: QRect, item: dict, base_font: QFont) -> dict:
+        if item.get("kind") == KIND_CHANNEL:
+            return self._layout_channel(rect, item, base_font)
+        return self._layout_media(rect, item, base_font)
+
+    def _layout_media(self, rect: QRect, item: dict, base_font: QFont) -> dict:
+        """Video o playlist: misma geometría (miniatura + título + canal), solo cambia la
+        insignia sobre la miniatura (ver paint())."""
         title_font, small_font = self._fonts(base_font)
         fm_title, fm_small = QFontMetrics(title_font), QFontMetrics(small_font)
         pad = 8
@@ -156,6 +177,35 @@ class _ResultDelegate(QStyledItemDelegate):
             "channel_rect": channel_rect, "title_font": title_font, "small_font": small_font,
         }
 
+    def _layout_channel(self, rect: QRect, item: dict, base_font: QFont) -> dict:
+        """Canal: avatar redondo + nombre + suscriptores, sin miniatura 16:9 -- se distingue
+        a propósito de una tarjeta de video/playlist."""
+        title_font, small_font = self._fonts(base_font)
+        fm_title, fm_small = QFontMetrics(title_font), QFontMetrics(small_font)
+        pad = 10
+        name_h, sub_h, gap = fm_title.height(), fm_small.height(), 6
+        if self.dialog.view_mode == "grid":
+            avatar_size = max(40, min(64, rect.height() - (name_h + sub_h + gap * 2 + 2 * pad)))
+            block_h = avatar_size + gap + name_h + sub_h
+            top = rect.y() + max(pad, (rect.height() - block_h) // 2)
+            cx = rect.x() + rect.width() // 2
+            avatar = QRect(cx - avatar_size // 2, top, avatar_size, avatar_size)
+            text_x, text_w = rect.x() + pad, rect.width() - 2 * pad
+            align = Qt.AlignHCenter
+        else:
+            avatar_size = 56
+            avatar = QRect(rect.x() + pad, rect.y() + (rect.height() - avatar_size) // 2, avatar_size, avatar_size)
+            text_x = avatar.right() + 14
+            text_w = rect.right() - pad - text_x
+            top = rect.y() + (rect.height() - (name_h + gap + sub_h)) // 2
+            align = Qt.AlignLeft
+        name_rect = QRect(text_x, avatar.bottom() + gap if self.dialog.view_mode == "grid" else top, text_w, name_h)
+        sub_rect = QRect(text_x, name_rect.bottom() + 2, text_w, sub_h)
+        return {
+            "avatar": avatar, "name_rect": name_rect, "sub_rect": sub_rect,
+            "title_font": title_font, "small_font": small_font, "align": align,
+        }
+
     def sizeHint(self, option, index):
         view = self.dialog.results_view
         available = view.viewport().width() - 2
@@ -175,8 +225,13 @@ class _ResultDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         item = index.data(ITEM_ROLE) or {}
         rect = option.rect.adjusted(1, 1, -1, -1)
-        selected = bool(option.state & QStyle.State_Selected)
         hovered = bool(option.state & QStyle.State_MouseOver)
+
+        if item.get("kind") == KIND_CHANNEL:
+            self._paint_channel(painter, rect, item, option, hovered)
+            return
+
+        selected = bool(option.state & QStyle.State_Selected)
         geo = self.layout(rect, item, option.font)
 
         painter.save()
@@ -188,8 +243,19 @@ class _ResultDelegate(QStyledItemDelegate):
         painter.setBrush(self.c_card_hover if hovered else self.c_card)
         painter.drawRoundedRect(rect, 8, 8)
 
-        # Miniatura (recortada para llenar el cuadro)
+        # "Carpeta" de playlist: un par de bordes desplazados detrás de la miniatura real,
+        # simulando hojas apiladas -- sin pedir fotos de otros videos (ver conversación).
         thumb = geo["thumb"]
+        if item.get("kind") == KIND_PLAYLIST:
+            # Una sola "hoja" desplazada detrás del thumb, con un color bastante más claro
+            # que el fondo de la tarjeta -- un borde/relleno demasiado parecido al fondo
+            # (probado: #222 sobre #1a1a1a) resultaba invisible en la práctica, no se leía
+            # como "apilado" (ver conversación).
+            stack_rect = thumb.translated(8, -8)
+            stack_fill = QColor(self.c_border).lighter(160)
+            painter.setPen(QPen(stack_fill.lighter(120), 1))
+            painter.setBrush(stack_fill)
+            painter.drawRoundedRect(stack_rect, 5, 5)
         clip = QPainterPath()
         clip.addRoundedRect(thumb, 6, 6)
         painter.save()
@@ -213,8 +279,10 @@ class _ResultDelegate(QStyledItemDelegate):
             painter.fillRect(thumb, self.c_placeholder)
         painter.restore()
 
-        # Duración / EN VIVO / Short, sobre la esquina inferior derecha de la miniatura
-        if item.get("is_live"):
+        # Duración / EN VIVO / Short / Playlist, sobre la esquina inferior derecha
+        if item.get("kind") == KIND_PLAYLIST:
+            badge_text, badge_bg, badge_fg = QCoreApplication.translate("MediaSearchDialog", "Playlist"), QColor(0, 0, 0, 200), QColor("#ffffff")
+        elif item.get("is_live"):
             badge_text, badge_bg, badge_fg = QCoreApplication.translate("MediaSearchDialog", "EN VIVO"), self.c_live, QColor("#ffffff")
         elif item.get("duration"):
             badge_text, badge_bg, badge_fg = format_duration(item["duration"]), QColor(0, 0, 0, 200), QColor("#ffffff")
@@ -267,6 +335,68 @@ class _ResultDelegate(QStyledItemDelegate):
 
         painter.restore()
 
+    def _paint_channel(self, painter, rect, item, option, hovered):
+        """Tarjeta de canal: avatar redondo + nombre + suscriptores. Nunca se selecciona
+        (ver _ResultsView) -- un clic en cualquier parte navega el canal, así que aquí no
+        hay marca de "seleccionado" que dibujar."""
+        geo = self._layout_channel(rect, item, option.font)
+
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+        painter.setPen(QPen(self.c_border, 1))
+        painter.setBrush(self.c_card_hover if hovered else self.c_card)
+        painter.drawRoundedRect(rect, 8, 8)
+
+        avatar = geo["avatar"]
+        pix = self.dialog.pixmap_for(item.get("thumb_url"))
+        painter.setPen(Qt.NoPen)
+        if pix is not None and not pix.isNull():
+            clip = QPainterPath()
+            clip.addEllipse(avatar)
+            painter.save()
+            painter.setClipPath(clip)
+            scaled = pix.scaled(avatar.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            sx, sy = (scaled.width() - avatar.width()) // 2, (scaled.height() - avatar.height()) // 2
+            painter.drawPixmap(avatar, scaled, QRect(sx, sy, avatar.width(), avatar.height()))
+            painter.restore()
+        else:
+            painter.setBrush(self.c_placeholder)
+            painter.drawEllipse(avatar)
+
+        align = geo["align"] | Qt.AlignVCenter
+        painter.setFont(geo["title_font"])
+        painter.setPen(self.c_text)
+        name = QFontMetrics(geo["title_font"]).elidedText(item.get("title", ""), Qt.ElideRight, geo["name_rect"].width())
+        painter.drawText(geo["name_rect"], align, name)
+        if item.get("is_verified"):
+            # Palomita de verificado, pegada al nombre.
+            fm = QFontMetrics(geo["title_font"])
+            name_w = fm.horizontalAdvance(name)
+            cy = geo["name_rect"].center().y()
+            if geo["align"] == Qt.AlignHCenter:
+                badge_x = geo["name_rect"].center().x() + name_w // 2 + 5
+            else:
+                badge_x = geo["name_rect"].x() + name_w + 5
+            badge = QRect(badge_x, cy - 6, 13, 13)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(self.c_accent)
+            painter.drawEllipse(badge)
+            painter.setPen(QPen(self.c_on_accent, 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.drawPolyline([
+                QPoint(badge.x() + 3, badge.y() + 7), QPoint(badge.x() + 5, badge.y() + 9), QPoint(badge.x() + 10, badge.y() + 4),
+            ])
+
+        subs = item.get("subscriber_count")
+        if subs:
+            text = QCoreApplication.translate("MediaSearchDialog", "{0} suscriptores").format(format_count(subs))
+            painter.setFont(geo["small_font"])
+            painter.setPen(self.c_muted)
+            painter.drawText(geo["sub_rect"], align, text)
+
+        painter.restore()
+
 
 class _ResultsView(QListView):
     channel_clicked = Signal(dict)
@@ -297,20 +427,35 @@ class _ResultsView(QListView):
         self.setResizeMode(QListView.Adjust)
         self.scheduleDelayedItemsLayout()
 
-    def _channel_hit(self, pos):
+    def _row_item(self, pos):
         index = self.indexAt(pos)
         if not index.isValid():
+            return None, None
+        return index, (index.data(ITEM_ROLE) or {})
+
+    def _channel_hit(self, pos):
+        """Clic en el nombre del canal DEBAJO de un video/playlist (no en una tarjeta de
+        canal completa, ver _whole_row_channel_hit)."""
+        index, item = self._row_item(pos)
+        if not item or item.get("kind") == KIND_CHANNEL:
             return None
-        item = index.data(ITEM_ROLE) or {}
         if not item.get("channel_url") or not item.get("channel"):
             return None
         rect = self.visualRect(index).adjusted(1, 1, -1, -1)
         geo = self.itemDelegate().layout(rect, item, self.font())
         return (index, item) if geo["channel_rect"].contains(pos) else None
 
+    def _whole_row_channel_hit(self, pos):
+        """Una tarjeta de canal completa: cualquier clic en ella navega el canal, nunca se
+        selecciona (ver conversación)."""
+        index, item = self._row_item(pos)
+        if item and item.get("kind") == KIND_CHANNEL:
+            return (index, item)
+        return None
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            hit = self._channel_hit(event.position().toPoint())
+            hit = self._whole_row_channel_hit(event.position().toPoint()) or self._channel_hit(event.position().toPoint())
             if hit:
                 # No pasa a super(): un clic en el canal no debe marcar/desmarcar la tarjeta.
                 self.channel_clicked.emit(hit[1])
@@ -318,7 +463,8 @@ class _ResultsView(QListView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        hit = self._channel_hit(event.position().toPoint())
+        pos = event.position().toPoint()
+        hit = self._whole_row_channel_hit(pos) or self._channel_hit(pos)
         row = hit[0].row() if hit else -1
         if row != self.hover_channel_row:
             self.hover_channel_row = row
@@ -381,6 +527,11 @@ class MediaSearchDialog(QDialog):
         # Estado de la búsqueda (para volver desde un canal) y del canal abierto.
         self._search_state = None
         self._channel = None  # {"url", "name"} mientras se navega un canal
+        # Si no está vacío, el cuadro de búsqueda ya no busca en todo YouTube: busca DENTRO
+        # de self._channel (ver conversación -- "búsqueda dentro de una búsqueda", mismo
+        # cuadro de texto, comportamiento contextual). Se limpia al abrir otro canal, volver
+        # o vaciar el cuadro.
+        self._channel_query = ""
         self._search_filter = media_search.FILTER_ALL
         self._last_query = ""
         self._last_source = media_search.SOURCE_YOUTUBE
@@ -481,6 +632,7 @@ class MediaSearchDialog(QDialog):
         self.search_input.setPlaceholderText(self.tr("Escribe lo que quieres buscar y presiona Enter"))
         self.search_input.setClearButtonEnabled(True)
         self.search_input.returnPressed.connect(self._start_new_search)
+        self.search_input.textChanged.connect(self._on_search_text_changed)
         row1.addWidget(self.search_input, 1)
 
         self.btn_search = QPushButton()
@@ -711,16 +863,23 @@ class MediaSearchDialog(QDialog):
         if not query:
             return
         if self._channel is not None:
-            # Buscar algo nuevo desde un canal sale del canal.
-            self._channel = None
-            self._search_state = None
-            self.channel_bar.hide()
-            self._set_filter(self._search_filter)
-            self._sync_filter_visibility()
+            # Buscar DENTRO del canal actual, sin salir de él (ver conversación).
+            self._channel_query = query
+            self._update_channel_label()
+            self._run(1)
+            return
         self._last_query = query
         self._last_source = self._current_source()
         self._search_filter = self._current_filter()
         self._run(1)
+
+    def _on_search_text_changed(self, text):
+        # Vaciar el cuadro mientras se busca dentro de un canal vuelve a mostrar esa
+        # sección del canal tal cual (Videos/Shorts/Directos), sin salir de él.
+        if self._channel is not None and self._channel_query and not text.strip():
+            self._channel_query = ""
+            self._update_channel_label()
+            self._start_channel_page(1)
 
     def _load_more(self):
         if not self._loading and self._has_more:
@@ -736,8 +895,12 @@ class MediaSearchDialog(QDialog):
         self._generation += 1
         self._loading = True
         if self._channel is not None:
-            worker = _SearchWorker(self._generation, page, media_search.browse_channel,
-                                   self._channel["url"], self._current_filter(), page)
+            if self._channel_query:
+                worker = _SearchWorker(self._generation, page, media_search.search_in_channel,
+                                       self._channel["url"], self._channel_query, self._current_filter(), page)
+            else:
+                worker = _SearchWorker(self._generation, page, media_search.browse_channel,
+                                       self._channel["url"], self._current_filter(), page)
         else:
             worker = _SearchWorker(self._generation, page, media_search.search,
                                    self._last_query, self._last_source, self._current_filter(), page)
@@ -824,6 +987,10 @@ class MediaSearchDialog(QDialog):
             row.setData(item, ITEM_ROLE)
             row.setToolTip(self._tooltip_for(item))
             row.setEditable(False)
+            if item.get("kind") == KIND_CHANNEL:
+                # Nunca seleccionable: un clic en la tarjeta navega el canal (ver
+                # _ResultsView._whole_row_channel_hit), no lo agrega a la cola.
+                row.setFlags(row.flags() & ~Qt.ItemIsSelectable)
             self.model.appendRow(row)
             self._items.append(item)
             if item["url"] in self._selected:
@@ -834,6 +1001,12 @@ class MediaSearchDialog(QDialog):
 
     def _tooltip_for(self, item):
         parts = [item.get("title", "")]
+        if item.get("kind") == KIND_CHANNEL:
+            if item.get("subscriber_count"):
+                parts.append(self.tr("{0} suscriptores").format(format_count(item["subscriber_count"])))
+            return "\n".join(parts)
+        if item.get("kind") == KIND_PLAYLIST:
+            parts.append(self.tr("Playlist"))
         if item.get("channel"):
             parts.append(item["channel"])
         if item.get("is_live"):
@@ -879,7 +1052,12 @@ class MediaSearchDialog(QDialog):
 
     # ── Canal ────────────────────────────────────────────────────
     def _open_channel(self, item):
-        channel_url = item.get("channel_url")
+        # Dos orígenes posibles: una tarjeta de canal completa (su propia URL vive en
+        # "url") o el nombre de canal debajo de un video/playlist ("channel_url").
+        if item.get("kind") == KIND_CHANNEL:
+            channel_url, channel_name = item.get("url"), item.get("title") or ""
+        else:
+            channel_url, channel_name = item.get("channel_url"), item.get("channel") or ""
         if not channel_url:
             return
         if self._channel is None:
@@ -892,9 +1070,14 @@ class MediaSearchDialog(QDialog):
                 "scroll": self.results_view.verticalScrollBar().value(),
                 "hint": self.hint_label.text() if self.hint_label.isVisible() else "",
             }
-        self._channel = {"url": channel_url, "name": item.get("channel") or ""}
+        self._channel = {"url": channel_url, "name": channel_name}
+        self._channel_query = ""
         self.btn_back.setText(self.tr("Volver a “{0}”").format(self._last_query))
-        self.channel_label.setText(self.tr("Canal: {0}").format(self._channel["name"]))
+        self.search_input.blockSignals(True)
+        self.search_input.clear()
+        self.search_input.blockSignals(False)
+        self.search_input.setPlaceholderText(self.tr("Buscar dentro de este canal..."))
+        self._update_channel_label()
         self.channel_bar.show()
         self.hint_label.hide()
         if self._current_filter() == media_search.FILTER_ALL:
@@ -902,14 +1085,29 @@ class MediaSearchDialog(QDialog):
         self._sync_filter_visibility()
         self._start_channel_page(1)
 
+    def _update_channel_label(self):
+        name = self._channel["name"] if self._channel else ""
+        if self._channel_query:
+            self.channel_label.setText(
+                self.tr("Buscando “{0}” en: {1}").format(self._channel_query, name))
+        else:
+            self.channel_label.setText(self.tr("Canal: {0}").format(name))
+
     def _start_channel_page(self, page):
         self._run(page)
 
     def _back_to_search(self):
         state = self._search_state
         self._channel = None
+        self._channel_query = ""
         self._search_state = None
         self.channel_bar.hide()
+        self.search_input.setPlaceholderText(self.tr("Escribe lo que quieres buscar y presiona Enter"))
+        # Restaurar el texto de la búsqueda de afuera (se vació al entrar al canal, ver
+        # _open_channel) sin disparar _on_search_text_changed de paso.
+        self.search_input.blockSignals(True)
+        self.search_input.setText(self._last_query)
+        self.search_input.blockSignals(False)
         self._generation += 1  # descarta cualquier carga del canal en curso
         self._loading = False
         if state:
@@ -984,6 +1182,26 @@ def confirm_live_download(parent, live_count, cut_enabled=False, total=1):
             "MediaSearchDialog", "Los directos en curso no se pueden recortar: se descargarán completos.")
     title = QCoreApplication.translate("MediaSearchDialog", "Directo en curso")
     return show_warning_confirm(parent, title, text + "\n\n" + question)
+
+
+def confirm_playlist_mode(parent, playlist_count):
+    """Hay playlists entre lo seleccionado y el modo playlist de esa pestaña está apagado.
+    Sí = lo activa (Modo Rápido abre su selector; Proceso Avanzado sigue lo que ya tenga
+    configurado -- rápido con selector, o lento agregando todo). No = cada playlist se
+    descarga solo con su primer video, igual que hace SOLO."""
+    if playlist_count <= 1:
+        text = QCoreApplication.translate(
+            "MediaSearchDialog", "Elegiste una playlist. ¿Quieres activar el modo playlist?")
+    else:
+        text = QCoreApplication.translate(
+            "MediaSearchDialog", "Elegiste {0} playlists. ¿Quieres activar el modo playlist?"
+        ).format(playlist_count)
+    text += "\n\n" + QCoreApplication.translate(
+        "MediaSearchDialog",
+        "Si eliges No, cada playlist se descargará solo con su primer video.")
+    from gui.dialogs.dialogs import show_warning_confirm
+    title = QCoreApplication.translate("MediaSearchDialog", "Playlist seleccionada")
+    return show_warning_confirm(parent, title, text)
 
 
 def ask_cut_one_by_one(parent):

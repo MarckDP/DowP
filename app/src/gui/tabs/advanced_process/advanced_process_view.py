@@ -381,10 +381,28 @@ class AdvancedProcessTab(QWidget):
         save_config(config)
 
     def _on_fast_mode_toggled(self, checked):
-        if self.chk_playlist_analysis.isChecked():
+        if not self.chk_playlist_analysis.isChecked():
+            return
+        if not checked:
             config = get_config()
-            config["fast_mode"] = checked
-            save_config(config)
+            if not config.get("fast_mode_warning_seen", False):
+                config["fast_mode_warning_seen"] = True
+                save_config(config)
+                from gui.dialogs.dialogs import show_warning_confirm
+                text = self.tr(
+                    "Desactivar el modo rápido hará que las playlists se analicen una por "
+                    "una. Esto tardará mucho, incluso si son playlists mayores a 50 videos."
+                    "\n\n¿Estás seguro?"
+                )
+                if not show_warning_confirm(self, self.tr("Modo rápido desactivado"), text):
+                    self.chk_fast_mode.blockSignals(True)
+                    self.chk_fast_mode.setChecked(True)
+                    self.chk_fast_mode.blockSignals(False)
+                    return
+
+        config = get_config()
+        config["fast_mode"] = checked
+        save_config(config)
 
     def _on_thumb_manual_toggled(self, checked):
         if not checked:
@@ -897,13 +915,18 @@ class AdvancedProcessTab(QWidget):
         se analiza como si se hubiera pegado. LOTES: varios, cada uno entra a la cola igual
         que una URL pegada. Solo viajan las URLs: el análisis sale del flujo normal."""
         from PySide6.QtWidgets import QDialog
-        from gui.dialogs.media_search_dialog import MediaSearchDialog, confirm_live_download
+        from gui.dialogs.media_search_dialog import MediaSearchDialog, confirm_live_download, confirm_playlist_mode
 
         solo = self.url_bar.solo_btn.isChecked()
         dialog = MediaSearchDialog(self, multi_select=not solo, initial_query=query)
         if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_items:
             return
-        items = dialog.selected_items[:1] if solo else dialog.selected_items
+        # Las tarjetas de canal nunca llegan hasta acá -- no son seleccionables en la
+        # ventana de búsqueda (ver media_search_dialog.py).
+        items = [item for item in dialog.selected_items if item.get("kind") != "channel"]
+        items = items[:1] if solo else items
+        if not items:
+            return
 
         live_count = sum(1 for item in items if item.get("is_live"))
         if live_count and not confirm_live_download(self, live_count, total=len(items)):
@@ -912,9 +935,21 @@ class AdvancedProcessTab(QWidget):
             return
 
         if solo:
+            # SOLO analiza con analyze_playlist=False sin importar el checkbox "Playlist"
+            # (ver start_analysis): una URL de playlist ya se resuelve sola como un único
+            # video, igual que si se hubiera pegado a mano -- nada especial que hacer aquí.
             self.url_bar.url_input.setText(items[0]["url"])
             self.start_analysis(items[0]["url"])
             return
+
+        # --- MODO LOTES ---
+        playlist_count = sum(1 for item in items if item.get("kind") == "playlist")
+        if playlist_count and not self.chk_playlist_analysis.isChecked():
+            if confirm_playlist_mode(self, playlist_count):
+                self.chk_playlist_analysis.setChecked(True)
+            # "No" (o no se activó): el checkbox queda como estaba, y start_analysis ya
+            # trata cualquier URL de playlist como un solo video mientras esté apagado.
+
         if query and self.url_bar.url_input.text().strip() == query:
             self.url_bar.url_input.clear()
         for item in items:
