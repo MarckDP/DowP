@@ -62,6 +62,10 @@ class AdvancedProcessTab(QWidget):
         self.video_details = VideoDetailsWidget()
         self.subtitle_options = SubtitleOptionsWidget()
         self.recode_options = RecodeOptionsWidget()
+        # "Posprocesar" sigue el modo de descarga del video elegido (ver
+        # RecodeOptionsWidget.set_stream_mode).
+        self.video_details.mode_selector.mode_changed.connect(self._sync_recode_stream_mode)
+        self._sync_recode_stream_mode()
         self.output_options = OutputOptionsWidget()
 
         # New Collapsible Queue Components (agrupados sin separación entre panel y tirador)
@@ -338,6 +342,16 @@ class AdvancedProcessTab(QWidget):
         self.combo_global_quality.currentIndexChanged.connect(self._on_global_quality_changed)
 
         return bar
+
+    def _sync_recode_stream_mode(self, *_args):
+        mode_text = self.video_details.mode_selector.current_mode()
+        if mode_text == self.tr("Solo Audio"):
+            mode = "audio_only"
+        elif mode_text == self.tr("Solo Video"):
+            mode = "video_only"
+        else:
+            mode = "video+audio"
+        self.recode_options.set_stream_mode(mode)
 
     def _on_label_changed(self, index):
         """Maneja el cambio de selección en el combobox de etiquetas."""

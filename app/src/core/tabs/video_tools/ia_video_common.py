@@ -1,5 +1,6 @@
 # src/core/tabs/video_tools/ia_video_common.py
-"""Piezas comunes de las Herramientas IA de video (Reescalado IA y Mapa de Profundidad):
+"""Piezas comunes de las Herramientas IA de video (Reescalado IA, Mapa de Profundidad y
+Mapa de Normales):
 sondeo de la fuente, recorte y elección del códec de salida.
 
 Vive aparte porque las dos funciones tienen que resolver EXACTAMENTE igual estas tres
@@ -12,7 +13,10 @@ Formatos de salida (ver build_video_encode_args):
     reproductores, navegadores ni móviles.
   - "Conservar transparencia" + MOV + fuente con alfa: ProRes 4444 con alfa, el formato
     estándar de video con transparencia de Premiere/After Effects/DaVinci/Final Cut.
-  - 16 bits (solo Mapa de Profundidad): FFV1 en MKV o PNG dentro de MOV, sin pérdida.
+  - 16 bits (Mapa de Profundidad y de Normales): FFV1 en MKV o PNG dentro de MOV, sin
+    pérdida.
+  - Mapa de Normales: formatos RGB que no deforman las direcciones (ver
+    build_video_encode_args).
 """
 import json
 import os
@@ -28,7 +32,7 @@ _ALPHA_PIX_FMTS = {
     "bgra64le", "bgra64be", "pal8",
 }
 
-# Contenedores que admiten 16 bits sin pérdida (Mapa de Profundidad), en orden de
+# Contenedores que admiten 16 bits sin pérdida (Mapas de Profundidad y Normales), en orden de
 # preferencia cuando el elegido no sirve.
 CONTAINERS_16BIT = ("mkv", "mov")
 
@@ -194,19 +198,45 @@ def container_of(path: str) -> str:
     return os.path.splitext(path)[1].lower().lstrip(".")
 
 
+def alpha_supported(container: str, sixteen_bit: bool = False, kind: str = "color") -> bool:
+    """Si la salida de build_video_encode_args puede llevar transparencia: MOV siempre
+    (ProRes 4444 o PNG); MKV en 16 bits (FFV1) y, en Mapa de Normales, también en 8 bits
+    (FFV1 RGB); MP4 (H.264) nunca."""
+    container = (container or "mp4").lower()
+    if container == "mov":
+        return True
+    return container == "mkv" and (sixteen_bit or kind == "normals")
+
+
 def build_video_encode_args(container: str, alpha: bool = False, depth16: bool = False,
-                            with_filter: bool = True) -> list:
+                            with_filter: bool = True, kind: str = "color") -> list:
     """Argumentos del códec de video de salida según contenedor, transparencia y 16 bits.
+
+    kind: "color" (Reescalado IA), "gray" (Mapa de Profundidad) o "normals" (Mapa de
+    Normales).
 
     - depth16 (Mapa de Profundidad): MKV -> FFV1 gris de 16 bits (o YUVA 16 bits con
       alfa); MOV -> PNG gris de 16 bits (o gris+alfa). Sin pérdida.
+    - Mapa de Normales: cada píxel es una DIRECCIÓN guardada en R, G y B, y H.264 4:2:0
+      la deforma (pasa a YUV y reduce el color a la cuarta parte): se ven halos al
+      iluminar con el mapa. Por eso MOV -> ProRes 4444 (10 bits, casi exacto; con o sin
+      alfa), MKV -> FFV1 RGB sin pérdida (8 o 16 bits) y, en 16 bits, MOV -> PNG RGB de
+      16 bits. MP4 queda como H.264 4:2:0, solo para vista previa (la interfaz lo avisa).
     - alpha en MOV: ProRes 4444 con alfa (10 bits).
     - resto: H.264 yuv420p. yuv420p exige ancho y alto pares: el filtro de escala los
       redondea hacia abajo (a lo sumo se pierde una fila/columna) en vez de fallar.
       with_filter=False lo omite, para quien arma su propio -filter_complex (no se
-      pueden combinar con -vf) y ya entrega los lados pares -- ver video_depth_engine.
+      pueden combinar con -vf) y ya entrega los lados pares -- ver video_frame_engine.
     """
     container = (container or "mp4").lower()
+    if kind == "normals" and container in ("mov", "mkv"):
+        if depth16 and container == "mov":
+            return ["-c:v", "png", "-pix_fmt", "rgba64be" if alpha else "rgb48be"]
+        if container == "mkv":
+            fmt = ("gbrap16le" if alpha else "gbrp16le") if depth16 else ("gbrap" if alpha else "gbrp")
+            return ["-c:v", "ffv1", "-level", "3", "-pix_fmt", fmt]
+        return ["-c:v", "prores_ks", "-profile:v", "4",
+                "-pix_fmt", "yuva444p10le" if alpha else "yuv444p10le", "-vendor", "apl0"]
     if depth16:
         if container == "mov":
             return ["-c:v", "png", "-pix_fmt", "ya16be" if alpha else "gray16be"]

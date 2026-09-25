@@ -12,7 +12,9 @@ from core.utils.download_history import download_history
 from core.utils.config_manager import get_config
 from core.utils.queue_manager import get_queue_manager
 from core.utils.output_artifacts import find_actual_downloaded_file
-from core.utils.preset_manager import build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE
+from core.utils.preset_manager import (
+    build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
+)
 from core.utils.file_conflict_manager import quarantine_for_recode, rollback_backup
 from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
 from core.tabs.quick_mode.quick_mode_logic import build_quick_request_data, reveal_in_file_manager
@@ -883,6 +885,24 @@ class QuickDownloadController(QObject):
 
         recode_enabled = bool(request_data.get("recode_enabled"))
         upscale_enabled = bool(request_data.get("upscale_enabled"))
+
+        # Red de seguridad: el modo de la descarga pudo cambiar después de elegir el
+        # posprocesado (ej. el "Modo global" de Proceso Avanzado cambia los ítems ya en
+        # cola). Lo que no tiene sentido en ese modo se omite (misma regla que la
+        # tarjeta "Posprocesar", ver preset_manager.recode_preset_fits).
+        stream_mode = request_data.get("mode") or "video+audio"
+        if upscale_enabled and not ia_tools_fit(stream_mode):
+            logger.info(f"QuickModeTab: Herramientas IA omitidas: la descarga es Solo Audio ({title}).")
+            upscale_enabled = False
+        if recode_enabled:
+            recode_settings = get_preset_manager().get_settings(
+                "video_tools/avanzado", request_data.get("recode_preset_name"))
+            if recode_settings and not recode_preset_fits(recode_settings, stream_mode):
+                logger.info(f"QuickModeTab: Recodificación omitida: el preajuste no sirve para una "
+                            f"descarga '{stream_mode}' ({title}).")
+                recode_enabled = False
+        if not recode_enabled and not upscale_enabled:
+            return False
 
         if recode_enabled:
             preset_name = request_data.get("recode_preset_name")

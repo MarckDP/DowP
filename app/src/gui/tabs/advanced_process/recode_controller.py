@@ -24,7 +24,9 @@ class RecodeController(QObject):
     def collect_recode_data(self) -> dict:
         widget = self.tab.recode_options
         recode_enabled = widget.switch_recode.isChecked()
-        upscale_enabled = widget.switch_upscale.isChecked()
+        # Deshabilitado = el modo de descarga no lo admite (Solo Audio, ver
+        # RecodeOptionsWidget.set_stream_mode), aunque un restore lo haya marcado.
+        upscale_enabled = widget.switch_upscale.isChecked() and widget.switch_upscale.isEnabled()
         return {
             "recode_enabled": recode_enabled,
             "recode_preset_name": widget.preset_bar.active_preset_name() if recode_enabled else None,

@@ -5,12 +5,22 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QFileDi
 from PySide6.QtCore import Qt
 
 from gui.styles import get_theme_token
+from gui.widgets.mode_selector import ModeSelector
 from gui.widgets.preset_bar import PresetBar
 from gui.tabs.video_tools.advanced_recode_panel import _PRESET_NAMESPACE
 from gui.tabs.video_tools.upscale_ia_panel import _PRESET_NAMESPACE as _UPSCALE_PRESET_NAMESPACE
-from core.utils.preset_manager import IA_TOOL_FUNCTIONS
+from core.utils.preset_manager import IA_TOOL_FUNCTIONS, ia_tools_fit, recode_preset_fits
 from core.utils.watermark_builder import check_watermark_file
 from core.utils.recode_guard import normalize_container
+
+# Modos del selector de arriba, en el orden de sus botones (mismas etiquetas que el
+# ModeSelector de Proceso Avanzado). Es el mismo valor que guarda cada preajuste de
+# Recodificación en "stream_mode", y el motor ya lo respeta (QueueWorker._execute_recode).
+_STREAM_MODES = ("video+audio", "audio_only", "video_only")
+# Contenedor de audio según el códec, para "Solo Audio" con un preajuste que conserva el
+# contenedor del original (container "same", ej. Normalizar Audio) y un original de video.
+_AUDIO_CONTAINER_BY_CODEC = {"aac": "m4a", "mp3": "mp3", "flac": "flac", "opus": "opus"}
+_AUDIO_CONTAINERS = {"m4a", "mp3", "flac", "opus", "ogg", "wav", "aac", "wma"}
 
 
 class PresetsPanel(QWidget):
@@ -34,6 +44,13 @@ class PresetsPanel(QWidget):
     get_upscale_settings()/get_recode_settings() por separado para que
     video_tools_view.py pueda detectar la combinación.
 
+    Selector "Video + Audio / Solo Audio / Solo Video" arriba de todo (como en el
+    DowP original y en Proceso Avanzado): filtra las dos listas a lo que tiene sentido
+    en ese modo (ver recode_preset_fits; en Solo Audio no hay Herramientas IA, que
+    necesitan video) y, al lanzar, fuerza ese modo sobre el preajuste elegido sin
+    tocar el guardado (ver get_recode_settings/get_upscale_settings). Así nunca se
+    combina, por ejemplo, un Mapa de Normales con "Convertir a MP3".
+
     Cada preajuste de Recodificación puede pedir container="same" (ver
     core.utils.default_presets, ej. los de normalizar audio: no tiene sentido
     forzar un contenedor fijo si solo se está tocando el audio) - se resuelve
@@ -53,6 +70,12 @@ class PresetsPanel(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
+        # Etiquetas por defecto del ModeSelector (Video + Audio / Solo Audio / Solo
+        # Video); el modo se resuelve por posición (ver stream_mode), no por el texto.
+        self.mode_selector = ModeSelector(self)
+        self.mode_selector.mode_changed.connect(self._on_stream_mode_changed)
+        layout.addWidget(self.mode_selector)
+
         frame_recode, rv = self._card_frame(self.tr("Preajustes de Recodificación"))
         # Un solo combo, agrupado por función adentro (ver PresetBar.refresh) - nada de
         # un filtro aparte más el picker (ver conversación).
@@ -71,6 +94,7 @@ class PresetsPanel(QWidget):
         )
         uv.addWidget(self.preset_bar_upscale)
         layout.addWidget(frame_upscale)
+        self.frame_upscale = frame_upscale
 
         # Aviso "la marca de agua de este preajuste ya no existe" + reparación puntual
         # (ver conversación): solo corrige la corrida actual, no reescribe el preajuste
@@ -97,6 +121,26 @@ class PresetsPanel(QWidget):
 
         self.preset_bar_recode.preset_applied.connect(self._on_recode_preset_applied)
         self.preset_bar_upscale.preset_applied.connect(self._on_upscale_preset_applied)
+        self._apply_stream_mode()
+
+    def stream_mode(self) -> str:
+        for i, btn in enumerate(self.mode_selector.buttons):
+            if btn.isChecked():
+                return _STREAM_MODES[i]
+        return _STREAM_MODES[0]
+
+    def _on_stream_mode_changed(self, *_args):
+        self._apply_stream_mode()
+        # Reemite el estado aunque ningún preajuste haya cambiado: el texto del botón
+        # "Iniciar" depende del modo (ver get_status).
+        self.preset_bar_recode.preset_applied.emit(self.preset_bar_recode.active_preset_name() or "")
+
+    def _apply_stream_mode(self):
+        mode = self.stream_mode()
+        self.preset_bar_recode.set_filter(lambda settings: recode_preset_fits(settings, mode))
+        # Las Herramientas IA siempre producen video: en Solo Audio se ocultan (y su
+        # preajuste elegido deja de contar, ver get_upscale_settings).
+        self.frame_upscale.setVisible(ia_tools_fit(mode))
 
     def _card_frame(self, title: str):
         frame = QFrame(self)
@@ -154,11 +198,20 @@ class PresetsPanel(QWidget):
         self._source_filepath = filepath
 
     def get_upscale_settings(self) -> dict | None:
-        """Ajustes del preajuste de Reescalado IA elegido, o None si el combo
-        está en "Sin preset". Elegirlo del combo NO empuja valores a ningún
-        control (mismo criterio que el resto de la app) -- este es el único
-        lugar de donde leerlo."""
-        return self.preset_bar_upscale.current_preset_settings()
+        """Ajustes del preajuste de Herramientas IA elegido, o None si el combo
+        está en "Sin preset" o el modo es Solo Audio. Elegirlo del combo NO empuja
+        valores a ningún control (mismo criterio que el resto de la app) -- este es
+        el único lugar de donde leerlo. En Solo Video, sale sin audio."""
+        mode = self.stream_mode()
+        if mode == "audio_only":
+            return None
+        preset = self.preset_bar_upscale.current_preset_settings()
+        if preset is None:
+            return None
+        settings = dict(preset)
+        if mode == "video_only":
+            settings["keep_audio"] = False
+        return settings
 
     def get_recode_settings(self, meta_override: dict | None = None, filepath_override: str | None = None) -> dict | None:
         """Ajustes del preajuste de Recodificación elegido, o None si el
@@ -170,12 +223,21 @@ class PresetsPanel(QWidget):
             return None
         settings = dict(preset)
         settings.update(self._settings_override)
+        # El modo del selector manda sobre el del preajuste (la lista ya solo ofrece
+        # preajustes compatibles, ver recode_preset_fits). Video + Audio no fuerza nada:
+        # respeta lo que el preajuste decida (ej. un GIF, que nunca lleva audio).
+        mode = self.stream_mode()
+        if mode != "video+audio":
+            settings["stream_mode"] = mode
         if settings.get("container") == "same":
             filepath = filepath_override if filepath_override is not None else self._source_filepath
             resolved = None
             if filepath:
                 ext = os.path.splitext(filepath)[1]
                 resolved = normalize_container(ext) if ext else None
+            if settings.get("stream_mode") == "audio_only" and resolved not in _AUDIO_CONTAINERS:
+                # Solo el audio de un video: no en su contenedor de video.
+                resolved = _AUDIO_CONTAINER_BY_CODEC.get(settings.get("audio_codec"), "m4a")
             settings["container"] = resolved or ("m4a" if settings.get("stream_mode") == "audio_only" else "mp4")
         return settings
 
@@ -194,16 +256,20 @@ class PresetsPanel(QWidget):
 
     def get_status(self) -> tuple[bool, str]:
         has_recode = self.preset_bar_recode.active_preset_name() is not None
-        has_upscale = self.preset_bar_upscale.active_preset_name() is not None
+        has_upscale = (self.preset_bar_upscale.active_preset_name() is not None
+                       and self.stream_mode() != "audio_only")
         if not has_recode and not has_upscale:
             return False, self.tr("Selecciona al menos un preajuste")
         if has_recode and self._warning_text:
             return False, self.tr("Resuelve el aviso de la marca de agua")
         if has_upscale and not has_recode:
-            # El mismo combo de IA trae preajustes de Reescalado y de Mapa de
-            # Profundidad (ver upscale_ia_panel.ia_function_of).
-            from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_DEPTH, ia_function_of
-            if ia_function_of(self.get_upscale_settings()) == FUNCTION_DEPTH:
+            # El mismo combo de IA trae preajustes de Reescalado y de los mapas
+            # (ver upscale_ia_panel.ia_function_of).
+            from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_DEPTH, FUNCTION_NORMALS, ia_function_of
+            function = ia_function_of(self.get_upscale_settings())
+            if function == FUNCTION_DEPTH:
                 return True, self.tr("Iniciar Mapa de Profundidad")
+            if function == FUNCTION_NORMALS:
+                return True, self.tr("Iniciar Mapa de Normales")
             return True, self.tr("Iniciar Reescalado")
         return True, self.tr("Iniciar Recodificación")

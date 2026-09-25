@@ -69,6 +69,8 @@ class PresetBar(QWidget):
         # para agrupar el picker por las categorías correctas (ver refresh()).
         self._function_choices = function_choices or PRESET_FUNCTIONS
         self._active_name = None
+        # Filtro opcional del picker: callable(settings) -> bool (ver set_filter).
+        self._filter = None
         self._is_picker = show_picker  # NO usar combo.isVisible(): una pestaña
         # inactiva del QTabWidget reporta isVisible()==False aunque este
         # configurada para mostrar el combo, y eso rompería el auto-refresh.
@@ -133,6 +135,18 @@ class PresetBar(QWidget):
         self._default_function = default_function
         self._job_type = job_type
 
+    def set_filter(self, predicate):
+        """Muestra en el picker solo los presets cuyos ajustes cumplen `predicate`
+        (callable(settings) -> bool), o todos con None. Si el elegido queda fuera, la
+        selección vuelve a "Sin preset" y se avisa con preset_applied("")."""
+        self._filter = predicate
+        if not self._is_picker:
+            return
+        previous = self._active_name
+        self.refresh()
+        if self._active_name != previous:
+            self.preset_applied.emit(self._active_name or "")
+
     def current_preset_settings(self):
         """Ajustes del preset activo, o None si no hay ninguno seleccionado
         ("Sin preset"). El panel host debe preferir esto sobre leer sus
@@ -178,6 +192,8 @@ class PresetBar(QWidget):
         self.combo.addItem(self.tr("Sin preset"), _NO_PRESET_DATA)
 
         presets = get_preset_manager().list_presets(self.namespace)
+        if self._filter is not None:
+            presets = [p for p in presets if self._filter(p.get("settings") or {})]
         by_function = {}
         for preset in presets:
             by_function.setdefault(preset.get("function"), []).append(preset["name"])

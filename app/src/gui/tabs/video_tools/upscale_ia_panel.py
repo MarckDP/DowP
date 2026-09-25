@@ -10,6 +10,7 @@ from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
 from gui.widgets.mode_selector import ModeSelector
 from gui.widgets.preset_bar import PresetBar
 from gui.tabs.image_tools.depth_popover import DepthPopoverContent
+from gui.tabs.image_tools.normal_popover import NormalPopoverContent
 from gui.tabs.image_tools.upscale_popover import UpscalePopoverContent
 from gui.tabs.video_tools.ia_output_options import VideoIAOutputOptions
 from core.tabs.video_tools.ia_video_common import CONTAINERS_16BIT
@@ -28,8 +29,8 @@ from core.utils.recode_guard import CONTAINER_LABELS
 # (ver PresetManager._RENAMED_NAMESPACES, migra solo lo ya guardado).
 _PRESET_NAMESPACE = IA_TOOLS_NAMESPACE
 
-# Contenedores ofrecidos: los de uso general. Con "16 bits" (solo Mapa de Profundidad)
-# la lista se reduce a los que lo admiten sin pérdida (CONTAINERS_16BIT). Cómo se
+# Contenedores ofrecidos: los de uso general. Con "16 bits" (solo en los mapas) la lista
+# se reduce a los que lo admiten sin pérdida (CONTAINERS_16BIT). Cómo se
 # codifica cada caso: core/tabs/video_tools/ia_video_common.py.
 _CONTAINER_IDS = ["mp4", "mov", "mkv"]
 
@@ -37,8 +38,17 @@ _CONTAINER_IDS = ["mp4", "mov", "mkv"]
 # vista y los preajustes sepan qué job crear sin mirar el nombre visible.
 FUNCTION_UPSCALE = "upscale"
 FUNCTION_DEPTH = "depth"
+FUNCTION_NORMALS = "normals"
 _PRESET_FUNCTION_IDS = {FUNCTION_UPSCALE: ("ia_reescalar", "UPSCALE_VIDEO"),
-                        FUNCTION_DEPTH: ("ia_profundidad", "DEPTH_VIDEO")}
+                        FUNCTION_DEPTH: ("ia_profundidad", "DEPTH_VIDEO"),
+                        FUNCTION_NORMALS: ("ia_normales", "NORMAL_VIDEO")}
+# Funciones que generan un mapa fotograma a fotograma (ver video_frame_engine.py):
+# comparten las opciones de video (suavizado, procesar a menos fps) y la casilla "16 bits".
+_MAP_FUNCTIONS = (FUNCTION_DEPTH, FUNCTION_NORMALS)
+# Contenedor inicial de cada función, hasta que el usuario elija otro. Mapa de Normales
+# empieza en MOV (ProRes 4444): H.264 deforma las direcciones (ver
+# ia_video_common.build_video_encode_args).
+_DEFAULT_CONTAINERS = {FUNCTION_NORMALS: "mov"}
 
 
 def ia_function_of(settings: dict | None) -> str:
@@ -48,8 +58,8 @@ def ia_function_of(settings: dict | None) -> str:
 
 
 class UpscaleIAPanel(QWidget):
-    """Pestaña "Herramientas IA" de Herramientas Multimedia: Reescalado IA o Mapa de
-    Profundidad, elegido arriba de todo.
+    """Pestaña "Herramientas IA" de Herramientas Multimedia: Reescalado IA, Mapa de
+    Profundidad o Mapa de Normales, elegido arriba de todo.
 
     - Reescalado: extrae los fotogramas del video, los reescala con el motor NCNN elegido
       (mismo selector que el Editor de Imagen, UpscalePopoverContent) y rearma el video
@@ -57,6 +67,9 @@ class UpscaleIAPanel(QWidget):
     - Mapa de Profundidad: mismo selector de modelos que el Editor de Imagen
       (DepthPopoverContent en modo video) -- job_type "DEPTH_VIDEO", ver
       core/tabs/video_tools/video_depth_engine.py.
+    - Mapa de Normales: mismo selector que el Editor de Imagen (NormalPopoverContent en
+      modo video, solo MoGe-2) -- job_type "NORMAL_VIDEO", ver
+      core/tabs/video_tools/video_normal_engine.py.
 
     El nombre de la clase se conserva (lo usan EncodingOptionsWidget y la vista) aunque
     ya no sea solo de reescalado."""
@@ -65,6 +78,9 @@ class UpscaleIAPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Contenedor elegido en cada función, para volver a él al cambiar de función.
+        self._container_by_function = dict(_DEFAULT_CONTAINERS)
+        self._shown_function = None
         self._init_ui()
 
     def _card(self, parent, title: str):
@@ -125,9 +141,9 @@ class UpscaleIAPanel(QWidget):
         # ── Función: mismo selector segmentado que "Rápido / Manual" de Comprimir ─
         # (ModeSelector). Las etiquetas se traducen aquí; la función se resuelve por
         # posición (ver current_function), nunca comparando el texto visible.
-        self._function_ids = [FUNCTION_UPSCALE, FUNCTION_DEPTH]
+        self._function_ids = [FUNCTION_UPSCALE, FUNCTION_DEPTH, FUNCTION_NORMALS]
         self.function_selector = ModeSelector(
-            content, labels=[self.tr("Reescalado"), self.tr("Mapa de profundidad")])
+            content, labels=[self.tr("Reescalado"), self.tr("Profundidad"), self.tr("Normales")])
         layout.addWidget(self.function_selector)
 
         # ── Contenedor de salida (+ 16 bits / transparencia / audio) ─────────
@@ -136,8 +152,7 @@ class UpscaleIAPanel(QWidget):
         cv.addWidget(self.combo_container)
         self.output_options = VideoIAOutputOptions(frame_container, allow_16bit=True)
         cv.addWidget(self.output_options)
-        self.combo_container.currentIndexChanged.connect(
-            lambda _i: self.output_options.set_container(self.combo_container.currentData()))
+        self.combo_container.currentIndexChanged.connect(self._on_container_changed)
         self.output_options.depth16_toggled.connect(self._populate_containers)
         layout.addWidget(frame_container)
 
@@ -146,14 +161,15 @@ class UpscaleIAPanel(QWidget):
         self.upscale_content = UpscalePopoverContent(content)
         self.upscale_content.selection_changed.connect(self._on_selection_changed)
 
-        depth_page = QWidget(content)
-        dv = QVBoxLayout(depth_page)
-        dv.setContentsMargins(0, 0, 0, 0)
-        dv.setSpacing(10)
-        self.depth_content = DepthPopoverContent(depth_page, video_mode=True)
+        self.depth_content = DepthPopoverContent(content, video_mode=True)
         self.depth_content.selection_changed.connect(self._on_selection_changed)
-        dv.addWidget(self.depth_content)
-        frame_video, vv = self._card(depth_page, self.tr("Opciones de video"))
+        self.normal_content = NormalPopoverContent(content, video_mode=True)
+        self.normal_content.selection_changed.connect(self._on_selection_changed)
+
+        # Opciones de video de los mapas (profundidad y normales): una sola tarjeta,
+        # debajo del selector de modelo de la función elegida.
+        frame_video, vv = self._card(content, self.tr("Opciones de video"))
+        self.frame_video = frame_video
         row = QHBoxLayout()
         row.addWidget(QLabel(self.tr("Suavizado:"), frame_video))
         self.combo_smoothing = self._combo(frame_video)
@@ -161,10 +177,6 @@ class UpscaleIAPanel(QWidget):
         self.combo_smoothing.addItem(self.tr("Bajo"), "low")
         self.combo_smoothing.addItem(self.tr("Medio"), "medium")
         self.combo_smoothing.addItem(self.tr("Alto"), "high")
-        self.combo_smoothing.setToolTip(self.tr(
-            "Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. "
-            "Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela.\n"
-            "Con Depth Anything 3 casi no hace falta: ya calcula varios fotogramas a la vez."))
         row.addWidget(self.combo_smoothing, 1)
         vv.addLayout(row)
         row = QHBoxLayout()
@@ -175,15 +187,17 @@ class UpscaleIAPanel(QWidget):
         self.combo_step.addItem(self.tr("Un tercio (3× más rápido)"), 3)
         self.combo_step.addItem(self.tr("Un cuarto (4× más rápido)"), 4)
         self.combo_step.setToolTip(self.tr(
-            "Calcula la profundidad solo en una parte de los fotogramas y rellena los "
+            "Calcula el mapa solo en una parte de los fotogramas y rellena los "
             "demás mezclando los dos mapas vecinos. El video conserva sus fps y su duración."))
         row.addWidget(self.combo_step, 1)
         vv.addLayout(row)
-        dv.addWidget(frame_video)
 
+        # Orden de las páginas = orden de self._function_ids.
         self.stack.addWidget(self.upscale_content)
-        self.stack.addWidget(depth_page)
+        self.stack.addWidget(self.depth_content)
+        self.stack.addWidget(self.normal_content)
         layout.addWidget(self.stack)
+        layout.addWidget(frame_video)
 
         self.lbl_note = QLabel(content)
         self.lbl_note.setObjectName("mutedLabel")
@@ -221,24 +235,42 @@ class UpscaleIAPanel(QWidget):
         return FUNCTION_UPSCALE
 
     def set_function(self, function: str):
-        """Elige la función por su clave (FUNCTION_UPSCALE / FUNCTION_DEPTH)."""
+        """Elige la función por su clave (FUNCTION_UPSCALE / FUNCTION_DEPTH / FUNCTION_NORMALS)."""
         if function in self._function_ids:
             self.function_selector.buttons[self._function_ids.index(function)].click()
 
     def _on_function_changed(self, *_args):
         function = self.current_function()
-        is_depth = function == FUNCTION_DEPTH
-        self.stack.setCurrentIndex(1 if is_depth else 0)
-        # "16 bits" solo tiene sentido en un mapa de profundidad.
+        is_map = function in _MAP_FUNCTIONS
+        if self._shown_function is not None:
+            self._container_by_function[self._shown_function] = self.combo_container.currentData()
+        self._shown_function = function
+        self.stack.setCurrentIndex(self._function_ids.index(function))
+        self.frame_video.setVisible(is_map)
+        self.output_options.set_kind("normals" if function == FUNCTION_NORMALS else
+                                     "gray" if function == FUNCTION_DEPTH else "color")
+        # "16 bits" solo tiene sentido en los mapas.
         if self.output_options.chk_16bit is not None:
-            if not is_depth:
+            if not is_map:
                 self.output_options.chk_16bit.setChecked(False)
-            self.output_options.chk_16bit.setVisible(is_depth)
-        self._populate_containers()
-        if is_depth:
+            self.output_options.chk_16bit.setVisible(is_map)
+        self._populate_containers(preferred=self._container_by_function.get(function))
+        if function == FUNCTION_DEPTH:
+            self.combo_smoothing.setToolTip(self.tr(
+                "Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. "
+                "Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela.\n"
+                "Con Depth Anything 3 casi no hace falta: ya calcula varios fotogramas a la vez."))
             self.lbl_note.setText(self.tr(
                 "Calcula la profundidad de cada fotograma con el modelo elegido, sin guardar "
                 "fotogramas en disco. Con modelos grandes puede tardar bastante: se recomienda GPU."))
+        elif function == FUNCTION_NORMALS:
+            self.combo_smoothing.setToolTip(self.tr(
+                "Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. "
+                "Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela."))
+            self.lbl_note.setText(self.tr(
+                "Calcula las normales de cada fotograma con MoGe-2, sin guardar fotogramas en "
+                "disco, y las amplía al tamaño original. Con modelos grandes puede tardar "
+                "bastante: se recomienda GPU."))
         else:
             self.lbl_note.setText(self.tr(
                 "Extrae los fotogramas del video, los reescala todos con el motor "
@@ -248,10 +280,10 @@ class UpscaleIAPanel(QWidget):
         self.preset_bar.set_save_defaults(preset_function, job_type)
         self.validity_changed.emit(self.is_valid())
 
-    def _populate_containers(self, *_args):
+    def _populate_containers(self, *_args, preferred: str | None = None):
         """Con "16 bits" solo quedan los contenedores que lo admiten (MKV, MOV); si el
-        elegido ya no está, pasa al primero de esa lista."""
-        current = self.combo_container.currentData()
+        elegido (o `preferred`) ya no está, pasa al primero de esa lista."""
+        current = preferred or self.combo_container.currentData()
         ids = list(CONTAINERS_16BIT) if self.output_options.is_16bit() else _CONTAINER_IDS
         self.combo_container.blockSignals(True)
         self.combo_container.clear()
@@ -262,21 +294,33 @@ class UpscaleIAPanel(QWidget):
         self.combo_container.blockSignals(False)
         self.output_options.set_container(self.combo_container.currentData())
 
+    def _on_container_changed(self, _index: int):
+        self.output_options.set_container(self.combo_container.currentData())
+        self._container_by_function[self.current_function()] = self.combo_container.currentData()
+
     def _on_selection_changed(self, *_args):
         self.validity_changed.emit(self.is_valid())
 
     # ─── API pública (mismo contrato que los demás tabs de EncodingOptionsWidget) ──
 
     def is_valid(self) -> bool:
-        if self.current_function() == FUNCTION_DEPTH:
+        function = self.current_function()
+        if function == FUNCTION_DEPTH:
             return self.depth_content.is_valid_selection()
+        if function == FUNCTION_NORMALS:
+            return self.normal_content.is_valid_selection()
         return self.upscale_content.is_valid_selection()
 
     def get_status(self) -> tuple[bool, str]:
-        if self.current_function() == FUNCTION_DEPTH:
+        function = self.current_function()
+        if function == FUNCTION_DEPTH:
             if self.is_valid():
                 return True, self.tr("Iniciar Mapa de Profundidad")
             return False, self.tr("Elige un motor y un modelo de profundidad.")
+        if function == FUNCTION_NORMALS:
+            if self.is_valid():
+                return True, self.tr("Iniciar Mapa de Normales")
+            return False, self.tr("Elige un motor y un modelo de normales.")
         if self.is_valid():
             return True, self.tr("Iniciar Reescalado")
         return False, self.tr("Elige un motor y un modelo de reescalado IA.")
@@ -287,6 +331,10 @@ class UpscaleIAPanel(QWidget):
             settings = self.depth_content.get_settings()
             settings["depth_smoothing"] = self.combo_smoothing.currentData() or "off"
             settings["depth_frame_step"] = self.combo_step.currentData() or 1
+        elif function == FUNCTION_NORMALS:
+            settings = self.normal_content.get_settings()
+            settings["normals_smoothing"] = self.combo_smoothing.currentData() or "off"
+            settings["normals_frame_step"] = self.combo_step.currentData() or 1
         else:
             settings = self.upscale_content.get_settings()
         settings["ia_function"] = function

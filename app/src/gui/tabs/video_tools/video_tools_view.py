@@ -32,7 +32,9 @@ from core.utils.queue_manager import get_queue_manager, JobStatus
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup, find_available_rename
 from core.utils.recode_guard import container_supports_multi_audio, CONTAINER_TO_EXTENSION
 from core.tabs.video_tools.ia_video_common import trimmed_duration
-from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_DEPTH, ia_function_of
+from gui.tabs.video_tools.upscale_ia_panel import (
+    FUNCTION_DEPTH, FUNCTION_NORMALS, FUNCTION_UPSCALE, ia_function_of,
+)
 
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
 
@@ -1128,8 +1130,11 @@ class VideoToolsTab(QWidget):
     def _ia_job_spec(self, settings: dict, base_name: str):
         """(job_type, clave de opciones en job.config, título) del job de Herramientas
         IA según la función de los ajustes (ver upscale_ia_panel.ia_function_of)."""
-        if ia_function_of(settings) == FUNCTION_DEPTH:
+        function = ia_function_of(settings)
+        if function == FUNCTION_DEPTH:
             return "DEPTH_VIDEO", "depth_options", self.tr("Mapa de profundidad: {0}").format(base_name)
+        if function == FUNCTION_NORMALS:
+            return "NORMAL_VIDEO", "normal_options", self.tr("Mapa de normales: {0}").format(base_name)
         return "UPSCALE_VIDEO", "upscale_options", f"Reescalado IA: {base_name}"
 
     def _trim_for(self, entry_key: str, duration_sec: float):
@@ -1183,10 +1188,10 @@ class VideoToolsTab(QWidget):
         clicked ya son genéricos (no miran job_type), así que no hace falta
         duplicarlos para este job_type nuevo.
 
-        Sirve para las dos funciones de Herramientas IA: con ajustes de Mapa de
-        Profundidad (ia_function "depth") crea jobs DEPTH_VIDEO -- ver _ia_job_spec."""
-        is_depth = ia_function_of(settings) == FUNCTION_DEPTH
-        if not is_depth and not self._confirm_upscale_engine_if_needed(settings.get("upscale_engine")):
+        Sirve para todas las funciones de Herramientas IA: con ajustes de Mapa de
+        Profundidad o de Normales crea jobs DEPTH_VIDEO / NORMAL_VIDEO -- ver _ia_job_spec."""
+        is_map = ia_function_of(settings) != FUNCTION_UPSCALE
+        if not is_map and not self._confirm_upscale_engine_if_needed(settings.get("upscale_engine")):
             return
 
         qm = get_queue_manager()
@@ -1217,9 +1222,9 @@ class VideoToolsTab(QWidget):
             trim_in, trim_out = self._trim_for(entry_key, duration_sec)
             duration_sec = trimmed_duration(duration_sec, trim_in, trim_out)
 
-            # El Mapa de Profundidad no guarda fotogramas en disco: no hace falta el
-            # chequeo de espacio temporal del Reescalado.
-            if not is_depth and not self._has_enough_space_for_upscale(meta, fps, duration_sec, settings):
+            # Los mapas (profundidad, normales) no guardan fotogramas en disco: no hace
+            # falta el chequeo de espacio temporal del Reescalado.
+            if not is_map and not self._has_enough_space_for_upscale(meta, fps, duration_sec, settings):
                 logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
                 self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
                 continue
@@ -1283,10 +1288,10 @@ class VideoToolsTab(QWidget):
         apenas la etapa 2 termina sea cual sea el resultado (ver
         self._chain_cleanup).
 
-        Igual con Mapa de Profundidad (ia_function "depth"): la etapa 1 es un job
-        DEPTH_VIDEO -- ver _ia_job_spec."""
-        is_depth = ia_function_of(upscale_settings) == FUNCTION_DEPTH
-        if not is_depth and not self._confirm_upscale_engine_if_needed(upscale_settings.get("upscale_engine")):
+        Igual con Mapa de Profundidad o de Normales: la etapa 1 es un job DEPTH_VIDEO /
+        NORMAL_VIDEO -- ver _ia_job_spec."""
+        is_map = ia_function_of(upscale_settings) != FUNCTION_UPSCALE
+        if not is_map and not self._confirm_upscale_engine_if_needed(upscale_settings.get("upscale_engine")):
             return
 
         import tempfile
@@ -1318,7 +1323,7 @@ class VideoToolsTab(QWidget):
             trim_in, trim_out = self._trim_for(entry_key, duration_sec)
             duration_sec = trimmed_duration(duration_sec, trim_in, trim_out)
 
-            if not is_depth and not self._has_enough_space_for_upscale(meta, fps, duration_sec, upscale_settings):
+            if not is_map and not self._has_enough_space_for_upscale(meta, fps, duration_sec, upscale_settings):
                 logger.info(f"VideoToolsTab: Reescalado IA omite (sin espacio en disco): {filepath}")
                 self.queue_widget.update_file_status(entry_key, self.tr("Sin espacio en disco"))
                 continue
@@ -1347,9 +1352,9 @@ class VideoToolsTab(QWidget):
             intermediate_path = os.path.join(self._chain_temp_dir, f"{idx}_{base_name}.mp4")
 
             job_type, options_key, title = self._ia_job_spec(upscale_settings, base_name)
-            if is_depth:
-                # El intermedio sale del contenedor del preajuste de profundidad (puede
-                # ser 16 bits, que MP4 no admite); la Recodificación define el final.
+            if is_map:
+                # El intermedio sale del contenedor del preajuste del mapa (puede ser 16
+                # bits, que MP4 no admite); la Recodificación define el final.
                 inter_container = upscale_settings.get("container", "mkv")
                 intermediate_path = os.path.splitext(intermediate_path)[0] + "." + \
                     CONTAINER_TO_EXTENSION.get(inter_container, inter_container)

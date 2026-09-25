@@ -21,7 +21,9 @@ from PySide6.QtWidgets import (
 
 from gui.widgets.preset_bar import PresetBar
 from gui.styles import get_theme_token
-from core.utils.preset_manager import IA_POST_DOWNLOAD_FUNCTIONS, IA_TOOLS_NAMESPACE
+from core.utils.preset_manager import (
+    IA_POST_DOWNLOAD_FUNCTIONS, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
+)
 
 _PRESET_NAMESPACE = "video_tools/avanzado"
 _UPSCALE_PRESET_NAMESPACE = IA_TOOLS_NAMESPACE
@@ -42,6 +44,12 @@ class RecodeOptionsWidget(QFrame):
     Multimedia -- ver core/tabs/video_tools/upscale_chain.py). Antes se
     llamaba "Recodificar" y tenía una sola sección -- renombrada al agregar
     la segunda, ya no describe una sola acción.
+
+    Sigue el modo de la descarga (Video + Audio / Solo Audio / Solo Video, ver
+    set_stream_mode): solo lista los preajustes de Recodificación que tienen sentido en
+    ese modo y, en Solo Audio, apaga Herramientas IA (necesitan video) -- misma regla
+    que la pestaña Preajustes de Herramientas Multimedia (ver
+    core.utils.preset_manager.recode_preset_fits).
 
     Mismo molde visual que SubtitleOptionsWidget (misma pestaña, tarjeta hermana a su
     izquierda): QFrame de ancho fijo, header colapsable, cuerpo animado. No sabe nada de
@@ -65,6 +73,7 @@ class RecodeOptionsWidget(QFrame):
 
         self._show_header = show_header
         self._is_expanded = start_expanded
+        self._stream_mode = "video+audio"
         self._anim_group = None
 
         self.init_ui()
@@ -248,6 +257,23 @@ class RecodeOptionsWidget(QFrame):
         self.switch_recode.toggled.connect(self._on_switch_toggled)
         self.switch_recode.toggled.connect(self._update_header_highlight)
         self._update_header_highlight()
+
+    def set_stream_mode(self, stream_mode: str):
+        """Modo de la descarga ("video+audio", "audio_only", "video_only"; otro valor,
+        como "thumbnail_only", no filtra). Si el preajuste elegido deja de tener
+        sentido, la selección vuelve a "Sin preset"."""
+        self._stream_mode = stream_mode or "video+audio"
+        self.preset_bar.set_filter(lambda settings: recode_preset_fits(settings, self._stream_mode))
+        ia_ok = ia_tools_fit(self._stream_mode)
+        if not ia_ok and self.switch_upscale.isChecked():
+            self.switch_upscale.setChecked(False)
+        self.switch_upscale.setEnabled(ia_ok)
+        self.switch_upscale.setToolTip("" if ia_ok else self.tr(
+            "Las Herramientas IA necesitan video: no están disponibles en Solo Audio."))
+        self._update_header_highlight()
+
+    def stream_mode(self) -> str:
+        return self._stream_mode
 
     def _on_switch_toggled(self, checked: bool):
         self.preset_bar.setEnabled(checked)

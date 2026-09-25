@@ -349,6 +349,8 @@ class QuickModeTab(QWidget):
 
     def _on_mode_changed(self, index):
         mode = self.mode_combo.itemData(index) or "video+audio"
+        # "Posprocesar" solo ofrece lo que tiene sentido en este modo.
+        self.recode_options.set_stream_mode(mode)
         current = self.quality_combo.currentData()
         self.quality_combo.blockSignals(True)
         self.quality_combo.clear()

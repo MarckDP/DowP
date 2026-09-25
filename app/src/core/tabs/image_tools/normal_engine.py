@@ -93,30 +93,53 @@ def _encode_normals(vectors: np.ndarray) -> np.ndarray:
     return ((vectors * 0.5 + 0.5).clip(0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
 
 
-def _run_moge(session, rgb: Image.Image, options: dict) -> np.ndarray:
-    width, height = rgb.size
+def moge_work_size(width: int, height: int) -> tuple[int, int]:
+    """Tamaño al que se le pasa la imagen a MoGe-2: lado mayor limitado a _MOGE_MAX_SIDE."""
     scale = min(1.0, _MOGE_MAX_SIDE / max(width, height))
-    work = rgb if scale >= 1.0 else rgb.resize(
-        (max(1, round(width * scale)), max(1, round(height * scale))), Image.Resampling.LANCZOS)
-    tensor = (np.asarray(work, dtype=np.float32) / 255.0).transpose(2, 0, 1)[None]
-    tokens = MOGE_TOKENS.get(options.get("normals_detail", "medium"), MOGE_TOKENS["medium"])
+    if scale >= 1.0:
+        return width, height
+    return max(1, round(width * scale)), max(1, round(height * scale))
 
+
+def moge_tokens(options: dict) -> int:
+    return MOGE_TOKENS.get(options.get("normals_detail", "medium"), MOGE_TOKENS["medium"])
+
+
+def moge_vectors(session, rgb: np.ndarray, tokens: int) -> np.ndarray:
+    """Normales (HxWx3 float32 unitarios, convención OpenGL) de un RGB uint8 HxWx3 ya al
+    tamaño de trabajo (ver moge_work_size). Las usan el Editor de Imagen y el Mapa de
+    Normales de video (core/tabs/video_tools/video_normal_engine.py)."""
+    tensor = (np.asarray(rgb, dtype=np.float32) / 255.0).transpose(2, 0, 1)[None]
     outputs = session.run(None, {"image": np.ascontiguousarray(tensor, dtype=np.float32),
                                  "num_tokens": np.array(tokens, dtype=np.int64)})
     by_name = dict(zip((o.name for o in session.get_outputs()), outputs))
-    normal, mask = by_name["normal"][0], by_name["mask"][0]     # HxWx3 y HxW, ya al tamaño de `work`
+    normal, mask = by_name["normal"][0], by_name["mask"][0]     # HxWx3 y HxW, al tamaño de entrada
 
     # cámara (x derecha, y abajo, z hacia dentro) -> OpenGL (x derecha, y arriba, z hacia ti)
     vectors = np.stack([normal[..., 0], -normal[..., 1], -normal[..., 2]], axis=-1)
     # sin superficie (cielo, huecos): plano frontal en vez de un vector nulo
     vectors = np.where((mask > 0.5)[..., None], vectors, np.array([0.0, 0.0, 1.0], np.float32))
-
-    if work.size != (width, height):
-        # ampliar los tres componentes por separado y volver a normalizar: interpolar
-        # vectores unitarios deja vectores algo más cortos
-        vectors = np.stack([_resize_float(vectors[..., c], (width, height)) for c in range(3)], axis=-1)
-        vectors /= np.maximum(np.linalg.norm(vectors, axis=-1, keepdims=True), 1e-6)
     return vectors.astype(np.float32)
+
+
+def resize_vectors(vectors: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """Amplía un campo de normales a (ancho, alto) y lo vuelve a normalizar: interpolar
+    vectores unitarios (o mezclarlos, como el suavizado del video) deja vectores algo
+    más cortos. Si ya tiene ese tamaño, solo normaliza."""
+    if (vectors.shape[1], vectors.shape[0]) != tuple(size):
+        vectors = np.stack([_resize_float(vectors[..., c], size) for c in range(3)], axis=-1)
+    vectors = vectors / np.maximum(np.linalg.norm(vectors, axis=-1, keepdims=True), 1e-6)
+    return vectors.astype(np.float32)
+
+
+def _run_moge(session, rgb: Image.Image, options: dict) -> np.ndarray:
+    width, height = rgb.size
+    work_size = moge_work_size(width, height)
+    work = rgb if work_size == (width, height) else rgb.resize(work_size, Image.Resampling.LANCZOS)
+    vectors = moge_vectors(session, np.asarray(work), moge_tokens(options))
+    if work_size != (width, height):
+        vectors = resize_vectors(vectors, (width, height))
+    return vectors
 
 
 # ═════════════════════════════════════════════════════════════════════════════

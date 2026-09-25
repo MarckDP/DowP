@@ -45,12 +45,13 @@ PRESET_FUNCTIONS = {
 IA_TOOL_FUNCTIONS = {
     "ia_reescalar": QT_TRANSLATE_NOOP("preset_manager", "Reescalado"),
     "ia_profundidad": QT_TRANSLATE_NOOP("preset_manager", "Mapa de profundidad"),
+    "ia_normales": QT_TRANSLATE_NOOP("preset_manager", "Mapa de normales"),
 }
 
 # Solo las funciones de IA que Modo Rápido y Proceso Avanzado saben ejecutar después de
 # una descarga (hoy, el Reescalado: ver core/tabs/video_tools/upscale_chain.py). Sus
-# pickers usan esta lista, así un preajuste de Mapa de Profundidad (que solo corre en
-# Herramientas Multimedia) no aparece ahí: PresetBar solo lista las funciones que recibe.
+# pickers usan esta lista, así un preajuste de Mapa de Profundidad o de Normales (que
+# solo corren en Herramientas Multimedia) no aparece ahí: PresetBar solo lista las funciones que recibe.
 IA_POST_DOWNLOAD_FUNCTIONS = {
     "ia_reescalar": IA_TOOL_FUNCTIONS["ia_reescalar"],
 }
@@ -61,6 +62,41 @@ IA_POST_DOWNLOAD_FUNCTIONS = {
 # presets_panel.py): un namespace desincronizado en un solo lugar deja presets guardados
 # que la ejecución real nunca encuentra, sin error visible.
 IA_TOOLS_NAMESPACE = "video_tools/ia_tools"
+
+
+# ── Modo Video + Audio / Solo Audio / Solo Video y posprocesado ────────────────
+# Mismo valor que el modo de descarga ("mode" en request_data, "playlist_mode" en un job
+# PLAYLIST) y que "stream_mode" de un preajuste de Recodificación. Lo usan la pestaña
+# Preajustes de Herramientas Multimedia (su propio selector) y la tarjeta "Posprocesar"
+# de Modo Rápido / Proceso Avanzado (sigue el modo de la descarga), para filtrar los
+# preajustes, y cada download_controller.py al ejecutar, como red de seguridad.
+
+def _touches_only_audio(settings: dict) -> bool:
+    """Preajuste que copia el video tal cual y solo procesa el audio (ej. Normalizar
+    Audio): tiene sentido con o sin el video, pero no en "Solo Video"."""
+    return (settings.get("video_mode") == "copy"
+            and settings.get("audio_mode") not in (None, "none", "copy"))
+
+
+def recode_preset_fits(settings: dict, stream_mode: str) -> bool:
+    """Si un preajuste de Recodificación tiene sentido en ese modo:
+      - Video + Audio: todo lo que produce video (no "Convertir a MP3").
+      - Solo Audio: los de solo audio y los que solo tocan el audio (Normalizar Audio).
+      - Solo Video: los que producen video, menos los que solo tocan el audio.
+    Un modo desconocido (ej. "thumbnail_only") no filtra nada."""
+    audio_only = (settings or {}).get("stream_mode") == "audio_only"
+    if stream_mode == "audio_only":
+        return audio_only or _touches_only_audio(settings)
+    if stream_mode == "video_only":
+        return not audio_only and not _touches_only_audio(settings)
+    if stream_mode == "video+audio":
+        return not audio_only
+    return True
+
+
+def ia_tools_fit(stream_mode: str) -> bool:
+    """Las Herramientas IA de video necesitan video: no en "Solo Audio"."""
+    return stream_mode != "audio_only"
 
 # Grupo (dentro del mismo combo, no un filtro aparte - ver conversación) para presets sin
 # función asignada: migrados de antes de que este campo existiera, o importados de un

@@ -159,146 +159,148 @@
 <context>
     <name>AdvancedProcessTab</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="244"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="248"/>
         <location filename="../../gui/tabs/advanced_process/playlist_controller.py" line="37"/>
         <source>Playlist</source>
         <translation>Playlist</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="246"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="250"/>
         <source>Si se activa y pegas una playlist, permite encolar múltiples medios a la vez.</source>
         <translation>Se ativado e você colar uma playlist, permite enfileirar várias mídias de uma vez.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="249"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="253"/>
         <source>Modo rápido</source>
         <translation>Modo rápido</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="252"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="256"/>
         <source>Habilita un análisis ultrarrápido que añade todos los elementos de golpe (puede no mostrar info completa al instante).</source>
         <translation>Ativa uma análise ultrarrápida que adiciona todos os itens de uma vez (pode não mostrar as informações completas na hora).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="262"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="266"/>
         <source>Miniaturas:</source>
         <translation>Miniaturas:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="268"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="296"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="459"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="272"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="300"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="473"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="270"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="274"/>
         <source>Decidir configuración de miniatura manualmente en cada ítem.</source>
         <translation>Decidir a configuração da miniatura manualmente em cada item.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="273"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="277"/>
         <source>Con medio</source>
         <translation>Com a mídia</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="275"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="279"/>
         <source>Descargar la miniatura junto con cada medio por defecto.</source>
         <translation>Baixar a miniatura junto com cada mídia por padrão.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="278"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="282"/>
         <source>Solo miniatura</source>
         <translation>Somente miniatura</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="280"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="284"/>
         <source>Descargar EXCLUSIVAMENTE la miniatura de cada medio (ignora audio/video).</source>
         <translation>Baixar SOMENTE a miniatura de cada mídia (ignora áudio/vídeo).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="290"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="294"/>
         <source>Global:</source>
         <translation>Global:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="297"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1300"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="301"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1314"/>
         <location filename="../../gui/tabs/advanced_process/playlist_controller.py" line="251"/>
         <source>Video + Audio</source>
         <translation>Vídeo + Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="298"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1296"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1380"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="302"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="348"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1310"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1394"/>
         <location filename="../../gui/tabs/advanced_process/playlist_controller.py" line="251"/>
         <source>Solo Audio</source>
         <translation>Somente Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="299"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1298"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1382"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="303"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="350"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1312"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1396"/>
         <source>Solo Video</source>
         <translation>Somente Vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="300"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="304"/>
         <source>Modo global por defecto para nuevos ítems.</source>
         <translation>Modo global padrão para itens novos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="306"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="310"/>
         <source>Calidad o resolución máxima global para nuevos ítems.</source>
         <translation>Qualidade ou resolução máxima global para itens novos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="462"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="472"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="476"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="486"/>
         <source>Mejor compatible</source>
         <translation>Melhor compatível</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="463"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="477"/>
         <source>Máxima calidad</source>
         <translation>Qualidade máxima</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="473"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="487"/>
         <source>Alta</source>
         <translation>Alta</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="474"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="488"/>
         <source>Media</source>
         <translation>Média</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="475"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="489"/>
         <source>Baja</source>
         <translation>Baixa</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="541"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="588"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="555"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="602"/>
         <source>máxima calidad</source>
         <translation>qualidade máxima</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="665"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="944"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="442"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="679"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="958"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="444"/>
         <source>En espera</source>
         <translation>Aguardando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="686"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="700"/>
         <source>Confirmar cambio a Modo Individual</source>
         <translation>Confirmar mudança para Modo Individual</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="687"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="701"/>
         <source>Al cambiar a Modo Individual se eliminarán todos los trabajos de la cola de descargas.
 
 ¿Deseas continuar?</source>
@@ -307,269 +309,269 @@
 	Do you want to continue?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="888"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="889"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="965"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="902"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="903"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="979"/>
         <source>Analizando URL...</source>
         <translation>Analisando URL...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="897"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="976"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="911"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="990"/>
         <source>Analizando {} de {}...</source>
         <translation>Analisando {} de {}...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="909"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="923"/>
         <source>Error en el análisis</source>
         <translation>Erro na análise</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1152"/>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1393"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1166"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1407"/>
         <source>Descarga de medios</source>
         <translation>Download de mídias</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1506"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1520"/>
         <source>Modo SOLO y LOTES</source>
         <translation>Modo ÚNICO e em LOTES</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1507"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1521"/>
         <source>Este botón intercala entre los dos modos de la pestaña: SOLO (individual) y por LOTES. Empezaremos explorando el Modo SOLO.</source>
         <translation>Este botão alterna entre os dois modos da aba: ÚNICO (individual) e em LOTES. Vamos começar explorando o Modo Único.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1512"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1526"/>
         <source>URL y Analizar</source>
         <translation>URL e Analisar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1513"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1527"/>
         <source>La URL se pega igual que en el Modo Rápido, pero la gran diferencia es que aquí la URL primero se analiza para extraer toda su información antes de descargar.</source>
         <translation>A URL é colada igual ao Modo Rápido, mas a grande diferença é que aqui ela é analisada primeiro, para extrair todas as informações antes de baixar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1517"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1531"/>
         <source>Vista Previa y Editor</source>
         <translation>Pré-visualização e Editor</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1518"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1532"/>
         <source>Aquí verás la miniatura del medio. Puedes guardarla directamente o usar &apos;Enviar a E.I&apos; para mandarla a la pestaña Editor de Imagen y procesarla de distintas formas.</source>
         <translation>Aqui você vê a miniatura da mídia. Pode salvá-la direto ou usar &apos;Enviar ao E.I&apos; para mandá-la à aba Editor de Imagem e processá-la de várias formas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1522"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1536"/>
         <source>Título y Etiquetas</source>
         <translation>Título e Etiquetas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1523"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1537"/>
         <source>Puedes cambiar manualmente el título final del medio y usar las Etiquetas para asignar rutas preconfiguradas rápidamente.</source>
         <translation>Você pode alterar manualmente o título final da mídia e usar as Etiquetas para atribuir pastas pré-configuradas rapidamente.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1527"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1541"/>
         <source>Pistas, Modos y Calidades</source>
         <translation>Faixas, Modos e Qualidades</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1528"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1542"/>
         <source>¡Control total! Aquí puedes elegir con precisión quirúrgica las pistas de video, audio e idiomas disponibles del medio.</source>
         <translation>Controle total! Aqui você escolhe com precisão cirúrgica as faixas de vídeo, áudio e os idiomas disponíveis da mídia.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1532"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1546"/>
         <source>Subtítulos</source>
         <translation>Legendas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1533"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1547"/>
         <source>Si el video tiene subtítulos, aparecerán aquí. Puedes descargarlos solos, incrustados con el video, o usar opciones extra como estandarizar a SRT o recortarlos.</source>
         <translation>Se o vídeo tiver legendas, elas aparecem aqui. Você pode baixá-las separadas, embutidas no vídeo, ou usar opções extras como padronizar para SRT ou recortá-las.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1538"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1552"/>
         <source>Recodificar</source>
         <translation>Recodificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1539"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1553"/>
         <source>Permite post-procesar el medio descargado (cambiar formato, códec, etc.) usando presets que configures en la pestaña Herramientas Multimedia.</source>
         <translation>Permite pós-processar a mídia baixada (mudar formato, códec, etc.) usando presets configurados na aba Ferramentas de Mídia.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1544"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1558"/>
         <source>Opciones de Salida y Arrastre</source>
         <translation>Opções de Saída e Arrasto</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1545"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1559"/>
         <source>Aparte de la ruta, al finalizar una descarga se iluminará el Botón de Arrastre (icono de la mano). Te permite arrastrar el archivo directamente desde DowP a tu editor de video o carpeta.</source>
         <translation>Além da pasta, ao terminar um download o Botão de Arrasto (ícone da mão) acende. Ele deixa você arrastar o arquivo direto do DowP para o seu editor de vídeo ou uma pasta.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1568"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1582"/>
         <source>Lista de Lotes</source>
         <translation>Lista de Lotes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1569"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1583"/>
         <source>¡Bienvenido al modo LOTES! Aquí puedes encolar múltiples URLs. Puedes reordenarlas, arrastrar los archivos terminados o restaurar ítems para volver a descargarlos.</source>
         <translation>Bem-vindo ao modo LOTES! Aqui você enfileira várias URLs. Pode reordená-las, arrastar os arquivos prontos ou restaurar itens para baixá-los de novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1573"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1587"/>
         <source>Playlist y Modo Rápido</source>
         <translation>Playlist e Modo Rápido</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1574"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1588"/>
         <source>Activar ambas despliega la ventana de Playlist para elegir qué medios encolar. Si solo activas &apos;Playlist&apos;, el análisis extraerá TODOS los videos de golpe (útil pero lento en listas grandes).</source>
         <translation>Ativar os dois abre a janela de Playlist para escolher quais mídias enfileirar. Se ativar só &apos;Playlist&apos;, a análise extrai TODOS os vídeos de uma vez (útil, mas lento em listas grandes).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1578"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1592"/>
         <source>Miniaturas Globales</source>
         <translation>Miniaturas Globais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1579"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1593"/>
         <source>Controla las miniaturas de toda la cola: decidir &apos;Manual&apos; ítem por ítem, &apos;Con medio&apos; para bajarlas todas, o &apos;Solo miniatura&apos;.</source>
         <translation>Controla as miniaturas da fila inteira: escolher &apos;Manual&apos; item a item, &apos;Com a mídia&apos; para baixar todas, ou &apos;Somente miniatura&apos;.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1583"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1597"/>
         <source>Ajuste Global</source>
         <translation>Ajuste Global</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1584"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1598"/>
         <source>Permite forzar una calidad o formato aproximado para todos los ítems de la lista a la vez.</source>
         <translation>Permite forçar uma qualidade ou formato aproximado para todos os itens da lista de uma vez.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1588"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1602"/>
         <source>Si Existe (Opciones de Salida)</source>
         <translation>Se Já Existir (Opções de Saída)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1589"/>
+        <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1603"/>
         <source>En las opciones de salida de lotes encontrarás el menú &apos;Si existe&apos;, ideal para decidir qué hacer automáticamente si te topas con archivos duplicados.</source>
         <translation>Nas opções de saída em lote existe o menu &apos;Se já existir&apos;, ideal para decidir automaticamente o que fazer quando aparecerem arquivos duplicados.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="123"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="125"/>
         <source>Pausar cola</source>
         <translation>Pausar fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="152"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="154"/>
         <source>Cancelar</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="153"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="155"/>
         <source>Iniciando descarga...</source>
         <translation>Iniciando o download...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="163"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="165"/>
         <source>Cortando</source>
         <translation>Cortando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="163"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="165"/>
         <source>Descargando</source>
         <translation>Baixando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="164"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="166"/>
         <source>{0} fragmento {1} de {2}</source>
         <translation>{0} fragmento {1} de {2}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="197"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="199"/>
         <source>Procesando descarga...</source>
         <translation>Processando o download...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="253"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="255"/>
         <source>Descarga</source>
         <translation>Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="257"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="603"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1013"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="259"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="605"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1037"/>
         <source>Descarga completada con éxito</source>
         <translation>Download concluído com sucesso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="270"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="272"/>
         <source>Error: {0}</source>
         <translation>Erro: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="286"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="288"/>
         <source>Descarga cancelada</source>
         <translation>Download cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="302"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="304"/>
         <source>Pausando...</source>
         <translation>Pausando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="306"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="421"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="448"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="545"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="308"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="423"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="450"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="547"/>
         <source>Reanudar cola</source>
         <translation>Retomar fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="383"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="385"/>
         <source>Analizando...</source>
         <translation>Analisando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="585"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="587"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="587"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="589"/>
         <source>{0} ({1} de {2})</source>
         <translation>{0} ({1} de {2})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="605"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1016"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="607"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1040"/>
         <source>Error al recodificar (original conservado)</source>
         <translation>Erro ao recodificar (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="609"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1022"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="611"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1046"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="609"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1023"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="611"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1047"/>
         <source>Error al recodificar</source>
         <translation>Erro ao recodificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1015"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1039"/>
         <source>Recodificación cancelada (original conservado)</source>
         <translation>Recodificação cancelada (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1023"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1047"/>
         <source>Recodificación cancelada</source>
         <translation>Recodificação cancelada</translation>
     </message>
@@ -2823,24 +2825,24 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>DownloadController</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="756"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="780"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="779"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="792"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="839"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="803"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="816"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="863"/>
         <source>Reescalando con IA...</source>
         <translation>Ampliando com IA...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="871"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="895"/>
         <source>Error al reescalar (original conservado)</source>
         <translation>Erro ao ampliar (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="875"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="899"/>
         <source>Error al reescalar</source>
         <translation>Erro ao ampliar</translation>
     </message>
@@ -6802,124 +6804,124 @@ Desmárcala para una imagen normal: en los bordes se refleja.</source>
 Desmarque para uma imagem normal: nas bordas é feito o espelhamento.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="103"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="108"/>
         <source>Mapa de Normales con IA</source>
         <translation>Mapa de Normais com IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="109"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="114"/>
         <source>Aceleración de Hardware (GPU)</source>
         <translation>Aceleração de Hardware (GPU)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="118"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="123"/>
         <source>Motor:</source>
         <translation>Motor:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="128"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="135"/>
         <source>Modelo:</source>
         <translation>Modelo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="156"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="163"/>
         <source>Borrar del disco el modelo seleccionado</source>
         <translation>Apagar do disco o modelo selecionado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="170"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="177"/>
         <source>DirectX (invertir verde)</source>
         <translation>DirectX (inverter verde)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="176"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="183"/>
         <source>Detalle:</source>
         <translation>Detalhe:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="179"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="186"/>
         <source>Bajo (rápido)</source>
         <translation>Baixo (rápido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="180"/>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="192"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="187"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="199"/>
         <source>Medio</source>
         <translation>Médio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="181"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="188"/>
         <source>Alto (más detalle)</source>
         <translation>Alto (mais detalhe)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="188"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="195"/>
         <source>Solape:</source>
         <translation>Sobreposição:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="191"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="198"/>
         <source>Pequeño (rápido)</source>
         <translation>Pequena (rápida)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="193"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="200"/>
         <source>Grande (más suave)</source>
         <translation>Grande (mais suave)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="198"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="205"/>
         <source>Textura repetible (sin costuras)</source>
         <translation>Textura repetível (sem emendas)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="233"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="240"/>
         <source>Aceleración por GPU en macOS</source>
         <translation>Aceleração por GPU no macOS</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="257"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="264"/>
         <source>Instalado</source>
         <translation>Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="261"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="268"/>
         <source>No descargado</source>
         <translation>Não baixado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="262"/>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="313"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="269"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="320"/>
         <source>Licencia: {0}</source>
         <translation>Licença: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="294"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="301"/>
         <source>Calcula las normales de la escena (rojo = derecha, verde = arriba, azul = hacia ti) y las amplía al tamaño original.</source>
         <translation>Calcula as normais da cena (vermelho = direita, verde = para cima, azul = em sua direção) e as amplia para o tamanho original.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="297"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="304"/>
         <source>Genera el relieve de una textura plana a partir de su brillo, por bloques de 256 px. Sale a la resolución original.</source>
         <translation>Gera o relevo de uma textura plana a partir do seu brilho, em blocos de 256 px. Sai na resolução original.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="310"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="317"/>
         <source>Licencia: {0} · solo uso no comercial</source>
         <translation>Licença: {0} · somente uso não comercial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="337"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="344"/>
         <source>Modelo listo para usar.</source>
         <translation>Modelo pronto para usar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="340"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="347"/>
         <source>No descargado — vuelve a elegirlo en la lista para descargarlo.</source>
         <translation>Não baixado — escolha-o novamente na lista para baixá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="353"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="360"/>
         <source>¿Eliminar &apos;{0}&apos; del disco?
 
 Puedes volver a descargarlo cuando quieras.</source>
@@ -6928,32 +6930,32 @@ Puedes volver a descargarlo cuando quieras.</source>
 Você pode baixá-lo novamente quando quiser.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="355"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="362"/>
         <source>Eliminar modelo</source>
         <translation>Excluir modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="358"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="365"/>
         <source>No se pudo eliminar el modelo.</source>
         <translation>Não foi possível excluir o modelo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="385"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="392"/>
         <source>Licencia {0}: solo permite uso no comercial.</source>
         <translation>Licença {0}: permite apenas uso não comercial.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="388"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="395"/>
         <source>modelo</source>
         <translation>modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="420"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="427"/>
         <source>No se pudo descargar: {0}</source>
         <translation>Não foi possível baixar: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="422"/>
+        <location filename="../../gui/tabs/image_tools/normal_popover.py" line="429"/>
         <source>Error de descarga</source>
         <translation>Erro de download</translation>
     </message>
@@ -7469,90 +7471,90 @@ Você pode baixá-lo novamente quando quiser.</translation>
 <context>
     <name>PresetBar</name>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="98"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="100"/>
         <source>Guardar como preajuste</source>
         <translation>Salvar como preset</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="105"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="107"/>
         <source>Exportar</source>
         <translation>Exportar</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="112"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="114"/>
         <source>Importar</source>
         <translation>Importar</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="119"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="121"/>
         <source>Eliminar</source>
         <translation>Excluir</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="178"/>
-        <location filename="../../gui/widgets/preset_bar.py" line="234"/>
-        <location filename="../../gui/widgets/preset_bar.py" line="274"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="192"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="250"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="290"/>
         <source>Sin preset</source>
         <translation>Sem preset</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="234"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="250"/>
         <source>Selecciona un preset de la lista para exportarlo.</source>
         <translation>Selecione um preset da lista para exportá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="239"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="255"/>
         <source>Exportar Preset</source>
         <translation>Exportar Preset</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="239"/>
-        <location filename="../../gui/widgets/preset_bar.py" line="256"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="255"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="272"/>
         <source>Preset JSON (*.json)</source>
         <translation>Preset JSON (*.json)</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="246"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="262"/>
         <source>Marca de agua no incluida</source>
         <translation>Marca d&apos;água não incluída</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="248"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="264"/>
         <source>Este preset usa una imagen de marca de agua ({0}); el archivo de imagen no viaja dentro del .json exportado — compártelo aparte si vas a usar este preset en otra PC.</source>
         <translation>Este preset usa uma imagem de marca d&apos;água ({0}); o arquivo de imagem não vai dentro do .json exportado — compartilhe-o à parte se for usar este preset em outro PC.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="256"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="272"/>
         <source>Importar Preset</source>
         <translation>Importar Preset</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="265"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="281"/>
         <source>Marca de agua no encontrada</source>
         <translation>Marca d&apos;água não encontrada</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="268"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="284"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="268"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="284"/>
         <source>No se pudo importar el preset desde el archivo seleccionado.</source>
         <translation>Não foi possível importar o preset a partir do arquivo selecionado.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="274"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="290"/>
         <source>Selecciona un preset de la lista para eliminarlo.</source>
         <translation>Selecione um preset da lista para excluí-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="280"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="296"/>
         <source>Eliminar preset</source>
         <translation>Excluir preset</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/preset_bar.py" line="281"/>
+        <location filename="../../gui/widgets/preset_bar.py" line="297"/>
         <source>¿Eliminar el preset &apos;{0}&apos;?</source>
         <translation>Excluir o preset &apos;{0}&apos;?</translation>
     </message>
@@ -7560,7 +7562,7 @@ Você pode baixá-lo novamente quando quiser.</translation>
 <context>
     <name>PresetManager</name>
     <message>
-        <location filename="../../core/utils/preset_manager.py" line="336"/>
+        <location filename="../../core/utils/preset_manager.py" line="372"/>
         <source>El archivo no contiene un objeto JSON</source>
         <translation>O arquivo não contém um objeto JSON</translation>
     </message>
@@ -7568,52 +7570,57 @@ Você pode baixá-lo novamente quando quiser.</translation>
 <context>
     <name>PresetsPanel</name>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="56"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="79"/>
         <source>Preajustes de Recodificación</source>
         <translation>Predefinições de Recodificação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="66"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="89"/>
         <source>Preajustes de Herramientas IA</source>
         <translation>Predefinições de Ferramentas IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="88"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="112"/>
         <source>Seleccionar otra imagen…</source>
         <translation>Selecionar outra imagem…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="140"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="184"/>
         <source>Seleccionar imagen de marca de agua</source>
         <translation>Selecionar imagem da marca d&apos;água</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="141"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="185"/>
         <source>Imágenes (*.png *.jpg *.jpeg *.webp *.bmp);;Todos los archivos (*.*)</source>
         <translation>Imagens (*.png *.jpg *.jpeg *.webp *.bmp);;Todos os arquivos (*.*)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="199"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="262"/>
         <source>Selecciona al menos un preajuste</source>
         <translation>Selecione ao menos uma predefinição</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="201"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="264"/>
         <source>Resuelve el aviso de la marca de agua</source>
         <translation>Resolva o aviso da marca d&apos;água</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="207"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="271"/>
         <source>Iniciar Mapa de Profundidad</source>
         <translation>Iniciar Mapa de Profundidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="208"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="273"/>
+        <source>Iniciar Mapa de Normales</source>
+        <translation>Iniciar Mapa de Normais</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="274"/>
         <source>Iniciar Reescalado</source>
         <translation>Iniciar Ampliação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="209"/>
+        <location filename="../../gui/tabs/video_tools/presets_panel.py" line="275"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
@@ -7860,79 +7867,89 @@ para reproduzi-lo ou ver os detalhes</translation>
 <context>
     <name>QueueWorker</name>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="377"/>
+        <location filename="../../core/utils/queue_manager.py" line="379"/>
         <source>Procesando final...</source>
         <translation>Processamento final...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="396"/>
+        <location filename="../../core/utils/queue_manager.py" line="398"/>
         <source>Descargando miniatura...</source>
         <translation>Baixando a miniatura...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="419"/>
+        <location filename="../../core/utils/queue_manager.py" line="421"/>
         <source>No se pudo obtener la miniatura para este video.</source>
         <translation>Não foi possível obter a miniatura deste vídeo.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="510"/>
+        <location filename="../../core/utils/queue_manager.py" line="512"/>
         <source>Omitido: el archivo ya existe</source>
         <translation>Ignorado: o arquivo já existe</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="537"/>
+        <location filename="../../core/utils/queue_manager.py" line="539"/>
         <source>La playlist no tiene medios seleccionados.</source>
         <translation>A playlist não tem mídias selecionadas.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="829"/>
+        <location filename="../../core/utils/queue_manager.py" line="839"/>
         <source>No se encontró ffmpeg.</source>
         <translation>O ffmpeg não foi encontrado.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1070"/>
+        <location filename="../../core/utils/queue_manager.py" line="1080"/>
         <source>Cancelado por el usuario</source>
         <translation>Cancelado pelo usuário</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1160"/>
+        <location filename="../../core/utils/queue_manager.py" line="1170"/>
         <source>Error desconocido en FFmpeg</source>
         <translation>Erro desconhecido no FFmpeg</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1173"/>
+        <location filename="../../core/utils/queue_manager.py" line="1179"/>
         <source>Calculando profundidad...</source>
         <translation>Calculando profundidade...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1214"/>
+        <location filename="../../core/utils/queue_manager.py" line="1180"/>
         <source>Error desconocido en Mapa de Profundidad de video</source>
         <translation>Erro desconhecido no Mapa de Profundidade de vídeo</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1234"/>
-        <location filename="../../core/utils/queue_manager.py" line="1276"/>
+        <location filename="../../core/utils/queue_manager.py" line="1188"/>
+        <source>Calculando normales...</source>
+        <translation>Calculando normais...</translation>
+    </message>
+    <message>
+        <location filename="../../core/utils/queue_manager.py" line="1189"/>
+        <source>Error desconocido en Mapa de Normales de video</source>
+        <translation>Erro desconhecido no Mapa de Normais de vídeo</translation>
+    </message>
+    <message>
+        <location filename="../../core/utils/queue_manager.py" line="1262"/>
+        <location filename="../../core/utils/queue_manager.py" line="1304"/>
         <source>Extrayendo fotogramas...</source>
         <translation>Extraindo quadros...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1283"/>
+        <location filename="../../core/utils/queue_manager.py" line="1311"/>
         <source>Reescalando fotogramas...</source>
         <translation>Ampliando quadros...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1288"/>
+        <location filename="../../core/utils/queue_manager.py" line="1316"/>
         <source>Recomponiendo video...</source>
         <translation>Remontando vídeo...</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1209"/>
-        <location filename="../../core/utils/queue_manager.py" line="1306"/>
+        <location filename="../../core/utils/queue_manager.py" line="1237"/>
+        <location filename="../../core/utils/queue_manager.py" line="1334"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../core/utils/queue_manager.py" line="1311"/>
+        <location filename="../../core/utils/queue_manager.py" line="1339"/>
         <source>Error desconocido en Reescalado de Video IA</source>
         <translation>Erro desconhecido na Ampliação de Vídeo com IA</translation>
     </message>
@@ -7940,144 +7957,144 @@ para reproduzi-lo ou ver os detalhes</translation>
 <context>
     <name>QuickDownloadController</name>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="83"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="85"/>
         <source>Pega una URL primero</source>
         <translation>Cole uma URL primeiro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="113"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="115"/>
         <source>Descarga directa</source>
         <translation>Download direto</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="118"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="120"/>
         <source>Analizando playlist...</source>
         <translation>Analisando a playlist...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="128"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="130"/>
         <source>Error: {0}</source>
         <translation>Erro: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="145"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="147"/>
         <source>Selección cancelada</source>
         <translation>Seleção cancelada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="151"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="153"/>
         <source>No se seleccionaron medios</source>
         <translation>Nenhuma mídia foi selecionada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="156"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="158"/>
         <source>Playlist</source>
         <translation>Playlist</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="187"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="189"/>
         <source>Analizando video para recorte...</source>
         <translation>Analisando o vídeo para recorte...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="197"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="199"/>
         <source>Error al analizar: {0}</source>
         <translation>Erro na análise: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="288"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="463"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="479"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="741"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="290"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="465"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="481"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="743"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="300"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="302"/>
         <source>Recorte cancelado</source>
         <translation>Recorte cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="331"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="333"/>
         <source>En cola</source>
         <translation>Na fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="370"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="689"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="712"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="372"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="691"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="714"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="445"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="447"/>
         <source>{0} de {1} completados</source>
         <translation>{0} de {1} concluídos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="480"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="482"/>
         <source>Descargas canceladas</source>
         <translation>Downloads cancelados</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="545"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="547"/>
         <source>Descargando</source>
         <translation>Baixando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="581"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="583"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="658"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="702"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1150"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1159"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="660"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="704"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1170"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1179"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="710"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="712"/>
         <source>Omitido</source>
         <translation>Ignorado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="742"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="744"/>
         <source>Descargas completadas</source>
         <translation>Downloads concluídos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="761"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="763"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="763"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="765"/>
         <source>{0} ({1} de {2})</source>
         <translation>{0} ({1} de {2})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="933"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="946"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="987"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="953"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="966"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1007"/>
         <source>Reescalando con IA...</source>
         <translation>Ampliando com IA...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1011"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1031"/>
         <source>Error al reescalar</source>
         <translation>Erro ao ampliar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1022"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1153"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1165"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1042"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1173"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1185"/>
         <source>Error al recodificar</source>
         <translation>Erro ao recodificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1163"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1183"/>
         <source>Recodificación cancelada</source>
         <translation>Recodificação cancelada</translation>
     </message>
@@ -8195,7 +8212,7 @@ para reproduzi-lo ou ver os detalhes</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="213"/>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="540"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="542"/>
         <source>Etiqueta</source>
         <translation>Etiqueta</translation>
     </message>
@@ -8236,7 +8253,7 @@ para reproduzi-lo ou ver os detalhes</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="245"/>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="468"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="470"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
@@ -8276,212 +8293,212 @@ para reproduzi-lo ou ver os detalhes</translation>
         <translation>Baixa SOMENTE a imagem de capa (não baixa o vídeo/áudio)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="356"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="358"/>
         <source>Mejor compatible</source>
         <translation>Melhor compatível</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="357"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="359"/>
         <source>Máxima calidad</source>
         <translation>Qualidade máxima</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="366"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="368"/>
         <source>Alta</source>
         <translation>Alta</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="367"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="369"/>
         <source>Media</source>
         <translation>Média</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="368"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="370"/>
         <source>Baja</source>
         <translation>Baixa</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="468"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="470"/>
         <source>Analizando...</source>
         <translation>Analisando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="607"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="609"/>
         <source>Selector de Corte</source>
         <translation>Seletor de Corte</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="608"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="610"/>
         <source>Aquí puedes elegir el inicio y fin exacto del fragmento que deseas descargar.</source>
         <translation>Aqui você escolhe o início e o fim exatos do fragmento que quer baixar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="612"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="614"/>
         <source>Añadir Fragmento</source>
         <translation>Adicionar Fragmento</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="613"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="615"/>
         <source>Usa el botón &apos;+&apos; para guardar el corte en la lista de la derecha.</source>
         <translation>Use o botão &apos;+&apos; para salvar o corte na lista da direita.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="617"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="619"/>
         <source>Opciones de Corte</source>
         <translation>Opções de Corte</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="618"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="620"/>
         <source>Elige la modalidad: Corte preciso, Descargar para cortar, o Conservar el original completo.</source>
         <translation>Escolha a modalidade: Corte preciso, Baixar para cortar, ou Manter o original completo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="622"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="624"/>
         <source>Guardar y Descargar</source>
         <translation>Salvar e Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="623"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="625"/>
         <source>Al guardar, empezará inmediatamente la descarga de esos fragmentos.</source>
         <translation>Ao salvar, o download desses fragmentos começa na hora.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="642"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="644"/>
         <source>Video 1</source>
         <translation>Vídeo 1</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="642"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="644"/>
         <source>Video 2</source>
         <translation>Vídeo 2</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="651"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="653"/>
         <source>Selección de Medios</source>
         <translation>Seleção de Mídias</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="652"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="654"/>
         <source>Aquí puedes marcar o desmarcar qué videos específicos de la playlist quieres descargar.</source>
         <translation>Aqui você marca ou desmarca quais vídeos específicos da playlist quer baixar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="656"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="658"/>
         <source>Controles Internos</source>
         <translation>Controles Internos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="657"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="659"/>
         <source>Los controles de Modo y Calidad se manejan internamente aquí. Las opciones de afuera no afectarán a la playlist.</source>
         <translation>Os controles de Modo e Qualidade são tratados internamente aqui. As opções de fora não afetam a playlist.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="661"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="663"/>
         <source>Aceptar</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="662"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="664"/>
         <source>Al aceptar, se guardará la configuración para esta playlist.</source>
         <translation>Ao confirmar, a configuração desta playlist será salva.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="679"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="681"/>
         <source>Pegado de Enlaces</source>
         <translation>Colagem de Links</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="680"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="682"/>
         <source>DowP pega automáticamente toda URL que tengas en tu portapapeles, pero también puedes hacerlo manualmente con CTRL + V o clic derecho y &apos;pegar&apos;. Si esta opción no te gusta, puedes desactivarla en Ajustes -&gt; General.</source>
         <translation>O DowP cola automaticamente qualquer URL que estiver na sua área de transferência, mas você também pode fazer isso manualmente com CTRL + V ou clicando com o botão direito e escolhendo &apos;colar&apos;. Se você não gostar dessa opção, pode desativá-la em Configurações -&gt; Geral.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="684"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="686"/>
         <source>Etiquetas de Carpeta</source>
         <translation>Etiquetas de Pasta</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="685"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="687"/>
         <source>Las etiquetas se configuran desde &apos;Ajustes -&gt; Etiquetas&apos; y sirven para preconfigurar distintas rutas a tu gusto para la descarga de medios, para que ya no tengas que estar configurando las rutas en las opciones de salida para cada medio.</source>
         <translation>As etiquetas são configuradas em &apos;Configurações -&gt; Etiquetas&apos; e servem para pré-configurar pastas diferentes do seu jeito para o download de mídias, assim você não precisa mais ficar ajustando os caminhos nas opções de saída para cada mídia.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="689"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="691"/>
         <source>Modos y Calidades</source>
         <translation>Modos e Qualidades</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="690"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="692"/>
         <source>Selecciona las opciones rápidas que necesites como Video + Audio, Solo Audio o Solo Video y sus respectivas calidades. Aquí la opción de &apos;Mejor compatible&apos; siempre buscará la calidad del medio que sea compatible con los programas de Adobe.</source>
         <translation>Selecione as opções rápidas de que precisar, como Vídeo + Áudio, Somente Áudio ou Somente Vídeo e as respectivas qualidades. Aqui a opção &apos;Melhor compatível&apos; sempre procura a qualidade da mídia que seja compatível com os programas da Adobe.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="694"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="696"/>
         <source>Recorte de Fragmentos</source>
         <translation>Recorte de Fragmentos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="695"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="697"/>
         <source>Al seleccionar esta opción puedes escoger fragmentos de un medio. Se abrirá una ventana donde puedes controlar exactamente qué parte del video quieres descargar y sus opciones de corte.</source>
         <translation>Ao selecionar esta opção você pode escolher fragmentos de uma mídia. Vai abrir uma janela onde você controla exatamente que parte do vídeo quer baixar e as opções de corte.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="700"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="702"/>
         <source>Descarga de Playlist</source>
         <translation>Download de Playlist</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="701"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="703"/>
         <source>Al habilitar esta opción también se despliega una ventana. En esta ventana de playlist puedes seleccionar qué medios de la lista quieres descargar y cuáles no. Los controles de modo y calidad se manejan internamente en la ventana (aquí no mandan las opciones externas), y TODAS LAS PLAYLIST se descargan en una carpeta con el título de la playlist, el cual en el Modo Rápido no es editable (eso es para el Modo Avanzado).</source>
         <translation>Ao ativar esta opção também abre uma janela. Nessa janela de playlist você seleciona quais mídias da lista quer baixar e quais não. Os controles de modo e qualidade são tratados internamente na janela (aqui as opções externas não mandam), e TODAS AS PLAYLISTS são baixadas em uma pasta com o título da playlist, que no Modo Rápido não é editável (isso é do Modo Avançado).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="706"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="708"/>
         <source>Opciones de Descarga</source>
         <translation>Opções de Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="707"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="709"/>
         <source>En esta sección se decide si quieres guardar los medios junto con sus miniaturas/carátulas, o descargar únicamente las miniaturas/carátulas.</source>
         <translation>Nesta seção você decide se quer salvar as mídias junto com as miniaturas/capas, ou baixar somente as miniaturas/capas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="711"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="713"/>
         <source>Recodificación Post-Descarga</source>
         <translation>Recodificação Pós-Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="712"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="714"/>
         <source>En esta sección puedes decidir un post-procesado luego de una descarga de forma opcional, para convertirlo a otros formatos o crear proxys para mayor compatibilidad con otros editores.</source>
         <translation>Nesta seção você pode definir opcionalmente um pós-processamento depois de um download, para converter para outros formatos ou criar proxies para maior compatibilidade com outros editores.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="716"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="718"/>
         <source>Lista de Descargas y Tareas</source>
         <translation>Lista de Downloads e Tarefas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="717"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="719"/>
         <source>Aquí aparecerán todas las descargas/procesos que hagas. Cada una cuenta con barra de progreso y son arrastrables una vez terminadas. Funciona como un explorador de archivos: simplemente arrastra tu medio a tu editor o carpeta.</source>
         <translation>Aqui aparecem todos os downloads/processos que você fizer. Cada um tem barra de progresso e pode ser arrastado depois de pronto. Funciona como um explorador de arquivos: é só arrastar sua mídia para o seu editor ou uma pasta.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="721"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="723"/>
         <source>Opciones de Salida</source>
         <translation>Opções de Saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="722"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="724"/>
         <source>Decide a dónde mandar los medios, qué hacer con duplicados, limitar la velocidad de descarga y ver el progreso general. Si seleccionaste una etiqueta previamente, la ruta se bloqueará; selecciona &apos;Etiqueta&apos; para dejarlo en default y recuperar el control.</source>
         <translation>Decida para onde mandar as mídias, o que fazer com duplicados, limitar a velocidade de download e ver o progresso geral. Se você tiver selecionado uma etiqueta antes, a pasta fica travada; selecione &apos;Etiqueta&apos; para voltar ao padrão e retomar o controle.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="726"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="728"/>
         <source>¡Empezar Descarga!</source>
         <translation>Começar o Download!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="727"/>
+        <location filename="../../gui/tabs/quick_mode/quick_mode_view.py" line="729"/>
         <source>UNA VEZ CONFIGURES TODO A TU GUSTO O NECESIDAD, PUEDES PRESIONAR EL BOTÓN DE DESCARGAR PARA EMPEZAR.</source>
         <translation>DEPOIS DE CONFIGURAR TUDO DO SEU JEITO OU CONFORME A NECESSIDADE, É SÓ APERTAR O BOTÃO DE BAIXAR PARA COMEÇAR.</translation>
     </message>
@@ -8512,59 +8529,64 @@ para reproduzi-lo ou ver os detalhes</translation>
 <context>
     <name>RecodeOptionsWidget</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="92"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="101"/>
         <source>Posprocesar</source>
         <translation>Pós-processar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="107"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="116"/>
         <source>Recodificación</source>
         <translation>Recodificação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="117"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="126"/>
         <source>Recodificar al finalizar</source>
         <translation>Recodificar ao finalizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="123"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="132"/>
         <source>Mantener medios originales</source>
         <translation>Manter as mídias originais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="128"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="137"/>
         <source>Activado (por defecto): conserva el archivo descargado además del recodificado. Desactivado: al terminar con éxito la recodificación, se borra el original.</source>
         <translation>Ativado (padrão): mantém o arquivo baixado além do recodificado. Desativado: ao terminar a recodificação com sucesso, o original é apagado.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="152"/>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="214"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="161"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="223"/>
         <source>Prefijo</source>
         <translation>Prefixo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="155"/>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="166"/>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="217"/>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="228"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="164"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="175"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="226"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="237"/>
         <source>(ninguno)</source>
         <translation>(nenhum)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="163"/>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="225"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="172"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="234"/>
         <source>Sufijo</source>
         <translation>Sufixo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="187"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="196"/>
         <source>Herramientas IA</source>
         <translation>Ferramentas IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="193"/>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="202"/>
         <source>Reescalar con IA al finalizar</source>
         <translation>Ampliar com IA ao finalizar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/advanced_process/recode_options.py" line="272"/>
+        <source>Las Herramientas IA necesitan video: no están disponibles en Solo Audio.</source>
+        <translation>As Ferramentas de IA precisam de vídeo: não estão disponíveis em Somente Áudio.</translation>
     </message>
 </context>
 <context>
@@ -9754,119 +9776,144 @@ Adicione itens clicando com o botão direito em qualquer mídia.</translation>
 <context>
     <name>UpscaleIAPanel</name>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="134"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="150"/>
         <source>Contenedor de salida</source>
         <translation>Contêiner de saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="244"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="276"/>
         <source>Extrae los fotogramas del video, los reescala todos con el motor elegido y rearma el video con el audio original -- puede tardar bastante más que una recodificación normal según la duración y la GPU.</source>
         <translation>Extrai os quadros do vídeo, amplia todos com o mecanismo escolhido e remonta o vídeo com o áudio original -- pode demorar bem mais que uma recodificação normal, dependendo da duração e da GPU.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="198"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="212"/>
         <source>Preajustes</source>
         <translation>Predefinições</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="130"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="146"/>
         <source>Reescalado</source>
         <translation>Upscale</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="130"/>
-        <source>Mapa de profundidad</source>
-        <translation>Mapa de profundidade</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="156"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="171"/>
         <source>Opciones de video</source>
         <translation>Opções de vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="158"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="174"/>
         <source>Suavizado:</source>
         <translation>Suavização:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="160"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="176"/>
         <source>Desactivado</source>
         <translation>Desativado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="161"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="177"/>
         <source>Bajo</source>
         <translation>Baixo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="162"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="178"/>
         <source>Medio</source>
         <translation>Médio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="163"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="179"/>
         <source>Alto</source>
         <translation>Alto</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="165"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="190"/>
+        <source>Calcula el mapa solo en una parte de los fotogramas y rellena los demás mezclando los dos mapas vecinos. El video conserva sus fps y su duración.</source>
+        <translation>Calcula o mapa em apenas uma parte dos quadros e preenche os demais misturando os dois mapas vizinhos. O vídeo mantém seus fps e sua duração.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="260"/>
         <source>Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela.
 Con Depth Anything 3 casi no hace falta: ya calcula varios fotogramas a la vez.</source>
         <translation>Mistura cada mapa com o anterior para tirar a tremulação entre quadros. Quanto mais alto, mais estável, mas em movimentos rápidos deixa um leve rastro.
 Com o Depth Anything 3 quase não é necessário: ele já calcula vários quadros de uma vez.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="171"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="183"/>
         <source>Procesar:</source>
         <translation>Processar:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="173"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="146"/>
+        <source>Profundidad</source>
+        <translation>Profundidade</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="146"/>
+        <source>Normales</source>
+        <translation>Normais</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="185"/>
         <source>Todos los fotogramas</source>
         <translation>Todos os quadros</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="174"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="186"/>
         <source>La mitad (2× más rápido)</source>
         <translation>A metade (2× mais rápido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="175"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="187"/>
         <source>Un tercio (3× más rápido)</source>
         <translation>Um terço (3× mais rápido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="176"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="188"/>
         <source>Un cuarto (4× más rápido)</source>
         <translation>Um quarto (4× mais rápido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="178"/>
-        <source>Calcula la profundidad solo en una parte de los fotogramas y rellena los demás mezclando los dos mapas vecinos. El video conserva sus fps y su duración.</source>
-        <translation>Calcula a profundidade só em parte dos quadros e preenche os demais misturando os dois mapas vizinhos. O vídeo mantém seu fps e sua duração.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="240"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="264"/>
         <source>Calcula la profundidad de cada fotograma con el modelo elegido, sin guardar fotogramas en disco. Con modelos grandes puede tardar bastante: se recomienda GPU.</source>
         <translation>Calcula a profundidade de cada quadro com o modelo escolhido, sem salvar quadros no disco. Com modelos grandes pode demorar bastante: recomenda-se GPU.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="278"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="268"/>
+        <source>Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela.</source>
+        <translation>Mistura cada mapa com o anterior para remover o tremor entre quadros. Quanto mais alto, mais estável, mas em movimentos rápidos deixa um leve rastro.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="271"/>
+        <source>Calcula las normales de cada fotograma con MoGe-2, sin guardar fotogramas en disco, y las amplía al tamaño original. Con modelos grandes puede tardar bastante: se recomienda GPU.</source>
+        <translation>Calcula as normais de cada quadro com o MoGe-2, sem salvar quadros no disco, e as amplia para o tamanho original. Com modelos grandes pode demorar bastante: recomenda-se GPU.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="318"/>
         <source>Iniciar Mapa de Profundidad</source>
         <translation>Iniciar Mapa de Profundidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="279"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="319"/>
         <source>Elige un motor y un modelo de profundidad.</source>
         <translation>Escolha um motor e um modelo de profundidade.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="281"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="322"/>
+        <source>Iniciar Mapa de Normales</source>
+        <translation>Iniciar Mapa de Normais</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="323"/>
+        <source>Elige un motor y un modelo de normales.</source>
+        <translation>Escolha um motor e um modelo de normais.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="325"/>
         <source>Iniciar Reescalado</source>
         <translation>Iniciar Ampliação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="282"/>
+        <location filename="../../gui/tabs/video_tools/upscale_ia_panel.py" line="326"/>
         <source>Elige un motor y un modelo de reescalado IA.</source>
         <translation>Escolha um mecanismo e um modelo de ampliação IA.</translation>
     </message>
@@ -10162,37 +10209,42 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
 <context>
     <name>VideoIAOutputOptions</name>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="30"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="35"/>
         <source>16 bits (sin pérdida)</source>
         <translation>16 bits (sem perdas)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="32"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="37"/>
         <source>Guarda el mapa con 16 bits de precisión y sin compresión con pérdida, para composición o 3D. Solo MKV (FFV1) y MOV (PNG) lo admiten, y los archivos ocupan mucho más.</source>
         <translation>Salva o mapa com 16 bits de precisão e sem compressão com perdas, para composição ou 3D. Só MKV (FFV1) e MOV (PNG) suportam, e os arquivos ficam bem maiores.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="43"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="48"/>
         <source>Conservar audio</source>
         <translation>Manter áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="45"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="50"/>
         <source>Copia el audio del video original, sin recodificarlo.</source>
         <translation>Copia o áudio do vídeo original, sem recodificá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="68"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="55"/>
+        <source>MP4 (H.264) deforma las normales: úsalo solo como vista previa. Para usar el mapa, elige MOV o MKV.</source>
+        <translation>MP4 (H.264) deforma as normais: use-o só como prévia. Para usar o mapa, escolha MOV ou MKV.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="89"/>
         <source>Conservar transparencia (sin pérdida)</source>
         <translation>Manter transparência (sem perdas)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="71"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="87"/>
         <source>Conservar transparencia (ProRes 4444)</source>
         <translation>Manter transparência (ProRes 4444)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="74"/>
+        <location filename="../../gui/tabs/video_tools/ia_output_options.py" line="92"/>
         <source>Solo si el video original tiene transparencia; si no la tiene, se genera un archivo normal. Los archivos con transparencia ocupan mucho más.</source>
         <translation>Só se o vídeo original tiver transparência; se não tiver, é gerado um arquivo normal. Arquivos com transparência ficam bem maiores.</translation>
     </message>
@@ -10200,37 +10252,37 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
 <context>
     <name>VideoToolsTab</name>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="249"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="251"/>
         <source>Opciones de Salida</source>
         <translation>Opções de Saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="265"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="267"/>
         <source>Guardar junto al original</source>
         <translation>Salvar junto ao original</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="270"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="272"/>
         <source>Si existe:</source>
         <translation>Se já existir:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="280"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="282"/>
         <source>Sobrescribir</source>
         <translation>Substituir</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="281"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="283"/>
         <source>Conservar</source>
         <translation>Manter</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="282"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="284"/>
         <source>Omitir</source>
         <translation>Ignorar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="286"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="288"/>
         <source>Qué hacer si ya existe un archivo con el mismo nombre de salida:
 • Sobrescribir: reemplaza el archivo antiguo (con respaldo reversible).
 • Conservar: guarda el nuevo archivo como &apos;nombre (1).ext&apos;.
@@ -10241,263 +10293,268 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
 • Ignorar: não recodifica esse arquivo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="297"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="299"/>
         <source>Ruta:</source>
         <translation>Caminho:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="306"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="308"/>
         <source>Seleccionar carpeta de destino...</source>
         <translation>Selecionar pasta de destino...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="312"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="779"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="314"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="781"/>
         <source>Etiqueta</source>
         <translation>Etiqueta</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="323"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="325"/>
         <source>Seleccionar carpeta de salida</source>
         <translation>Selecionar pasta de saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="330"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="332"/>
         <source>Abrir carpeta de salida en el explorador</source>
         <translation>Abrir a pasta de saída no explorador</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="340"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="342"/>
         <source>Prefijo:</source>
         <translation>Prefixo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="351"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="353"/>
         <source>Sufijo:</source>
         <translation>Sufixo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="371"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="373"/>
         <source>En espera</source>
         <translation>Aguardando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="379"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="381"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="736"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="738"/>
         <source>Pista 1</source>
         <translation>Faixa 1</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="827"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="829"/>
         <source>Seleccionar Carpeta de Salida</source>
         <translation>Selecionar Pasta de Saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="890"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1419"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="892"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1424"/>
         <source>Cancelar</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="907"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="909"/>
         <source>Configuración no válida</source>
         <translation>Configuração inválida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="912"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="914"/>
         <source>Sin archivos</source>
         <translation>Sem arquivos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="912"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="914"/>
         <source>Por favor agrega al menos un archivo a la cola para iniciar la recodificación.</source>
         <translation>Adicione pelo menos um arquivo à fila para iniciar a recodificação.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="919"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="921"/>
         <source>Carpeta inválida</source>
         <translation>Pasta inválida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="919"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="921"/>
         <source>Por favor selecciona una carpeta de salida válida.</source>
         <translation>Selecione uma pasta de saída válida.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="945"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="947"/>
         <source>Sin configuración</source>
         <translation>Sem configuração</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="945"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="947"/>
         <source>Selecciona un preajuste o una configuración válida.</source>
         <translation>Selecione um preset ou uma configuração válida.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1051"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1240"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1340"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1053"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1245"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1345"/>
         <source>Omitido</source>
         <translation>Ignorado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1089"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1091"/>
         <source>se usó solo {0} — el formato de salida no admite múltiples pistas de audio</source>
         <translation>foi usada só {0} — o formato de saída não aceita várias faixas de áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1120"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1260"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1377"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1122"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1265"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1382"/>
         <source>En cola</source>
         <translation>Na fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1132"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1135"/>
         <source>Mapa de profundidad: {0}</source>
         <translation>Mapa de profundidade: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1206"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1308"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1137"/>
+        <source>Mapa de normales: {0}</source>
+        <translation>Mapa de normais: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1211"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1313"/>
         <source>Omitido (sin video)</source>
         <translation>Ignorado (sem vídeo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1224"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1323"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1229"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1328"/>
         <source>Sin espacio en disco</source>
         <translation>Espaço em disco insuficiente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1404"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1409"/>
         <source>Motor no instalado</source>
         <translation>Mecanismo não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1406"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1411"/>
         <source>&apos;{0}&apos; no está instalado. ¿Descargarlo ahora o cancelar el proceso?</source>
         <translation>&apos;{0}&apos; não está instalado. Deseja baixá-lo agora ou cancelar o processo?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1419"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1424"/>
         <source>Descargando {0}...</source>
         <translation>Baixando {0}...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1454"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1459"/>
         <source>No se pudo descargar &apos;{0}&apos;:
 {1}</source>
         <translation>Não foi possível baixar &apos;{0}&apos;:
 {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1465"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1470"/>
         <source>Cancelando...</source>
         <translation>Cancelando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1493"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1498"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/media_queue_widget.py" line="75"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1485"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1490"/>
         <source>Procesando...</source>
         <translation>Processando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1509"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1514"/>
         <source>Completado ({0})</source>
         <translation>Concluído ({0})</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/media_queue_widget.py" line="70"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1509"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1514"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/media_queue_widget.py" line="78"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1453"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1530"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1458"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1535"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/media_queue_widget.py" line="79"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1537"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1542"/>
         <source>Cancelado</source>
         <translation>Cancelado</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/media_queue_widget.py" line="77"/>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1573"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1578"/>
         <source>Finalizado</source>
         <translation>Finalizado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1591"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1596"/>
         <source>Lista de Archivos</source>
         <translation>Lista de Arquivos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1592"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1597"/>
         <source>Arrastra aquí tus archivos de video o audio. Puedes procesar un solo archivo o una lista completa en lote.</source>
         <translation>Arraste para cá seus arquivos de vídeo ou áudio. Você pode processar um único arquivo ou uma lista inteira em lote.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1596"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1601"/>
         <source>Vista Previa Interactiva</source>
         <translation>Pré-visualização Interativa</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1597"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1602"/>
         <source>Reproduce tus videos y visualiza en tiempo real los recortes espaciales o marcas de agua que configures.</source>
         <translation>Reproduza seus vídeos e veja em tempo real os recortes espaciais ou as marcas d&apos;água que você configurar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1601"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1606"/>
         <source>Recorte de Tiempo (Trim)</source>
         <translation>Recorte de Tempo (Trim)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1602"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1607"/>
         <source>Ajusta los marcadores inicial y final en la línea de tiempo para exportar solo un fragmento exacto del video.</source>
         <translation>Ajuste os marcadores inicial e final na linha do tempo para exportar só um trecho exato do vídeo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1606"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1611"/>
         <source>Pestañas de Edición</source>
         <translation>Abas de Edição</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1607"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1612"/>
         <source>Navega entre estas pestañas para usar preajustes guardados, comprimir videos rápido, convertir formatos o hacer ediciones básicas.</source>
         <translation>Navegue entre estas abas para usar presets salvos, comprimir vídeos rápido, converter formatos ou fazer edições básicas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1615"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1620"/>
         <source>Opciones Avanzadas</source>
         <translation>Opções Avançadas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1616"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1621"/>
         <source>En Avanzado tienes control profesional: puedes recortar la imagen, incrustar marcas de agua arrastrándolas en la vista previa y mucho más.</source>
         <translation>Em Avançado você tem controle profissional: pode recortar a imagem, embutir marcas d&apos;água arrastando-as na pré-visualização e muito mais.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1624"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1629"/>
         <source>Exportación y Ejecución</source>
         <translation>Exportação e Execução</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1625"/>
+        <location filename="../../gui/tabs/video_tools/video_tools_view.py" line="1630"/>
         <source>Elige la carpeta de destino, la regla para archivos existentes, y pulsa iniciar. ¡Y lo mejor es que puedes arrastrar el resultado directamente a tu editor de video favorito!</source>
         <translation>Escolha a pasta de destino, a regra para arquivos existentes, e aperte iniciar. E o melhor é que você pode arrastar o resultado direto para o seu editor de vídeo favorito!</translation>
     </message>
@@ -13724,12 +13781,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>normal_engine</name>
     <message>
-        <location filename="../../core/tabs/image_tools/normal_engine.py" line="176"/>
+        <location filename="../../core/tabs/image_tools/normal_engine.py" line="199"/>
         <source>Mapa de Normales: no hay un modelo de IA seleccionado.</source>
         <translation>Mapa de Normais: nenhum modelo de IA selecionado.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/normal_engine.py" line="179"/>
+        <location filename="../../core/tabs/image_tools/normal_engine.py" line="202"/>
         <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
         <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>
@@ -13891,7 +13948,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Mapa de profundidade</translation>
     </message>
     <message>
-        <location filename="../../core/utils/preset_manager.py" line="69"/>
+        <location filename="../../core/utils/preset_manager.py" line="48"/>
+        <source>Mapa de normales</source>
+        <translation>Mapa de normais</translation>
+    </message>
+    <message>
+        <location filename="../../core/utils/preset_manager.py" line="105"/>
         <source>Preajustes de Usuario</source>
         <translation>Presets do Usuário</translation>
     </message>
@@ -14031,59 +14093,80 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>video_depth_engine</name>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="185"/>
-        <source>No se encontró ffmpeg.</source>
-        <translation>O ffmpeg não foi encontrado.</translation>
-    </message>
-    <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="189"/>
+        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="198"/>
         <source>No hay un modelo de profundidad seleccionado.</source>
         <translation>Nenhum modelo de profundidade selecionado.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="191"/>
+        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="200"/>
         <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
         <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>
+</context>
+<context>
+    <name>video_frame_engine</name>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="197"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="129"/>
+        <source>No se encontró ffmpeg.</source>
+        <translation>O ffmpeg não foi encontrado.</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="134"/>
         <source>No se pudo leer el video de origen.</source>
         <translation>Não foi possível ler o vídeo de origem.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="251"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="153"/>
         <source>No se pudo cargar el modelo: {0}</source>
         <translation>Não foi possível carregar o modelo: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="262"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="203"/>
         <source>No se pudo iniciar ffmpeg: {0}</source>
         <translation>Não foi possível iniciar o ffmpeg: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="375"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="286"/>
         <source>ffmpeg dejó de recibir los fotogramas: {0}</source>
         <translation>O ffmpeg parou de receber os quadros: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="378"/>
-        <source>Error al calcular la profundidad: {0}</source>
-        <translation>Erro ao calcular a profundidade: {0}</translation>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="289"/>
+        <source>Error al procesar los fotogramas: {0}</source>
+        <translation>Erro ao processar os quadros: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="391"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="302"/>
         <source>Cancelado por el usuario.</source>
         <translation>Cancelado pelo usuário.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="393"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="304"/>
         <source>No se pudo leer ningún fotograma: {0}</source>
         <translation>Não foi possível ler nenhum quadro: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="395"/>
+        <location filename="../../core/tabs/video_tools/video_frame_engine.py" line="306"/>
         <source>ffmpeg terminó con código {0}: {1}</source>
         <translation>O ffmpeg terminou com o código {0}: {1}</translation>
+    </message>
+</context>
+<context>
+    <name>video_normal_engine</name>
+    <message>
+        <location filename="../../core/tabs/video_tools/video_normal_engine.py" line="98"/>
+        <source>No hay un modelo de normales seleccionado.</source>
+        <translation>Nenhum modelo de normais selecionado.</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/video_tools/video_normal_engine.py" line="100"/>
+        <source>Ese modelo es solo para texturas: en video usa MoGe-2.</source>
+        <translation>Esse modelo é só para texturas: em vídeo, use o MoGe-2.</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/video_tools/video_normal_engine.py" line="102"/>
+        <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
+        <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>
 </context>
 <context>

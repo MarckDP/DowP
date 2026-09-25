@@ -82,8 +82,13 @@ class NormalPopoverContent(QFrame):
     selection_changed = Signal(str, str, bool)
     close_popover_requested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, video_mode: bool = False):
+        """video_mode=True: el mismo selector dentro de Herramientas IA de Herramientas
+        Multimedia (ver upscale_ia_panel.py). Solo ofrece MoGe-2: DeepBump es para
+        texturas planas, no para escenas, y en video no se usa (ver
+        video_normal_engine.py)."""
         super().__init__(parent)
+        self._video_mode = video_mode
         self.setObjectName("normalPopover")
         bg = get_theme_token('fondo_secundario', '#1e1e1e')
         border = get_theme_token('borde_normal', '#2d2d2d')
@@ -118,7 +123,9 @@ class NormalPopoverContent(QFrame):
         family_row.addWidget(self._label(self.tr("Motor:")))
         self.combo_family = AutoPopupComboBox(fit_contents=True)
         self.combo_family.addItem(AI_ENGINE_HOLDER, None)
-        for family_name in get_normal_families().keys():
+        for family_name, models in get_normal_families().items():
+            if video_mode and not any(m.get("engine") == "moge" for m in models.values()):
+                continue
             self.combo_family.addItem(family_name, family_name)
         self.combo_family.currentIndexChanged.connect(self._on_family_changed)
         family_row.addWidget(self.combo_family, 1)

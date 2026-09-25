@@ -106,7 +106,7 @@ def source_has_real_video(input_file: str) -> bool:
 # Job types que compiten por GPU/CPU local (a diferencia de DOWNLOAD/PLAYLIST,
 # limitados por ancho de banda) -- máximo 1 a la vez, ver QueueWorker.run() y
 # QueueManager._get_next_runnable_job.
-_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO"})
+_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
 
 
 class JobStatus:
@@ -175,6 +175,8 @@ class SingleJobWorker(QThread):
                 self.queue_worker._execute_upscale_video(self.job, self.cancellation_event, self)
             elif self.job.job_type == "DEPTH_VIDEO":
                 self.queue_worker._execute_depth_video(self.job, self.cancellation_event, self)
+            elif self.job.job_type == "NORMAL_VIDEO":
+                self.queue_worker._execute_normal_video(self.job, self.cancellation_event, self)
         except Exception as e:
             import traceback
             logger.error(f"SingleJobWorker: Error inesperado en job {self.job.job_id}: {traceback.format_exc()}")
@@ -770,6 +772,14 @@ class QueueWorker(QThread):
         if not settings:
             logger.warning(f"QueueWorker: [Playlist] Preset de recodificación '{preset_name}' no encontrado, se omite.")
             return
+        # Misma regla que la tarjeta "Posprocesar" (ver preset_manager.recode_preset_fits):
+        # el modo de la playlist pudo cambiar después de elegir el preajuste.
+        from core.utils.preset_manager import recode_preset_fits
+        playlist_mode = job.config.get("playlist_mode", "video+audio")
+        if not recode_preset_fits(settings, playlist_mode):
+            logger.info(f"QueueWorker: [Playlist] Recodificación omitida: '{preset_name}' no sirve "
+                        f"para una descarga '{playlist_mode}'.")
+            return
 
         try:
             backup_path = quarantine_for_recode(input_path)
@@ -1162,15 +1172,34 @@ class QueueWorker(QThread):
             logger.error(f"QueueWorker: [RECODE] FFmpeg falló: {job.error_message} ({job.title})")
 
     def _execute_depth_video(self, job, cancellation_event=None, worker_ref=None):
-        """Mapa de Profundidad de video -- ver core/tabs/video_tools/video_depth_engine.py.
-        Mismo molde de estados que _execute_upscale_video; el progreso es por fotograma
-        (la cuenta la lleva el motor) y el tiempo restante va en el campo de ETA."""
+        """Mapa de Profundidad de video -- ver core/tabs/video_tools/video_depth_engine.py."""
+        from core.tabs.video_tools.video_depth_engine import run_depth_video
+        self._execute_frame_video(
+            job, run_depth_video, "depth_options", "DEPTH_VIDEO",
+            self.tr("Calculando profundidad..."),
+            self.tr("Error desconocido en Mapa de Profundidad de video"),
+            cancellation_event, worker_ref)
+
+    def _execute_normal_video(self, job, cancellation_event=None, worker_ref=None):
+        """Mapa de Normales de video -- ver core/tabs/video_tools/video_normal_engine.py."""
+        from core.tabs.video_tools.video_normal_engine import run_normal_video
+        self._execute_frame_video(
+            job, run_normal_video, "normal_options", "NORMAL_VIDEO",
+            self.tr("Calculando normales..."),
+            self.tr("Error desconocido en Mapa de Normales de video"),
+            cancellation_event, worker_ref)
+
+    def _execute_frame_video(self, job, run_engine, options_key, tag, label, unknown_error,
+                             cancellation_event=None, worker_ref=None):
+        """Herramientas IA de video fotograma a fotograma (ver
+        core/tabs/video_tools/video_frame_engine.py). Mismo molde de estados que
+        _execute_upscale_video; el progreso es por fotograma (la cuenta la lleva el motor)
+        y el tiempo restante va en el campo de ETA."""
         if cancellation_event is None:
             cancellation_event = self._cancellation_event
 
         job.status = JobStatus.RUNNING
         job.progress = 0.0
-        label = self.tr("Calculando profundidad...")
         self.job_status_changed.emit(job.job_id, JobStatus.RUNNING)
         self.job_progress_changed.emit(job.job_id, 0.0, label, "")
 
@@ -1186,9 +1215,8 @@ class QueueWorker(QThread):
                 eta = f"{hours}:{minutes:02d}:{seconds:02d}" if hours else f"{minutes:02d}:{seconds:02d}"
             self.job_progress_changed.emit(job.job_id, pct, label, eta)
 
-        from core.tabs.video_tools.video_depth_engine import run_depth_video
-        success, error = run_depth_video(
-            config.get("input_path"), output_file, config.get("depth_options", {}),
+        success, error = run_engine(
+            config.get("input_path"), output_file, config.get(options_key, {}),
             config.get("fps") or 0.0, config.get("duration_sec", 0.0),
             trim_in=config.get("trim_in_sec"), trim_out=config.get("trim_out_sec"),
             cancellation_event=cancellation_event, progress_callback=on_progress,
@@ -1198,7 +1226,7 @@ class QueueWorker(QThread):
         if cancellation_event.is_set():
             job.status = JobStatus.CANCELLED
             self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
-            logger.info(f"QueueWorker: [DEPTH_VIDEO] Trabajo cancelado por el usuario: {job.title}")
+            logger.info(f"QueueWorker: [{tag}] Trabajo cancelado por el usuario: {job.title}")
             return
 
         if success:
@@ -1208,12 +1236,12 @@ class QueueWorker(QThread):
             job.add_output_files([output_file], is_stem_source=False)
             self.job_progress_changed.emit(job.job_id, 100.0, self.tr("Completado"), "")
             self.job_status_changed.emit(job.job_id, JobStatus.COMPLETED)
-            logger.info(f"QueueWorker: [DEPTH_VIDEO] Mapa de profundidad terminado: {output_file}")
+            logger.info(f"QueueWorker: [{tag}] Terminado: {output_file}")
         else:
             job.status = JobStatus.FAILED
-            job.error_message = error or self.tr("Error desconocido en Mapa de Profundidad de video")
+            job.error_message = error or unknown_error
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
-            logger.error(f"QueueWorker: [DEPTH_VIDEO] Falló: {job.error_message} ({job.title})")
+            logger.error(f"QueueWorker: [{tag}] Falló: {job.error_message} ({job.title})")
 
     def _execute_upscale_video(self, job, cancellation_event=None, worker_ref=None):
         """Reescalado de Video con IA: extrae fotogramas (ffmpeg) -> los
