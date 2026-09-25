@@ -197,7 +197,7 @@ class QuickModeTab(QWidget):
         layout.setSpacing(8)
 
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText(self.tr("Pega una URL para descargar directamente"))
+        self.url_input.setPlaceholderText(self.tr("Pega una URL para descargar o escribe algo para buscar"))
         self.url_input.returnPressed.connect(self._on_download_clicked)
         self.url_input.textEdited.connect(self._on_text_edited)
 
@@ -206,6 +206,16 @@ class QuickModeTab(QWidget):
         monitor = ClipboardURLMonitor.instance()
         monitor.register(self.url_input)
         monitor.url_detected.connect(self._on_clipboard_url_detected)
+
+        # Botón de búsqueda (lupa), a la izquierda del campo de URL: abre la ventana de
+        # búsqueda de YouTube/SoundCloud (gui/dialogs/media_search_dialog.py).
+        self.btn_search = QPushButton()
+        self.btn_search.setFixedSize(32, 32)
+        self.btn_search.setCursor(Qt.PointingHandCursor)
+        self.btn_search.setToolTip(self.tr("Buscar videos o audios por nombre"))
+        self.btn_search.setIconSize(QSize(18, 18))
+        self.btn_search.clicked.connect(self._on_search_clicked)
+        apply_cut_button_style(self.btn_search, "normal", icon_size=18, shape="square", icon_name="search.svg")
 
         # ComboBox de Etiquetas (a la derecha de corte de fragmentos)
         self.combo_tags = AutoPopupComboBox()
@@ -250,7 +260,7 @@ class QuickModeTab(QWidget):
         self.btn_download.setStyleSheet("padding: 0px;")
         self.btn_download.clicked.connect(self._on_download_clicked)
 
-        layout.addWidget(QLabel(self.tr("URL:")))
+        layout.addWidget(self.btn_search)
         layout.addWidget(self.url_input, 1)
         layout.addWidget(self.btn_cut)
         layout.addWidget(self.combo_tags)
@@ -402,6 +412,12 @@ class QuickModeTab(QWidget):
         if not url:
             return
 
+        from gui.dialogs.media_search_dialog import looks_like_url
+        if not looks_like_url(url):
+            # Texto libre (ej. "green screen"): se toma como búsqueda.
+            self._open_search(url)
+            return
+
         # Delegar la descarga al controlador
         self.controller.start_download_flow(
             url=url,
@@ -416,6 +432,31 @@ class QuickModeTab(QWidget):
             recode_data=self.recode_controller.collect_recode_data(),
         )
         self.url_input.clear()
+
+    def _on_search_clicked(self):
+        from gui.dialogs.media_search_dialog import looks_like_url
+        text = self.url_input.text().strip()
+        self._open_search("" if looks_like_url(text) else text)
+
+    def _open_search(self, query=""):
+        from PySide6.QtWidgets import QDialog
+        from gui.dialogs.media_search_dialog import MediaSearchDialog
+        dialog = MediaSearchDialog(self, multi_select=True, initial_query=query)
+        if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_items:
+            return
+        if query and self.url_input.text().strip() == query:
+            self.url_input.clear()
+        self.controller.start_search_downloads(
+            dialog.selected_items,
+            mode=self.mode_combo.currentData() or "video+audio",
+            quality=self.quality_combo.currentData() or "best_compatible",
+            output_path=self.output_options.output_path_input.text(),
+            speed_limit_val=self.output_options.speed_limit_input.value(),
+            chk_thumb_file_checked=self.chk_thumb_file.isChecked(),
+            chk_thumb_only_checked=self.chk_thumb_only.isChecked(),
+            btn_cut_checked=self.btn_cut.isChecked(),
+            recode_data=self.recode_controller.collect_recode_data(),
+        )
 
     def _on_open_output_path_clicked(self):
         path = self.output_options.output_path_input.text().strip()
@@ -475,6 +516,7 @@ class QuickModeTab(QWidget):
         # El campo de URL y el botón de descarga siempre se mantienen habilitados para permitir encolar/añadir
         self.url_input.setEnabled(True)
         self.btn_download.setEnabled(enabled or self.controller.is_downloading)
+        self.btn_search.setEnabled(enabled or self.controller.is_downloading)
         self.options_panel.setEnabled(enabled)
         self.mode_combo.setEnabled(enabled and not self.chk_thumb_only.isChecked())
         self.quality_combo.setEnabled(enabled and not self.chk_thumb_only.isChecked())

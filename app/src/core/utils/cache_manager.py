@@ -418,6 +418,47 @@ class RemoteThumbnailCacheProvider(BaseCacheProvider):
         }
 
 
+class SearchThumbnailCacheProvider(BaseCacheProvider):
+    """Proveedor de caché para las miniaturas chicas de la ventana de búsqueda (lupa de
+    Modo Rápido/Proceso Avanzado) -- ver core/utils/search_thumbnail_cache.py."""
+
+    scope = "web"
+
+    @property
+    def key(self) -> str:
+        return "search_thumbnails"
+
+    @property
+    def name(self) -> str:
+        return QCoreApplication.translate("SearchThumbnailCacheProvider", "Caché de Miniaturas de Búsqueda")
+
+    @property
+    def description(self) -> str:
+        from core.utils.search_thumbnail_cache import MAX_SEARCH_THUMBNAIL_FILES
+        return QCoreApplication.translate("SearchThumbnailCacheProvider", "Miniaturas de baja calidad de los resultados de búsqueda de YouTube y SoundCloud (máx {0} archivos).").format(MAX_SEARCH_THUMBNAIL_FILES)
+
+    def get_stats(self) -> Dict[str, Any]:
+        from core.utils.search_thumbnail_cache import search_thumbnail_stats
+        file_count, total_size = search_thumbnail_stats()
+        return {
+            "key": self.key,
+            "name": self.name,
+            "description": self.description,
+            "file_count": file_count,
+            "size_bytes": total_size,
+            "formatted_size": format_bytes(total_size)
+        }
+
+    def clear(self) -> Dict[str, Any]:
+        stats_before = self.get_stats()
+        from core.utils.search_thumbnail_cache import SearchThumbnailCache
+        deleted_count = SearchThumbnailCache.get_instance().clear_cache()
+        return {
+            "files_removed": deleted_count,
+            "bytes_freed": stats_before["size_bytes"]
+        }
+
+
 class CacheManager:
     """Servicio centralizado que administra todos los proveedores de caché de la aplicación."""
 
@@ -443,6 +484,7 @@ class CacheManager:
         self.register_provider(ProxyCacheProvider())
         self.register_provider(FreesoundPreviewCacheProvider())
         self.register_provider(RemoteThumbnailCacheProvider())
+        self.register_provider(SearchThumbnailCacheProvider())
 
 
     def register_provider(self, provider: BaseCacheProvider):

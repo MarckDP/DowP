@@ -20,6 +20,8 @@ from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_a
 from core.tabs.quick_mode.quick_mode_logic import build_quick_request_data, reveal_in_file_manager
 from gui.tabs.advanced_process.workers import AnalysisWorker, DownloadWorker
 from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
+from gui.dialogs.media_search_dialog import confirm_live_download, ask_cut_one_by_one
+from core.ytdlp_logic.media_search import is_live_now
 
 
 class QuickDownloadController(QObject):
@@ -96,8 +98,11 @@ class QuickDownloadController(QObject):
                                        chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
 
     def start_direct_download(self, url, mode, quality, output_path, speed_limit_val,
-                              chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None):
-        """Descarga directa sin análisis previo."""
+                              chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
+                              display_title=None):
+        """Descarga directa sin análisis previo. display_title (ej. el título que ya trae un
+        resultado de la búsqueda) solo cambia el texto de la fila mientras yt-dlp responde;
+        el nombre del archivo lo sigue poniendo yt-dlp."""
         req = build_quick_request_data(
             url=url,
             title="",
@@ -112,7 +117,8 @@ class QuickDownloadController(QObject):
         )
         if recode_data:
             req.update(recode_data)
-        self.start_worker(req, selected_entries=[{"title": self.tr("Descarga directa") if hasattr(self, "tr") else "Descarga directa"}], selected_indices=[0])
+        row_title = display_title or (self.tr("Descarga directa") if hasattr(self, "tr") else "Descarga directa")
+        self.start_worker(req, selected_entries=[{"title": row_title}], selected_indices=[0])
 
     def start_playlist_selection(self, url, mode, quality, output_path, speed_limit_val,
                                  chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None):
@@ -184,8 +190,12 @@ class QuickDownloadController(QObject):
         self.analysis_worker.start()
 
     def start_cut_analysis(self, url, mode, quality, output_path, speed_limit_val,
-                           chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None):
-        """Inicia el análisis para corte de fragmento."""
+                           chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
+                           on_done=None):
+        """Inicia el análisis para corte de fragmento. on_done() se llama cuando este video
+        ya terminó su paso por el recorte (descarga encolada, cancelado o error): lo usa
+        start_search_downloads para abrir el recorte de varios videos uno tras otro, ya que
+        self.analysis_worker es uno solo."""
         self.busy_state_changed.emit(True, self.tr("Analizando video para recorte...") if hasattr(self, "tr") else "Analizando video para recorte...")
         self.analysis_worker = AnalysisWorker(url, analyze_playlist=False, fast_mode=True)
 
@@ -193,19 +203,75 @@ class QuickDownloadController(QObject):
             if self.analysis_worker:
                 self.analysis_worker.deleteLater()
             self.analysis_worker = None
-            
-            if error:
-                self.busy_state_changed.emit(False, "")
-                self.progress_updated.emit(0, self.tr("Error al analizar: {0}").format(error) if hasattr(self, "tr") else f"Error al analizar: {error}", "error")
-                return
-                
-            history_key = download_history().record_analysis(data, url, as_playlist=False)
-            self.open_cut_dialog_and_download(url, data, mode, quality, output_path, speed_limit_val,
-                                              chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
-                                              history_key=history_key)
+            try:
+                if error:
+                    self.busy_state_changed.emit(False, "")
+                    self.progress_updated.emit(0, self.tr("Error al analizar: {0}").format(error) if hasattr(self, "tr") else f"Error al analizar: {error}", "error")
+                    return
+
+                if is_live_now(data):
+                    # Un directo en curso no tiene duración ni rangos fijos: el recorte no
+                    # aplica. Se ofrece descargarlo completo (ver conversación).
+                    self.busy_state_changed.emit(False, "")
+                    if confirm_live_download(self.tab, 1, cut_enabled=True, total=1):
+                        self.start_direct_download(url, mode, quality, output_path, speed_limit_val,
+                                                   chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
+                                                   display_title=data.get("title"))
+                    else:
+                        self.progress_updated.emit(0, self.tr("Descarga cancelada") if hasattr(self, "tr") else "Descarga cancelada", "wait")
+                    return
+
+                history_key = download_history().record_analysis(data, url, as_playlist=False)
+                self.open_cut_dialog_and_download(url, data, mode, quality, output_path, speed_limit_val,
+                                                  chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
+                                                  history_key=history_key)
+            finally:
+                if on_done:
+                    on_done()
 
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
+
+    def start_search_downloads(self, items, mode, quality, output_path, speed_limit_val,
+                               chk_thumb_file_checked, chk_thumb_only_checked, btn_cut_checked,
+                               recode_data=None):
+        """Encola los resultados elegidos en la ventana de búsqueda (lupa). Solo se usan sus
+        URLs y títulos: cada video se analiza/descarga como si se hubiera pegado a mano.
+        El selector de playlist no aplica (cada resultado es un video suelto)."""
+        items = [item for item in items if item.get("url")]
+        if not items:
+            return
+
+        live_items = [item for item in items if item.get("is_live")]
+        if live_items:
+            if not confirm_live_download(self.tab, len(live_items), cut_enabled=btn_cut_checked, total=len(items)):
+                live_items = []
+        normal_items = [item for item in items if not item.get("is_live")]
+
+        cut_one_by_one = False
+        if btn_cut_checked and normal_items:
+            if len(normal_items) == 1:
+                cut_one_by_one = True
+            else:
+                cut_one_by_one = ask_cut_one_by_one(self.tab)
+
+        common = (mode, quality, output_path, speed_limit_val, chk_thumb_file_checked, chk_thumb_only_checked)
+
+        for item in live_items:
+            self.start_direct_download(item["url"], *common, recode_data, display_title=item.get("title"))
+
+        if not cut_one_by_one:
+            for item in normal_items:
+                self.start_direct_download(item["url"], *common, recode_data, display_title=item.get("title"))
+            return
+
+        pending = [item["url"] for item in normal_items]
+
+        def next_cut():
+            if pending:
+                self.start_cut_analysis(pending.pop(0), *common, recode_data, on_done=next_cut)
+
+        next_cut()
 
     def open_cut_dialog_and_download(self, url, data, mode, quality, output_path, speed_limit_val,
                                      chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,

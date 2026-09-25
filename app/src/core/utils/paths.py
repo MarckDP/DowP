@@ -141,6 +141,14 @@ def get_remote_thumbnail_cache_dir() -> str:
     os.makedirs(rt_dir, exist_ok=True)
     return rt_dir
 
+def get_search_thumbnail_cache_dir() -> str:
+    """Retorna el directorio de caché para las miniaturas chicas de la ventana de búsqueda
+    (lupa de Modo Rápido/Proceso Avanzado). Separado a propósito de get_thumbnail_cache_dir():
+    estas miniaturas son de baja calidad y nunca deben terminar en una descarga."""
+    st_dir = os.path.join(get_cache_dir(), "search_thumbnails")
+    os.makedirs(st_dir, exist_ok=True)
+    return st_dir
+
 def get_local_app_data_dir() -> str:
     r"""
     Retorna un directorio de datos NO itinerante (no roaming) para lo que pesa: bin/

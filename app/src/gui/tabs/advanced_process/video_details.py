@@ -389,6 +389,8 @@ class VideoDetailsWidget(QFrame):
 
         self.current_video_url = data.get('original_url', data.get('webpage_url', ''))
         self.current_duration = data.get('duration', 0)
+        from core.ytdlp_logic.media_search import is_live_now
+        self.current_is_live = is_live_now(data)
         self.current_fps = data.get('fps', 30)
         if not self.current_fps:
             self.current_fps = 30
@@ -659,6 +661,13 @@ class VideoDetailsWidget(QFrame):
 
     def open_fragments_dialog(self, btn_fragments=None):
         """Abre el diálogo de fragmentos. btn_fragments se pasa desde fuera para actualizar su texto."""
+        if getattr(self, "current_is_live", False):
+            # Un directo en curso no tiene duración ni rangos fijos (ver conversación).
+            from gui.dialogs.dialogs import show_info
+            show_info(self, self.tr("Directo en curso"),
+                      self.tr("Los directos en curso no se pueden recortar. Puedes descargarlo "
+                              "completo; la descarga seguirá hasta que termine la transmisión o la canceles."))
+            return
         pixmap = self.thumb_container._pixmap
         dialog = FragmentDialog(
             self,
@@ -716,6 +725,7 @@ class VideoDetailsWidget(QFrame):
 
     def reset_ui(self):
         """Limpia todos los datos de la UI."""
+        self.current_is_live = False
         self.title_input.clear()
         self.combo_video.clear()
         self.combo_video.addItem(self.tr("Seleccionar video..."))

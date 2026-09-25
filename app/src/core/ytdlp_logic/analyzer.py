@@ -193,16 +193,15 @@ def get_base_ydl_opts(extra_opts=None):
 
     return ydl_opts
 
-def get_video_info(url, extra_opts=None, progress_callback=None):
-    """
-    Análisis de video usando la lógica del DowP viejo (ZIP + API Nativa) 
-    y respetando estrictamente los ajustes del usuario.
-    """
+def load_ytdlp_module():
+    """Importa yt_dlp desde el ZIP que gestiona DowP (no el de pip), con los plugins de PO
+    token si están instalados. Devuelve el módulo, o None si el ZIP no existe o no se pudo
+    importar. Compartido por get_video_info y la búsqueda (media_search.py)."""
     ytdlp_path = get_ytdlp_path()
-    
+
     if not os.path.exists(ytdlp_path):
         logger.error(f"yt-dlp not found at {ytdlp_path}")
-        return None, "yt-dlp binary not found."
+        return None
 
     # Solo recargar módulos si el path del ZIP cambió (evita reimportación innecesaria)
     if ytdlp_path not in sys.path:
@@ -227,6 +226,21 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
         import yt_dlp
     except ImportError:
         logger.error("Failed to import yt_dlp from zip")
+        return None
+    return yt_dlp
+
+
+def get_video_info(url, extra_opts=None, progress_callback=None):
+    """
+    Análisis de video usando la lógica del DowP viejo (ZIP + API Nativa)
+    y respetando estrictamente los ajustes del usuario.
+    """
+    if not os.path.exists(get_ytdlp_path()):
+        logger.error(f"yt-dlp not found at {get_ytdlp_path()}")
+        return None, "yt-dlp binary not found."
+
+    yt_dlp = load_ytdlp_module()
+    if yt_dlp is None:
         return None, QCoreApplication.translate("analyzer", "Error: yt-dlp could not be imported.")
 
     ydl_opts = get_base_ydl_opts(extra_opts)

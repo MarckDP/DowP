@@ -146,6 +146,7 @@ class AdvancedProcessTab(QWidget):
 
         # Connections
         self.url_bar.analyze_requested.connect(self.start_analysis)
+        self.url_bar.search_requested.connect(self.open_media_search)
         self.url_bar.solo_toggled.connect(self._on_solo_toggled)
         self.queue_trigger.clicked.connect(self.toggle_queue_panel)
 
@@ -890,6 +891,34 @@ class AdvancedProcessTab(QWidget):
     def resizeEvent(self, event):
         self.queue_panel.adjust_width(self.width())
         super().resizeEvent(event)
+
+    def open_media_search(self, query=""):
+        """Ventana de búsqueda (lupa). SOLO: un resultado, que se pone en el campo de URL y
+        se analiza como si se hubiera pegado. LOTES: varios, cada uno entra a la cola igual
+        que una URL pegada. Solo viajan las URLs: el análisis sale del flujo normal."""
+        from PySide6.QtWidgets import QDialog
+        from gui.dialogs.media_search_dialog import MediaSearchDialog, confirm_live_download
+
+        solo = self.url_bar.solo_btn.isChecked()
+        dialog = MediaSearchDialog(self, multi_select=not solo, initial_query=query)
+        if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_items:
+            return
+        items = dialog.selected_items[:1] if solo else dialog.selected_items
+
+        live_count = sum(1 for item in items if item.get("is_live"))
+        if live_count and not confirm_live_download(self, live_count, total=len(items)):
+            items = [item for item in items if not item.get("is_live")]
+        if not items:
+            return
+
+        if solo:
+            self.url_bar.url_input.setText(items[0]["url"])
+            self.start_analysis(items[0]["url"])
+            return
+        if query and self.url_bar.url_input.text().strip() == query:
+            self.url_bar.url_input.clear()
+        for item in items:
+            self.start_analysis(item["url"])
 
     def start_analysis(self, url):
         logger.info(f"AdvancedProcessTab: Empezando análisis para {url}")

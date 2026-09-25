@@ -1066,19 +1066,22 @@ QPushButton#soloButton:checked:hover {
    ═══════════════════════════════════════════ */
 
 QDialog#fragmentDialogOverlay,
-QDialog#subclipDialogOverlay {
+QDialog#subclipDialogOverlay,
+QDialog#mediaSearchOverlay {
     background-color: rgba(0, 0, 0, 0.72);
 }
 
 QFrame#fragmentDialogCard,
-QFrame#subclipDialogCard {
+QFrame#subclipDialogCard,
+QFrame#mediaSearchCard {
     background-color: {{fondo_principal}};
     border: 1px solid {{borde_normal}};
     border-radius: 6px;
 }
 
 QWidget#fragmentTitleBar,
-QWidget#subclipTitleBar {
+QWidget#subclipTitleBar,
+QWidget#mediaSearchTitleBar {
     background-color: {{fondo_secundario}};
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
@@ -1086,14 +1089,77 @@ QWidget#subclipTitleBar {
 }
 
 QLabel#fragmentTitleLabel,
-QLabel#subclipTitleLabel {
+QLabel#subclipTitleLabel,
+QLabel#mediaSearchTitleLabel {
     color: {{texto_activo}};
     font-weight: bold;
     font-size: 13px;
 }
 
-QWidget#fragmentMainContainer {
+QWidget#fragmentMainContainer,
+QWidget#mediaSearchMainContainer {
     background-color: {{fondo_principal}};
+}
+
+/* Ventana de búsqueda (lupa) — gui/dialogs/media_search_dialog.py */
+QListView#mediaSearchResults {
+    background-color: {{fondo_secundario}};
+    border: 1px solid {{borde_normal}};
+    border-radius: 6px;
+    outline: none;
+}
+
+QPushButton#mediaSearchFilterChip {
+    background-color: {{fondo_elemento}};
+    color: {{texto_principal}};
+    border: 1px solid {{borde_sutil}};
+    border-radius: 14px;
+    padding: 2px 14px;
+}
+
+QPushButton#mediaSearchFilterChip:hover {
+    border: 1px solid {{acento_secundario}};
+}
+
+QPushButton#mediaSearchFilterChip:checked {
+    background-color: {{boton_secundario_fondo}};
+    color: {{boton_secundario_texto}};
+    border: 1px solid {{acento_primario}};
+    font-weight: bold;
+}
+
+QPushButton#mediaSearchViewButton {
+    background-color: {{fondo_elemento}};
+    border: 1px solid {{borde_sutil}};
+    border-radius: 6px;
+    padding: 0px;
+}
+
+QPushButton#mediaSearchViewButton:checked {
+    background-color: {{boton_secundario_fondo}};
+    border: 1px solid {{acento_primario}};
+}
+
+QLabel#mediaSearchHint {
+    color: {{estado_aviso}};
+    font-size: 11px;
+}
+
+QLabel#mediaSearchMessage {
+    color: {{texto_secundario}};
+    font-size: 14px;
+    background-color: {{fondo_secundario}};
+    border: 1px solid {{borde_normal}};
+    border-radius: 6px;
+}
+
+QLabel#mediaSearchStatus {
+    color: {{texto_secundario}};
+}
+
+QLabel#mediaSearchChannelLabel {
+    color: {{texto_activo}};
+    font-weight: bold;
 }
 
 QWidget#fragmentVideoContainer {

@@ -1,12 +1,15 @@
 # src/gui/widgets/url_bar.py
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QSizePolicy
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QSizePolicy, QPushButton
+from PySide6.QtCore import Signal, Qt, QSize
 from core.logger.logger_manager import logger
 from gui.widgets.animated_button import AnimatedButton
 
 class URLBar(QWidget):
     analyze_requested = Signal(str)
     solo_toggled = Signal(bool)
+    # Lupa o Enter con texto que no es URL: abre la ventana de búsqueda con ese texto
+    # (vacío si no hay) -- ver AdvancedProcessTab.open_media_search.
+    search_requested = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -66,8 +69,17 @@ class URLBar(QWidget):
         self.solo_btn.setFixedWidth(65)
         self.solo_btn.toggled.connect(self.solo_toggled.emit)
 
+        from gui.styles import apply_cut_button_style
+        self.search_btn = QPushButton()
+        self.search_btn.setFixedSize(34, 34)
+        self.search_btn.setCursor(Qt.PointingHandCursor)
+        self.search_btn.setToolTip(self.tr("Buscar videos o audios por nombre"))
+        self.search_btn.setIconSize(QSize(18, 18))
+        self.search_btn.clicked.connect(self._on_search_clicked)
+        apply_cut_button_style(self.search_btn, "normal", icon_size=18, shape="square", icon_name="search.svg")
+
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText(self.tr("Pega la URL aquí (YouTube, Twitch, etc...)"))
+        self.url_input.setPlaceholderText(self.tr("Pega la URL aquí (YouTube, Twitch, etc.) o escribe algo para buscar"))
         self.url_input.returnPressed.connect(self.on_analyze_clicked)
         self.url_input.textEdited.connect(self._on_text_edited)
         
@@ -77,13 +89,25 @@ class URLBar(QWidget):
         self.analyze_btn.clicked.connect(self.on_analyze_clicked)
 
         layout.addWidget(self.solo_btn)
+        layout.addWidget(self.search_btn)
         layout.addWidget(self.url_input)
         layout.addWidget(self.analyze_btn)
 
     def on_analyze_clicked(self):
         url = self.url_input.text().strip()
-        if url:
+        if not url:
+            return
+        from gui.dialogs.media_search_dialog import looks_like_url
+        if looks_like_url(url):
             self.analyze_requested.emit(url)
+        else:
+            # Texto libre (ej. "green screen"): se toma como búsqueda.
+            self.search_requested.emit(url)
+
+    def _on_search_clicked(self):
+        from gui.dialogs.media_search_dialog import looks_like_url
+        text = self.url_input.text().strip()
+        self.search_requested.emit("" if looks_like_url(text) else text)
 
     def set_loading(self, loading: bool):
         self.analyze_btn.setEnabled(not loading)
