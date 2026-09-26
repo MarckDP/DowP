@@ -7,7 +7,6 @@ from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import QDialog
 
 from core.logger.logger_manager import logger
-from core.utils.cleanup_manager import CleanupManager
 from core.utils.download_history import download_history
 from core.utils.config_manager import get_config
 from core.utils.queue_manager import get_queue_manager
@@ -79,7 +78,7 @@ class QuickDownloadController(QObject):
         # termine, pase lo que pase -- el intermedio nunca es el resultado final.
         self._chain_cleanup = {}
 
-    def start_download_flow(self, url, mode, quality, output_path, speed_limit_val,
+    def start_download_flow(self, url, mode, quality, output_path,
                             chk_thumb_file_checked, chk_thumb_only_checked,
                             btn_cut_checked, chk_playlist_selector_checked, recode_data=None):
         """Inicia el flujo de descargas dependiendo de la configuración actual."""
@@ -88,16 +87,16 @@ class QuickDownloadController(QObject):
             return
 
         if btn_cut_checked:
-            self.start_cut_analysis(url, mode, quality, output_path, speed_limit_val,
+            self.start_cut_analysis(url, mode, quality, output_path,
                                     chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
         elif chk_playlist_selector_checked:
-            self.start_playlist_selection(url, mode, quality, output_path, speed_limit_val,
+            self.start_playlist_selection(url, mode, quality, output_path,
                                          chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
         else:
-            self.start_direct_download(url, mode, quality, output_path, speed_limit_val,
+            self.start_direct_download(url, mode, quality, output_path,
                                        chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
 
-    def start_direct_download(self, url, mode, quality, output_path, speed_limit_val,
+    def start_direct_download(self, url, mode, quality, output_path,
                               chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
                               display_title=None):
         """Descarga directa sin análisis previo. display_title (ej. el título que ya trae un
@@ -109,7 +108,6 @@ class QuickDownloadController(QObject):
             mode=mode,
             quality=quality,
             output_path=output_path,
-            speed_limit_val=speed_limit_val,
             chk_thumb_file_checked=chk_thumb_file_checked,
             chk_thumb_only_checked=chk_thumb_only_checked,
             is_playlist=False,
@@ -120,7 +118,7 @@ class QuickDownloadController(QObject):
         row_title = display_title or (self.tr("Descarga directa") if hasattr(self, "tr") else "Descarga directa")
         self.start_worker(req, selected_entries=[{"title": row_title}], selected_indices=[0])
 
-    def start_playlist_selection(self, url, mode, quality, output_path, speed_limit_val,
+    def start_playlist_selection(self, url, mode, quality, output_path,
                                  chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
                                  on_done=None):
         """Inicia el análisis de la lista de reproducción para posterior selección. on_done()
@@ -145,7 +143,7 @@ class QuickDownloadController(QObject):
             entries = data.get("entries") or []
             if len(entries) <= 1:
                 self.busy_state_changed.emit(False, "")
-                self.start_direct_download(url, mode, quality, output_path, speed_limit_val,
+                self.start_direct_download(url, mode, quality, output_path,
                                            chk_thumb_file_checked, chk_thumb_only_checked, recode_data)
                 if on_done:
                     on_done()
@@ -171,24 +169,26 @@ class QuickDownloadController(QObject):
                     on_done()
                 return
 
+            # El modo y la calidad de una playlist los decide SU ventana, no el selector
+            # de afuera (que en modo playlist está desactivado, ver quick_mode_view).
+            # Antes se armaba la petición con el selector externo y después se pisaban
+            # solo modo y formato: la extracción de audio y las extensiones quedaban del
+            # modo externo, y "Solo audio" elegido acá bajaba .webm sin convertir (sin
+            # carátula) o hasta video cuando YouTube no ofrecía audio suelto.
+            pl_mode = dialog.result_data.get("playlist_mode") or mode
+            item_quality = dialog.result_data.get("playlist_quality") or quality
             req = build_quick_request_data(
                 url=data.get("original_url", data.get("webpage_url", url)),
                 title=data.get("title") or (self.tr("Playlist") if hasattr(self, "tr") else "Playlist"),
-                mode=mode,
-                quality=quality,
+                mode=pl_mode,
+                quality=item_quality,
                 output_path=output_path,
-                speed_limit_val=speed_limit_val,
                 chk_thumb_file_checked=chk_thumb_file_checked,
                 chk_thumb_only_checked=chk_thumb_only_checked,
                 is_playlist=True,
                 playlist_items=",".join(str(i + 1) for i in selected),
                 conflict_policy=self.tab.output_options.conflict_policy_combo.currentData(),
             )
-            
-            req["mode"] = dialog.result_data.get("playlist_mode") or req["mode"]
-            item_quality = dialog.result_data.get("playlist_quality") or quality
-            from core.ytdlp_logic.format_selectors import quick_format_selector
-            req["format_selector"] = quick_format_selector(req["mode"], item_quality, url=req.get("url", ""))
             if recode_data:
                 req.update(recode_data)
 
@@ -208,7 +208,7 @@ class QuickDownloadController(QObject):
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
 
-    def start_cut_analysis(self, url, mode, quality, output_path, speed_limit_val,
+    def start_cut_analysis(self, url, mode, quality, output_path,
                            chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
                            on_done=None):
         """Inicia el análisis para corte de fragmento. on_done() se llama cuando este video
@@ -233,7 +233,7 @@ class QuickDownloadController(QObject):
                     # aplica. Se ofrece descargarlo completo (ver conversación).
                     self.busy_state_changed.emit(False, "")
                     if confirm_live_download(self.tab, 1, cut_enabled=True, total=1):
-                        self.start_direct_download(url, mode, quality, output_path, speed_limit_val,
+                        self.start_direct_download(url, mode, quality, output_path,
                                                    chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
                                                    display_title=data.get("title"))
                     else:
@@ -241,7 +241,7 @@ class QuickDownloadController(QObject):
                     return
 
                 history_key = download_history().record_analysis(data, url, as_playlist=False)
-                self.open_cut_dialog_and_download(url, data, mode, quality, output_path, speed_limit_val,
+                self.open_cut_dialog_and_download(url, data, mode, quality, output_path,
                                                   chk_thumb_file_checked, chk_thumb_only_checked, recode_data,
                                                   history_key=history_key)
             finally:
@@ -251,7 +251,7 @@ class QuickDownloadController(QObject):
         self.analysis_worker.finished.connect(on_finished)
         self.analysis_worker.start()
 
-    def start_search_downloads(self, items, mode, quality, output_path, speed_limit_val,
+    def start_search_downloads(self, items, mode, quality, output_path,
                                chk_thumb_file_checked, chk_thumb_only_checked, btn_cut_checked,
                                recode_data=None):
         """Encola los resultados elegidos en la ventana de búsqueda (lupa). Solo se usan sus
@@ -292,7 +292,7 @@ class QuickDownloadController(QObject):
             else:
                 cut_one_by_one = ask_cut_one_by_one(self.tab)
 
-        common = (mode, quality, output_path, speed_limit_val, chk_thumb_file_checked, chk_thumb_only_checked)
+        common = (mode, quality, output_path, chk_thumb_file_checked, chk_thumb_only_checked)
 
         for item in live_items:
             self.start_direct_download(item["url"], *common, recode_data, display_title=item.get("title"))
@@ -324,7 +324,7 @@ class QuickDownloadController(QObject):
 
         next_cut()
 
-    def open_cut_dialog_and_download(self, url, data, mode, quality, output_path, speed_limit_val,
+    def open_cut_dialog_and_download(self, url, data, mode, quality, output_path,
                                      chk_thumb_file_checked, chk_thumb_only_checked, recode_data=None,
                                      history_key=None):
         """Abre el diálogo de fragmento de corte."""
@@ -380,7 +380,6 @@ class QuickDownloadController(QObject):
                 mode=mode,
                 quality=quality,
                 output_path=output_path,
-                speed_limit_val=speed_limit_val,
                 chk_thumb_file_checked=chk_thumb_file_checked,
                 chk_thumb_only_checked=chk_thumb_only_checked,
                 is_playlist=False,
@@ -470,6 +469,7 @@ class QuickDownloadController(QObject):
         self.current_item_rows.extend(item_rows)
         self.current_item_keys.extend(item_keys)
 
+        numbering = get_config().get("playlist_numbering", True)
         for pos, (row, key, entry) in enumerate(zip(item_rows, item_keys, entries), start=1):
             item_url = QueueWorker._entry_url(entry or {})
             if not item_url:
@@ -483,11 +483,11 @@ class QuickDownloadController(QObject):
             # _prepare_opts active ignoreerrors y vuelva a tragarse los 403.
             child.pop("playlist_items", None)
             child["url"] = item_url
-            # " #N" reproduce lo que ponía la plantilla %(playlist_autonumber)s, que solo
-            # funciona dentro del bucle de playlist de yt-dlp: sin esto los archivos
-            # perderían la numeración.
+            # Numeración al inicio ("001 - Título"), igual que Proceso Avanzado
+            # (_execute_playlist): así el explorador ordena los archivos como la lista.
+            # Se puede apagar en Ajustes > Descargas.
             titulo = (entry or {}).get("title") or row.original_title or f"Item {pos}"
-            child["title"] = f"{titulo} #{pos}"
+            child["title"] = f"{pos:03d} - {titulo}" if numbering else titulo
             child["format_selector"] = quick_format_selector(mode, quality, url=item_url)
 
             self._batch_total += 1
@@ -738,6 +738,12 @@ class QuickDownloadController(QObject):
         editor_mgr = EditorIntegrationManager.get_instance()
 
         request_data = task_data["request_data"]
+        # Medio bajado pero un paso opcional falló (ej. carátula en un .webm): la fila
+        # queda completada, con el motivo a la vista (ver DownloaderMaster._cosmetic_pp_failure).
+        from core.ytdlp_logic.downloader_master import DownloaderMaster
+        pp_warning = ""
+        if success and message and message.startswith(DownloaderMaster.POSTPROCESS_WARNING_PREFIX):
+            pp_warning = message[len(DownloaderMaster.POSTPROCESS_WARNING_PREFIX):]
         recode_requested = bool(request_data.get("recode_enabled")) or bool(request_data.get("upscale_enabled"))
         is_single_row = len(task_data["item_rows"]) == 1
         fragment_files = task_data.get("_fragment_files")  # {frag_idx: path} o None
@@ -806,7 +812,8 @@ class QuickDownloadController(QObject):
                     # _on_recode_job_status una vez termine la recodificación.
                     continue
 
-                row.update_progress(100, status=self.tr("Completado") if hasattr(self, "tr") else "Completado")
+                row.update_progress(100, info=pp_warning,
+                                    status=self.tr("Completado") if hasattr(self, "tr") else "Completado")
                 row.mark_completed(filepath=actual_path or getattr(row, 'downloaded_filepath', None))
 
                 if editor_mgr and editor_mgr.is_auto_send_enabled and hasattr(row, 'downloaded_filepath') and row.downloaded_filepath:
@@ -828,13 +835,8 @@ class QuickDownloadController(QObject):
                 row.history_key = task_data["_history_key"]
                 self._history_sync_row(row)
 
-        if success:
-            title = task_data["request_data"].get("title", "").strip()
-            output_dir = task_data["request_data"].get("output_path", "")
-            if title and output_dir:
-                keep_thumb = task_data["request_data"].get("download_thumbnail_file", False)
-                CleanupManager.cleanup_ytdlp_temp_files(output_dir, title, keep_thumbnail=keep_thumb)
-                CleanupManager.deferred_cleanup(output_dir, title, keep_thumbnail=keep_thumb)
+        # Los residuos de la descarga (.part, streams sin fusionar...) ya los limpió
+        # DownloaderMaster al terminar, con las rutas exactas que reportó yt-dlp.
 
         # Despachar siguiente tarea si existe
         from core.utils.config_manager import get_config

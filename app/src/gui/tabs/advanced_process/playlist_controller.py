@@ -46,7 +46,6 @@ class PlaylistController(QObject):
             "conflict_policy": self.tab.output_options.conflict_policy_combo.currentData(),
             "selected_indices": selected,
             "total_videos": dialog.result_data.get("total_videos", len(data.get("entries") or [])),
-            "speed_limit": f"{int(self.tab.output_options.speed_limit_input.value() * 1024)}K" if self.tab.output_options.speed_limit_input.value() > 0 else None,
             "embed_metadata": get_config().get("embed_metadata", True),
             "embed_thumbnail": get_config().get("embed_thumbnail", True),
             "remove_sponsors": get_config().get("remove_sponsors", False),

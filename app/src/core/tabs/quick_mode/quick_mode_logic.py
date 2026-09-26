@@ -31,7 +31,7 @@ def reveal_in_file_manager(path):
     except Exception as e:
         logger.warning(f"No se pudo revelar archivo en el gestor: {e}")
 
-def build_quick_request_data(url, title, mode, quality, output_path, speed_limit_val,
+def build_quick_request_data(url, title, mode, quality, output_path,
                              chk_thumb_file_checked, chk_thumb_only_checked,
                              is_playlist=False, playlist_items=None, conflict_policy="conservar"):
     """
@@ -65,7 +65,6 @@ def build_quick_request_data(url, title, mode, quality, output_path, speed_limit
         "output_path": output_path,
         "conflict_policy": conflict_policy,
         "format_selector": format_selector,
-        "speed_limit": f"{int(speed_limit_val * 1024)}K" if speed_limit_val > 0 else None,
         "download_thumbnail_file": chk_thumb_file_checked or chk_thumb_only_checked,
         "embed_metadata": config.get("embed_metadata", True),
         "embed_thumbnail": config.get("embed_thumbnail", True),

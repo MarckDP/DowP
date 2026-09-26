@@ -1,13 +1,15 @@
 # src/core/ytdlp_logic/downloader_master.py
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QT_TRANSLATE_NOOP
 import os
 import sys
+import re
+import time
 import traceback
 from core.logger.logger_manager import logger
 from core.setup.setup_manager import get_dependency_env
 from core.setup.ytdlp_setup import get_ytdlp_path
 
-from core.ytdlp_logic.analyzer import get_base_ydl_opts
+from core.ytdlp_logic.analyzer import get_base_ydl_opts, YTDLLogger
 from core.utils.cleanup_manager import DownloadCancelledError
 from core.utils.subtitle_manager import SubtitleProcessor
 from core.utils import file_conflict_manager
@@ -18,8 +20,22 @@ class DownloaderMaster:
     Clase maestra encargada de centralizar las descargas de todas las pestañas.
     Gestiona la configuración de yt-dlp, hilos y post-procesamiento.
     """
+    # Prefijo del mensaje de éxito cuando el medio se bajó pero un paso opcional del
+    # post-proceso falló (ver _cosmetic_pp_failure). Quien lo recibe puede mostrar el
+    # aviso que sigue al prefijo.
+    POSTPROCESS_WARNING_PREFIX = "POSTPROCESS_WARNING:"
+
     def __init__(self):
         self.active_downloads = {} # Para futuras colas simultáneas
+        # Ver request_pause. No se reinicia en download(): una pausa pedida justo antes
+        # de que arranque la siguiente llamada tiene que seguir valiendo.
+        self._pause_requested = False
+
+    def request_pause(self):
+        """La próxima cancelación es una pausa: la limpieza conserva lo ya bajado
+        (.part, fragmentos, streams sin fusionar) para que yt-dlp lo retome al volver a
+        lanzar la misma descarga. Se usa junto con el cancellation_event."""
+        self._pause_requested = True
 
     def download(self, request_data, progress_callback=None, cancellation_event=None, conflict_ask_callback=None):
         """
@@ -37,9 +53,27 @@ class DownloaderMaster:
         # ignoreerrors='only_download' yt-dlp se traga el error por ítem y no hay
         # excepción de la que deducirlo (ver _retry_failed_playlist_items).
         self._completed_playlist_indices = set()
+        # Rutas que yt-dlp reporta en el hook para ESTA descarga (ver _make_hook y
+        # _cleanup_temp_artifacts): la limpieza borra solo lo derivado de ellas.
+        self._touched_streams = {}   # ruta del stream -> format_id
+        self._touched_tmp = set()    # rutas .part
+        # Miniaturas que yt-dlp escribió (ver _on_ytdlp_message). Van aparte porque se
+        # escriben ANTES de empezar a bajar: si la descarga falla antes del primer aviso
+        # de progreso (ej. un 403), _touched_streams queda vacío y no habría de dónde
+        # deducir su nombre.
+        self._touched_thumbs = set()
+        self._download_started_at = time.time()
         url = request_data.get("url")
         if not url:
             return False, "No URL provided"
+
+        # Miniaturas sueltas: se conservan si el usuario las pidió. La cola de Proceso
+        # Avanzado decide eso con su modo de miniaturas en lote y lo manda en
+        # _keep_thumbnail_files, porque a yt-dlp le apaga download_thumbnail_file (baja
+        # la miniatura por su cuenta, ver QueueWorker._execute_download).
+        keep_thumbnails = bool(request_data.get(
+            "_keep_thumbnail_files", request_data.get("download_thumbnail_file", False)))
+        keep_partials = False
 
         # Sanitizar el título (replica de sanitize_filename del DowP 1.0)
         if request_data.get("title"):
@@ -274,19 +308,30 @@ class DownloaderMaster:
                 return True, "Download finished successfully"
 
         except DownloadCancelledError as e:
-            # Limpieza de archivos temporales al cancelar
-            self._cleanup_on_cancel(request_data)
+            keep_thumbnails = False
+            keep_partials = self._pause_requested
             file_conflict_manager.rollback_backup(self._pending_backup)
             return False, str(e)
         except Exception as e:
             err_msg = str(e)
+            # Con fragmentos no: la excepción corta el bucle de fragmentos (o el corte
+            # local posterior), así que declarar éxito dejaría la tarea a medias.
+            warning = None if fragments else self._cosmetic_pp_failure(err_msg)
+            if warning:
+                logger.warning(f"DownloaderMaster: El medio se descargó, pero falló un paso opcional: {err_msg}")
+                file_conflict_manager.commit_backup(self._pending_backup)
+                return True, f"{self.POSTPROCESS_WARNING_PREFIX}{warning}"
+            keep_thumbnails = False
             logger.error(f"Error en DownloaderMaster: {err_msg}\n{traceback.format_exc()}")
-            # Limpieza de archivos temporales al fallar
-            self._cleanup_on_cancel(request_data)
             file_conflict_manager.rollback_backup(self._pending_backup)
             return False, err_msg
         finally:
             os.environ["PATH"] = old_path
+            # En el finally y no dentro del except: ahí la excepción en curso todavía
+            # retiene los frames de yt-dlp (y con ellos el .part abierto), y Windows no
+            # deja borrar un archivo abierto. Aquí ya se soltó todo -- incluidos los
+            # hilos de fragmentos concurrentes, que yt-dlp espera al salir.
+            self._cleanup_temp_artifacts(keep_thumbnails, keep_partials)
 
     def _resolve_title_from_metadata(self, request_data, url):
         """
@@ -305,6 +350,16 @@ class DownloaderMaster:
             probe_opts['skip_download'] = True
             probe_opts['quiet'] = True
             probe_opts.pop('progress_hooks', None)
+            # Solo se quiere el título: nada de escribir en disco. skip_download no
+            # alcanza -- con la URL de una playlist, yt-dlp escribía igual la miniatura de
+            # la playlist en la carpeta de salida y quedaba de basura.
+            probe_opts.update({
+                'writethumbnail': False,
+                'writesubtitles': False,
+                'writeautomaticsub': False,
+                'writeinfojson': False,
+                'postprocessors': [],
+            })
             with yt_dlp.YoutubeDL(probe_opts) as probe:
                 info = probe.extract_info(url, download=False)
             title = info.get('title') if info else None
@@ -405,6 +460,7 @@ class DownloaderMaster:
 
         # Obtener opciones base (cookies, impersonate, etc.)
         ydl_opts = get_base_ydl_opts()
+        ydl_opts['logger'] = YTDLLogger(message_callback=self._on_ytdlp_message)
         
         output_path = data.get("output_path", os.getcwd())
         custom_title = data.get("title")
@@ -612,11 +668,12 @@ class DownloaderMaster:
         if data.get('is_playlist') and ydl_opts.get('format') != 'bestvideo+bestaudio/best':
             ydl_opts['format'] = f"{ydl_opts['format']}/bestvideo+bestaudio/best"
 
-        # Límite de velocidad
-        ratelimit = data.get("speed_limit")
-        if ratelimit:
-            # yt-dlp espera bytes/s o strings como '50K', '10M'
-            ydl_opts['ratelimit'] = self._parse_speed_limit(ratelimit)
+        # Límite de velocidad: ajuste global (Ajustes > Descargas), leído al empezar cada
+        # descarga -- así un cambio también alcanza a lo que ya estaba en la cola.
+        from core.utils.config_manager import get_config
+        limit_mbps = get_config().get("speed_limit_mbps", 0) or 0
+        if limit_mbps > 0:
+            ydl_opts['ratelimit'] = float(limit_mbps) * 1024 * 1024  # bytes/s
 
         # Post-procesadores (Metadata, Subs, etc)
         ydl_opts['postprocessors'] = []
@@ -876,38 +933,6 @@ class DownloaderMaster:
         cmd.append(f"\"{url}\"")
         return " ".join(cmd)
 
-    def _parse_speed_limit(self, limit_str):
-        """Convierte inputs como '5M' o '50K' a un float de bytes/s."""
-        if not limit_str:
-            return None
-        if isinstance(limit_str, (int, float)):
-            return float(limit_str)
-        
-        limit_str = str(limit_str).strip().upper()
-        
-        multipliers = {
-            'K': 1024,
-            'M': 1024 * 1024,
-            'G': 1024 * 1024 * 1024,
-            'B': 1
-        }
-        
-        suffix = None
-        for s in multipliers:
-            if limit_str.endswith(s):
-                suffix = s
-                break
-                
-        try:
-            if suffix:
-                num_part = limit_str[:-1].strip()
-                val = float(num_part) * multipliers[suffix]
-            else:
-                val = float(limit_str)
-            return val
-        except ValueError:
-            logger.warning(f"DownloaderMaster: No se pudo parsear el limite de velocidad '{limit_str}', se ignora.")
-            return None
 
     # Extensiones con las que puede quedar la miniatura escrita por yt-dlp: la
     # conversión a jpg es un postprocesador que puede no correr (contenedor de origen ya
@@ -1229,6 +1254,16 @@ class DownloaderMaster:
     def _make_hook(self, external_callback):
         """Crea un hook que envuelve el callback externo y verifica la cancelación."""
         def hook(d):
+            # 0. Anotar las rutas ANTES de revisar la cancelación: el aviso que trae la
+            # cancelación suele ser el primero de un archivo recién abierto, y sin
+            # anotarlo ese .part quedaría fuera de la limpieza.
+            filename = d.get("filename")
+            if filename:
+                format_id = (d.get("info_dict") or {}).get("format_id")
+                self._touched_streams.setdefault(filename, format_id)
+            if d.get("tmpfilename"):
+                self._touched_tmp.add(d["tmpfilename"])
+
             # 1. Verificar Cancelación
             if self.cancellation_event and self.cancellation_event.is_set():
                 logger.info("DownloaderMaster: Cancelación detectada en el hook")
@@ -1320,17 +1355,115 @@ class DownloaderMaster:
             logger.info(f"DownloaderMaster: recuperados {len(recovered)} de {len(pending)} "
                         f"ítem(s) con el cliente alternativo.")
 
-    def _cleanup_on_cancel(self, request_data):
-        """Limpia archivos temporales/parciales cuando se cancela o falla una descarga."""
+    # Pistas en el mensaje de yt-dlp de un post-proceso opcional: fallar ahí no invalida
+    # el medio ya descargado (a diferencia de la fusión o la extracción de audio).
+    _COSMETIC_PP_HINTS = {
+        "thumbnail": QT_TRANSLATE_NOOP("DownloaderMaster", "No se pudo incrustar la carátula en este formato"),
+        "subtitle": QT_TRANSLATE_NOOP("DownloaderMaster", "No se pudieron incrustar los subtítulos"),
+        "metadata": QT_TRANSLATE_NOOP("DownloaderMaster", "No se pudieron incrustar los metadatos"),
+    }
+
+    def _cosmetic_pp_failure(self, err_msg):
+        """Si el error es de un post-proceso opcional (carátula, subtítulos, metadatos)
+        y el medio final ya está completo en disco, devuelve el aviso para el usuario;
+        si no, None. Antes cualquier fallo así marcaba la descarga como error aunque el
+        archivo estuviera bajado (ej. incrustar carátula en un .webm): la fila quedaba en
+        rojo, sin poder arrastrarse."""
+        from core.ytdlp_logic.analyzer import strip_ansi_codes
+        from core.utils.output_artifacts import find_actual_downloaded_file
+        clean = strip_ansi_codes(err_msg).lower()
+        if "postprocessing:" not in clean:
+            return None
+        hint = next((text for key, text in self._COSMETIC_PP_HINTS.items() if key in clean), None)
+        if not hint:
+            return None
+        for stream, format_id in self._touched_streams.items():
+            media = find_actual_downloaded_file(stream)
+            if not media or not os.path.isfile(media):
+                continue
+            root = os.path.splitext(media)[0]
+            if format_id and root.endswith(f".f{format_id}"):
+                continue  # stream sin fusionar: el medio final no existe
+            return QCoreApplication.translate("DownloaderMaster", hint)
+        return None
+
+    # "[info] Writing video thumbnail 42 to: C:\...\Título.webp" (también "playlist
+    # thumbnail"): yt-dlp no avisa de las miniaturas por el hook de progreso, solo así.
+    _THUMB_WRITTEN_RE = re.compile(r"Writing .*?thumbnail\b.*? to: (.+)$")
+
+    def _on_ytdlp_message(self, msg):
+        from core.ytdlp_logic.analyzer import strip_ansi_codes
+        match = self._THUMB_WRITTEN_RE.search(strip_ansi_codes(str(msg)).strip())
+        if match and hasattr(self, "_touched_thumbs"):
+            self._touched_thumbs.add(os.path.splitext(match.group(1).strip())[0])
+
+    def _temp_artifacts(self, keep_thumbnails, keep_partials=False):
+        """Residuos de ESTA descarga, derivados solo de las rutas exactas que yt-dlp
+        reportó en el hook (ver _make_hook) -- nunca por patrón de nombre.
+
+        Antes se barría la carpeta con globs armados con el título ('título*.part',
+        '*.f[0-9]*.part'...): el patrón sin título se llevaba los .part de OTRAS
+        descargas en curso en la misma carpeta, y el prefijo atrapaba archivos de
+        títulos parecidos ('Video' -> 'Video 2.f137.mp4', 'Video (Live).jpg').
+
+        Nunca incluye el medio final: un stream solo se borra si es intermedio (lleva
+        '.f<format_id>' en el nombre, ver YoutubeDL.process_info), que es lo que ffmpeg
+        fusiona y ya no sirve. Las miniaturas solo si se crearon durante esta descarga:
+        una que ya existía (de una descarga anterior, o del usuario) no se toca.
+
+        keep_partials (pausa, ver request_pause): se conserva todo lo que yt-dlp puede
+        retomar -- .part, fragmentos, .ytdl y streams ya completos sin fusionar."""
+        paths = set()
+        bases = set()
+        if not keep_partials:
+            for tmp in self._touched_tmp:
+                paths.add(tmp)
+                paths.update(glob.glob(glob.escape(tmp) + "-Frag*"))
+        for stream, format_id in self._touched_streams.items():
+            root = os.path.splitext(stream)[0]
+            marker = f".f{format_id}" if format_id else None
+            is_intermediate = bool(marker and root.endswith(marker))
+            if is_intermediate:
+                root = root[: -len(marker)]
+            bases.add(root)
+            if keep_partials:
+                continue
+            part = stream + ".part"
+            paths.update({part, stream + ".ytdl", part + ".ytdl"})
+            paths.update(glob.glob(glob.escape(part) + "-Frag*"))
+            if is_intermediate:
+                paths.add(stream)
+        for base in bases:
+            paths.add(base + ".temp")
+            paths.update(glob.glob(glob.escape(base) + ".temp.*"))
+        if not keep_thumbnails:
+            # Nombres de miniatura: los derivados del medio y los que yt-dlp avisó haber
+            # escrito (incluye la miniatura de la playlist, que no comparte nombre con
+            # ningún medio). Con estas últimas también .png: la conversión puede ir a png.
+            candidates = [(base, (".webp", ".jpg")) for base in bases]
+            candidates += [(base, (".webp", ".jpg", ".jpeg", ".png")) for base in self._touched_thumbs]
+            for base, exts in candidates:
+                for ext in exts:
+                    thumb = base + ext
+                    try:
+                        # 2 s de margen por la resolución de fecha de algunos sistemas de archivos
+                        if os.path.getmtime(thumb) >= self._download_started_at - 2:
+                            paths.add(thumb)
+                    except OSError:
+                        pass
+        return paths
+
+    def _cleanup_temp_artifacts(self, keep_thumbnails, keep_partials=False):
         from core.utils.cleanup_manager import CleanupManager
-        output_path = request_data.get("output_path", "")
-        title = request_data.get("title", "")
-        
-        if output_path and title:
-            CleanupManager.deferred_cleanup(output_path, title, delay=2)
-        elif output_path:
-            # Si no hay título custom, intentar limpiar con patrón genérico
-            CleanupManager.deferred_cleanup(output_path, "", delay=2)
+        if keep_partials:
+            logger.info("DownloaderMaster: Pausa: se conserva lo descargado para retomarlo.")
+        removed = 0
+        for path in self._temp_artifacts(keep_thumbnails, keep_partials):
+            if os.path.isfile(path) and CleanupManager.safe_remove(path):
+                logger.debug(f"DownloaderMaster: Residuo eliminado: {path}")
+                removed += 1
+        if removed:
+            logger.info(f"DownloaderMaster: Se limpiaron {removed} archivos residuales de la descarga.")
 
     @staticmethod
     def _sanitize_filename(filename):

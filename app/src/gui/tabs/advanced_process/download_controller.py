@@ -7,7 +7,6 @@ import platform
 import subprocess
 from PySide6.QtCore import QObject, QCoreApplication
 from core.logger.logger_manager import logger
-from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config
 from core.utils.download_history import download_history
 from core.utils.preset_manager import (
@@ -118,7 +117,8 @@ class DownloadController(QObject):
                     continue
                 if not job.request_data and job.video_data:
                     job.request_data = self.tab._build_default_request_data(job.video_data, job.title)
-                    
+        self.tab._apply_global_output_path()
+
         self.queue_mgr.start_queue()
         
         self.tab.output_options.btn_start_download.setEnabled(True)
@@ -206,12 +206,6 @@ class DownloadController(QObject):
                 self.tab.taskbar_manager.stop()
                 
             if success:
-                title = self.solo_request_data.get("title", "").strip()
-                output_dir = self.solo_request_data.get("output_path", "")
-                if title and output_dir:
-                    keep_thumb = self.solo_request_data.get("download_thumbnail_file", False)
-                    CleanupManager.cleanup_ytdlp_temp_files(output_dir, title, keep_thumbnail=keep_thumb)
-                    CleanupManager.deferred_cleanup(output_dir, title, keep_thumbnail=keep_thumb)
                 logger.info("AdvancedProcessTab: Descarga directa SOLO finalizada con éxito.")
                 download_history().mark_downloaded(getattr(self, "_solo_history_key", None))
 
@@ -299,7 +293,7 @@ class DownloadController(QObject):
             if running_jobs:
                 for job in running_jobs:
                     self.paused_job_ids.add(job.job_id)
-                    self.queue_mgr.cancel_job(job.job_id)
+                    self.queue_mgr.pause_job(job.job_id)
                 
                 self.tab.output_options.set_download_state("paused", QCoreApplication.translate("AdvancedProcessTab", "Pausando..."))
                 self.tab.output_options.btn_start_download.setEnabled(False)
@@ -471,20 +465,6 @@ class DownloadController(QObject):
             download_history().mark_job_downloaded(job_id)
             self._history_sync(job_id)
             if job and job.request_data:
-                title = job.request_data.get("title", "").strip()
-                output_dir = job.request_data.get("output_path", "")
-                if title and output_dir:
-                    logger.info(f"AdvancedProcessTab: Iniciando limpieza de residuos para '{title}'")
-                    from core.utils.config_manager import get_config
-                    batch_thumb_mode = get_config().get("batch_thumbnail_mode", "manual")
-                    if batch_thumb_mode in ("with_media", "thumbnail_only"):
-                        keep_thumb = True
-                    else:
-                        keep_thumb = job.request_data.get("download_thumbnail_file", False)
-                        
-                    CleanupManager.cleanup_ytdlp_temp_files(output_dir, title, keep_thumbnail=keep_thumb)
-                    CleanupManager.deferred_cleanup(output_dir, title, keep_thumbnail=keep_thumb)
-
                 # Rutas reales del resultado, para poder arrastrar la tarjeta terminada
                 # a otra aplicación (ver queue_panel.py::_on_card_file_drag). Los
                 # sidecars (miniatura, subtítulos) no hace falta registrarlos: se barren

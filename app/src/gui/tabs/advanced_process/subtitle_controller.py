@@ -76,7 +76,6 @@ class SubtitleController(QObject):
             "subtitle_is_auto": self.get_selected_subtitle_is_auto(),
             "subtitle_format": ext,
             "subtitle_output_ext": output_ext,
-            "speed_limit": f"{int(self.tab.output_options.speed_limit_input.value() * 1024)}K" if self.tab.output_options.speed_limit_input.value() > 0 else None,
             "standardize_srt": self.tab.subtitle_options.chk_standardize_srt["switch"].isChecked(),
             "cut_subtitles": self.tab.subtitle_options.chk_cut_to_fragment["switch"].isChecked(),
             "selected_fragments": self.tab.video_details.selected_fragments,

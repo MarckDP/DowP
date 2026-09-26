@@ -4,7 +4,6 @@ import os
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QAbstractSpinBox,
     QComboBox,
     QFileDialog,
     QFrame,
@@ -13,8 +12,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
-    QSpinBox,
-    QDoubleSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -27,14 +24,6 @@ from gui.widgets.native_file_drag import DraggableFilesButton
 from PySide6.QtCore import Signal
 
 
-_SPINBOX_SYMBOLS = getattr(QAbstractSpinBox, "ButtonSymbols", QAbstractSpinBox)
-PLUS_MINUS_BUTTONS = getattr(
-    _SPINBOX_SYMBOLS,
-    "PlusMinus",
-    getattr(_SPINBOX_SYMBOLS, "UpDownArrows"),
-)
-
-
 class OutputOptionsWidget(QFrame):
     TOOL_BUTTON_SIZE = 32
     PANEL_HEIGHT = 210
@@ -42,9 +31,16 @@ class OutputOptionsWidget(QFrame):
     # Clic simple sobre el botón de arrastre (ver btn_drag_output): abre el explorador
     # con los archivos producidos seleccionados. El arrastre en sí no pasa por aquí.
     output_drag_clicked = Signal()
+    # La ruta propia de la pestaña cambió (el usuario la eligió o la escribió); no se
+    # emite cuando el campo muestra la ruta de una etiqueta. Ver own_output_path.
+    own_path_changed = Signal(str)
 
-    def __init__(self):
+    def __init__(self, path_config_key=None):
+        """path_config_key: clave de configuración donde recordar la ruta de salida de
+        esta pestaña entre sesiones (cada pestaña la suya). Sin ella, el campo arranca
+        siempre en la carpeta de Descargas del sistema."""
         super().__init__()
+        self._path_config_key = path_config_key
         self.setObjectName("outputOptionsContainer")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.init_ui()
@@ -99,13 +95,11 @@ class OutputOptionsWidget(QFrame):
         controls_layout.addWidget(self.conflict_policy_container)
 
         # --- PATH SECTION ---
-        from core.tabs.advanced_process.output_logic import get_default_download_path
-        default_path = get_default_download_path()
-
         self.output_path_input = QLineEdit()
         self.output_path_input.setPlaceholderText(self.tr("Ruta de salida"))
-        self.output_path_input.setText(default_path)
+        self.output_path_input.setText(self.own_output_path())
         self.output_path_input.setFixedHeight(32)
+        self.output_path_input.editingFinished.connect(self._remember_output_path)
         
         self.btn_select_output_path = QPushButton()
         self.btn_select_output_path.setFixedSize(self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
@@ -136,27 +130,8 @@ class OutputOptionsWidget(QFrame):
         controls_layout.addWidget(self.btn_select_output_path)
         controls_layout.addWidget(self.btn_open_output_path)
 
-        # --- SPEED LIMIT SECTION ---
-        self.speed_limit_label = QLabel(self.tr("Velocidad:"))
-        self.speed_limit_label.setObjectName("menuLabel")
-        self.speed_limit_input = QDoubleSpinBox()
-        self.speed_limit_input.setRange(0.0, 999.0)
-        self.speed_limit_input.setDecimals(1)
-        self.speed_limit_input.setSingleStep(0.5)
-        self.speed_limit_input.setSuffix(self.tr(" MB/s"))
-        self.speed_limit_input.setSpecialValueText(self.tr("Sin límite"))
-        self.speed_limit_input.setFixedWidth(115)
-        self.speed_limit_input.setButtonSymbols(PLUS_MINUS_BUTTONS)
-        self.speed_limit_input.setStyleSheet("""
-            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-                font-size: 9px;
-                padding: 0px;
-            }
-        """)
-
-        controls_layout.addWidget(self.speed_limit_label)
-        self.speed_limit_input.setFixedHeight(32)
-        controls_layout.addWidget(self.speed_limit_input)
+        # El límite de velocidad vivía aquí; ahora es un ajuste global (Ajustes >
+        # Descargas, ver DownloaderMaster._prepare_opts).
 
         # --- DOWNLOAD BUTTON ---
         self.btn_start_download = AnimatedButton(self.tr("Iniciar descarga"))
@@ -257,6 +232,37 @@ class OutputOptionsWidget(QFrame):
         )
         if selected_path:
             self.output_path_input.setText(selected_path)
+            self._remember_output_path()
+
+    def own_output_path(self):
+        """La ruta de salida elegida por el usuario para esta pestaña (la última, guardada
+        entre sesiones), aunque el campo muestre ahora la de una etiqueta. Si la carpeta
+        guardada ya no existe, la de Descargas del sistema."""
+        from core.tabs.advanced_process.output_logic import get_default_download_path
+        from core.utils.config_manager import get_config
+        saved = get_config().get(self._path_config_key) if self._path_config_key else None
+        if saved and os.path.isdir(saved):
+            return saved
+        return get_default_download_path()
+
+    def restore_own_output_path(self):
+        """Vuelve a mostrar la ruta propia de la pestaña (al quitar una etiqueta)."""
+        self.output_path_input.setText(self.own_output_path())
+
+    def _remember_output_path(self):
+        # Con una etiqueta activa el campo está bloqueado y muestra la ruta de la
+        # etiqueta: esa no es la ruta que el usuario eligió para la pestaña.
+        if not self._path_config_key or not self.output_path_input.isEnabled():
+            return
+        path = self.output_path_input.text().strip()
+        if not path:
+            return
+        from core.utils.config_manager import get_config, save_config
+        config = get_config()
+        if config.get(self._path_config_key) != path:
+            config[self._path_config_key] = path
+            save_config(config)
+        self.own_path_changed.emit(path)
 
     def open_output_path(self):
         path = self.output_path_input.text().strip()

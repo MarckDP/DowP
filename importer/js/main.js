@@ -74,16 +74,22 @@ window.onload = function () {
     const importImagesCheckbox = document.getElementById('import-images-checkbox');
     const importImagesContainer = document.getElementById('import-images-container');
 
+    // Copia sincrona de la ruta guardada, para los mensajes de estado (que no
+    // pueden esperar al evalScript asincrono de storage.getDowpPath).
+    let knownDowpPath = null;
+
     const storage = {
         getDowpPath: () => {
             return new Promise((resolve) => {
                 csInterface.evalScript('loadConfig("dowpPath")', (result) => {
                     if (result && result !== "null" && result !== "") {
+                        knownDowpPath = result;
                         resolve(result);
                     } else {
                         const legacy = localStorage.getItem('dowpPath');
                         if (legacy) {
                             storage.setDowpPath(legacy);
+                            knownDowpPath = legacy;
                             resolve(legacy);
                         } else {
                             resolve(null);
@@ -95,9 +101,11 @@ window.onload = function () {
 
         setDowpPath: (path) => {
             return new Promise((resolve) => {
-                csInterface.evalScript(`saveConfig("dowpPath", "${path.replace(/\\/g, '\\\\')}")`, (result) => {
+                const escaped = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                csInterface.evalScript(`saveConfig("dowpPath", "${escaped}")`, (result) => {
                     if (result === "success") {
                         localStorage.setItem('dowpPath', path);
+                        knownDowpPath = path;
                         resolve(true);
                     } else {
                         resolve(false);
@@ -149,6 +157,8 @@ window.onload = function () {
         }
     }
 
+    const UNCONFIGURED_MESSAGE = "Abre DowP y pulsa 🔗: el panel se configura solo (o usa ⚙️).";
+
     function updateStatusMessage() {
         if (isShowingPersistentMessage) return;
 
@@ -158,7 +168,7 @@ window.onload = function () {
 
         switch (currentState) {
             case 'unconfigured':
-                showMessage(`Hola, haz clic en ⚙️ para configurar DowP.`, 'info');
+                showMessage(UNCONFIGURED_MESSAGE, 'info');
                 break;
             case 'connecting':
                 showMessage("Conectando con DowP...", 'info');
@@ -175,14 +185,12 @@ window.onload = function () {
                 showMessage(`Enlazado con ${otherAppName}.`, 'warning');
                 break;
             case 'dowp-closed':
-                showMessage("DowP no está abierto.", 'warning');
-                break;
             case 'disconnected':
             default:
-                if (storage.getDowpPath()) {
+                if (knownDowpPath) {
                     showMessage("DowP no está abierto.", 'warning');
                 } else {
-                    showMessage(`Hola, haz clic en ⚙️ para configurar DowP.`, 'info');
+                    showMessage(UNCONFIGURED_MESSAGE, 'info');
                 }
                 break;
         }
@@ -483,6 +491,20 @@ window.onload = function () {
             }
             console.warn(`Desfase de version: panel v${CURRENT_EXTENSION_VERSION}, DowP v${appVersion}`);
             showVersionMismatchNotice(appVersion);
+        });
+
+        // DowP informa de su propia ruta al registrarnos: con eso el panel queda
+        // configurado sin pasar por el ⚙️, y se corrige solo si DowP se movio.
+        socket.on('dowp_path', async (data) => {
+            let path = data && data.path;
+            if (!path) return;
+            path = DowPPlatform.normalizeTarget(path);
+            if (path === knownDowpPath) return;
+            const saved = await storage.setDowpPath(path);
+            if (saved) {
+                console.log(`[DowP] Ruta recibida de DowP y guardada: ${path}`);
+                btnLaunch.classList.remove('is-disabled');
+            }
         });
 
         socket.on('new_file', (data) => {
@@ -872,10 +894,40 @@ window.onload = function () {
         }
     }
 
+    // Dialogo para elegir DowP. En macOS se usa el panel nativo de CEP: el
+    // Folder.selectDlg de ExtendScript no deja seleccionar un bundle .app (lo
+    // trata como carpeta a la que entrar) y el dialogo acababa en "cancelado".
+    // Devuelve la ruta, "cancel" o "error: ...", igual que selectDowPExecutable.
+    function pickDowPPath(callback) {
+        const fs = window.cep && window.cep.fs;
+        if (DowPPlatform.isMac() && fs && typeof fs.showOpenDialogEx === 'function') {
+            try {
+                const res = fs.showOpenDialogEx(false, false, "Selecciona DowP.app", "/Applications", ["app"]);
+                if (res && res.err === 0 && res.data && res.data.length > 0) {
+                    callback(res.data[0]);
+                    return;
+                }
+                if (res && res.err === 0) {
+                    callback("cancel");
+                    return;
+                }
+                console.warn(`[DowP] showOpenDialogEx fallo (err ${res && res.err}); usando ExtendScript`);
+            } catch (e) {
+                console.warn(`[DowP] showOpenDialogEx lanzo ${e}; usando ExtendScript`);
+            }
+        }
+        csInterface.evalScript('selectDowPExecutable()', callback);
+    }
+
     async function setDowPPath() {
         clearUpdateNotice();
         showMessage(`Selecciona ${DowPPlatform.targetLabel()}`, 'info', true);
-        csInterface.evalScript('selectDowPExecutable()', async (result) => {
+        pickDowPPath(async (result) => {
+            if (result && result.indexOf("error:") === 0) {
+                console.error(`[DowP] Error en el selector de ruta: ${result}`);
+                showMessage(`No se pudo abrir el selector (${result.substring(6).trim()}).`, 'error', true, 6000);
+                return;
+            }
             if (result && result !== "cancel") {
                 // En macOS el usuario puede acabar senalando el binario interno
                 // del bundle; normalizeTarget lo repliega al .app.
@@ -890,7 +942,6 @@ window.onload = function () {
                 if (saved) {
                     showMessage(`Ruta guardada correctamente.`, 'success', true, 3000);
                     btnLaunch.classList.remove('is-disabled');
-                    btnLink.classList.remove('is-disabled');
                     setState('disconnected');
                     connectToServer();
                 } else {
@@ -1395,10 +1446,12 @@ window.onload = function () {
                         connectToServer();
                     }
                 } else {
+                    // Sin ruta solo falta "Iniciar". Si DowP ya esta abierto, al
+                    // conectar nos manda su ruta (evento dowp_path) y se habilita.
                     setState('unconfigured');
                     setLinkButtonState('disconnected');
                     btnLaunch.classList.add('is-disabled');
-                    btnLink.classList.add('is-disabled');
+                    connectToServer();
                 }
             } else {
                 setState('disconnected');

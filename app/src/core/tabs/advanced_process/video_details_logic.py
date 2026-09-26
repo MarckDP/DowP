@@ -81,7 +81,8 @@ def send_thumbnail_to_image_tools(widget):
 
 from core.ytdlp_logic.analyzer import get_video_info
 
-def analyze_media_for_queue(url, analyze_playlist=True, fast_mode=True, progress_callback=None):
+def analyze_media_for_queue(url, analyze_playlist=True, fast_mode=True, progress_callback=None,
+                            cancellation_event=None):
     """
     Analiza una URL para la cola avanzada.
     - Sin playlist: fuerza un solo medio.
@@ -100,7 +101,8 @@ def analyze_media_for_queue(url, analyze_playlist=True, fast_mode=True, progress
         })
     elif fast_mode:
         opts['extract_flat'] = 'in_playlist'
-    return get_video_info(url, extra_opts=opts, progress_callback=progress_callback)
+    return get_video_info(url, extra_opts=opts, progress_callback=progress_callback,
+                          cancellation_event=cancellation_event)
 
 def analyze_single_media(url):
     """

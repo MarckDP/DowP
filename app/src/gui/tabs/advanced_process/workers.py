@@ -2,6 +2,7 @@
 from PySide6.QtCore import QThread, Signal
 from core.tabs.advanced_process.video_details_logic import analyze_media_for_queue
 from core.ytdlp_logic.downloader_master import DownloaderMaster
+import threading
 import time
 
 class AnalysisWorker(QThread):
@@ -14,16 +15,29 @@ class AnalysisWorker(QThread):
         self.url = url
         self.analyze_playlist = analyze_playlist
         self.fast_mode = fast_mode
+        self._cancel_event = threading.Event()
+
+    def cancel(self):
+        """Corta el análisis en el siguiente paso de yt-dlp (ver YTDLLogger en
+        analyzer.py). No espera: el hilo termina solo poco después y emite finished con
+        el error "Análisis cancelado" -- quien lo lanzó debe mirar is_cancelled() en su
+        handler y descartar el resultado."""
+        self._cancel_event.set()
+
+    def is_cancelled(self):
+        return self._cancel_event.is_set()
 
     def run(self):
         def on_progress(current, total):
-            self.progress.emit(current, total)
+            if not self._cancel_event.is_set():
+                self.progress.emit(current, total)
 
         data, error = analyze_media_for_queue(
             self.url,
             analyze_playlist=self.analyze_playlist,
             fast_mode=self.fast_mode,
-            progress_callback=on_progress
+            progress_callback=on_progress,
+            cancellation_event=self._cancel_event,
         )
         self.finished.emit(data if data else {}, error if error else "")
 

@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSpinBox, QPushButton, QMessageBox,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSpinBox, QDoubleSpinBox, QPushButton,
+    QMessageBox,
 )
 from PySide6.QtCore import Qt
 from core.utils.i18n import logger
@@ -147,6 +148,50 @@ class DownloadsPage(QWidget):
         self.concurrent_row.addWidget(self.concurrent_spin)
         self.content_layout.addLayout(self.concurrent_row)
 
+        # 6. Límite de velocidad (global: vale para todas las descargas de todas las
+        # pestañas, ver DownloaderMaster._prepare_opts)
+        self.speed_row = QHBoxLayout()
+        self.speed_vbox = QVBoxLayout()
+        self.speed_label = QLabel(self.tr("Límite de velocidad"))
+        self.speed_label.setObjectName("settingsLabel")
+        self.speed_desc = QLabel(self.tr(
+            "Velocidad máxima de cada descarga. También se aplica a lo que ya está en cola."))
+        self.speed_desc.setWordWrap(True)
+        self.speed_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.speed_vbox.addWidget(self.speed_label)
+        self.speed_vbox.addWidget(self.speed_desc)
+        self.speed_spin = QDoubleSpinBox()
+        self.speed_spin.setRange(0.0, 999.0)
+        self.speed_spin.setDecimals(1)
+        self.speed_spin.setSingleStep(0.5)
+        self.speed_spin.setSuffix(self.tr(" MB/s"))
+        self.speed_spin.setSpecialValueText(self.tr("Sin límite"))
+        # Sin keyboardTracking, escribir "12" no guarda 1 y después 12 por el camino.
+        self.speed_spin.setKeyboardTracking(False)
+        self.speed_spin.setFixedWidth(110)
+        self.speed_spin.setFixedHeight(28)
+        self.speed_spin.setStyleSheet(self.concurrent_spin.styleSheet().replace("QSpinBox", "QDoubleSpinBox"))
+        self.speed_row.addLayout(self.speed_vbox, 1)
+        self.speed_row.addWidget(self.speed_spin)
+        self.content_layout.addLayout(self.speed_row)
+
+        # 7. Switch: numerar los archivos de una playlist
+        self.numbering_row = QHBoxLayout()
+        self.numbering_vbox = QVBoxLayout()
+        self.numbering_label = QLabel(self.tr("Numerar archivos de playlists"))
+        self.numbering_label.setObjectName("settingsLabel")
+        self.numbering_desc = QLabel(self.tr(
+            "Antepone el número de orden al nombre de cada archivo de una playlist "
+            "(ej. «001 - Título»). Las descargas sueltas nunca se numeran."))
+        self.numbering_desc.setWordWrap(True)
+        self.numbering_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.numbering_vbox.addWidget(self.numbering_label)
+        self.numbering_vbox.addWidget(self.numbering_desc)
+        self.numbering_switch = ToggleSwitch()
+        self.numbering_row.addLayout(self.numbering_vbox, 1)
+        self.numbering_row.addWidget(self.numbering_switch)
+        self.content_layout.addLayout(self.numbering_row)
+
         self._build_history_section()
 
         # Finalizar setup del scroll area
@@ -162,6 +207,8 @@ class DownloadsPage(QWidget):
         self.sponsors_switch.toggled.connect(self.on_remove_sponsors_toggled)
         self.imp_switch.toggled.connect(self.on_impersonate_toggled)
         self.concurrent_spin.valueChanged.connect(self.on_concurrent_downloads_changed)
+        self.speed_spin.valueChanged.connect(self.on_speed_limit_changed)
+        self.numbering_switch.toggled.connect(self.on_playlist_numbering_toggled)
         self.history_switch.toggled.connect(self.on_history_enabled_toggled)
         self.history_limit_spin.valueChanged.connect(self.on_history_limit_changed)
         self.btn_clear_history.clicked.connect(self.on_clear_history_clicked)
@@ -263,6 +310,7 @@ class DownloadsPage(QWidget):
         self.thumb_switch.setTrackColors("#333333", accent)
         self.sponsors_switch.setTrackColors("#333333", accent)
         self.imp_switch.setTrackColors("#333333", accent)
+        self.numbering_switch.setTrackColors("#333333", accent)
         self.history_switch.setTrackColors("#333333", accent)
 
     def load_current_settings(self):
@@ -272,6 +320,8 @@ class DownloadsPage(QWidget):
         self.sponsors_switch.setChecked(config.get("remove_sponsors", False))
         self.imp_switch.setChecked(config.get("use_impersonate", False))
         self.concurrent_spin.setValue(config.get("max_concurrent_downloads", 3))
+        self.speed_spin.setValue(config.get("speed_limit_mbps", 0.0) or 0.0)
+        self.numbering_switch.setChecked(config.get("playlist_numbering", True))
         self.history_switch.setChecked(config.get("history_enabled", True))
         self.history_limit_spin.setValue(config.get("history_max_entries", DEFAULT_MAX_ENTRIES))
         self._update_history_usage()
@@ -303,6 +353,20 @@ class DownloadsPage(QWidget):
         config["use_impersonate"] = checked
         save_config(config)
         logger.info(f"DownloadsPage: Uso de Impersonate cambiado a: {checked}")
+
+    def on_speed_limit_changed(self, value):
+        if self._is_loading: return
+        config = get_config()
+        config["speed_limit_mbps"] = value
+        save_config(config)
+        logger.info(f"DownloadsPage: Límite de velocidad cambiado a: {value} MB/s")
+
+    def on_playlist_numbering_toggled(self, checked):
+        if self._is_loading: return
+        config = get_config()
+        config["playlist_numbering"] = checked
+        save_config(config)
+        logger.info(f"DownloadsPage: Numerar archivos de playlists cambiado a: {checked}")
 
     def on_concurrent_downloads_changed(self, value):
         if self._is_loading: return

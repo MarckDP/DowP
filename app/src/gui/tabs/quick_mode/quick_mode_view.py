@@ -72,7 +72,7 @@ class QuickModeTab(QWidget):
         self.activity_panel.cancel_all_requested.connect(self._on_cancel_all_clicked)
         self.activity_panel.clear_all_requested.connect(self._on_clear_all_clicked)
 
-        self.output_options = OutputOptionsWidget()
+        self.output_options = OutputOptionsWidget(path_config_key="quick_output_path")
 
         # Cabecera clicable "Recodificar" (misma tarjeta de Proceso Avanzado, ver
         # recode_options.py): vive en el MISMO renglón que options_panel (a su derecha,
@@ -389,9 +389,14 @@ class QuickModeTab(QWidget):
             self.quality_combo.setCurrentIndex(0)
         self.quality_combo.blockSignals(False)
 
+    def _mode_quality_locked(self):
+        """Modo y calidad no aplican con "Solo miniatura" (se baja una imagen) ni con
+        "Playlist" (los elige la ventana de la playlist, ver start_playlist_selection)."""
+        return self.chk_thumb_only.isChecked() or self.chk_playlist_selector.isChecked()
+
     def _on_thumbnail_only_toggled(self, checked):
-        self.mode_combo.setEnabled(not checked)
-        self.quality_combo.setEnabled(not checked)
+        self.mode_combo.setEnabled(not self._mode_quality_locked())
+        self.quality_combo.setEnabled(not self._mode_quality_locked())
         self.chk_thumb_file.setEnabled(not checked)
         # "Solo miniatura" descarga una imagen, no un medio recodificable.
         self.recode_bar.setEnabled(not checked)
@@ -406,6 +411,8 @@ class QuickModeTab(QWidget):
             self.btn_cut.setEnabled(False)
         else:
             self.btn_cut.setEnabled(True)
+        self.mode_combo.setEnabled(not self._mode_quality_locked())
+        self.quality_combo.setEnabled(not self._mode_quality_locked())
 
     def _on_download_clicked(self):
         url = self.url_input.text().strip()
@@ -424,7 +431,6 @@ class QuickModeTab(QWidget):
             mode=self.mode_combo.currentData() or "video+audio",
             quality=self.quality_combo.currentData() or "best_compatible",
             output_path=self.output_options.output_path_input.text(),
-            speed_limit_val=self.output_options.speed_limit_input.value(),
             chk_thumb_file_checked=self.chk_thumb_file.isChecked(),
             chk_thumb_only_checked=self.chk_thumb_only.isChecked(),
             btn_cut_checked=self.btn_cut.isChecked(),
@@ -451,7 +457,6 @@ class QuickModeTab(QWidget):
             mode=self.mode_combo.currentData() or "video+audio",
             quality=self.quality_combo.currentData() or "best_compatible",
             output_path=self.output_options.output_path_input.text(),
-            speed_limit_val=self.output_options.speed_limit_input.value(),
             chk_thumb_file_checked=self.chk_thumb_file.isChecked(),
             chk_thumb_only_checked=self.chk_thumb_only.isChecked(),
             btn_cut_checked=self.btn_cut.isChecked(),
@@ -518,14 +523,13 @@ class QuickModeTab(QWidget):
         self.btn_download.setEnabled(enabled or self.controller.is_downloading)
         self.btn_search.setEnabled(enabled or self.controller.is_downloading)
         self.options_panel.setEnabled(enabled)
-        self.mode_combo.setEnabled(enabled and not self.chk_thumb_only.isChecked())
-        self.quality_combo.setEnabled(enabled and not self.chk_thumb_only.isChecked())
+        self.mode_combo.setEnabled(enabled and not self._mode_quality_locked())
+        self.quality_combo.setEnabled(enabled and not self._mode_quality_locked())
         self.combo_tags.setEnabled(enabled)
         self.recode_bar.setEnabled(enabled and not self.chk_thumb_only.isChecked())
         self.recode_options.setEnabled(enabled and not self.chk_thumb_only.isChecked())
         self.output_options.output_path_input.setEnabled(enabled and self.combo_tags.currentIndex() <= 0)
         self.output_options.btn_select_output_path.setEnabled(enabled and self.combo_tags.currentIndex() <= 0)
-        self.output_options.speed_limit_input.setEnabled(enabled)
         
         # btn_cut: solo habilitar si playlist_selector no está activo
         if enabled:
@@ -617,19 +621,18 @@ class QuickModeTab(QWidget):
         """Maneja el cambio de selección en el combobox de etiquetas."""
         self._update_combo_style()
         if index <= 0:
-            # Ninguna etiqueta seleccionada: restaurar ruta por defecto
-            from core.tabs.advanced_process.output_logic import get_default_download_path
-            default_path = get_default_download_path()
-            self.output_options.output_path_input.setText(default_path)
+            # Sin etiqueta: vuelve la ruta que el usuario eligió para la pestaña (antes
+            # volvía siempre a Descargas y se perdía la ruta elegida).
             self.output_options.output_path_input.setEnabled(True)
             self.output_options.btn_select_output_path.setEnabled(True)
+            self.output_options.restore_own_output_path()
         else:
             # Etiqueta seleccionada: actualizar ruta y bloquear edición
             path = self.combo_tags.currentData()
-            if path:
-                self.output_options.output_path_input.setText(path)
             self.output_options.output_path_input.setEnabled(False)
             self.output_options.btn_select_output_path.setEnabled(False)
+            if path:
+                self.output_options.output_path_input.setText(path)
 
 
     def start_tutorial(self):

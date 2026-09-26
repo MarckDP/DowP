@@ -5,7 +5,6 @@ from core.utils.format_manager import FormatManager
 import os
 import time
 import threading
-from core.utils.cleanup_manager import CleanupManager
 from core.utils.config_manager import get_config, save_config
 from core.utils.download_history import download_history
 from core.ytdlp_logic.analyzer import strip_ansi_codes
@@ -66,7 +65,7 @@ class AdvancedProcessTab(QWidget):
         # RecodeOptionsWidget.set_stream_mode).
         self.video_details.mode_selector.mode_changed.connect(self._sync_recode_stream_mode)
         self._sync_recode_stream_mode()
-        self.output_options = OutputOptionsWidget()
+        self.output_options = OutputOptionsWidget(path_config_key="advanced_output_path")
 
         # New Collapsible Queue Components (agrupados sin separación entre panel y tirador)
         self.queue_panel = QueuePanel()
@@ -182,6 +181,7 @@ class AdvancedProcessTab(QWidget):
         self.output_options.btn_start_download.clicked.connect(self._on_download_button_clicked)
         self.output_options.btn_open_output_path.clicked.disconnect()
         self.output_options.btn_open_output_path.clicked.connect(self._on_open_output_path_clicked)
+        self.output_options.own_path_changed.connect(self._apply_global_output_path)
 
         # Botón de arrastre del resultado (solo modo SOLO, ver _on_solo_toggled): las
         # rutas se piden en el momento del arrastre, nunca antes.
@@ -354,20 +354,41 @@ class AdvancedProcessTab(QWidget):
             mode = "video+audio"
         self.recode_options.set_stream_mode(mode)
 
+    def _apply_global_output_path(self, *_):
+        """La ruta del campo vale para toda la cola: se copia a cada trabajo que todavía
+        no empezó, salvo los que tienen etiqueta (esos van a la carpeta de la etiqueta).
+
+        Antes cada trabajo se quedaba con la ruta que había al analizarlo: cambiar la
+        ruta después no lo movía, y una playlist no la cambiaba nunca.
+
+        No se toca lo que ya avanzó (progress > 0, ej. una descarga pausada): sus .part o
+        los ítems ya bajados de una playlist están en la carpeta original, y moverlo
+        partiría el resultado en dos carpetas."""
+        path = self.output_options.own_output_path()
+        for job in self.queue_mgr.get_all_jobs():
+            if job.status not in ("PENDING", "ANALYZING") or job.progress > 0:
+                continue
+            if job.job_type == "PLAYLIST":
+                job.config["output_path"] = path
+            elif job.job_type == "DOWNLOAD" and job.request_data and not job.request_data.get("label"):
+                job.request_data["output_path"] = path
+
     def _on_label_changed(self, index):
         """Maneja el cambio de selección en el combobox de etiquetas."""
         self.video_details.update_combo_style()
         if index <= 0:
-            # Ninguna etiqueta seleccionada
+            # Sin etiqueta: la ruta global de la pestaña (antes el campo se quedaba con
+            # la ruta de la etiqueta o del ítem que se había visto antes).
             self.output_options.output_path_input.setEnabled(True)
             self.output_options.btn_select_output_path.setEnabled(True)
+            self.output_options.restore_own_output_path()
         else:
             # Etiqueta seleccionada: actualizar ruta y bloquear edición
             path = self.video_details.combo_tags.currentData()
-            if path:
-                self.output_options.output_path_input.setText(path)
             self.output_options.output_path_input.setEnabled(False)
             self.output_options.btn_select_output_path.setEnabled(False)
+            if path:
+                self.output_options.output_path_input.setText(path)
 
     def _on_playlist_analysis_toggled(self, checked):
         self.chk_fast_mode.setEnabled(checked)
@@ -1061,6 +1082,12 @@ class AdvancedProcessTab(QWidget):
         
         def create_handler(j_id):
             def handler(data, error):
+                if worker.is_cancelled() or self.queue_mgr.get_job(j_id) is None:
+                    # El job se quitó mientras se analizaba (ver _on_job_removed): sin
+                    # esto, una playlist lenta que terminaba igual se desempaquetaba y
+                    # volvía a meter todos sus videos en la cola.
+                    self._batch_workers.pop(j_id, None)
+                    return
                 if error:
                     j = self.queue_mgr.get_job(j_id)
                     if j: j.error_message = error
@@ -1245,7 +1272,6 @@ class AdvancedProcessTab(QWidget):
             "output_path": self.output_options.output_path_input.text(),
             "conflict_policy": "ask" if self.url_bar.solo_btn.isChecked() else self.output_options.conflict_policy_combo.currentData(),
             "label": self.video_details.combo_tags.currentText() if self.video_details.combo_tags.currentIndex() > 0 else None,
-            "speed_limit": f"{int(self.output_options.speed_limit_input.value() * 1024)}K" if self.output_options.speed_limit_input.value() > 0 else None,
             "download_thumbnail_file": False,
             "subtitle_lang": None,
             "subtitle_is_auto": False,
@@ -1340,6 +1366,17 @@ class AdvancedProcessTab(QWidget):
 
     def _on_job_removed(self, job_id):
         """Limpia la UI si el trabajo eliminado es el que estaba seleccionado."""
+        # Si el job todavía se estaba analizando, cortar el análisis. QueueManager no
+        # puede hacerlo (no conoce los AnalysisWorker, viven aquí): antes quitar la
+        # tarjeta solo la sacaba de la lista y yt-dlp seguía analizando la playlist
+        # completa de fondo. Todas las formas de quitar jobs (X de la tarjeta, vaciar la
+        # cola) pasan por job_removed. La referencia NO se suelta aquí: el hilo sigue
+        # vivo unos instantes hasta el siguiente paso de yt-dlp, y el handler de
+        # start_analysis la saca de _batch_workers cuando termina de verdad.
+        worker = self._batch_workers.get(job_id)
+        if worker is not None:
+            worker.cancel()
+
         if job_id == self._selected_job_id:
             self._selected_job_id = None
             self._current_video_data = None
@@ -1423,12 +1460,9 @@ class AdvancedProcessTab(QWidget):
             self.video_details.combo_tags.setCurrentIndex(0)
         self.video_details.combo_tags.blockSignals(False)
 
-        # Restaurar ruta de salida propia del item
-        out_path = req.get("output_path")
-        if out_path:
-            self.output_options.output_path_input.setText(out_path)
-
-        # Forzar actualización del estado de bloqueo de la ruta
+        # La ruta de salida es global a la pestaña: el campo no se pisa con la que tenía
+        # el ítem al analizarlo. Si el ítem tiene etiqueta, _on_label_changed muestra la
+        # ruta de la etiqueta; si no, la ruta global.
         self._on_label_changed(self.video_details.combo_tags.currentIndex())
 
         # Restaurar opción de miniatura
@@ -1497,7 +1531,6 @@ class AdvancedProcessTab(QWidget):
             "output_path": self.output_options.output_path_input.text(),
             "conflict_policy": "ask" if self.url_bar.solo_btn.isChecked() else self.output_options.conflict_policy_combo.currentData(),
             "label": self.video_details.combo_tags.currentText() if self.video_details.combo_tags.currentIndex() > 0 else None,
-            "speed_limit": f"{int(self.output_options.speed_limit_input.value() * 1024)}K" if self.output_options.speed_limit_input.value() > 0 else None,
             "download_thumbnail_file": self.video_details.chk_download_with_video.isChecked(),
             "selected_fragments": self.video_details.selected_fragments,
             "fragment_mode": self.video_details.fragment_mode,

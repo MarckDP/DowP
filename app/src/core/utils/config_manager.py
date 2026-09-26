@@ -62,6 +62,8 @@ def get_config():
         "ffmpeg_custom_path": "",       # Ruta personalizada a ffmpeg.exe o carpeta
         "update_channel": "beta" if IS_BETA else "stable",  # "stable" | "beta" (incluye prereleases de GitHub)
         "max_concurrent_downloads": 3,  # Número máximo de descargas simultáneas (1 a 10)
+        "playlist_numbering": True,     # "001 - Título" en los archivos de una playlist (Ajustes > Descargas)
+        "speed_limit_mbps": 0.0,        # Límite de velocidad global en MB/s; 0 = sin límite (Ajustes > Descargas)
         "hardware_info": {},            # Información del sistema y GPU detectada
         # GPU para los modelos de IA. Vacío = se elige sola (la dedicada). Sin interfaz
         # a propósito: el automático acierta en los equipos híbridos normales y esto es

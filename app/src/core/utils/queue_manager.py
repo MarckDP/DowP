@@ -126,7 +126,7 @@ class Job:
     def __init__(self, config: dict, job_type: str = "DOWNLOAD"):
         self.job_id = str(uuid4())
         self.job_type = job_type
-        self.config = config  # Contiene url, output_path, speed_limit, etc. (Opciones iniciales por defecto)
+        self.config = config  # Contiene url, output_path, etc. (Opciones iniciales por defecto)
         self.video_data = None    # Datos en crudo de la extracción de yt-dlp (formatos disponibles, miniatura, etc.)
         self.request_data = None  # Opciones específicas seleccionadas por el usuario para esta descarga
         self.analysis_data = None
@@ -143,6 +143,11 @@ class Job:
         # arrastrar, no hace falta registrarlos. Ver core/utils/output_artifacts.py.
         self.artifacts = OutputArtifactTracker()
         self.created_at = time.time()
+        # Ítems de una playlist (índices en analysis_data["entries"]) que ya terminaron
+        # en una pasada que se pausó o canceló: al reanudar se saltan en vez de volver a
+        # bajarlos (con "conservar" se habrían duplicado como "(1)"). Se vacía cuando la
+        # playlist termina de verdad, para que reintentarla entera la baje de nuevo.
+        self.playlist_done_indices = set()
 
     def add_output_files(self, paths, is_stem_source=True):
         self.artifacts.add(paths, is_stem_source=is_stem_source)
@@ -159,9 +164,20 @@ class SingleJobWorker(QThread):
         self.downloader = None
 
     def cancel(self):
+        # Antes también llamaba self.downloader.cancel_download(), un método que
+        # DownloaderMaster nunca tuvo: la excepción cortaba a mitad a quien cancelaba
+        # (Pausar solo frenaba el primer job; quitar la tarjeta fallaba). El evento basta:
+        # DownloaderMaster lo revisa en su hook. Los jobs de ffmpeg (RECODE, IA)
+        # reemplazan este método con el suyo, que además mata el proceso.
         self.cancellation_event.set()
-        if self.downloader:
-            self.downloader.cancel_download()
+
+    def pause(self):
+        """Como cancel(), pero la descarga en curso conserva lo ya bajado (.part) para
+        que yt-dlp la retome desde ahí al reanudar (ver DownloaderMaster.request_pause).
+        Los jobs sin descarga (RECODE, IA) no tienen cómo retomarse: reanudan desde cero."""
+        if hasattr(self.downloader, "request_pause"):
+            self.downloader.request_pause()
+        self.cancel()
 
     def run(self):
         try:
@@ -265,6 +281,12 @@ class QueueWorker(QThread):
             worker = self._active_workers.get(job_id)
         if worker:
             worker.cancel()
+
+    def pause_job(self, job_id: str):
+        with QMutexLocker(self._workers_mutex):
+            worker = self._active_workers.get(job_id)
+        if worker:
+            worker.pause()
 
     def _download_best_thumb(self, entry, output_dir, title, force_png=False, media_path=None):
         """
@@ -432,6 +454,11 @@ class QueueWorker(QThread):
         # Nos aseguramos de que yt-dlp NO intente descargar el archivo físico por su cuenta
         # (pero permitimos embed_thumbnail para incrustación)
         config_to_use = config_to_use.copy()
+        # La limpieza de residuos (DownloaderMaster._cleanup_temp_artifacts) necesita
+        # saber si el usuario quiere conservar miniaturas sueltas, y el flag de abajo ya
+        # no lo dice: se le pasa aparte, con el mismo criterio del modo en lote.
+        config_to_use["_keep_thumbnail_files"] = (
+            batch_thumb_mode == "with_media" or bool(config_to_use.get("download_thumbnail_file", False)))
         config_to_use["download_thumbnail_file"] = False
 
         # GUARDIA DE MEMORIA: Proteger miniatura existente para evitar que yt-dlp la borre (al incrustar)
@@ -511,7 +538,11 @@ class QueueWorker(QThread):
                 job.status = JobStatus.SKIPPED
                 job.error_message = self.tr("Omitido: el archivo ya existe") if hasattr(self, "tr") else "Omitido: el archivo ya existe"
                 self.job_status_changed.emit(job.job_id, JobStatus.SKIPPED)
-            elif self._cancellation_event.is_set():
+            elif cancellation_event.is_set():
+                # El evento de ESTE job (no self._cancellation_event, que es el global
+                # del despachador y solo se activa al cerrar la app): con el global, una
+                # descarga cancelada o pausada terminaba como FAILED, y la reanudación
+                # (que solo retoma jobs CANCELLED) no la volvía a lanzar.
                 job.status = JobStatus.CANCELLED
                 self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
             else:
@@ -561,11 +592,21 @@ class QueueWorker(QThread):
         from core.utils.config_manager import get_config
         batch_thumb_mode = get_config().get("batch_thumbnail_mode", "manual")
 
+        numbering = get_config().get("playlist_numbering", True)
+
         for pos, (entry_index, entry) in enumerate(selected_entries, start=1):
-            if self._cancellation_event.is_set():
+            # El evento de ESTE job, no self._cancellation_event (el global del
+            # despachador, que solo se activa al cerrar la app): con el global, pausar o
+            # cancelar una playlist cortaba el ítem en curso pero el bucle seguía con
+            # todos los demás, contándolos como error.
+            if cancellation_event.is_set():
                 job.status = JobStatus.CANCELLED
                 self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
                 return
+
+            if entry_index in job.playlist_done_indices:
+                completed_count += 1
+                continue
 
             item_title = self._sanitize_filename(
                 entry.get("title") or entry.get("id") or entry.get("url") or f"Item {pos:03d}"
@@ -575,7 +616,7 @@ class QueueWorker(QThread):
                 logger.warning(f"QueueWorker: Item de playlist sin URL: {item_title}")
                 continue
 
-            prefix = f"{pos:03d} - "
+            prefix = f"{pos:03d} - " if numbering else ""
             
             # Si el modo de lote es "Solo miniaturas"
             if batch_thumb_mode == "thumbnail_only":
@@ -603,7 +644,6 @@ class QueueWorker(QThread):
                 "mode": mode,
                 "output_path": playlist_output,
                 "format_selector": self._playlist_format_selector(mode, quality, url=item_url),
-                "speed_limit": job.config.get("speed_limit"),
                 "embed_metadata": job.config.get("embed_metadata", True),
                 "embed_thumbnail": job.config.get("embed_thumbnail", True),
                 "remove_sponsors": job.config.get("remove_sponsors", False),
@@ -646,6 +686,10 @@ class QueueWorker(QThread):
 
             if success:
                 completed_count += 1
+                # Se marca apenas el medio quedó bajado, antes de recodificar: si se pausa
+                # durante la recodificación de este ítem, al reanudar no se vuelve a bajar
+                # (se duplicaría como "(1)"); solo se pierde su recodificación.
+                job.playlist_done_indices.add(entry_index)
 
                 # El hook de yt-dlp reporta el ÚLTIMO stream descargado
                 # ('001 - Título.f395.mp4'), que ffmpeg borra al fusionar: comprobar
@@ -689,7 +733,7 @@ class QueueWorker(QThread):
                 skipped_count += 1
                 continue
             else:
-                if self._cancellation_event.is_set():
+                if cancellation_event.is_set():
                     job.status = JobStatus.CANCELLED
                     self.job_status_changed.emit(job.job_id, JobStatus.CANCELLED)
                     return
@@ -699,6 +743,7 @@ class QueueWorker(QThread):
                 error_count += 1
                 continue
 
+        job.playlist_done_indices = set()
         job.progress = 100.0
         job.final_filepath = playlist_output
 
@@ -1348,18 +1393,6 @@ class QueueWorker(QThread):
         except Exception:
             return os.getcwd()
 
-    def cancel_current_job(self):
-        """Activa la bandera de cancelación para detener yt-dlp."""
-        self._cancellation_event.set()
-
-    def stop(self):
-        """Detiene el bucle principal del hilo de trabajo."""
-        self._is_running = False
-        self.cancel_current_job()
-        self.quit()
-        self.wait()
-
-
 class QueueManager(QObject):
     """
     Gestor de la cola de trabajos. Centraliza la lista de trabajos y sincroniza
@@ -1448,6 +1481,15 @@ class QueueManager(QObject):
             elif job.status == JobStatus.PENDING:
                 job.status = JobStatus.CANCELLED
                 self.job_status_changed.emit(job_id, JobStatus.CANCELLED)
+
+    def pause_job(self, job_id: str):
+        """Detiene un trabajo en curso conservando lo ya descargado, para retomarlo al
+        reanudar (ver SingleJobWorker.pause). Termina como CANCELLED: quien pausa lo
+        devuelve a PENDING con reset_job."""
+        with QMutexLocker(self._mutex):
+            job = next((j for j in self._jobs if j.job_id == job_id), None)
+            if job and job.status == JobStatus.RUNNING:
+                self._worker.pause_job(job_id)
 
     def clear_queue(self):
         """Limpia todos los trabajos. Cancela el actual si está corriendo."""

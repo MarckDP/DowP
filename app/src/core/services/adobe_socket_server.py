@@ -1,9 +1,30 @@
+import os
+import sys
 import socketio
 import asyncio
 from aiohttp import web
 from PySide6.QtCore import QThread, Signal
 from core.logger.logger_manager import logger
 from core.version import APP_VERSION
+
+
+def _launchable_path():
+    """
+    Lo que el panel debe abrir para lanzar esta misma instalación de DowP, o None
+    si corremos desde fuente (ahí sys.executable es el python del venv).
+    En Mac se devuelve el bundle .app, no el binario de dentro: `open` lanza el
+    bundle con su entorno correcto, y es lo que el usuario reconoce en /Applications.
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    exe = sys.executable
+    if sys.platform == "darwin":
+        idx = exe.find(".app/Contents/MacOS")
+        if idx == -1:
+            return None
+        return exe[:idx + len(".app")]
+    return os.path.abspath(exe)
+
 
 class AdobeSocketServer(QThread):
     # Signals to communicate with the PySide6 UI if needed
@@ -83,6 +104,12 @@ class AdobeSocketServer(QThread):
                     f"[Socket.IO] Desfase de versión con {app_id}: panel v{panel_version}, "
                     f"app v{APP_VERSION}. El panel debería reinstalarse desde Integraciones.")
             await self.sio.emit('dowp_version', {'appVersion': APP_VERSION}, to=sid)
+
+            # Ruta lanzable de esta instalación: el panel la guarda y habilita "Iniciar"
+            # sin que el usuario tenga que buscar el ejecutable a mano con el ⚙️.
+            launch_path = _launchable_path()
+            if launch_path:
+                await self.sio.emit('dowp_path', {'path': launch_path}, to=sid)
 
         @self.sio.event
         async def get_active_target(sid):

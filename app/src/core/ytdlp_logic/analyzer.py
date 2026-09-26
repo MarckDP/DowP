@@ -19,11 +19,39 @@ def strip_ansi_codes(text):
 import time
 
 class YTDLLogger:
-    """Redirige los logs de yt-dlp al logger de DowP con limitador de velocidad."""
-    def __init__(self, progress_callback=None):
+    """Redirige los logs de yt-dlp al logger de DowP con limitador de velocidad.
+
+    Con cancellation_event, también es el punto de corte del análisis: yt-dlp manda
+    cada paso (cada página, cada video de una playlist) por debug(), y extract_info() no
+    tiene otra forma de interrumpirse desde afuera. Se lanza cancel_exception, que tiene
+    que ser utils.DownloadCancelled de yt-dlp: con ignoreerrors=True (el análisis de
+    playlist lo usa) yt-dlp se traga cualquier otra excepción por entrada y sigue con la
+    siguiente, pero DownloadCancelled la re-lanza a propósito."""
+    def __init__(self, progress_callback=None, cancellation_event=None, cancel_exception=None,
+                 message_callback=None):
         self._last_download_log = 0
         self.progress_callback = progress_callback
+        self.cancellation_event = cancellation_event
+        self._cancel_exception = cancel_exception
+        # Recibe cada mensaje crudo de yt-dlp (ver DownloaderMaster._on_ytdlp_message).
+        self.message_callback = message_callback
         self.errors = []
+
+    def __deepcopy__(self, memo):
+        # make_fallback_ydl_opts hace deepcopy de las opciones: un threading.Event no se
+        # puede copiar, y el reintento tiene que seguir escuchando la MISMA cancelación.
+        return self
+
+    def _check_cancelled(self):
+        if self._cancel_exception and self.cancellation_event is not None and self.cancellation_event.is_set():
+            raise self._cancel_exception("Análisis cancelado por el usuario")
+
+    def _notify(self, msg):
+        if self.message_callback:
+            try:
+                self.message_callback(msg)
+            except Exception:
+                pass
 
     def _process_message(self, msg):
         if self.progress_callback:
@@ -40,6 +68,8 @@ class YTDLLogger:
                 pass
 
     def debug(self, msg):
+        self._check_cancelled()
+        self._notify(msg)
         self._process_message(msg)
         # Filtrar mensajes de progreso de descarga (muy ruidosos)
         if "[download]" in msg:
@@ -51,6 +81,8 @@ class YTDLLogger:
         logger.debug(f"[yt-dlp] {msg}")
 
     def info(self, msg):
+        self._check_cancelled()
+        self._notify(msg)
         self._process_message(msg)
         logger.info(f"[yt-dlp] {msg}")
 
@@ -230,10 +262,13 @@ def load_ytdlp_module():
     return yt_dlp
 
 
-def get_video_info(url, extra_opts=None, progress_callback=None):
+def get_video_info(url, extra_opts=None, progress_callback=None, cancellation_event=None):
     """
     Análisis de video usando la lógica del DowP viejo (ZIP + API Nativa)
     y respetando estrictamente los ajustes del usuario.
+
+    cancellation_event (threading.Event): si se activa, el análisis se corta en el
+    siguiente paso de yt-dlp (ver YTDLLogger) y devuelve (None, "Análisis cancelado").
     """
     if not os.path.exists(get_ytdlp_path()):
         logger.error(f"yt-dlp not found at {get_ytdlp_path()}")
@@ -243,9 +278,14 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
     if yt_dlp is None:
         return None, QCoreApplication.translate("analyzer", "Error: yt-dlp could not be imported.")
 
+    cancelled_msg = QCoreApplication.translate("analyzer", "Análisis cancelado")
+    cancel_exception = yt_dlp.utils.DownloadCancelled
+    if cancellation_event is not None and cancellation_event.is_set():
+        return None, cancelled_msg
+
     ydl_opts = get_base_ydl_opts(extra_opts)
-    if progress_callback:
-        ydl_opts['logger'] = YTDLLogger(progress_callback)
+    if progress_callback or cancellation_event is not None:
+        ydl_opts['logger'] = YTDLLogger(progress_callback, cancellation_event, cancel_exception)
     ydl_opts['skip_download'] = True
 
     # Inyectar entorno (PATH) para dependencias internas
@@ -267,7 +307,11 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
                 logger.info("Analyzer: Instancia de YoutubeDL creada exitosamente. Iniciando extracción...")
                 info_dict = ydl.extract_info(url, download=False)
                 logger.info("Analyzer: Extracción completada.")
+        except cancel_exception:
+            raise
         except Exception as extract_err:
+            if cancellation_event is not None and cancellation_event.is_set():
+                raise cancel_exception("Análisis cancelado por el usuario")
             if is_youtube_access_error(url, extract_err):
                 logger.warning(f"Analyzer: YouTube bloqueó el primer cliente ({extract_err}). Reintentando análisis con cliente alternativo (web_embedded)...")
                 fallback_opts = make_fallback_ydl_opts(ydl_opts)
@@ -284,7 +328,11 @@ def get_video_info(url, extra_opts=None, progress_callback=None):
             return None, strip_ansi_codes(err_msg) or QCoreApplication.translate("analyzer", "No se pudo obtener información de la URL.")
             
         return info_dict, None
-        
+
+    except cancel_exception:
+        logger.info(f"Analyzer: Análisis cancelado por el usuario ({url})")
+        return None, cancelled_msg
+
     except Exception as e:
         err_detail = traceback.format_exc()
         logger.error(f"Unexpected error in analyzer: {err_detail}")

@@ -161,7 +161,9 @@ function selectDowPExecutable() {
         if (file) { return file.fsName; }
         return "cancel";
     } catch (e) {
-        return "cancel";
+        // No disfrazar el fallo de "cancel": el panel lo mostraria como si el
+        // usuario hubiera cerrado el dialogo y el error quedaria oculto.
+        return "error: " + e.toString();
     }
 }
 
