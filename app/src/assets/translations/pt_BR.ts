@@ -6069,238 +6069,248 @@ Continuar?</translation>
 <context>
     <name>MediaSearchDialog</name>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="67"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="70"/>
         <source>Error desconocido</source>
         <translation>Erro desconhecido</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="284"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1009"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="525"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1300"/>
         <source>Playlist</source>
         <translation>Playlist</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="286"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="527"/>
         <source>EN VIVO</source>
         <translation>AO VIVO</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="290"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="531"/>
         <source>Short</source>
         <translation>Short</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="393"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1006"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="634"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1297"/>
         <source>{0} suscriptores</source>
         <translation>{0} inscritos</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="496"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="764"/>
         <source>Todos</source>
         <translation>Todos</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="497"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="765"/>
         <source>Videos</source>
         <translation>Vídeos</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="498"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="766"/>
         <source>Shorts</source>
         <translation>Shorts</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="499"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="767"/>
         <source>Directos</source>
         <translation>Ao vivo</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="507"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="599"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="775"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="882"/>
         <source>Buscar medios</source>
         <translation>Buscar mídias</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="609"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="892"/>
         <source>Cerrar (Esc)</source>
         <translation>Fechar (Esc)</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="626"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="909"/>
         <source>Sitio donde buscar</source>
         <translation>Site onde buscar</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="632"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1105"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="915"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1504"/>
         <source>Escribe lo que quieres buscar y presiona Enter</source>
         <translation>Digite o que você quer buscar e pressione Enter</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="644"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="927"/>
         <source>Buscar</source>
         <translation>Buscar</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="651"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="934"/>
         <source>Vista en cuadrícula</source>
         <translation>Visualização em grade</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="652"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="935"/>
         <source>Vista en lista</source>
         <translation>Visualização em lista</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="731"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1014"/>
         <source>Busca videos o audios por nombre, como en YouTube.</source>
         <translation>Busque vídeos ou áudios pelo nome, como no YouTube.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="758"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1047"/>
         <source>Cargar más</source>
         <translation>Carregar mais</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="766"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1055"/>
         <source>Cancelar</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="914"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="917"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1205"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1208"/>
         <source>Buscando...</source>
         <translation>Buscando...</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="929"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1220"/>
         <source>Error al buscar: {0}</source>
         <translation>Erro na busca: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="947"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1238"/>
         <source>Este canal no tiene contenido en esta sección.</source>
         <translation>Este canal não tem conteúdo nesta seção.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="949"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1240"/>
         <source>No se encontraron resultados.</source>
         <translation>Nenhum resultado encontrado.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="958"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1249"/>
         <source>Los Shorts se buscan por hashtag: #{0}</source>
         <translation>Os Shorts são buscados por hashtag: #{0}</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="962"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1253"/>
         <source>No hay Shorts con el hashtag #{0}; se muestran los del filtro de Shorts de YouTube, que suele traer pocos resultados.</source>
         <translation>Não há Shorts com a hashtag #{0}; mostrando os do filtro de Shorts do YouTube, que costuma trazer poucos resultados.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1013"/>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1183"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1304"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1584"/>
         <source>Directo en curso</source>
         <translation>Transmissão ao vivo em andamento</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1032"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1323"/>
         <source>Agregar a la cola ({0})</source>
         <translation>Adicionar à fila ({0})</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1034"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1325"/>
         <source>Usar este video</source>
         <translation>Usar este vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1043"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1334"/>
         <source>{0} resultados · {1} seleccionados</source>
         <translation>{0} resultados · {1} selecionados</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1045"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1336"/>
         <source>{0} resultados</source>
         <translation>{0} resultados</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1075"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1402"/>
+        <source>No se encontró un formato reproducible.</source>
+        <translation>Não foi encontrado um formato reproduzível.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1404"/>
+        <source>No se pudo analizar el video.</source>
+        <translation>Não foi possível analisar o vídeo.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1472"/>
         <source>Volver a “{0}”</source>
         <translation>Voltar para “{0}”</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1079"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1476"/>
         <source>Buscar dentro de este canal...</source>
         <translation>Buscar dentro deste canal...</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1092"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1489"/>
         <source>Buscando “{0}” en: {1}</source>
         <translation>Buscando “{0}” em: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1094"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1491"/>
         <source>Canal: {0}</source>
         <translation>Canal: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1168"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1569"/>
         <source>Este es un directo en curso. La descarga continuará hasta que termine la transmisión o la canceles.</source>
         <translation>Esta é uma transmissão ao vivo em andamento. O download continuará até a transmissão terminar ou você cancelá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1172"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1573"/>
         <source>¿Quieres continuar?</source>
         <translation>Deseja continuar?</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1174"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1575"/>
         <source>{0} de los videos elegidos son directos en curso. Su descarga continuará hasta que termine la transmisión o la canceles.</source>
         <translation>{0} dos vídeos escolhidos são transmissões ao vivo em andamento. O download deles continuará até a transmissão terminar ou você cancelá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1178"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1579"/>
         <source>¿Quieres incluirlos? Si eliges No, se descargará solo el resto.</source>
         <translation>Deseja incluí-los? Se escolher Não, apenas o restante será baixado.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1181"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1582"/>
         <source>Los directos en curso no se pueden recortar: se descargarán completos.</source>
         <translation>Transmissões ao vivo em andamento não podem ser recortadas: serão baixadas por completo.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1193"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1594"/>
         <source>Elegiste una playlist. ¿Quieres activar el modo playlist?</source>
         <translation>Você escolheu uma playlist. Deseja ativar o modo playlist?</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1196"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1597"/>
         <source>Elegiste {0} playlists. ¿Quieres activar el modo playlist?</source>
         <translation>Você escolheu {0} playlists. Deseja ativar o modo playlist?</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1199"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1600"/>
         <source>Si eliges No, cada playlist se descargará solo con su primer video.</source>
         <translation>Se escolher Não, cada playlist será baixada apenas com seu primeiro vídeo.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1203"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1604"/>
         <source>Playlist seleccionada</source>
         <translation>Playlist selecionada</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1214"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1615"/>
         <source>Corte de fragmentos</source>
         <translation>Recorte de fragmentos</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1215"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1616"/>
         <source>Tienes el corte de fragmentos activado. ¿Quieres recortar cada video uno por uno?</source>
         <translation>O recorte de fragmentos está ativado. Deseja recortar cada vídeo um por um?</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/media_search_dialog.py" line="1217"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="1618"/>
         <source>Si eliges No, los videos se descargarán completos.</source>
         <translation>Se escolher Não, os vídeos serão baixados por completo.</translation>
     </message>
@@ -7646,34 +7656,34 @@ Você pode baixá-lo novamente quando quiser.</translation>
 <context>
     <name>PlaylistGroupRow</name>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="799"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="988"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="808"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="997"/>
         <source>{0} de {1}</source>
         <translation>{0} de {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="821"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="830"/>
         <source>Quitar la playlist de la lista</source>
         <translation>Remover a playlist da lista</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="902"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="904"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="911"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="913"/>
         <source>Arrastra la playlist a otra aplicación para importar sus archivos</source>
         <translation>Arraste a playlist para outro aplicativo para importar os arquivos dela</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="937"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="946"/>
         <source>Contraer</source>
         <translation>Recolher</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="937"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="946"/>
         <source>Ver los elementos</source>
         <translation>Ver os itens</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="990"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="999"/>
         <source> · {0} con error</source>
         <translation> · {0} com erro</translation>
     </message>
@@ -8245,114 +8255,114 @@ para reproduzi-lo ou ver os detalhes</translation>
         <translation>Playlist</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="213"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="218"/>
         <source>Analizando video para recorte...</source>
         <translation>Analisando o vídeo para recorte...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="223"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="228"/>
         <source>Error al analizar: {0}</source>
         <translation>Erro na análise: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="235"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="240"/>
         <source>Descarga cancelada</source>
         <translation>Download cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="402"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="577"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="593"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="855"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="395"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="570"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="586"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="848"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="414"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="407"/>
         <source>Recorte cancelado</source>
         <translation>Recorte cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="445"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="438"/>
         <source>En cola</source>
         <translation>Na fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="484"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="803"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="826"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="477"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="796"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="819"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="559"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="552"/>
         <source>{0} de {1} completados</source>
         <translation>{0} de {1} concluídos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="594"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="587"/>
         <source>Descargas canceladas</source>
         <translation>Downloads cancelados</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="659"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="652"/>
         <source>Descargando</source>
         <translation>Baixando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="695"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="688"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="772"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="816"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1282"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1291"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="765"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="809"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1275"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1284"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="824"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="817"/>
         <source>Omitido</source>
         <translation>Ignorado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="856"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="849"/>
         <source>Descargas completadas</source>
         <translation>Downloads concluídos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="875"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="868"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="877"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="870"/>
         <source>{0} ({1} de {2})</source>
         <translation>{0} ({1} de {2})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1065"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1078"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1119"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1058"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1071"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1112"/>
         <source>Reescalando con IA...</source>
         <translation>Ampliando com IA...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1143"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1136"/>
         <source>Error al reescalar</source>
         <translation>Erro ao ampliar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1154"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1285"/>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1297"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1147"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1278"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1290"/>
         <source>Error al recodificar</source>
         <translation>Erro ao recodificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1295"/>
+        <location filename="../../gui/tabs/quick_mode/download_controller.py" line="1288"/>
         <source>Recodificación cancelada</source>
         <translation>Recodificação cancelada</translation>
     </message>
@@ -8413,40 +8423,40 @@ para reproduzi-lo ou ver os detalhes</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/download_row.py" line="470"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="624"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="633"/>
         <source>En cola</source>
         <translation>Na fila</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/download_row.py" line="467"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="628"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="637"/>
         <source>Preparando</source>
         <translation>Preparando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="644"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="653"/>
         <source>Cortando</source>
         <translation>Cortando</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/download_row.py" line="464"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="644"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="653"/>
         <source>Descargando</source>
         <translation>Baixando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="645"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="654"/>
         <source>{0} fragmento {1} de {2}</source>
         <translation>{0} fragmento {1} de {2}</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/quick_mode/download_row.py" line="466"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="648"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="657"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="656"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="665"/>
         <source>Descarga directa</source>
         <translation>Download direto</translation>
     </message>
@@ -10459,7 +10469,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="492"/>
         <source>Cargando vista previa...</source>
-        <translation>Carregando a pré-visualização...</translation>
+        <translation>Carregando pré-visualização...</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="589"/>
@@ -11436,6 +11446,32 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <location filename="../../gui/dialogs/fragment_dialog.py" line="120"/>
         <source>Eliminar fragmento</source>
         <translation>Excluir fragmento</translation>
+    </message>
+</context>
+<context>
+    <name>_PreviewPanel</name>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="161"/>
+        <source>Cerrar vista previa (Esc)</source>
+        <translation>Fechar pré-visualização (Esc)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="307"/>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="332"/>
+        <source>Cargando vista previa...</source>
+        <translation>Carregando pré-visualização...</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="322"/>
+        <source>No se encontró un formato reproducible.</source>
+        <translation>Não foi encontrado um formato reproduzível.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/media_search_dialog.py" line="354"/>
+        <source>No se puede reproducir la vista previa.
+{0}</source>
+        <translation>Não é possível reproduzir a pré-visualização.
+{0}</translation>
     </message>
 </context>
 <context>

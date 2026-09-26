@@ -519,7 +519,7 @@ class QuickDownloadRow(QFrame):
         else:
             background = base
             border_width = 1
-        self.setStyleSheet(f"""
+        new_style = f"""
             QFrame#queueItemCard {{
                 background-color: {background};
                 border: {border_width}px solid {border};
@@ -529,7 +529,16 @@ class QuickDownloadRow(QFrame):
                 color: {get_theme_token('texto_principal', '#dddddd')};
             }}
             {progress_bar_qss()}
-        """)
+        """
+        # En cada tick de progreso se vuelve a llamar aquí aunque nada haya
+        # cambiado (update_progress -> _apply_status_color -> _set_status_color
+        # -> _refresh_card_style). Sin esta guarda, Qt reparsea el QSS completo y
+        # repinta la tarjeta hasta 10 veces por segundo por descarga activa -- con
+        # varias descargas simultáneas eso es lo que se sentía como que la UI se
+        # trababa. Mismo patrón que QueueItemCard._apply_style en queue_panel.py.
+        if self.styleSheet() == new_style:
+            return
+        self.setStyleSheet(new_style)
 
     _TOKEN_ERROR = ("estado_error", "#ff6b5f")
     _TOKEN_ESPERA = ("estado_espera", "#aaaaaa")

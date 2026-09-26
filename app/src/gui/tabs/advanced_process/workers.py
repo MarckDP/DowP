@@ -70,8 +70,13 @@ class DownloadWorker(QThread):
         # saber a qué fragmento pertenecía cada archivo (ver
         # QuickDownloadController._resolve_target_rows) - "Recodificar" terminaba
         # aplicándose a un fragmento cualquiera y dejando el resto sin recodificar.
+        # 0.5s = 2 actualizaciones/seg por descarga activa. yt-dlp llama a este hook
+        # mucho más seguido que eso; con varias descargas simultáneas, emitir a esa
+        # frecuencia nativa saturaba la cola de eventos del hilo principal (cada tick
+        # dispara un ciclo de repintado en la fila -- ver
+        # QuickDownloadRow._refresh_card_style).
         current_time = time.time()
-        if current_time - self._last_emit_time < 0.1 and d.get('status') not in ('finished', 'fragment_progress'):
+        if current_time - self._last_emit_time < 0.5 and d.get('status') not in ('finished', 'fragment_progress'):
             return
 
         self._last_emit_time = current_time

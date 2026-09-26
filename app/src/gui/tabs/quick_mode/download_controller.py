@@ -349,20 +349,8 @@ class QuickDownloadController(QObject):
             except Exception as e:
                 logger.warning(f"QuickDownloadController: No se pudo descargar miniatura para FragmentDialog: {e}")
 
-        formats = data.get("formats") or []
-        preview_format = None
-        for f in formats:
-            if f.get("url") and not f.get("url", "").startswith("rtmp") and f.get("acodec") != "none" and f.get("vcodec") != "none":
-                h = f.get("height") or 0
-                if 360 <= h <= 720:
-                    preview_format = f
-                    break
-        if not preview_format:
-            for f in formats:
-                if f.get("url") and f.get("vcodec") != "none":
-                    preview_format = f
-                    break
-        stream_url = preview_format.get("url", "") if preview_format else ""
+        from core.utils.preview_stream import pick_preview_stream_url
+        stream_url = pick_preview_stream_url(data.get("formats"))
 
         from gui.dialogs.fragment_dialog import FragmentDialog
         

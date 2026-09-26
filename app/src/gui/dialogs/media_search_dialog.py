@@ -12,16 +12,19 @@ tarjeta central con los colores del tema."""
 import re
 
 from PySide6.QtCore import (
-    Qt, QPoint, QRect, QSize, QThread, QTimer, Signal, QCoreApplication, QItemSelectionModel,
+    Qt, QPoint, QRect, QSize, QThread, QTimer, QUrl, Signal, QCoreApplication, QItemSelectionModel,
 )
 from PySide6.QtGui import (
-    QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen, QPixmap, QStandardItem,
+    QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen, QPixmap, QPolygon, QStandardItem,
     QStandardItemModel,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView, QButtonGroup, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QListView, QPushButton, QStackedWidget, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget,
+    QListView, QPushButton, QSlider, QStackedWidget, QStyle, QStyledItemDelegate, QVBoxLayout,
+    QWidget,
 )
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimediaWidgets import QVideoWidget
 
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
@@ -119,6 +122,285 @@ class _SearchWorker(QThread):
 
 
 # ──────────────────────────────────────────────────────────────
+# Vista previa (doble clic en un resultado) -- reproduce el stream directo del CDN sin
+# descargar nada, mismo mecanismo que usa el corte de fragmentos (FragmentDialog /
+# core/utils/stream_proxy.py), pero SIN el widget completo de recorte (forma de onda,
+# crop, marca de agua, etc. -- ver conversación): aquí solo hace falta reproducir.
+# ──────────────────────────────────────────────────────────────
+class _PreviewPanel(QWidget):
+    """Tarjeta flotante (picture-in-picture) sobre la esquina de la lista de resultados
+    -- NO tapa la búsqueda: se puede seguir viendo y scrolleando la lista detrás mientras
+    se previsualiza (ver conversación: la primera versión reemplazaba toda la página)."""
+    closed = Signal()
+
+    # Ancho fijo del reproductor (16:9). Más chico que antes a propósito: como ahora
+    # flota sobre la lista en vez de ocupar toda la vista, tiene que dejar ver el resto.
+    PLAYER_WIDTH = 340
+    PLAYER_HEIGHT = int(PLAYER_WIDTH * 9 / 16)
+    MARGIN_TO_EDGE = 16  # separación con el borde de la lista al posicionarla (ver dialog._reposition_preview)
+
+    def __init__(self, dialog):
+        super().__init__(dialog.stack)
+        self.dialog = dialog
+        self.setObjectName("mediaSearchPreview")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(f"""
+            #mediaSearchPreview {{
+                background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
+                border: 1px solid {get_theme_token('borde_normal', '#333333')};
+                border-radius: 10px;
+            }}
+        """)
+        self._slider_dragging = False
+        self._audio_output = QAudioOutput(self)
+
+        # Botón chico y cuadrado (mismo criterio en cerrar/play): sin esto, un QPushButton
+        # sin estilo propio se pinta con el bisel rectangular por defecto del sistema, que
+        # con un ícono adentro se ve como un botón "de más", no como un ícono limpio.
+        square_btn_style = f"""
+            QPushButton {{
+                background-color: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 0px;
+            }}
+            QPushButton:hover {{
+                background-color: {get_theme_token('fondo_hover', '#2a2a2a')};
+            }}
+        """
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(10, 8, 10, 10)
+        outer.setSpacing(6)
+
+        top = QHBoxLayout()
+        top.setContentsMargins(0, 0, 0, 0)
+        self.title_lbl = QLabel()
+        self.title_lbl.setObjectName("mediaSearchPreviewTitle")
+        self.title_lbl.setMaximumWidth(self.PLAYER_WIDTH - 34)
+        self.title_lbl.setStyleSheet(
+            f"color: {get_theme_token('texto_principal', '#e0e0e0')}; font-weight: bold; font-size: 11px;")
+        top.addWidget(self.title_lbl, 1)
+        self.btn_close = QPushButton()
+        self.btn_close.setIcon(dialog._icon("close.svg", size=14))
+        self.btn_close.setIconSize(QSize(14, 14))
+        self.btn_close.setFixedSize(26, 26)
+        self.btn_close.setStyleSheet(square_btn_style)
+        self.btn_close.setCursor(Qt.PointingHandCursor)
+        self.btn_close.setToolTip(self.tr("Cerrar vista previa (Esc)"))
+        self.btn_close.clicked.connect(self.closed.emit)
+        top.addWidget(self.btn_close)
+        outer.addLayout(top)
+
+        # Bloque reproductor (video + controles) a ancho fijo, centrado en el panel --
+        # así los controles quedan siempre del mismo ancho que el video, sea cual sea el
+        # tamaño de la ventana de búsqueda.
+        player_block = QWidget()
+        player_block.setFixedWidth(self.PLAYER_WIDTH)
+        block_layout = QVBoxLayout(player_block)
+        block_layout.setContentsMargins(0, 0, 0, 0)
+        block_layout.setSpacing(6)
+
+        self.video_container = QWidget()
+        self.video_container.setObjectName("mediaSearchPreviewContainer")
+        self.video_container.setFixedSize(self.PLAYER_WIDTH, self.PLAYER_HEIGHT)
+        self.video_container.setStyleSheet("background-color: #000000; border-radius: 6px;")
+        block_layout.addWidget(self.video_container)
+
+        self.video_widget = QVideoWidget(self.video_container)
+        self.video_widget.setGeometry(0, 0, self.PLAYER_WIDTH, self.PLAYER_HEIGHT)
+        self.video_widget.setCursor(Qt.PointingHandCursor)
+        self.video_widget.hide()
+
+        self.fallback_label = QLabel(self.video_container)
+        self.fallback_label.setGeometry(0, 0, self.PLAYER_WIDTH, self.PLAYER_HEIGHT)
+        self.fallback_label.setAlignment(Qt.AlignCenter)
+
+        self.status_label = QLabel(self.video_container)
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setWordWrap(True)
+        self.status_label.setFixedWidth(self.PLAYER_WIDTH - 40)
+        self.status_label.setStyleSheet(
+            f"color: {get_theme_token('texto_principal', '#eeeeee')}; background-color: rgba(0,0,0,170); "
+            "padding: 10px 16px; border-radius: 8px; font-size: 12px;")
+        self.status_label.hide()
+
+        controls = QHBoxLayout()
+        controls.setContentsMargins(0, 0, 0, 0)
+        controls.setSpacing(8)
+        self._icon_play = dialog._icon("play_arrow.svg", size=14)
+        self._icon_pause = dialog._icon("pause.svg", size=14)
+        self.btn_play = QPushButton()
+        self.btn_play.setIcon(self._icon_play)
+        self.btn_play.setIconSize(QSize(14, 14))
+        self.btn_play.setFixedSize(26, 26)
+        self.btn_play.setStyleSheet(square_btn_style)
+        self.btn_play.setCursor(Qt.PointingHandCursor)
+        self.btn_play.setEnabled(False)
+        self.btn_play.clicked.connect(self._toggle_play)
+        controls.addWidget(self.btn_play)
+
+        small_style = f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;"
+        self.time_lbl = QLabel("0:00")
+        self.time_lbl.setStyleSheet(small_style)
+        controls.addWidget(self.time_lbl)
+
+        self.seek_slider = QSlider(Qt.Horizontal)
+        self.seek_slider.setRange(0, 0)
+        self.seek_slider.setEnabled(False)
+        self.seek_slider.sliderPressed.connect(self._on_slider_pressed)
+        self.seek_slider.sliderReleased.connect(self._on_slider_released)
+        self.seek_slider.sliderMoved.connect(self._on_slider_moved)
+        controls.addWidget(self.seek_slider, 1)
+
+        self.duration_lbl = QLabel("0:00")
+        self.duration_lbl.setStyleSheet(small_style)
+        controls.addWidget(self.duration_lbl)
+
+        # Control de volumen -- reutiliza el mismo widget que ya usan los otros
+        # reproductores de la app (MediaTrimPlayerWidget, Editor de Medios). Arranca en
+        # modo compacto (solo el botón de mute, sin slider fijo): a 340px de ancho no
+        # sobra lugar para un slider horizontal permanente -- pasar el mouse sobre el
+        # botón muestra el popup vertical (ver VolumeControlWidget.set_slider_visible).
+        from gui.widgets.volume_control import VolumeControlWidget
+        self.volume_control = VolumeControlWidget(initial_volume=100, slider_width=50)
+        self.volume_control.set_slider_visible(False)
+        self.volume_control.volume_changed.connect(self._audio_output.setVolume)
+        controls.addWidget(self.volume_control)
+
+        block_layout.addLayout(controls)
+
+        outer.addWidget(player_block)
+
+        self.media_player = QMediaPlayer(self)
+        self.media_player.setAudioOutput(self._audio_output)
+        self.media_player.setVideoOutput(self.video_widget)
+        self.media_player.mediaStatusChanged.connect(self._on_status_changed)
+        self.media_player.errorOccurred.connect(self._on_error)
+        self.media_player.playbackStateChanged.connect(self._on_playback_state_changed)
+        self.media_player.positionChanged.connect(self._on_position_changed)
+        self.media_player.durationChanged.connect(self._on_duration_changed)
+
+        # Clic sobre el video: pausa/reanuda, además del botón de la barra de controles.
+        self.video_widget.mousePressEvent = self._toggle_play
+
+    def _toggle_play(self, _event=None):
+        if self.media_player.playbackState() == QMediaPlayer.PlayingState:
+            self.media_player.pause()
+        else:
+            self.media_player.play()
+
+    def _on_playback_state_changed(self, state):
+        self.btn_play.setIcon(self._icon_pause if state == QMediaPlayer.PlayingState else self._icon_play)
+
+    def _on_position_changed(self, position_ms):
+        if self._slider_dragging:
+            return
+        self.seek_slider.setValue(position_ms)
+        self.time_lbl.setText(format_duration(position_ms / 1000))
+
+    def _on_duration_changed(self, duration_ms):
+        self.seek_slider.setRange(0, duration_ms)
+        self.seek_slider.setEnabled(duration_ms > 0)
+        self.duration_lbl.setText(format_duration(duration_ms / 1000))
+
+    def _on_slider_pressed(self):
+        self._slider_dragging = True
+
+    def _on_slider_released(self):
+        self.media_player.setPosition(self.seek_slider.value())
+        self._slider_dragging = False
+
+    def _on_slider_moved(self, value):
+        self.time_lbl.setText(format_duration(value / 1000))
+
+    def _center_status(self):
+        self.status_label.adjustSize()
+        rect = self.video_container.rect()
+        self.status_label.move(
+            rect.center().x() - self.status_label.width() // 2,
+            rect.center().y() - self.status_label.height() // 2,
+        )
+        self.status_label.raise_()
+
+    def _reset_controls(self):
+        self.btn_play.setEnabled(False)
+        self.btn_play.setIcon(self._icon_play)
+        self.seek_slider.setEnabled(False)
+        self.seek_slider.setValue(0)
+        self.time_lbl.setText("0:00")
+        self.duration_lbl.setText("0:00")
+
+    def show_loading(self, item, pixmap=None):
+        title = item.get("title", "")
+        fm = QFontMetrics(self.title_lbl.font())
+        self.title_lbl.setText(fm.elidedText(title, Qt.ElideRight, self.title_lbl.maximumWidth()))
+        self.title_lbl.setToolTip(title)
+        self.media_player.stop()
+        self.video_widget.hide()
+        self._reset_controls()
+        if pixmap is not None and not pixmap.isNull():
+            self.fallback_label.setPixmap(pixmap.scaled(
+                self.video_container.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            self.fallback_label.clear()
+        self.fallback_label.show()
+        self.status_label.setText(self.tr("Cargando vista previa..."))
+        self.status_label.show()
+        self._center_status()
+
+    def show_error(self, message):
+        self.video_widget.hide()
+        self._reset_controls()
+        self.fallback_label.show()
+        self.status_label.setText(message)
+        self.status_label.show()
+        self._center_status()
+
+    def play(self, resolved, item):
+        stream_url = resolved.get("stream_url") if resolved else ""
+        if not stream_url:
+            self.show_error(self.tr("No se encontró un formato reproducible."))
+            return
+        playback_url = stream_url
+        try:
+            from core.utils.stream_proxy import build_proxy_url
+            proxy = build_proxy_url(stream_url, resolved.get("source_url") or item.get("url", ""))
+            if proxy:
+                playback_url = proxy
+        except Exception as e:
+            logger.warning(f"MediaSearchDialog: Proxy de vista previa no disponible, usando URL directa: {e}")
+        self.status_label.setText(self.tr("Cargando vista previa..."))
+        self.status_label.show()
+        self._center_status()
+        self.btn_play.setEnabled(True)
+        self.media_player.setSource(QUrl(playback_url))
+        self.media_player.play()
+
+    def _on_status_changed(self, status):
+        if status == QMediaPlayer.NoMedia:
+            return  # transitorio al llamar setSource()
+        if status in (QMediaPlayer.LoadingMedia, QMediaPlayer.BufferingMedia, QMediaPlayer.StalledMedia):
+            self.status_label.show()
+            self._center_status()
+        elif status in (QMediaPlayer.LoadedMedia, QMediaPlayer.BufferedMedia):
+            self.status_label.hide()
+            self.fallback_label.hide()
+            self.video_widget.show()
+
+    def _on_error(self, error, error_string):
+        if error == QMediaPlayer.NoError:
+            return
+        logger.warning(f"MediaSearchDialog: Error al reproducir vista previa: {error} - {error_string}")
+        self.show_error(self.tr("No se puede reproducir la vista previa.\n{0}").format(error_string))
+
+    def stop(self):
+        self.media_player.stop()
+        self.media_player.setSource(QUrl())
+        self._reset_controls()
+
+
+# ──────────────────────────────────────────────────────────────
 # Tarjetas
 # ──────────────────────────────────────────────────────────────
 class _ResultDelegate(QStyledItemDelegate):
@@ -205,6 +487,28 @@ class _ResultDelegate(QStyledItemDelegate):
             "avatar": avatar, "name_rect": name_rect, "sub_rect": sub_rect,
             "title_font": title_font, "small_font": small_font, "align": align,
         }
+
+    # -- botón de reproducir sobre la miniatura (ver _ResultsView._play_button_hit) --
+    # Aparte de la marca de seleccionado: antes la única forma de previsualizar era el
+    # doble clic, pero el primer clic de ese doble clic ya marca/desmarca el ítem para
+    # descargar (comportamiento normal de selección de QListView) -- quedaba fácil
+    # previsualizar un video sin querer dejarlo marcado, u olvidarse de desmarcarlo
+    # después. Este botón previsualiza SIN tocar la selección (ver conversación).
+    def play_button_rect(self, thumb: QRect) -> QRect:
+        size = max(28, min(44, thumb.height() - 8))
+        return QRect(thumb.center().x() - size // 2, thumb.center().y() - size // 2, size, size)
+
+    def _paint_play_button(self, painter, thumb):
+        rect = self.play_button_rect(thumb)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(0, 0, 0, 165))
+        painter.drawEllipse(rect)
+        cx, cy = rect.center().x(), rect.center().y()
+        w, h = max(4, int(rect.width() * 0.16)), max(5, int(rect.height() * 0.22))
+        painter.setBrush(QColor(255, 255, 255, 235))
+        painter.drawPolygon(QPolygon([
+            QPoint(cx - w, cy - h), QPoint(cx - w, cy + h), QPoint(cx + w + 2, cy),
+        ]))
 
     def sizeHint(self, option, index):
         view = self.dialog.results_view
@@ -300,6 +604,11 @@ class _ResultDelegate(QStyledItemDelegate):
             painter.drawRoundedRect(badge, 4, 4)
             painter.setPen(badge_fg)
             painter.drawText(badge, Qt.AlignCenter, badge_text)
+
+        # Botón de reproducir, solo al pasar el mouse y solo si se puede previsualizar
+        # (mismo criterio que el doble clic, ver MediaSearchDialog._is_previewable).
+        if hovered and self.dialog._is_previewable(item):
+            self._paint_play_button(painter, thumb)
 
         # Marca de seleccionado
         if selected:
@@ -400,11 +709,23 @@ class _ResultDelegate(QStyledItemDelegate):
 
 class _ResultsView(QListView):
     channel_clicked = Signal(dict)
+    # Ítem bajo el mouse tras quedarse quieto un rato: dispara una precarga de su URL de
+    # stream (ver MediaSearchDialog._on_hover_settled) para que el doble clic no tenga
+    # que esperar el análisis completo de yt-dlp si el usuario ya venía apuntando ahí.
+    hover_settled = Signal(dict)
+    # Clic en el botón de play sobre la miniatura (ver _ResultDelegate._paint_play_button):
+    # previsualiza SIN marcar/desmarcar el ítem, a diferencia del doble clic normal.
+    play_requested = Signal(dict)
 
     def __init__(self, dialog):
         super().__init__(dialog)
         self.dialog = dialog
         self.hover_channel_row = -1
+        self._hover_row = -1
+        self._hover_timer = QTimer(self)
+        self._hover_timer.setSingleShot(True)
+        self._hover_timer.setInterval(400)
+        self._hover_timer.timeout.connect(self._emit_hover_settled)
         self.setMouseTracking(True)
         self.setResizeMode(QListView.Adjust)
         self.setMovement(QListView.Static)
@@ -453,9 +774,30 @@ class _ResultsView(QListView):
             return (index, item)
         return None
 
+    def _play_button_hit(self, pos):
+        """Clic en el botón de play sobre la miniatura (ver _ResultDelegate). Solo existe
+        si el ítem se puede previsualizar Y el mouse está sobre ESA tarjeta (el botón solo
+        se dibuja con hover), así que alcanza con el mismo criterio que el pintado."""
+        index, item = self._row_item(pos)
+        if not item or not self.dialog._is_previewable(item):
+            return None
+        rect = self.visualRect(index).adjusted(1, 1, -1, -1)
+        geo = self.itemDelegate().layout(rect, item, self.font())
+        thumb = geo.get("thumb")
+        if not thumb:
+            return None
+        play_rect = self.itemDelegate().play_button_rect(thumb)
+        return (index, item) if play_rect.contains(pos) else None
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            hit = self._whole_row_channel_hit(event.position().toPoint()) or self._channel_hit(event.position().toPoint())
+            pos = event.position().toPoint()
+            play_hit = self._play_button_hit(pos)
+            if play_hit:
+                # No pasa a super(): previsualizar no debe marcar/desmarcar la tarjeta.
+                self.play_requested.emit(play_hit[1])
+                return
+            hit = self._whole_row_channel_hit(pos) or self._channel_hit(pos)
             if hit:
                 # No pasa a super(): un clic en el canal no debe marcar/desmarcar la tarjeta.
                 self.channel_clicked.emit(hit[1])
@@ -468,11 +810,19 @@ class _ResultsView(QListView):
         row = hit[0].row() if hit else -1
         if row != self.hover_channel_row:
             self.hover_channel_row = row
-            if hit:
-                self.viewport().setCursor(Qt.PointingHandCursor)
-            else:
-                self.viewport().unsetCursor()
             self.viewport().update()
+        if hit or self._play_button_hit(pos):
+            self.viewport().setCursor(Qt.PointingHandCursor)
+        else:
+            self.viewport().unsetCursor()
+
+        index, _item = self._row_item(pos)
+        hover_row = index.row() if index is not None and index.isValid() else -1
+        if hover_row != self._hover_row:
+            self._hover_row = hover_row
+            self._hover_timer.stop()
+            if hover_row >= 0:
+                self._hover_timer.start()
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event):
@@ -480,7 +830,17 @@ class _ResultsView(QListView):
             self.hover_channel_row = -1
             self.viewport().unsetCursor()
             self.viewport().update()
+        self._hover_row = -1
+        self._hover_timer.stop()
         super().leaveEvent(event)
+
+    def _emit_hover_settled(self):
+        if self._hover_row < 0:
+            return
+        index = self.model().index(self._hover_row, 0)
+        item = index.data(ITEM_ROLE) or {}
+        if item:
+            self.hover_settled.emit(item)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -518,6 +878,16 @@ class MediaSearchDialog(QDialog):
         self._page = 1
         self._items = []
         self._error_text = ""
+
+        # Vista previa (ver _PreviewPanel más arriba): cachea la URL de stream ya resuelta
+        # por ítem (dura la sesión de este diálogo, no entre aperturas) para que reabrir la
+        # misma vista previa no repita el análisis de yt-dlp, y agrupa por URL las
+        # resoluciones en curso para no lanzar dos análisis del mismo video si el hover ya
+        # había empezado uno cuando llega el doble clic.
+        self._stream_cache = {}
+        self._pending_resolvers = {}
+        self._preview_item = None
+        self._preview_token = 0
 
         config = get_config()
         self.view_mode = config.get("media_search_view", "grid")
@@ -569,6 +939,11 @@ class MediaSearchDialog(QDialog):
     def keyPressEvent(self, event):
         # Evitar que la ventana se cierre al presionar Enter
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            event.accept()
+            return
+        if event.key() == Qt.Key_Escape and self.preview_panel.isVisible():
+            # Esc con la vista previa abierta la cierra a ELLA, no todo el diálogo.
+            self._close_preview()
             event.accept()
             return
         super().keyPressEvent(event)
@@ -745,8 +1120,17 @@ class MediaSearchDialog(QDialog):
         self.results_view.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self.results_view.channel_clicked.connect(self._open_channel)
         self.results_view.doubleClicked.connect(self._on_double_clicked)
+        self.results_view.hover_settled.connect(self._on_hover_settled)
+        self.results_view.play_requested.connect(self._show_preview)
         self.results_view.verticalScrollBar().valueChanged.connect(self._on_scrolled)
         self.stack.addWidget(self.results_view)
+
+        # Flota SOBRE self.stack (no es una página propia, ver _PreviewPanel): así la
+        # lista de resultados sigue visible y usable detrás mientras se previsualiza.
+        self.preview_panel = _PreviewPanel(self)
+        self.preview_panel.closed.connect(self._close_preview)
+        self.preview_panel.hide()
+
         layout.addWidget(self.stack, 1)
 
         # Pie
@@ -793,6 +1177,19 @@ class MediaSearchDialog(QDialog):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.results_view.scheduleDelayedItemsLayout()
+        self._reposition_preview()
+
+    def _reposition_preview(self):
+        """Ancla el panel flotante a la esquina inferior derecha de la lista de
+        resultados. Se llama al mostrarlo y en cada resize del diálogo."""
+        if not self.preview_panel.isVisible():
+            return
+        self.preview_panel.adjustSize()
+        margin = _PreviewPanel.MARGIN_TO_EDGE
+        parent_rect = self.stack.rect()
+        x = parent_rect.right() - self.preview_panel.width() - margin
+        y = parent_rect.bottom() - self.preview_panel.height() - margin
+        self.preview_panel.move(max(margin, x), max(margin, y))
 
     # ── Miniaturas ────────────────────────────────────────────────
     def pixmap_for(self, url):
@@ -892,6 +1289,9 @@ class MediaSearchDialog(QDialog):
             self._load_more()
 
     def _run(self, page):
+        # No cierra la vista previa: al ser un panel flotante (picture-in-picture, ver
+        # _PreviewPanel) sobre la lista y no una página del stack, buscar/paginar con una
+        # preview abierta no la tapa ni la interrumpe.
         self._generation += 1
         self._loading = True
         if self._channel is not None:
@@ -1047,8 +1447,116 @@ class MediaSearchDialog(QDialog):
             self.status_label.setText("")
 
     def _on_double_clicked(self, index):
-        if not self.multi_select and index.isValid():
+        if not index.isValid():
+            return
+        if not self.multi_select:
+            # Proceso Avanzado SOLO: el doble clic ya significa "usar este video" (ver
+            # docstring de la clase) -- no se le suma la vista previa para no pisar ese
+            # atajo existente.
             self._accept_selection()
+            return
+        item = index.data(ITEM_ROLE) or {}
+        if not self._is_previewable(item):
+            return
+        self._show_preview(item)
+
+    # ── Vista previa ─────────────────────────────────────────────
+    def _is_previewable(self, item):
+        return bool(item.get("url")) and item.get("kind") not in (KIND_PLAYLIST, KIND_CHANNEL) and not item.get("is_live")
+
+    def _on_hover_settled(self, item):
+        # Solo precarga en Modo Rápido (multi_select): en Proceso Avanzado el doble clic
+        # no abre vista previa (ver _on_double_clicked), así que precargar ahí no serviría.
+        if not self.multi_select or not self._is_previewable(item):
+            return
+        url = item["url"]
+        if url in self._stream_cache:
+            return
+        self._resolve_stream_for_preview(item, on_ready=lambda _r: None, on_error=lambda _m: None)
+
+    def _extract_preview_stream(self, data):
+        from core.utils.preview_stream import pick_preview_stream_url
+        stream_url = pick_preview_stream_url(data.get("formats"))
+        if not stream_url:
+            return None
+        return {"stream_url": stream_url, "source_url": data.get("webpage_url") or ""}
+
+    def _resolve_stream_for_preview(self, item, on_ready, on_error=None):
+        """Resuelve la URL de stream de `item` con un análisis de yt-dlp (igual que el
+        corte de fragmentos). Si ya hay una resolución en curso para la misma URL (hover
+        + doble clic casi seguidos), se suma como otro interesado en vez de lanzar un
+        segundo análisis -- todos los interesados se avisan cuando termine."""
+        url = item.get("url")
+        if not url:
+            return
+        pending = self._pending_resolvers.get(url)
+        if pending is not None:
+            pending["callbacks"].append((on_ready, on_error))
+            return
+
+        from gui.tabs.advanced_process.workers import AnalysisWorker
+        worker = AnalysisWorker(url, analyze_playlist=False, fast_mode=True)
+        entry = {"worker": worker, "callbacks": [(on_ready, on_error)]}
+        self._pending_resolvers[url] = entry
+        _RUNNING_WORKERS.add(worker)
+
+        def on_finished(data, error):
+            self._pending_resolvers.pop(url, None)
+            _RUNNING_WORKERS.discard(worker)
+            worker.deleteLater()
+            resolved, message = None, error or ""
+            if not error and data:
+                resolved = self._extract_preview_stream(data)
+                if not resolved:
+                    message = self.tr("No se encontró un formato reproducible.")
+            if not resolved and not message:
+                message = self.tr("No se pudo analizar el video.")
+            if resolved:
+                self._stream_cache[url] = resolved
+            for ready_cb, error_cb in entry["callbacks"]:
+                if resolved:
+                    if ready_cb:
+                        ready_cb(resolved)
+                elif error_cb:
+                    error_cb(message)
+
+        worker.finished.connect(on_finished)
+        worker.start()
+
+    def _show_preview(self, item):
+        url = item.get("url")
+        if not url:
+            return
+        self._preview_token += 1
+        token = self._preview_token
+        self._preview_item = item
+        self.preview_panel.show_loading(item, self.pixmap_for(item.get("thumb_url")))
+        self.preview_panel.show()
+        self.preview_panel.raise_()
+        self._reposition_preview()
+
+        cached = self._stream_cache.get(url)
+        if cached:
+            self.preview_panel.play(cached, item)
+            return
+
+        def on_ready(resolved):
+            if token != self._preview_token:
+                return  # el usuario ya cerró esta vista previa o abrió otra
+            self.preview_panel.play(resolved, item)
+
+        def on_error(message):
+            if token != self._preview_token:
+                return
+            self.preview_panel.show_error(message)
+
+        self._resolve_stream_for_preview(item, on_ready, on_error)
+
+    def _close_preview(self):
+        self.preview_panel.stop()
+        self.preview_panel.hide()
+        self._preview_item = None
+        self._preview_token += 1  # descarta cualquier resolución que llegue tarde
 
     # ── Canal ────────────────────────────────────────────────────
     def _open_channel(self, item):
@@ -1138,6 +1646,8 @@ class MediaSearchDialog(QDialog):
 
     def done(self, result):
         self._generation += 1
+        self._preview_token += 1
+        self.preview_panel.stop()
         try:
             self._thumb_cache.thumbnail_ready.disconnect(self._on_thumbnail_ready)
         except (RuntimeError, TypeError):
