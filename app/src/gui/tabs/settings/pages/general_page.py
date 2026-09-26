@@ -11,6 +11,7 @@ from core.version import IS_BETA
 from gui.styles import get_available_themes, apply_folder_open_button_style
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.combo_box import AutoPopupComboBox
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 class GeneralPage(QWidget):
     language_changed = Signal(str)
@@ -54,10 +55,9 @@ class GeneralPage(QWidget):
         self.scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
         
         # Layout para el contenido del scroll
-        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(12)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         # --- TARJETA: ACTUALIZACIONES DOWP ---
         # Mismo mecanismo visual de tarjeta que usan DenoCardPanel/GhostscriptCardPanel
@@ -196,14 +196,14 @@ class GeneralPage(QWidget):
         
         self.paste_desc = QLabel(self.tr("Al volver a la ventana, pega automáticamente la URL copiada en el campo de análisis."))
         self.paste_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.paste_desc.setWordWrap(True)
         
         self.paste_vbox.addWidget(self.paste_label)
         self.paste_vbox.addWidget(self.paste_desc)
         
         self.paste_switch = ToggleSwitch()
         
-        self.paste_row.addLayout(self.paste_vbox)
-        self.paste_row.addStretch()
+        self.paste_row.addLayout(self.paste_vbox, 1)
         self.paste_row.addWidget(self.paste_switch)
         self.content_layout.addLayout(self.paste_row)
 
@@ -215,6 +215,7 @@ class GeneralPage(QWidget):
         self.adobe_label.setObjectName("settingsLabel")
         
         self.adobe_desc = QLabel(self.tr("Si está activo, preseleccionará el formato más compatible (✨). Si no, la mejor calidad absoluta."))
+        self.adobe_desc.setWordWrap(True)
         self.adobe_desc.setStyleSheet("color: #888888; font-size: 11px;") # Compact description
         
         self.adobe_vbox.addWidget(self.adobe_label)
@@ -222,8 +223,7 @@ class GeneralPage(QWidget):
         
         self.adobe_switch = ToggleSwitch()
         
-        self.adobe_row.addLayout(self.adobe_vbox)
-        self.adobe_row.addStretch()
+        self.adobe_row.addLayout(self.adobe_vbox, 1)
         self.adobe_row.addWidget(self.adobe_switch)
         self.content_layout.addLayout(self.adobe_row)
 
@@ -236,6 +236,7 @@ class GeneralPage(QWidget):
         
         self.tutorials_desc = QLabel(self.tr("Si deseas volver a ver los tutoriales iniciales de cada pestaña, puedes restablecerlos aquí."))
         self.tutorials_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.tutorials_desc.setWordWrap(True)
         
         self.tutorials_vbox.addWidget(self.tutorials_label)
         self.tutorials_vbox.addWidget(self.tutorials_desc)
@@ -246,8 +247,7 @@ class GeneralPage(QWidget):
         self.btn_reset_tutorials.setProperty("variant", "secondary")
         self.btn_reset_tutorials.clicked.connect(self._on_reset_tutorials_clicked)
         
-        self.tutorials_row.addLayout(self.tutorials_vbox)
-        self.tutorials_row.addStretch()
+        self.tutorials_row.addLayout(self.tutorials_vbox, 1)
         self.tutorials_row.addWidget(self.btn_reset_tutorials)
         self.content_layout.addLayout(self.tutorials_row)
 

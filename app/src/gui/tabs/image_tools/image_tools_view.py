@@ -7,9 +7,15 @@ import tempfile
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QApplication,
     QPushButton, QButtonGroup, QLineEdit, QFileDialog, QMessageBox, QProgressDialog,
+    QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsLineItem, QCheckBox, QToolTip,
 )
-from PySide6.QtCore import Qt, QSize, QEvent, QUrl, QStandardPaths, QThread, Signal, QTimer, QMimeData
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtCore import (
+    Qt, QSize, QEvent, QUrl, QStandardPaths, QThread, Signal, QTimer, QMimeData, QRectF, QLineF, QPointF,
+)
+from PySide6.QtGui import (
+    QDesktopServices, QPixmap, QColor, QPen, QBrush, QCursor,
+    QUndoGroup, QUndoStack,
+)
 
 from core.logger.logger_manager import logger
 from core.setup.ghostscript_setup import check_ghostscript, download_ghostscript
@@ -33,10 +39,22 @@ from gui.tabs.image_tools.depth_popover import DepthPopoverContent
 from gui.tabs.image_tools.normal_popover import NormalPopoverContent
 from gui.tabs.image_tools.canvas_popover import CanvasPopoverContent
 from gui.tabs.image_tools.resize_popover import ResizePopoverContent
+from gui.tabs.image_tools.tool_rail import ToolRail
+from gui.tabs.image_tools.tool_options_popover import (
+    DEFAULT_TOOL_STYLES, TOOL_OPTION_MODE, ToolOptionsButton, ToolOptionsPopoverContent,
+)
 from gui.tabs.image_tools.convert_panel import ConvertPanel
 from gui.tabs.image_tools.image_convert_worker import ImageConvertWorker
-from gui.tabs.image_tools.canvas_flatten import build_flattened_image
+from gui.tabs.image_tools.canvas_flatten import build_flattened_image, rasterize_item, _clone_item
+from core.utils import shortcuts
 from gui.tabs.image_tools.layers.layer_model import Layer, LayerStack
+from gui.tabs.image_tools.layers.history import (
+    MacroCommand, AddLayerCommand, RemoveLayerCommand, MoveLayerCommand, VisibilityCommand, OpacityCommand,
+    RasterizeCommand, PixelPatchCommand, GeometryCommand, StyleCommand, CanvasCommand, NudgeCommand,
+    RasterGrowCommand, TextContentCommand, TextStyleCommand, TextResizeCommand,
+)
+from gui.tabs.image_tools.layers.text_item import EditableTextItem
+from gui.widgets.zoomable_image_viewer import ZoomableImageViewer
 from gui.tabs.image_tools.layers.layers_panel import LayersPanel
 from gui.tabs.image_tools.layers.background_dialog import BackgroundDialog
 
@@ -107,6 +125,15 @@ class ImageToolsTab(QWidget):
         # canvas_popover.py). Clave = filepath. Ver _on_file_selected/_on_canvas_edited.
         self._layer_snapshots: dict[str, list] = {}
         self._canvas_overrides: dict[str, dict] = {}
+        # Máscara del Borrador sobre la imagen base, por archivo (ver
+        # ZoomableImageViewer.base_mask). Se guarda al terminar cada trazo.
+        self._base_masks: dict = {}
+        # Deshacer/Rehacer: un QUndoStack por archivo (ver layers/history.py). El grupo
+        # apunta al del archivo abierto; botones y atajos hablan siempre con el grupo.
+        self._undo_group = QUndoGroup(self)
+        self._undo_stacks: dict[str, QUndoStack] = {}
+        self._pending_raster_layer = None  # (Layer, índice) creada por el trazo en curso
+        self._pending_raster_grow = None   # args de RasterGrowCommand del trazo en curso
         self._flatten_temp_dir: str | None = None
         # Filepath -> si el resultado ya convertido de ese archivo usó IA
         # (reescalado por ahora, ver _on_convert_file_completed -- a futuro también
@@ -149,13 +176,12 @@ class ImageToolsTab(QWidget):
         # ── Barra de herramientas vertical: botones cuadrados estándar 32x32
         # (mismo tamaño y proporciones que en el resto de la app), cada uno
         # despliega su propio panel flotante o activa su herramienta de dibujo.
-        self.side_toolbar = QFrame()
+        # Con poco alto la barra se compacta y, si aun así no entra, pasa a dos columnas
+        # (ver ToolRail) en vez de montar los botones unos sobre otros.
+        self.side_toolbar = ToolRail()
         self.side_toolbar.setObjectName("imageToolsSideToolbar")
-        self.side_toolbar.setFixedWidth(self.TOOLBAR_WIDTH)
-        top_layout = QVBoxLayout(self.side_toolbar)
-        top_layout.setContentsMargins(4, 10, 4, 10)
-        top_layout.setSpacing(6)
-        top_layout.setAlignment(Qt.AlignHCenter)
+        self.side_toolbar.layout_changed.connect(self._on_side_toolbar_layout_changed)
+        top_layout = self.side_toolbar
 
         def _make_sep():
             sep = QFrame()
@@ -240,7 +266,7 @@ class ImageToolsTab(QWidget):
         top_layout.addWidget(self.btn_normals)
         self._popover_buttons.append(self.btn_normals)
 
-        top_layout.addWidget(_make_sep())
+        top_layout.addSeparator(_make_sep())
 
         # ── Grupo 2: Dimensiones y Lienzo ─────────────────────────────────────
         self.resize_popover_content = ResizePopoverContent()
@@ -273,11 +299,13 @@ class ImageToolsTab(QWidget):
             "ellipse": "circle.svg",
             "line": "horizontal_rule.svg",
             "brush": "edit.svg",
+            "eraser": "ink_eraser.svg",
+            "text": "title4.svg",
             "canvas": "crop_free.svg",
         }
 
         # Canvas — clic izquierdo selecciona la herramienta; clic derecho abre el popover de opciones
-        self.btn_canvas = PopoverTriggerButton(host=self, content=self.canvas_popover_content, left_click_opens=False)
+        self.btn_canvas = ToolOptionsButton(host=self, content=self.canvas_popover_content)
         self.btn_canvas.setCheckable(True)
         self.btn_canvas.setFixedSize(32, 32)
         self.btn_canvas.setIconSize(QSize(18, 18))
@@ -291,21 +319,20 @@ class ImageToolsTab(QWidget):
         self._popover_buttons.append(self.btn_canvas)
         top_layout.addWidget(self.btn_canvas)
 
-        top_layout.addWidget(_make_sep())
+        top_layout.addSeparator(_make_sep())
 
         # ── Grupo 3: Capas y Composición ──────────────────────────────────────
         self.layer_stack = LayerStack()
         self.layer_stack.layers_changed.connect(self._refresh_layers_panel)
 
         self.layers_panel = LayersPanel()
-        self.layers_panel.draw_style_changed.connect(self._on_layers_draw_style_changed)
-        self.layers_panel.brush_style_changed.connect(self._on_layers_brush_style_changed)
         self.layers_panel.layer_visibility_toggled.connect(self._on_layer_visibility_toggled)
         self.layers_panel.layer_opacity_changed.connect(self._on_layer_opacity_changed)
         self.layers_panel.layer_move_up_requested.connect(self._on_layer_move_up)
         self.layers_panel.layer_move_down_requested.connect(self._on_layer_move_down)
         self.layers_panel.layer_delete_requested.connect(self._on_layer_delete)
         self.layers_panel.layer_selected.connect(self._on_layer_row_selected)
+        self.layers_panel.layer_rasterize_requested.connect(self._on_layer_rasterize_requested)
         self.layers_panel.add_background_requested.connect(self._on_add_background_requested)
 
         # Botón para mostrar/ocultar el panel flotante de Capas
@@ -319,15 +346,35 @@ class ImageToolsTab(QWidget):
         self._style_layers_panel_button(False)
         top_layout.addWidget(self.btn_layers_panel)
 
-        # Herramientas de capas y dibujo (Seleccionar/Rectángulo/Elipse/Línea/Pincel)
+        # Herramientas de capas y dibujo (Seleccionar/Rectángulo/Elipse/Línea/Pincel).
+        # Las de dibujo abren sus opciones con clic derecho (ver tool_options_popover.py),
+        # sin cambiar de herramienta: así se puede retocar la forma seleccionada.
+        self._tool_styles = self._load_tool_styles()
+        self._tool_option_popovers = {}
+        self._save_tool_styles_timer = QTimer(self)
+        self._save_tool_styles_timer.setSingleShot(True)
+        self._save_tool_styles_timer.setInterval(400)
+        self._save_tool_styles_timer.timeout.connect(self._save_tool_styles)
         for key, tooltip in (
             ("select", self.tr("Seleccionar")),
-            ("rect", self.tr("Rectángulo")),
-            ("ellipse", self.tr("Elipse")),
-            ("line", self.tr("Línea")),
-            ("brush", self.tr("Pincel")),
+            ("rect", self.tr("Rectángulo — clic derecho: opciones")),
+            ("ellipse", self.tr("Elipse — clic derecho: opciones")),
+            ("line", self.tr("Línea — clic derecho: opciones")),
+            ("brush", self.tr("Pincel — clic derecho: opciones")),
+            ("eraser", self.tr("Borrador — clic derecho: opciones")),
+            ("text", self.tr("Texto — clic derecho: opciones")),
         ):
-            btn = QPushButton()
+            mode = TOOL_OPTION_MODE.get(key)
+            if mode is None:
+                btn = QPushButton()
+            else:
+                content = ToolOptionsPopoverContent(mode)
+                content.load(self._tool_styles[mode])
+                content.option_changed.connect(self._on_tool_option_changed)
+                btn = ToolOptionsButton(host=self, content=content)
+                btn.opened.connect(lambda c=content, m=mode: c.load(self._option_values_for(m)))
+                self._tool_option_popovers[key] = btn
+                self._popover_buttons.append(btn)
             btn.setCheckable(True)
             btn.setFixedSize(32, 32)
             btn.setIconSize(QSize(18, 18))
@@ -351,7 +398,6 @@ class ImageToolsTab(QWidget):
         self.btn_normals.opened.connect(self._reset_to_select_tool)
         self.btn_resize.opened.connect(self._reset_to_select_tool)
 
-        top_layout.addStretch()
         content_row.addWidget(self.side_toolbar)
 
         # ── Fila de cuerpo: preview + panel derecho colapsable ─────────────────────
@@ -382,6 +428,17 @@ class ImageToolsTab(QWidget):
         # siguen visibles y editables incluso después de convertir, ver
         # _on_file_selected/_show_editable_view); la comparación antes/después
         # queda como vista explícita bajo demanda, no como estado permanente.
+        self.btn_undo = self._make_history_button("undo.svg")
+        self.btn_undo.clicked.connect(self._undo_group.undo)
+        title_row.addWidget(self.btn_undo)
+        self.btn_redo = self._make_history_button("redo.svg")
+        self.btn_redo.clicked.connect(self._undo_group.redo)
+        title_row.addWidget(self.btn_redo)
+        self._undo_group.canUndoChanged.connect(self.btn_undo.setEnabled)
+        self._undo_group.canRedoChanged.connect(self.btn_redo.setEnabled)
+        self._undo_group.undoTextChanged.connect(self._refresh_history_tooltips)
+        self._undo_group.redoTextChanged.connect(self._refresh_history_tooltips)
+        self._refresh_history_tooltips()
         self.btn_compare_result = QPushButton(self.tr("Comparar"))
         # accent-orange (degradado naranja, mismo que "Fragmentos"/"Buscar
         # actualizaciones") y accent-blue para Copiar (el degradado azul del botón
@@ -429,6 +486,18 @@ class ImageToolsTab(QWidget):
             self.tr("Capas"), self.layers_panel, host=self.body_row, width=300, preferred_side="left",
         )
         self.layers_floating_panel.closed.connect(lambda: self.btn_layers_panel.setChecked(False))
+
+        # Suprimir / Retroceso borran la capa seleccionada. Solo con el foco en el visor o
+        # en el panel de Capas: la cola de archivos usa esas mismas teclas para quitar
+        # archivos (ver ImageQueueWidget.eventFilter), y un atajo a nivel de pestaña se
+        # dispararía antes que ella. Los campos de texto del panel (opacidad...) se quedan
+        # con esas teclas vía ShortcutOverride, así que borrar dígitos no borra una capa.
+        # Todos los atajos salen del registro central (core/utils/shortcuts.py), así el
+        # usuario puede cambiarlos en Ajustes > Atajos de teclado y se aplican al momento.
+        self._shortcut_binder = shortcuts.ShortcutBinder(self)
+        self._bind_editor_shortcuts()
+        shortcuts.registry.changed.connect(lambda _id: self._refresh_shortcut_tooltips())
+        self._refresh_shortcut_tooltips()
         # Oculto por defecto -- self.btn_layers_panel ya nace desmarcado (ver arriba),
         # así que no hace falta forzar nada aquí; alcanza con no mostrarlo.
 
@@ -449,6 +518,20 @@ class ImageToolsTab(QWidget):
         viewer.shape_created.connect(self._on_shape_created)
         viewer.raster_layer_created.connect(self._on_raster_layer_created)
         viewer.shape_selected.connect(self._on_shape_selected)
+        viewer.set_eraser_target_provider(self._eraser_target)
+        viewer.set_marked_item_provider(self._marked_layer_item)
+        viewer.set_brush_target_provider(self._brush_target)
+        viewer.raster_layer_grown.connect(self._on_raster_layer_grown)
+        viewer.text_item_created.connect(self._on_text_item_created)
+        viewer.text_edit_finished.connect(self._on_text_edit_finished)
+        viewer.text_editing_changed.connect(self._on_text_editing_changed)
+        viewer.text_resized.connect(
+            lambda item, before, after: self._push_history(
+                TextResizeCommand(self, self.tr("Redimensionar"), item, before, after)))
+        self.layers_panel.marked_changed.connect(viewer.viewport().update)
+        viewer.base_mask_changed.connect(self._on_base_mask_changed)
+        viewer.pixels_changed.connect(self._on_pixels_changed)
+        viewer.item_geometry_changed.connect(self._on_item_geometry_changed)
 
         # El host del overlay es la pestaña completa (self), no self.body_row: Qt recorta
         # los hijos al área de su padre, así que si quedara colgado de body_row jamás podría
@@ -736,9 +819,16 @@ class ImageToolsTab(QWidget):
         Fase 2), esto queda guardado solo para el archivo actualmente abierto."""
         if not self._current_filepath:
             return
-        state = self.preview.zoom_viewer.get_canvas_state()
+        viewer = self.preview.zoom_viewer
+        state = viewer.get_canvas_state()
         if state is not None:
+            before_override = self._canvas_overrides.get(self._current_filepath)
             self._canvas_overrides[self._current_filepath] = state
+            before_state = viewer.canvas_state_before_edit()
+            if before_state is not None:
+                self._push_history(CanvasCommand(
+                    self, self.tr("Ajustar Canvas"), self._current_filepath,
+                    before_state, state, before_override))
 
     def _on_tool_toggled(self, key: str, checked: bool):
         """Maneja los 6 botones de herramienta (Seleccionar/Rectángulo/Elipse/Línea/
@@ -747,6 +837,8 @@ class ImageToolsTab(QWidget):
         "modo" aparte que activar/desactivar."""
         if not checked:
             return
+        if key in self._SHAPE_TOOL_CYCLE:
+            self._last_shape_tool = key
         if key != "canvas":
             self._canvas_right_activated = False
             if hasattr(self, "btn_canvas") and self.btn_canvas.is_open():
@@ -762,7 +854,11 @@ class ImageToolsTab(QWidget):
         else:
             viewer.set_interaction_mode("layers_draw")
             viewer.set_active_tool(key)
-            self.layers_panel.set_active_tool_ui(key)
+            self._push_tool_style(key)
+            # El Borrador trabaja sobre la capa marcada en Capas: el panel tiene que
+            # estar a la vista para poder elegirla.
+            if key == "eraser" and not self.btn_layers_panel.isChecked():
+                self.btn_layers_panel.setChecked(True)
 
     def _current_tool_key(self) -> str:
         for key, btn in self._tool_buttons.items():
@@ -867,21 +963,605 @@ class ImageToolsTab(QWidget):
     def _find_layer(self, layer_id: int) -> Layer | None:
         return next((l for l in self.layer_stack.layers if l.id == layer_id), None)
 
-    def _on_layers_draw_style_changed(self, fill, stroke, width: int):
-        self.preview.zoom_viewer.set_draw_style(fill, stroke, width)
+    # ------------------------------------------------------------------
+    # Opciones de herramientas de dibujo (clic derecho, ver tool_options_popover.py)
+    # ------------------------------------------------------------------
+    _TOOL_STYLES_CONFIG_KEY = "image_editor_tool_styles"
 
-    def _on_layers_brush_style_changed(self, color, size: int):
-        self.preview.zoom_viewer.set_brush_style(color, size)
+    def _load_tool_styles(self) -> dict:
+        saved = get_config().get(self._TOOL_STYLES_CONFIG_KEY) or {}
+        return {mode: {**defaults, **(saved.get(mode) or {})}
+                for mode, defaults in DEFAULT_TOOL_STYLES.items()}
+
+    def _save_tool_styles(self):
+        config = get_config()
+        config[self._TOOL_STYLES_CONFIG_KEY] = self._tool_styles
+        save_config(config)
+
+    def _push_tool_style(self, tool: str):
+        """Le pasa al visor el estilo con el que dibuja `tool`. El visor tiene un solo
+        juego de relleno/borde/ancho para formas y líneas, así que se reescribe cada
+        vez que cambia la herramienta (Línea tiene sus propios ajustes)."""
+        viewer = self.preview.zoom_viewer
+        mode = TOOL_OPTION_MODE.get(tool)
+        style = self._tool_styles.get(mode) if mode else None
+        if mode == "shape":
+            viewer.set_draw_style(
+                QColor(style["fill"]) if style["fill_enabled"] else None,
+                QColor(style["stroke"]) if style["stroke_enabled"] else None,
+                style["stroke_width"])
+        elif mode == "line":
+            viewer.set_draw_style(None, QColor(style["color"]), style["width"])
+        elif mode == "brush":
+            viewer.set_brush_style(QColor(style["color"]), style["size"])
+        elif mode == "eraser":
+            viewer.set_eraser_style(style["size"], style["softness"])
+        elif mode == "text":
+            viewer.set_text_style(style)
+
+    def _eraser_target(self):
+        """Provider del Borrador (ver ZoomableImageViewer.set_eraser_target_provider):
+        solo la capa marcada en Capas, y solo si es la imagen o una capa de pincel."""
+        layer_id = self.layers_panel.selected_layer_id()
+        layer = self._find_layer(layer_id) if layer_id is not None else None
+        if layer is None:
+            return None, self.tr("Marca en Capas la capa que quieres borrar.")
+        if not layer.visible:
+            return None, self.tr("La capa marcada está oculta.")
+        if layer.kind in ("shape", "fill", "text"):
+            if get_config().get(self._RASTERIZE_NO_ASK_KEY):
+                # Ya aceptó no volver a preguntar: se rasteriza y el trazo sigue sin cortarse.
+                if not self._rasterize_layer(layer):
+                    return None, ""
+            else:
+                # El aviso NO se abre aquí: estamos dentro del mousePress del visor y un
+                # diálogo modal se quedaría con el release -- el visor seguiría "borrando"
+                # sin botón apretado. Se pregunta apenas termina el clic; si acepta,
+                # el siguiente trazo ya borra.
+                QTimer.singleShot(0, lambda l=layer: self._confirm_rasterize_for_eraser(l))
+                return None, ""
+        return layer.graphics_item, ""
+
+    _RASTERIZE_NO_ASK_KEY = "image_editor_rasterize_no_ask"
+
+    def _confirm_rasterize_for_eraser(self, layer):
+        if layer not in self.layer_stack.layers:
+            return
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(self.tr("Rasterizar capa"))
+        box.setText(self.tr("Para borrar «{0}» hay que convertirla en píxeles.").format(layer.name))
+        box.setInformativeText(self.tr(
+            "Podrás borrarla y moverla, pero ya no cambiarle el color, el borde ni el tamaño "
+            "como forma. ¿Continuar?"))
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+        box.setDefaultButton(QMessageBox.Yes)
+        no_ask = QCheckBox(self.tr("No volver a preguntar"))
+        box.setCheckBox(no_ask)
+        if box.exec() != QMessageBox.Yes:
+            return
+        if no_ask.isChecked():
+            config = get_config()
+            config[self._RASTERIZE_NO_ASK_KEY] = True
+            save_config(config)
+        if self._rasterize_layer(layer):
+            QToolTip.showText(QCursor.pos(), self.tr("Listo: ya puedes borrar «{0}».").format(layer.name),
+                              self.preview.zoom_viewer.viewport())
+
+    def _on_layer_rasterize_requested(self, layer_id: int):
+        layer = self._find_layer(layer_id)
+        if layer is not None:
+            self._rasterize_layer(layer)
+
+    def _rasterize_layer(self, layer) -> bool:
+        """Reemplaza el item de una forma/fondo por su versión en píxeles, conservando
+        la capa (id, nombre, orden, opacidad, visibilidad). Queda marcada y como capa
+        activa del Pincel, igual que cualquier capa de píxeles."""
+        if layer.kind not in ("shape", "fill", "text"):
+            return False
+        old, old_kind = layer.graphics_item, layer.kind
+        new = rasterize_item(old)
+        if new is None:
+            return False
+        self._history_swap_item(layer, new, "raster")
+        self._refresh_layers_panel()
+        self._on_layer_row_selected(layer.id)
+        self._push_history(RasterizeCommand(self, self.tr("Rasterizar capa"), layer, old, old_kind, new))
+        return True
+
+    # ------------------------------------------------------------------
+    # Deshacer / Rehacer (ver layers/history.py)
+    # ------------------------------------------------------------------
+    def _make_history_button(self, icon: str) -> QPushButton:
+        btn = QPushButton()
+        btn.setFixedSize(30, 30)
+        btn.setIcon(get_colored_svg_icon(icon, get_theme_token("texto_principal", "#ffffff"), size=16))
+        btn.setIconSize(QSize(16, 16))
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setEnabled(False)
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
+                border-radius: 6px;
+                padding: 0px;
+            }}
+            QPushButton:hover {{ background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')}; }}
+            QPushButton:disabled {{ background-color: transparent; }}
+        """)
+        return btn
+
+    def _refresh_history_tooltips(self, *_):
+        undo_text = self._undo_group.undoText()
+        redo_text = self._undo_group.redoText()
+        undo = self.tr("Deshacer: {0}").format(undo_text) if undo_text else self.tr("Deshacer")
+        redo = self.tr("Rehacer: {0}").format(redo_text) if redo_text else self.tr("Rehacer")
+        self.btn_undo.setToolTip(self._with_keys(undo, "editor.undo"))
+        self.btn_redo.setToolTip(self._with_keys(redo, "editor.redo"))
+
+    # ------------------------------------------------------------------
+    # Atajos de teclado (ver core/utils/shortcuts.py)
+    # ------------------------------------------------------------------
+    _SHAPE_TOOL_CYCLE = ("rect", "ellipse", "line")
+    _last_shape_tool = "rect"
+
+    @staticmethod
+    def _with_keys(text: str, action_id: str) -> str:
+        keys = shortcuts.display_keys(action_id)
+        return f"{text} ({keys})" if keys else text
+
+    def _bind_editor_shortcuts(self):
+        b = self._shortcut_binder
+        viewer = self.preview.zoom_viewer
+        # Toda la pestaña: los campos de texto se quedan con las teclas que usan.
+        for tool in ("select", "rect", "ellipse", "line", "brush", "eraser", "text", "canvas"):
+            b.bind(f"editor.tool.{tool}", self, lambda t=tool: self._select_tool(t), auto_repeat=False)
+        b.bind("editor.tool.shapes_cycle", self, self._cycle_shape_tool, auto_repeat=False)
+        b.bind("editor.layers_panel", self, self.btn_layers_panel.toggle, auto_repeat=False)
+        b.bind("editor.size_down", self, lambda: self._adjust_tool_size(-1))
+        b.bind("editor.size_up", self, lambda: self._adjust_tool_size(+1))
+        b.bind("editor.duplicate", self, self._duplicate_selected_layer, auto_repeat=False)
+        b.bind("editor.undo", self, self._undo_group.undo)
+        b.bind("editor.redo", self, self._undo_group.redo)
+        b.bind("editor.cancel", self, self._on_cancel_shortcut, auto_repeat=False)
+        # Solo en el visor: las flechas mueven la selección, pero en la cola o en un
+        # campo numérico tienen que seguir haciendo lo suyo.
+        for suffix, dx, dy in (("left", -1, 0), ("right", 1, 0), ("up", 0, -1), ("down", 0, 1)):
+            b.bind(f"editor.nudge_{suffix}", viewer, lambda x=dx, y=dy: self._nudge_selection(x, y))
+            b.bind(f"editor.nudge_{suffix}_10", viewer, lambda x=dx, y=dy: self._nudge_selection(10 * x, 10 * y))
+        # Suprimir / Retroceso: solo con el foco en el visor o en el panel de Capas -- la
+        # cola de archivos usa esas mismas teclas para quitar archivos (ver
+        # ImageQueueWidget.eventFilter), y un atajo de pestaña se dispararía antes.
+        b.bind("editor.delete_layer", [viewer, self.layers_floating_panel], self._delete_selected_layer)
+
+    def _refresh_shortcut_tooltips(self):
+        names = {
+            "select": self.tr("Seleccionar"), "rect": self.tr("Rectángulo"), "ellipse": self.tr("Elipse"),
+            "line": self.tr("Línea"), "brush": self.tr("Pincel"), "eraser": self.tr("Borrador"),
+            "text": self.tr("Texto"), "canvas": self.tr("Canvas"),
+        }
+        for tool, name in names.items():
+            action_id = f"editor.tool.{tool}"
+            if tool in self._SHAPE_TOOL_CYCLE and not shortcuts.get_keys(action_id):
+                action_id = "editor.tool.shapes_cycle"
+            text = self._with_keys(name, action_id)
+            if tool != "select":
+                text += " — " + self.tr("clic derecho: opciones")
+            self._tool_buttons[tool].setToolTip(text)
+        self.btn_layers_panel.setToolTip(self._with_keys(self.tr("Mostrar/ocultar panel de Capas"), "editor.layers_panel"))
+        self._refresh_history_tooltips()
+
+    def _select_tool(self, tool: str):
+        # click() y no setChecked(): pasa por los mismos handlers que un clic real
+        # (Canvas, por ejemplo, cierra su panel de opciones en el clic).
+        self._tool_buttons[tool].click()
+
+    def _cycle_shape_tool(self):
+        """U: fuera de las formas vuelve a la última usada; dentro, pasa a la siguiente
+        (Rectángulo -> Elipse -> Línea), como en Photoshop."""
+        current = self._current_tool_key()
+        if current in self._SHAPE_TOOL_CYCLE:
+            i = self._SHAPE_TOOL_CYCLE.index(current)
+            self._select_tool(self._SHAPE_TOOL_CYCLE[(i + 1) % len(self._SHAPE_TOOL_CYCLE)])
+        else:
+            self._select_tool(self._last_shape_tool)
+
+    _SIZE_KEYS = {"shape": ("stroke_width", 1, 50), "line": ("width", 1, 50),
+                  "brush": ("size", 1, 200), "eraser": ("size", 1, 300)}
+
+    def _adjust_tool_size(self, direction: int):
+        """[ / ]: tamaño de la herramienta activa (grosor en formas y líneas), a pasos
+        de ~10% como en Photoshop, así se nota igual en tamaños chicos y grandes."""
+        tool = self._current_tool_key()
+        mode = TOOL_OPTION_MODE.get(tool)
+        if mode not in self._SIZE_KEYS:
+            return
+        key, lo, hi = self._SIZE_KEYS[mode]
+        current = self._tool_styles[mode][key]
+        new = max(lo, min(hi, current + direction * max(1, round(current * 0.1))))
+        if new == current:
+            return
+        self._on_tool_option_changed(mode, key, new)
+        btn = self._tool_option_popovers.get(tool)
+        if btn is not None and btn.is_open():
+            btn.content.load(self._tool_styles[mode])
+
+    def _nudge_selection(self, dx: int, dy: int):
+        viewer = self.preview.zoom_viewer
+        item = viewer.selected_item()
+        if item is None:
+            return
+        before = viewer.item_geometry(item)
+        viewer._translate_item(item, QPointF(dx, dy))
+        after = viewer.item_geometry(item)
+        viewer.viewport().update()
+        self._push_history(NudgeCommand(self, self.tr("Mover"), item, before, after))
+
+    def _duplicate_selected_layer(self):
+        """Ctrl+D: copia la capa seleccionada (en el visor o en la lista) justo encima,
+        corrida 10 px para que se vea que es otra. La imagen base no se duplica."""
+        viewer = self.preview.zoom_viewer
+        layer = self.layer_stack.layer_for_item(viewer.selected_item()) if viewer.selected_item() else None
+        if layer is None:
+            layer_id = self.layers_panel.selected_layer_id()
+            layer = self._find_layer(layer_id) if layer_id is not None else None
+        if layer is None or layer.kind == "image" or layer.graphics_item is None:
+            return
+        clone = _clone_item(layer.graphics_item)
+        if clone is None:
+            return
+        viewer._translate_item(clone, QPointF(10, 10))
+        viewer.add_scene_item(clone)
+        copy = Layer(self.tr("{0} copia").format(layer.name), layer.kind, clone)
+        copy.set_opacity(layer.opacity)
+        copy.set_visible(layer.visible)
+        index = self.layer_stack.layers.index(layer) + 1
+        self.layer_stack.add_layer(copy, index)
+        self._push_history(AddLayerCommand(self, self.tr("Duplicar capa"), copy, index))
+        self._on_layer_row_selected(copy.id)
+
+    def _on_cancel_shortcut(self):
+        """Esc: primero cierra un panel de opciones abierto; si no hay, quita la selección."""
+        open_popovers = [btn for btn in self._popover_buttons if btn.is_open()]
+        if open_popovers:
+            for btn in open_popovers:
+                btn.set_open(False)
+            return
+        viewer = self.preview.zoom_viewer
+        if viewer.selected_item() is not None or self.layers_panel.selected_layer_id() is not None:
+            viewer.select_item(None)
+            self.layers_panel.select_row(None)
+
+    def _history(self) -> QUndoStack | None:
+        fp = self._current_filepath
+        if not fp:
+            return None
+        stack = self._undo_stacks.get(fp)
+        if stack is None:
+            stack = QUndoStack(self._undo_group)
+            stack.setUndoLimit(50)
+            self._undo_stacks[fp] = stack
+        return stack
+
+    def _activate_history(self, filepath: str):
+        self._pending_raster_layer = None
+        self._undo_group.setActiveStack(self._history() if filepath else None)
+
+    def _prune_history(self):
+        """Descarta el historial de los archivos que ya no están en la cola."""
+        alive = set(self.image_queue.get_all_filepaths())
+        for fp in [fp for fp in self._undo_stacks if fp not in alive]:
+            stack = self._undo_stacks.pop(fp)
+            self._undo_group.removeStack(stack)
+            stack.deleteLater()
+
+    def _push_history(self, command):
+        stack = self._history()
+        if stack is None:
+            return
+        # Una capa de pincel que quedó "pendiente" sin trazo que la acompañe (no
+        # debería pasar) se registra sola antes, para no perderla del historial.
+        if self._pending_raster_layer is not None and not isinstance(command, PixelPatchCommand):
+            layer, index = self._pending_raster_layer
+            self._pending_raster_layer = None
+            stack.push(AddLayerCommand(self, self.tr("Pincel"), layer, index))
+        stack.push(command)
+
+    def _on_pixels_changed(self, item, rect, before, after):
+        text = self.tr("Borrador") if self._current_tool_key() == "eraser" else self.tr("Pincel")
+        grow = self._pending_raster_grow
+        self._pending_raster_grow = None
+        if grow is not None and grow[0] is item:
+            # La capa se agrandó al empezar este trazo: agrandado + trazo = un paso.
+            macro = MacroCommand(text)
+            macro.add(RasterGrowCommand, self, text, *grow)
+            macro.add(PixelPatchCommand, self, text, item, rect, before, after)
+            self._push_history(macro)
+            return
+        pending = self._pending_raster_layer
+        if pending is not None and pending[0].graphics_item is item:
+            # Primer trazo de una capa nueva: capa + trazo = un solo paso.
+            self._pending_raster_layer = None
+            macro = MacroCommand(text)
+            macro.add(AddLayerCommand, self, text, pending[0], pending[1])
+            macro.add(PixelPatchCommand, self, text, item, rect, before, after)
+            stack = self._history()
+            if stack is not None:
+                stack.push(macro)
+            return
+        self._push_history(PixelPatchCommand(self, text, item, rect, before, after))
+
+    def _on_item_geometry_changed(self, item, before, after):
+        if isinstance(before, QRectF):
+            resized = before.size() != after.size()
+        elif isinstance(before, QLineF):
+            resized = (before.p2() - before.p1()) != (after.p2() - after.p1())
+        else:
+            resized = False
+        text = self.tr("Redimensionar") if resized else self.tr("Mover")
+        self._push_history(GeometryCommand(self, text, item, before, after))
+
+    def _history_after_change(self):
+        # La fila marcada decide dónde pinta el Pincel y qué borra el Borrador, así
+        # que deshacer/rehacer no debe perderla: primero una capa recién repuesta,
+        # si no la que ya estaba marcada (si sigue existiendo), si no la selección.
+        marked_before = self.layers_panel.selected_layer_id()
+        self._refresh_layers_panel()
+        mark = getattr(self, "_history_mark", None)
+        self._history_mark = None
+        if mark is None and marked_before is not None and self._find_layer(marked_before) is not None:
+            mark = marked_before
+        if mark is None:
+            selected = self.layer_stack.layer_for_item(self.preview.zoom_viewer.selected_item())
+            mark = selected.id if selected else None
+        self.layers_panel.select_row(mark)
+        self.preview.zoom_viewer.viewport().update()
+
+    def _history_insert_layer(self, layer, index: int):
+        if layer.graphics_item is not None and layer.graphics_item.scene() is None:
+            self.preview.zoom_viewer.add_scene_item(layer.graphics_item)
+        self.layer_stack.add_layer(layer, min(index, len(self.layer_stack.layers)))
+        # La capa repuesta queda marcada: así un trazo de pincel después de rehacer
+        # sigue en ella en vez de crear otra.
+        self._history_mark = layer.id
+        if layer.kind == "raster":
+            self.preview.zoom_viewer.set_active_raster_layer(layer.graphics_item)
+
+    def _history_remove_layer(self, layer):
+        viewer = self.preview.zoom_viewer
+        if viewer.selected_item() is layer.graphics_item:
+            viewer.select_item(None)
+        if viewer.active_raster_layer() is layer.graphics_item:
+            viewer.set_active_raster_layer(None)
+        self.layer_stack.remove_layer(layer)
+
+    def _history_swap_item(self, layer, item, kind: str):
+        """Cambia el item de una capa (rasterizar y su deshacer) conservando orden,
+        opacidad y visibilidad."""
+        old = layer.graphics_item
+        viewer = self.preview.zoom_viewer
+        if viewer.selected_item() is old:
+            viewer.select_item(None)
+        if viewer.active_raster_layer() is old:
+            viewer.set_active_raster_layer(None)
+        item.setZValue(old.zValue())
+        item.setOpacity(layer.opacity)
+        item.setVisible(layer.visible)
+        if old.scene() is not None:
+            old.scene().removeItem(old)
+        if item.scene() is None:
+            viewer.add_scene_item(item)
+        layer.graphics_item = item
+        layer.kind = kind
+
+    def _history_apply_pixels(self, item, rect, patch):
+        viewer = self.preview.zoom_viewer
+        viewer.apply_pixel_patch(item, rect, patch)
+        if item is None and self._current_filepath:
+            mask = viewer.base_mask()
+            if mask is not None:
+                self._base_masks[self._current_filepath] = mask
+
+    def _history_set_geometry(self, item, geometry):
+        ZoomableImageViewer.set_item_geometry(item, geometry)
+
+    def _history_set_style(self, item, brush, pen):
+        if brush is not None and hasattr(item, "setBrush"):
+            item.setBrush(brush)
+        item.setPen(pen)
+
+    def _history_set_canvas(self, filepath: str, state: dict, override: dict | None):
+        self.preview.zoom_viewer.apply_canvas_state(
+            state["canvas_rect"], state["mode"], state["resizable"],
+            state["image_pos"], state["image_scale"],
+        )
+        if override is None:
+            self._canvas_overrides.pop(filepath, None)
+        else:
+            self._canvas_overrides[filepath] = override
+
+    def _marked_layer_item(self):
+        """Provider del visor: item de la capa marcada en Capas (si está visible)."""
+        layer_id = self.layers_panel.selected_layer_id()
+        layer = self._find_layer(layer_id) if layer_id is not None else None
+        if layer is None or not layer.visible:
+            return None
+        return layer.graphics_item
+
+    def _on_base_mask_changed(self):
+        if self._current_filepath:
+            mask = self.preview.zoom_viewer.base_mask()
+            if mask is not None:
+                self._base_masks[self._current_filepath] = mask
+
+    def _on_tool_option_changed(self, mode: str, key: str, value):
+        self._tool_styles[mode][key] = value
+        self._save_tool_styles_timer.start()
+        current = self._current_tool_key()
+        if TOOL_OPTION_MODE.get(current) == mode:
+            self._push_tool_style(current)
+        self._apply_tool_option_to_selection(mode, key)
+
+    def _apply_tool_option_to_selection(self, mode: str, key: str):
+        """Aplica el cambio a la forma seleccionada, si es del tipo que edita ese
+        popover. Solo se toca el grupo de la opción cambiada (relleno o borde), para
+        no pisarle a la forma el resto de su estilo."""
+        viewer = self.preview.zoom_viewer
+        if mode == "text":
+            item = self._text_target()
+            if item is not None:
+                before = item.style()
+                item.apply_style({key: self._tool_styles["text"][key]})
+                after = item.style()
+                if after != before:
+                    self._push_history(TextStyleCommand(self, self.tr("Estilo de texto"), item, before, after))
+                viewer.viewport().update()
+            return
+        item = viewer.selected_item()
+        if item is None:
+            return
+        style = self._tool_styles[mode]
+        before = (QBrush(item.brush()) if hasattr(item, "brush") else None, QPen(item.pen()))
+        if mode == "shape" and isinstance(item, (QGraphicsRectItem, QGraphicsEllipseItem)):
+            if key in ("fill", "fill_enabled"):
+                item.setBrush(QBrush(QColor(style["fill"])) if style["fill_enabled"] else QBrush(Qt.NoBrush))
+            else:
+                if style["stroke_enabled"]:
+                    item.setPen(QPen(QColor(style["stroke"]), style["stroke_width"]))
+                else:
+                    item.setPen(QPen(Qt.NoPen))
+        elif mode == "line" and isinstance(item, QGraphicsLineItem):
+            item.setPen(QPen(QColor(style["color"]), style["width"]))
+        else:
+            return
+        after = (QBrush(item.brush()) if hasattr(item, "brush") else None, QPen(item.pen()))
+        self._push_history(StyleCommand(self, self.tr("Cambiar estilo"), item, before, after))
+        viewer.viewport().update()
+        # La miniatura de la fila en Capas muestra el color de relleno.
+        layer = self.layer_stack.layer_for_item(item)
+        self._refresh_layers_panel()
+        if layer is not None:
+            self.layers_panel.select_row(layer.id)
 
     def _on_shape_created(self, item, kind: str):
         label_map = {"rect": self.tr("Rectángulo"), "ellipse": self.tr("Elipse"), "line": self.tr("Línea")}
-        n = sum(1 for l in self.layer_stack.layers if l.kind == "shape") + 1
-        name = f"{label_map.get(kind, kind.title())} {n}"
-        self.layer_stack.add_layer(Layer(name, "shape", item))
+        label = label_map.get(kind, kind.title())
+        name = f"{label} {self._next_layer_number(label + ' {0}')}"
+        layer = Layer(name, "shape", item)
+        self.layer_stack.add_layer(layer)
+        self._push_history(AddLayerCommand(self, self.tr("Dibujar forma"), layer, len(self.layer_stack.layers) - 1))
 
     def _on_raster_layer_created(self, item):
-        n = sum(1 for l in self.layer_stack.layers if l.kind == "raster") + 1
-        self.layer_stack.add_layer(Layer(self.tr("Pincel {0}").format(n), "raster", item))
+        pattern = self.tr("Pincel {0}")
+        layer = Layer(pattern.format(self._next_layer_number(pattern)), "raster", item)
+        # Como en Photoshop: la capa nueva va justo encima de la marcada (o arriba de
+        # todo si no hay nada marcado) y pasa a ser la marcada, así los trazos
+        # siguientes siguen en ella.
+        marked_id = self.layers_panel.selected_layer_id()
+        marked = self._find_layer(marked_id) if marked_id is not None else None
+        index = self.layer_stack.layers.index(marked) + 1 if marked is not None else len(self.layer_stack.layers)
+        self.layer_stack.add_layer(layer, index)
+        self.layers_panel.select_row(layer.id)
+        # No se registra sola: el trazo que la creó y la capa son UN paso (ver
+        # _on_pixels_changed, que arma los dos juntos al terminar el trazo).
+        self._pending_raster_layer = (layer, index)
+
+    # -- Texto ----------------------------------------------------------------
+    def _text_target(self):
+        """Texto al que se aplican las opciones: el que se está editando o, si no, el
+        seleccionado."""
+        viewer = self.preview.zoom_viewer
+        item = viewer.editing_text_item() or viewer.selected_item()
+        return item if isinstance(item, EditableTextItem) else None
+
+    def _option_values_for(self, mode: str) -> dict:
+        """Lo que muestra un panel de opciones al abrirse: para Texto, el estilo del
+        texto en edición/seleccionado; si no, los ajustes de la herramienta."""
+        if mode == "text":
+            item = self._text_target()
+            if item is not None:
+                return item.style()
+        return self._tool_styles[mode]
+
+    @staticmethod
+    def _text_layer_name(text: str) -> str:
+        """Como Photoshop: la capa se llama como su texto (primera línea, recortada)."""
+        first = next((line.strip() for line in text.splitlines() if line.strip()), "")
+        return first if len(first) <= 24 else first[:23].rstrip() + "…"
+
+    def _rename_text_layer_for(self, item):
+        layer = self.layer_stack.layer_for_item(item)
+        if layer is not None:
+            name = self._text_layer_name(item.toPlainText())
+            if name:
+                layer.name = name
+
+    def _on_text_item_created(self, item):
+        pattern = self.tr("Texto {0}")
+        layer = Layer(pattern.format(self._next_layer_number(pattern)), "text", item)
+        marked_id = self.layers_panel.selected_layer_id()
+        marked = self._find_layer(marked_id) if marked_id is not None else None
+        index = self.layer_stack.layers.index(marked) + 1 if marked is not None else len(self.layer_stack.layers)
+        self.layer_stack.add_layer(layer, index)
+        self.layers_panel.select_row(layer.id)
+
+    def _on_text_editing_changed(self, editing: bool):
+        # Mientras se escribe sobre la imagen, ningún atajo (V, U, Supr, flechas...)
+        # debe robarle teclas al texto. Esc lo recibe el propio texto para terminar.
+        self._shortcut_binder.set_enabled(not editing)
+
+    def _on_text_edit_finished(self, item, before: str, is_new: bool):
+        layer = self.layer_stack.layer_for_item(item)
+        if layer is None:
+            return
+        text = item.toPlainText()
+        index = self.layer_stack.layers.index(layer)
+        if is_new:
+            if not text.strip():
+                # Clic sin escribir nada: el texto vacío se descarta sin dejar rastro.
+                self._history_remove_layer(layer)
+                return
+            self._rename_text_layer_for(item)
+            self._push_history(AddLayerCommand(self, self.tr("Texto"), layer, index))
+        elif text != before:
+            if not text.strip():
+                # Se borró todo el texto: equivale a borrar la capa. Se repone lo que
+                # decía antes, así deshacer la devuelve completa.
+                item.setPlainText(before)
+                self._history_remove_layer(layer)
+                self._push_history(RemoveLayerCommand(self, self.tr("Borrar capa"), layer, index))
+                return
+            self._rename_text_layer_for(item)
+            self._push_history(TextContentCommand(self, self.tr("Editar texto"), item, before, text))
+        self._refresh_layers_panel()
+        self.layers_panel.select_row(layer.id)
+
+    def _next_layer_number(self, pattern: str) -> int:
+        """Siguiente número libre para un nombre como "Rectángulo {0}": uno más que
+        el más alto en uso, cuente o no como forma todavía (una forma rasterizada
+        conserva su nombre). Antes se contaban solo las del mismo tipo y los
+        números se repetían."""
+        prefix, _, suffix = pattern.partition("{0}")
+        highest = 0
+        for layer in self.layer_stack.layers:
+            name = layer.name
+            if name.startswith(prefix) and name.endswith(suffix):
+                middle = name[len(prefix):len(name) - len(suffix)] if suffix else name[len(prefix):]
+                if middle.isdigit():
+                    highest = max(highest, int(middle))
+        return highest + 1
+
+    def _brush_target(self):
+        """Provider del visor para el Pincel: la capa marcada si es de píxeles y
+        está visible; si no, None (el visor crea una capa nueva)."""
+        layer_id = self.layers_panel.selected_layer_id()
+        layer = self._find_layer(layer_id) if layer_id is not None else None
+        if layer is None or layer.kind != "raster" or not layer.visible:
+            return None
+        return layer.graphics_item
+
+    def _on_raster_layer_grown(self, item, old_image, old_pos, new_pos, new_size):
+        self._pending_raster_grow = (item, old_image, old_pos, new_pos, new_size)
 
     def _on_shape_selected(self, item):
         layer = self.layer_stack.layer_for_item(item) if item is not None else None
@@ -896,28 +1576,43 @@ class ImageToolsTab(QWidget):
         viewer = self.preview.zoom_viewer
         if layer.kind == "raster":
             viewer.set_active_raster_layer(layer.graphics_item)
-        if layer.kind == "shape":
-            viewer.select_item(layer.graphics_item)
+        # Marcar en Capas = seleccionar en la imagen, para cualquier tipo de capa (la
+        # imagen base no se arrastra con Seleccionar, así que ella solo se marca).
+        # Con otras herramientas no hay selección: el visor muestra el contorno.
+        if self._current_tool_key() == "select":
+            viewer.select_item(None if layer.kind == "image" else layer.graphics_item)
+        # Las filas del panel no toman foco: se lo pasamos al visor para que Suprimir
+        # borre esta capa (y no, por ejemplo, el archivo marcado en la cola).
+        viewer.setFocus(Qt.OtherFocusReason)
 
     def _on_layer_visibility_toggled(self, layer_id: int, visible: bool):
         layer = self._find_layer(layer_id)
-        if layer is not None:
+        if layer is not None and layer.visible != visible:
             layer.set_visible(visible)
+            self._push_history(VisibilityCommand(self, self.tr("Visibilidad de capa"), layer, visible))
 
     def _on_layer_opacity_changed(self, layer_id: int, percent: int):
         layer = self._find_layer(layer_id)
         if layer is not None:
+            before = layer.opacity
             layer.set_opacity(percent / 100.0)
+            if layer.opacity != before:
+                self._push_history(OpacityCommand(self, self.tr("Opacidad de capa"), layer, before, layer.opacity))
 
     def _on_layer_move_up(self, layer_id: int):
-        layer = self._find_layer(layer_id)
-        if layer is not None:
-            self.layer_stack.move_up(layer)
+        self._move_layer(layer_id, up=True)
 
     def _on_layer_move_down(self, layer_id: int):
+        self._move_layer(layer_id, up=False)
+
+    def _move_layer(self, layer_id: int, up: bool):
         layer = self._find_layer(layer_id)
-        if layer is not None:
-            self.layer_stack.move_down(layer)
+        if layer is None:
+            return
+        before = self.layer_stack.layers.index(layer)
+        (self.layer_stack.move_up if up else self.layer_stack.move_down)(layer)
+        if self.layer_stack.layers.index(layer) != before:
+            self._push_history(MoveLayerCommand(self, self.tr("Orden de capas"), layer, up))
 
     def _on_add_background_requested(self):
         viewer = self.preview.zoom_viewer
@@ -929,20 +1624,35 @@ class ImageToolsTab(QWidget):
             return
         item = dialog.build_layer_item()
         viewer.add_scene_item(item)
-        n = sum(1 for l in self.layer_stack.layers if l.kind == "fill") + 1
+        pattern = self.tr("Fondo {0}")
         # index=0: un Fondo siempre va al fondo del stack, debajo de todo lo demás.
-        self.layer_stack.add_layer(Layer(self.tr("Fondo {0}").format(n), "fill", item), index=0)
+        layer = Layer(pattern.format(self._next_layer_number(pattern)), "fill", item)
+        self.layer_stack.add_layer(layer, index=0)
+        self._push_history(AddLayerCommand(self, self.tr("Añadir fondo"), layer, 0))
+
+    def _delete_selected_layer(self):
+        """Atajo Suprimir/Retroceso: borra la figura seleccionada en el visor o, si no hay,
+        la fila marcada en el panel de Capas (capas de pincel y fondos no se seleccionan
+        en el visor, solo desde la lista)."""
+        layer = None
+        item = self.preview.zoom_viewer.selected_item()
+        if item is not None:
+            layer = self.layer_stack.layer_for_item(item)
+        if layer is None:
+            layer_id = self.layers_panel.selected_layer_id()
+            layer = self._find_layer(layer_id) if layer_id is not None else None
+        # La capa "image" (la imagen misma) no se borra -- igual que en el panel, donde
+        # su fila no tiene botón de eliminar.
+        if layer is not None and layer.kind != "image":
+            self._on_layer_delete(layer.id)
 
     def _on_layer_delete(self, layer_id: int):
         layer = self._find_layer(layer_id)
         if layer is None:
             return
-        viewer = self.preview.zoom_viewer
-        if viewer.selected_item() is layer.graphics_item:
-            viewer.select_item(None)
-        if viewer.active_raster_layer() is layer.graphics_item:
-            viewer.set_active_raster_layer(None)
-        self.layer_stack.remove_layer(layer)
+        index = self.layer_stack.layers.index(layer)
+        self._history_remove_layer(layer)
+        self._push_history(RemoveLayerCommand(self, self.tr("Borrar capa"), layer, index))
 
     def eventFilter(self, obj, event):
         """Cierra cualquier popover de la franja superior (Reescalar IA, Eliminar
@@ -973,8 +1683,12 @@ class ImageToolsTab(QWidget):
         return super().eventFilter(obj, event)
 
     def _on_file_selected(self, filepath: str):
+        # Un texto a medio escribir se cierra (y registra) antes de guardar las capas
+        # del archivo que se deja.
+        self.preview.zoom_viewer.end_text_editing()
         old_filepath = self._current_filepath
         self._current_filepath = filepath
+        self._activate_history(filepath)
         self._refresh_title_and_copy_button(filepath)
 
         # Fase 3 -- antes de tocar nada, guardar las formas/trazos (capas no-
@@ -1028,7 +1742,7 @@ class ImageToolsTab(QWidget):
         else:
             viewer.set_interaction_mode("layers_draw")
             viewer.set_active_tool(current_tool)
-            self.layers_panel.set_active_tool_ui(current_tool)
+            self._push_tool_style(current_tool)
         size = viewer.image_size()
         if size is not None:
             self.canvas_popover_content.set_reference_image_size(size.width(), size.height())
@@ -1053,6 +1767,8 @@ class ImageToolsTab(QWidget):
         base_item = viewer.base_pixmap_item()
         if base_item is not None:
             self.layer_stack.add_layer(Layer(self.tr("Imagen Base"), "image", base_item))
+            if filepath in self._base_masks:
+                viewer.set_base_mask(self._base_masks[filepath])
         # Fase 3 -- reponer las formas/trazos que este archivo ya tenía.
         for layer in self._layer_snapshots.get(filepath, []):
             viewer.add_scene_item(layer.graphics_item)
@@ -1262,6 +1978,7 @@ class ImageToolsTab(QWidget):
         self._convert_worker = None
         self._update_convert_button_state()
         self.image_queue.queue_updated.connect(lambda _count: self._update_convert_button_state())
+        self.image_queue.queue_updated.connect(lambda _count: self._prune_history())
         return container
 
     def _build_output_bar(self) -> QFrame:
@@ -1426,7 +2143,7 @@ class ImageToolsTab(QWidget):
         cada archivo -- mismas coordenadas en las que quedaron dibujadas las formas."""
         to_flatten = [
             fp for fp in filepaths
-            if self._layer_snapshots.get(fp) or fp in self._canvas_overrides
+            if self._layer_snapshots.get(fp) or fp in self._canvas_overrides or fp in self._base_masks
         ]
         if not to_flatten:
             return None
@@ -1441,7 +2158,7 @@ class ImageToolsTab(QWidget):
                 continue
             canvas_state = self._canvas_overrides.get(fp)
             layers = self._layer_snapshots.get(fp, [])
-            image = build_flattened_image(base_pixmap, canvas_state, layers)
+            image = build_flattened_image(base_pixmap, canvas_state, layers, self._base_masks.get(fp))
             temp_path = os.path.join(self._flatten_temp_dir, f"{len(overrides)}.png")
             if image.save(temp_path, "PNG"):
                 overrides[fp] = temp_path
@@ -1812,13 +2529,25 @@ class ImageToolsTab(QWidget):
         base = super().minimumSizeHint()
         if not hasattr(self, "preview"):
             return base
-        width = self.TOOLBAR_WIDTH + self.preview.minimumSizeHint().width()
+        width = self._toolbar_width() + self.preview.minimumSizeHint().width()
         return QSize(width, base.height())
+
+    def _toolbar_width(self):
+        """Ancho real de la barra lateral: TOOLBAR_WIDTH en una columna, más en dos."""
+        rail = getattr(self, "side_toolbar", None)
+        return rail.current_width() if rail is not None else self.TOOLBAR_WIDTH
+
+    def _on_side_toolbar_layout_changed(self):
+        # Los botones pudieron moverse (compacto / dos columnas): los popovers abiertos
+        # están anclados a ellos y tienen que seguirlos.
+        for btn in getattr(self, "_popover_buttons", []):
+            if btn.is_open():
+                btn.reposition()
 
     def _update_responsive_mode(self):
         if not hasattr(self, "right_panel"):
             return
-        threshold = max(self.COLLAPSE_THRESHOLD_WIDTH, self.TOOLBAR_WIDTH + self.RIGHT_DOCKED_WIDTH + self.PREVIEW_MIN_WIDTH)
+        threshold = max(self.COLLAPSE_THRESHOLD_WIDTH, self._toolbar_width() + self.RIGHT_DOCKED_WIDTH + self.PREVIEW_MIN_WIDTH)
         want_docked = self.width() >= threshold
         if want_docked != self.right_panel.is_docked():
             self.right_panel.set_mode(docked=want_docked)
@@ -1903,14 +2632,14 @@ class ImageToolsTab(QWidget):
                 "on_enter": lambda: self.btn_layers_panel.setChecked(True)
             },
             {
-                "title": self.tr("Estilos de Forma"),
-                "desc": self.tr("Antes de dibujar un rectángulo o línea, elige aquí el color de relleno, el color del borde y su grosor."),
-                "widgets": [self.layers_panel.btn_fill_color, self.layers_panel.btn_stroke_color, self.layers_panel.entry_stroke_width],
+                "title": self.tr("Borrador"),
+                "desc": self.tr("Marca en Capas la capa que quieres borrar y pasa el borrador por encima. Las formas y los fondos se convierten en píxeles para poder borrarlos. La imagen original nunca se modifica."),
+                "widgets": [self._tool_buttons["eraser"]],
             },
             {
-                "title": self.tr("Tamaño de Pincel"),
-                "desc": self.tr("Si eliges la herramienta de dibujo libre (pincel), aquí puedes controlar qué tan grueso será el trazo."),
-                "widgets": [self.layers_panel.slider_brush_size],
+                "title": self.tr("Opciones de Dibujo"),
+                "desc": self.tr("Haz clic derecho en Rectángulo, Elipse, Línea o Pincel para elegir colores, quitar el relleno o el borde y ajustar el grosor. Si tienes una forma seleccionada, los cambios también se aplican a ella."),
+                "widgets": [self._tool_buttons[k] for k in ("rect", "ellipse", "line", "brush")],
             },
             {
                 "title": self.tr("Añadir Fondo"),

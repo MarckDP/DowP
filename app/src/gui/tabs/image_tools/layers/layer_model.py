@@ -6,7 +6,7 @@ ZoomableImageViewer. Orden = zValue, visibilidad = item.setVisible(), opacidad =
 item.setOpacity() -- todo nativo de Qt, la QGraphicsScene ya es el stack de capas."""
 from PySide6.QtCore import QObject, Signal
 
-_KINDS = ("image", "shape", "raster", "fill")
+_KINDS = ("image", "shape", "raster", "fill", "text")
 
 
 class Layer:

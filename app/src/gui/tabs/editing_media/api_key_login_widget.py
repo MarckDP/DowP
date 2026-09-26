@@ -9,6 +9,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QToolButton,
+    QScrollArea,
+    QFrame,
+    QSizePolicy,
 )
 
 from gui.styles import get_theme_token
@@ -46,13 +49,46 @@ class ApiKeyLoginWidget(QWidget):
         self.provider = None
         self._validation_thread = None
 
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
+        # Todo va en un área con scroll: con la ventana chica el contenido se desplaza en
+        # vez de recortarse. Los textos se agregan a la columna SIN flag de alineación --
+        # con alineación el layout les da su sizeHint y no recalcula la altura al envolver,
+        # que es lo que cortaba las últimas líneas de los pasos.
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        scroll.viewport().setAutoFillBackground(False)
+        outer.addWidget(scroll)
+
+        content = QWidget()
+        content.setAttribute(Qt.WA_TranslucentBackground)
+        content.setStyleSheet("background: transparent;")
+        scroll.setWidget(content)
+
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(16, 16, 16, 16)
+        content_layout.addStretch(1)
+        center_row = QHBoxLayout()
+        center_row.addStretch(1)
+        column = QWidget()
+        column.setMaximumWidth(460)
+        column.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        center_row.addWidget(column)
+        center_row.addStretch(1)
+        content_layout.addLayout(center_row)
+        content_layout.addStretch(1)
+
+        layout = QVBoxLayout(column)
         layout.setSpacing(14)
-        layout.setContentsMargins(40, 20, 40, 20)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.title_label = QLabel()
         self.title_label.setAlignment(Qt.AlignCenter)
+        self.title_label.setWordWrap(True)
         self.title_label.setStyleSheet("font-size: 15px; font-weight: bold;")
         layout.addWidget(self.title_label)
 
@@ -62,12 +98,11 @@ class ApiKeyLoginWidget(QWidget):
         self.instructions_label.setStyleSheet(
             f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 13px;"
         )
-        self.instructions_label.setMaximumWidth(420)
         layout.addWidget(self.instructions_label)
 
         self.btn_open_site = QPushButton()
         self.btn_open_site.setFixedHeight(38)
-        self.btn_open_site.setMinimumWidth(220)
+        self.btn_open_site.setMinimumWidth(180)
         self.btn_open_site.setCursor(Qt.PointingHandCursor)
         self.btn_open_site.setStyleSheet(f"""
             QPushButton {{
@@ -90,7 +125,7 @@ class ApiKeyLoginWidget(QWidget):
         self.key_input = QLineEdit()
         self.key_input.setEchoMode(QLineEdit.Password)
         self.key_input.setFixedHeight(36)
-        self.key_input.setMinimumWidth(260)
+        self.key_input.setMinimumWidth(160)
         self.key_input.setPlaceholderText(QCoreApplication.translate("ApiKeyLoginWidget", "Pega tu API key aquí"))
         self.key_input.returnPressed.connect(self._on_save_clicked)
         key_row.addWidget(self.key_input)
@@ -103,14 +138,12 @@ class ApiKeyLoginWidget(QWidget):
         self.btn_toggle_visibility.toggled.connect(self._on_toggle_visibility)
         key_row.addWidget(self.btn_toggle_visibility)
 
-        key_row_widget = QWidget()
-        key_row_widget.setLayout(key_row)
-        layout.addWidget(key_row_widget, 0, Qt.AlignCenter)
+        key_row.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(key_row)
 
         self.status_label = QLabel()
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setWordWrap(True)
-        self.status_label.setMaximumWidth(420)
         layout.addWidget(self.status_label)
 
         self.btn_save = QPushButton(QCoreApplication.translate("ApiKeyLoginWidget", "Guardar"))

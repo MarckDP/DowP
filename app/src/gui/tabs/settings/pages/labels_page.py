@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, Signal, QSize
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_src_dir
 from gui.styles import get_theme_token
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 class LabelRow(QFrame):
     delete_requested = Signal(str)
@@ -162,10 +163,9 @@ class LabelsPage(QWidget):
         self.scroll_content = QWidget()
         self.scroll_content.setObjectName("labelsScrollContent")
         self.scroll_content.setStyleSheet("QWidget#labelsScrollContent { background: transparent; }")
-        self.scroll_layout = QVBoxLayout(self.scroll_content)
+        self.scroll_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.scroll_layout.setContentsMargins(0, 0, 5, 0)
         self.scroll_layout.setSpacing(8)
-        self.scroll_layout.setAlignment(Qt.AlignTop)
 
         # Empty state label
         self.empty_lbl = QLabel(self.tr("No hay etiquetas registradas. Crea una arriba."))

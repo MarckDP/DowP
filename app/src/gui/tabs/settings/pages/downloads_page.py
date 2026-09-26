@@ -8,6 +8,7 @@ from core.utils.config_manager import get_config, save_config
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.styles import get_theme_token, set_button_variant
 from core.utils.download_history import download_history, DEFAULT_MAX_ENTRIES
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class DownloadsPage(QWidget):
@@ -49,10 +50,9 @@ class DownloadsPage(QWidget):
         self.scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
 
         # Layout para el contenido del scroll
-        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(12)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         # --- SECCIÓN: OPCIONES DE DESCARGA ---
         self.dl_section_label = QLabel(self.tr("Opciones de Descarga"))
@@ -66,11 +66,11 @@ class DownloadsPage(QWidget):
         self.metadata_label.setObjectName("settingsLabel")
         self.metadata_desc = QLabel(self.tr("Añade información del video (título, autor, fecha) dentro del archivo multimedia."))
         self.metadata_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.metadata_desc.setWordWrap(True)
         self.metadata_vbox.addWidget(self.metadata_label)
         self.metadata_vbox.addWidget(self.metadata_desc)
         self.metadata_switch = ToggleSwitch()
-        self.metadata_row.addLayout(self.metadata_vbox)
-        self.metadata_row.addStretch()
+        self.metadata_row.addLayout(self.metadata_vbox, 1)
         self.metadata_row.addWidget(self.metadata_switch)
         self.content_layout.addLayout(self.metadata_row)
 
@@ -81,11 +81,11 @@ class DownloadsPage(QWidget):
         self.thumb_label.setObjectName("settingsLabel")
         self.thumb_desc = QLabel(self.tr("Utiliza la miniatura del video como imagen de portada del archivo descargado."))
         self.thumb_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.thumb_desc.setWordWrap(True)
         self.thumb_vbox.addWidget(self.thumb_label)
         self.thumb_vbox.addWidget(self.thumb_desc)
         self.thumb_switch = ToggleSwitch()
-        self.thumb_row.addLayout(self.thumb_vbox)
-        self.thumb_row.addStretch()
+        self.thumb_row.addLayout(self.thumb_vbox, 1)
         self.thumb_row.addWidget(self.thumb_switch)
         self.content_layout.addLayout(self.thumb_row)
 
@@ -96,11 +96,11 @@ class DownloadsPage(QWidget):
         self.sponsors_label.setObjectName("settingsLabel")
         self.sponsors_desc = QLabel(self.tr("Utiliza SponsorBlock para identificar y omitir segmentos publicitarios dentro del video."))
         self.sponsors_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.sponsors_desc.setWordWrap(True)
         self.sponsors_vbox.addWidget(self.sponsors_label)
         self.sponsors_vbox.addWidget(self.sponsors_desc)
         self.sponsors_switch = ToggleSwitch()
-        self.sponsors_row.addLayout(self.sponsors_vbox)
-        self.sponsors_row.addStretch()
+        self.sponsors_row.addLayout(self.sponsors_vbox, 1)
         self.sponsors_row.addWidget(self.sponsors_switch)
         self.content_layout.addLayout(self.sponsors_row)
 
@@ -111,11 +111,11 @@ class DownloadsPage(QWidget):
         self.imp_label.setObjectName("settingsLabel")
         self.imp_desc = QLabel(self.tr("Evita bloqueos de YouTube simulando ser Chrome. (Puede ser más lento)"))
         self.imp_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.imp_desc.setWordWrap(True)
         self.imp_vbox.addWidget(self.imp_label)
         self.imp_vbox.addWidget(self.imp_desc)
         self.imp_switch = ToggleSwitch()
-        self.imp_row.addLayout(self.imp_vbox)
-        self.imp_row.addStretch()
+        self.imp_row.addLayout(self.imp_vbox, 1)
         self.imp_row.addWidget(self.imp_switch)
         self.content_layout.addLayout(self.imp_row)
 
@@ -126,6 +126,7 @@ class DownloadsPage(QWidget):
         self.concurrent_label.setObjectName("settingsLabel")
         self.concurrent_desc = QLabel(self.tr("Número máximo de descargas que se procesarán en paralelo a la vez (1 a 10)."))
         self.concurrent_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        self.concurrent_desc.setWordWrap(True)
         self.concurrent_vbox.addWidget(self.concurrent_label)
         self.concurrent_vbox.addWidget(self.concurrent_desc)
         
@@ -143,8 +144,7 @@ class DownloadsPage(QWidget):
                 font-weight: bold;
             }}
         """)
-        self.concurrent_row.addLayout(self.concurrent_vbox)
-        self.concurrent_row.addStretch()
+        self.concurrent_row.addLayout(self.concurrent_vbox, 1)
         self.concurrent_row.addWidget(self.concurrent_spin)
         self.content_layout.addLayout(self.concurrent_row)
 

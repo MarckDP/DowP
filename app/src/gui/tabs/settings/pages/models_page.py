@@ -37,6 +37,7 @@ from gui.styles import (
     apply_folder_open_button_style,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class _ProbeInputSizeWorker(QThread):
@@ -353,10 +354,9 @@ class ModelsPage(QWidget):
         scroll_content.setObjectName("settingsScrollContent")
         scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
 
-        self.content_layout = QVBoxLayout(scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(10)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         self._add_section_header(self.tr("Eliminación de Fondo (Rembg)"))
         for family_name, models in REMBG_MODEL_FAMILIES.items():

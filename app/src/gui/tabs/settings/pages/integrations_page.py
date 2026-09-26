@@ -10,6 +10,7 @@ from core.utils.paths import get_src_dir
 from gui.styles import apply_folder_browse_button_style, set_button_variant
 import os
 import platform
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class _ElevatedRemovalThread(QThread):
@@ -75,10 +76,9 @@ class IntegrationsPage(QWidget):
         self.scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
 
         # Layout para el contenido del scroll
-        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(20)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         # --- SECCIÓN ADOBE (Premiere Pro / After Effects no existen en Linux) ---
         if platform.system() != "Linux":

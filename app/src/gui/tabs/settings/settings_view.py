@@ -21,6 +21,7 @@ from .pages.integrations_page import IntegrationsPage
 from .pages.system_page import SystemPage
 from .pages.models_page import ModelsPage
 from .pages.console_page import ConsolePage
+from .pages.shortcuts_page import ShortcutsPage
 
 # Índices de las páginas dentro del QStackedWidget de abajo, en el mismo orden en
 # que se añaden. Los usa SettingsModalOverlay.open_page() y cualquier parte de la app
@@ -94,6 +95,7 @@ class SettingsTab(QWidget):
         self.btn_system = SidebarButton(self.tr("Acerca de"))
         self.btn_models = SidebarButton(self.tr("Modelos"))
         self.btn_console = SidebarButton(self.tr("Consola"))
+        self.btn_shortcuts = SidebarButton(self.tr("Atajos de teclado"))
 
         self.btn_group.addButton(self.btn_general, 0)
         self.btn_group.addButton(self.btn_memory_cache, 1)
@@ -105,6 +107,7 @@ class SettingsTab(QWidget):
         self.btn_group.addButton(self.btn_system, 7)
         self.btn_group.addButton(self.btn_models, 8)
         self.btn_group.addButton(self.btn_console, 9)
+        self.btn_group.addButton(self.btn_shortcuts, 10)
 
         sidebar_layout.addWidget(self.btn_general)
         sidebar_layout.addWidget(self.btn_memory_cache)
@@ -112,6 +115,7 @@ class SettingsTab(QWidget):
         sidebar_layout.addWidget(self.btn_cookies)
         sidebar_layout.addWidget(self.btn_deps)
         sidebar_layout.addWidget(self.btn_labels)
+        sidebar_layout.addWidget(self.btn_shortcuts)
         sidebar_layout.addWidget(self.btn_integrations)
         sidebar_layout.addWidget(self.btn_system)
         sidebar_layout.addWidget(self.btn_models)
@@ -172,6 +176,8 @@ class SettingsTab(QWidget):
         self.stacked_widget.addWidget(self.page_system)             # 7
         self.stacked_widget.addWidget(self.page_models)             # 8
         self.stacked_widget.addWidget(self.page_console)            # 9
+        self.page_shortcuts = ShortcutsPage()
+        self.stacked_widget.addWidget(self.page_shortcuts)          # 10
 
         content_layout.addWidget(self.stacked_widget)
         self.main_layout.addWidget(self.content_area, 1)

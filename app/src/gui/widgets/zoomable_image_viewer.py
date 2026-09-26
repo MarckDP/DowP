@@ -21,11 +21,15 @@ importar el zoom."""
 import math
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem,
-    QGraphicsEllipseItem, QGraphicsLineItem, QApplication,
+    QGraphicsEllipseItem, QGraphicsLineItem, QApplication, QToolTip,
 )
-from PySide6.QtCore import Qt, QRectF, QPointF, QRect, QPoint, QLineF, Signal
-from PySide6.QtGui import QPixmap, QPainter, QBrush, QPen, QColor, QPainterPath, QTransform, QImage, QFont
+from PySide6.QtCore import Qt, QRectF, QPointF, QRect, QPoint, QLineF, Signal, QEvent, QSize, QSizeF
+from PySide6.QtGui import (
+    QPixmap, QPainter, QBrush, QPen, QColor, QPainterPath, QTransform, QImage, QFont, QRadialGradient,
+    QBitmap, QRegion,
+)
 
+from gui.tabs.image_tools.layers.text_item import EditableTextItem, DEFAULT_TEXT_STYLE
 from gui.styles import (
     VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip,
     get_theme_token,
@@ -65,6 +69,21 @@ class ZoomableImageViewer(QGraphicsView):
     shape_created = Signal(object, str)       # QGraphicsItem, "rect"|"ellipse"|"line"
     raster_layer_created = Signal(object)      # QGraphicsPixmapItem (nueva capa de pincel)
     shape_selected = Signal(object)            # QGraphicsItem o None
+    base_mask_changed = Signal()               # terminó un trazo de Borrador sobre la imagen base
+    # Historial (ver gui/tabs/image_tools/layers/history.py):
+    # item (None = máscara de la imagen base), recuadro tocado, píxeles antes, después
+    pixels_changed = Signal(object, QRect, QImage, QImage)
+    # item, geometría antes, después (QRectF para formas, QLineF para líneas, QPointF si no)
+    item_geometry_changed = Signal(object, object, object)
+    # Una capa de píxeles se agrandó para que entrara un trazo: item, imagen y posición
+    # de antes, posición y tamaño nuevos (el historial lo registra junto con el trazo).
+    raster_layer_grown = Signal(object, QImage, QPointF, QPointF, QSize)
+    # Herramienta Texto
+    text_item_created = Signal(object)          # EditableTextItem nuevo (ya en la escena)
+    text_editing_changed = Signal(bool)         # empezó/terminó la edición en línea
+    text_edit_finished = Signal(object, str, bool)  # item, texto de antes, ¿era nuevo?
+    # Tamaño cambiado arrastrando un tirador: item, (estilo, pos) antes, (estilo, pos) después
+    text_resized = Signal(object, object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -104,6 +123,41 @@ class ZoomableImageViewer(QGraphicsView):
         self._stroke_width = 2
         self._brush_color = QColor("#3498db")
         self._brush_size = 12
+        # -- Borrador: borra SOLO la capa marcada en Capas (ver set_eraser_target_provider).
+        # Sobre la imagen base no toca el original: pinta una máscara aparte
+        # (_base_mask, opaco = se ve, transparente = borrado) que ImageToolsTab guarda
+        # por archivo y canvas_flatten aplica al exportar.
+        self._eraser_size = 30
+        self._eraser_softness = 0          # 0 = borde duro, 100 = todo difuminado
+        self._stamp_carry = 0.0            # distancia recorrida desde el último sello (modo suave)
+        self._cursor_vp_pos: QPoint | None = None   # para dibujar el círculo del borrador
+        self._eraser_target_provider = None
+        self._erasing = False
+        self._erase_item = None
+        self._last_erase_scene = None
+        self._base_original: QImage | None = None
+        self._base_mask: QImage | None = None
+        self._base_work: QImage | None = None
+        # Historial: copia del buffer al empezar un trazo + recuadro que va tocando.
+        self._stroke_before: QImage | None = None
+        self._stroke_dirty = QRect()
+        self._geometry_before = None       # (item, geometría) al empezar a mover/redimensionar
+        # Capa marcada en Capas (ver set_marked_item_provider) y caché del área con
+        # contenido de las capas de píxeles: {id(item): (cacheKey del pixmap, QRectF)}.
+        self._marked_item_provider = None
+        self._bounds_cache = {}
+        # Capa donde pinta el Pincel: la decide ImageToolsTab según lo marcado en Capas
+        # (ver set_brush_target_provider). None del provider = crear una capa nueva.
+        self._brush_target_provider = None
+        # Texto: estilo para textos nuevos, item en edición y si el clic en curso
+        # pertenece al texto (se le pasa a Qt para mover el cursor/seleccionar).
+        self._text_style = dict(DEFAULT_TEXT_STYLE)
+        self._editing_text = None
+        self._editing_text_before = ""
+        self._editing_text_is_new = False
+        self._text_mouse = False
+        self._text_resize_start = None   # estado al empezar a arrastrar un tirador de texto
+        self._canvas_before_edit = None    # get_canvas_state() al empezar un ajuste manual
         self._drawing_item = None
         self._draw_start_scene = QPointF()
         self._selected_item = None
@@ -194,7 +248,67 @@ class ZoomableImageViewer(QGraphicsView):
             else:
                 self._draw_canvas_passive_border(painter)
         if self._interaction_mode == "layers_draw":
+            self._draw_marked_outline(painter)
             self._draw_shape_selection(painter)
+            self._draw_eraser_cursor(painter)
+            self._draw_text_editing_frame(painter)
+
+    def _eraser_cursor_active(self) -> bool:
+        return (self._interaction_mode == "layers_draw" and getattr(self, "_active_tool", None) == "eraser"
+                and self._pixmap_item is not None)
+
+    def _update_tool_cursor(self):
+        """Con el Borrador el puntero se reemplaza por un círculo del tamaño real del
+        borrado (ver _draw_eraser_cursor); con cualquier otra herramienta, lo normal.
+        El seguimiento del mouse sin botón apretado solo se enciende aquí, así el
+        resto de herramientas sigue exactamente igual que antes."""
+        active = self._eraser_cursor_active()
+        self.viewport().setMouseTracking(active)
+        if active:
+            self.viewport().setCursor(Qt.BlankCursor)
+        elif self._interaction_mode == "layers_draw" and getattr(self, "_active_tool", None) == "text":
+            self.viewport().setCursor(Qt.IBeamCursor)
+            self._cursor_vp_pos = None
+        else:
+            self.viewport().unsetCursor()
+            self._cursor_vp_pos = None
+        self.viewport().update()
+
+    def _eraser_cursor_rect(self, pos: QPoint) -> QRect:
+        r = int(self._eraser_size / 2 * abs(self.transform().m11())) + 4
+        return QRect(pos.x() - r, pos.y() - r, 2 * r, 2 * r)
+
+    def _draw_eraser_cursor(self, painter: QPainter):
+        if self._cursor_vp_pos is None or not self._eraser_cursor_active():
+            return
+        painter.save()
+        painter.resetTransform()  # a coordenadas del viewport
+        painter.setRenderHint(QPainter.Antialiasing)
+        center = QPointF(self._cursor_vp_pos)
+        radius = max(2.0, self._eraser_size / 2 * abs(self.transform().m11()))
+        painter.setBrush(Qt.NoBrush)
+        # Doble trazo (oscuro + claro) para verse sobre cualquier color.
+        painter.setPen(QPen(QColor(0, 0, 0, 170), 3))
+        painter.drawEllipse(center, radius, radius)
+        painter.setPen(QPen(QColor(255, 255, 255, 230), 1))
+        painter.drawEllipse(center, radius, radius)
+        if self._eraser_softness > 0:
+            # Núcleo que borra al 100%: lo de afuera se va difuminando.
+            inner = radius * (1 - self._eraser_softness / 100)
+            if inner > 2:
+                painter.setPen(QPen(QColor(255, 255, 255, 150), 1, Qt.DashLine))
+                painter.drawEllipse(center, inner, inner)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(255, 255, 255, 230))
+        painter.drawEllipse(center, 1.5, 1.5)
+        painter.restore()
+
+    def viewportEvent(self, event):
+        if event.type() == QEvent.Leave and self._cursor_vp_pos is not None:
+            old = self._cursor_vp_pos
+            self._cursor_vp_pos = None
+            self.viewport().update(self._eraser_cursor_rect(old))
+        return super().viewportEvent(event)
 
     def _draw_canvas_passive_border(self, painter: QPainter):
         painter.save()
@@ -285,11 +399,111 @@ class ZoomableImageViewer(QGraphicsView):
                 "p2": self._draw_one_handle(painter, QPointF(p2_vp), accent),
             }
         elif isinstance(self._selected_item, _SHAPE_ITEM_TYPES):
-            rect_vp = self._scene_rect_to_viewport(self._selected_item.rect())
+            rect_vp = self._scene_rect_to_viewport_f(self._selected_item.mapRectToScene(self._selected_item.rect()))
             painter.setPen(QPen(accent, 1.5, Qt.DashLine))
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect_vp)
             self._handle_rects = self._paint_handles(painter, rect_vp, accent)
+        elif isinstance(self._selected_item, EditableTextItem):
+            # Texto: tiradores solo en las esquinas -- arrastrarlos cambia el tamaño de
+            # la letra de forma proporcional (ver _resize_text).
+            rect_vp = self._scene_rect_to_viewport_f(self._selected_item.sceneBoundingRect())
+            painter.setPen(QPen(accent, 1.5, Qt.DashLine))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(rect_vp)
+            self._handle_rects = self._paint_handles(painter, rect_vp, accent, ids=("nw", "ne", "sw", "se"))
+        else:
+            # Capas de píxeles (pincel, rasterizadas, fondos de imagen): recuadro
+            # alrededor de lo que tienen dibujado, sin tiradores -- se mueven, no se
+            # escalan (eso sería otra función).
+            bounds = self._layer_bounds_scene(self._selected_item)
+            if bounds is not None:
+                painter.setPen(QPen(QColor(0, 0, 0, 120), 3))
+                painter.setBrush(Qt.NoBrush)
+                rect_vp = self._scene_rect_to_viewport_f(bounds)
+                painter.drawRect(rect_vp)
+                painter.setPen(QPen(accent, 1.5, Qt.DashLine))
+                painter.drawRect(rect_vp)
+        painter.restore()
+
+    # -- Capa marcada en Capas ------------------------------------------------
+    def set_marked_item_provider(self, provider):
+        """`provider()` -> item de la capa marcada en Capas (o None). Se consulta al
+        dibujar, en vez de guardar el item: así nunca queda apuntando a uno viejo
+        tras rasterizar, deshacer o cambiar de archivo."""
+        self._marked_item_provider = provider
+
+    def _marked_item(self):
+        item = self._marked_item_provider() if self._marked_item_provider else None
+        if item is None or item.scene() is not self._scene:
+            return None
+        return item
+
+    def _opaque_bounds(self, item) -> QRectF:
+        """Área con contenido (alfa > 0) de una capa de píxeles, en coordenadas del
+        item. Una capa de pincel ocupa toda la imagen aunque tenga un solo trazo; un
+        recuadro de ese tamaño no diría nada. Se calcula con la máscara de alfa de
+        Qt (C++, rápido) y se guarda hasta que el pixmap cambie."""
+        pix = item.pixmap()
+        key = pix.cacheKey()
+        cached = self._bounds_cache.get(id(item))
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        mask = QBitmap.fromImage(pix.toImage().createAlphaMask())
+        rect = QRectF(QRegion(mask).boundingRect())
+        self._bounds_cache[id(item)] = (key, rect)
+        return rect
+
+    def _layer_bounds_scene(self, item) -> QRectF | None:
+        if isinstance(item, _SHAPE_ITEM_TYPES):
+            return item.mapRectToScene(item.rect())
+        if isinstance(item, QGraphicsPixmapItem):
+            local = QRectF(item.pixmap().rect()) if item is self._pixmap_item else self._opaque_bounds(item)
+            if local.isEmpty():
+                return None
+            return item.mapRectToScene(local)
+        return item.sceneBoundingRect()
+
+    def _draw_marked_outline(self, painter: QPainter):
+        """Marcas en las esquinas de la capa marcada en Capas, con cualquier herramienta,
+        para saber sobre qué capa se trabaja (ej. qué borra el Borrador). Solo esquinas
+        y no un recuadro: así no se confunde con la selección (que tiene tiradores) ni
+        tapa los bordes de la capa. Se ocultan mientras se pinta o se borra, y no se
+        repiten si esa misma capa ya muestra su recuadro de selección."""
+        if self._painting or self._erasing:
+            return
+        item = self._marked_item()
+        if item is None or (self._active_tool == "select" and item is self._selected_item):
+            return
+        if isinstance(item, QGraphicsLineItem):
+            bounds = item.sceneBoundingRect()
+        else:
+            bounds = self._layer_bounds_scene(item)
+        if bounds is None:
+            return
+        pad = 3  # px de pantalla: las marcas no pisan el borde de la capa
+        rect = self._scene_rect_to_viewport_f(bounds).adjusted(-pad, -pad, pad, pad)
+        # Largo de cada marca: ~22% del lado corto, entre 4 y 14 px -- en una forma
+        # chica (imagen alejada) no se juntan en un recuadro completo.
+        arm = max(4.0, min(14.0, min(rect.width(), rect.height()) * 0.22))
+        l, t, r, b = rect.left(), rect.top(), rect.right(), rect.bottom()
+        corners = [
+            (QPointF(l, t + arm), QPointF(l, t), QPointF(l + arm, t)),
+            (QPointF(r - arm, t), QPointF(r, t), QPointF(r, t + arm)),
+            (QPointF(r, b - arm), QPointF(r, b), QPointF(r - arm, b)),
+            (QPointF(l + arm, b), QPointF(l, b), QPointF(l, b - arm)),
+        ]
+        accent = QColor(get_theme_token("acento_primario", "#B9E640"))
+        painter.save()
+        painter.resetTransform()
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(Qt.NoBrush)
+        # Halo oscuro debajo y acento encima: se leen sobre cualquier color.
+        for pen in (QPen(QColor(0, 0, 0, 160), 4, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin),
+                    QPen(accent, 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)):
+            painter.setPen(pen)
+            for a, corner, c in corners:
+                painter.drawPolyline([a, corner, c])
         painter.restore()
 
     def _draw_one_handle(self, painter: QPainter, pt: QPointF, accent: QColor) -> QRect:
@@ -301,9 +515,11 @@ class ZoomableImageViewer(QGraphicsView):
         hit_half = _HANDLE_HIT // 2
         return QRect(int(pt.x() - hit_half), int(pt.y() - hit_half), _HANDLE_HIT, _HANDLE_HIT)
 
-    def _paint_handles(self, painter: QPainter, vp_rect: QRect, accent: QColor) -> dict:
+    def _paint_handles(self, painter: QPainter, vp_rect: QRect, accent: QColor, ids=None) -> dict:
         handle_rects = {}
         points = self._handle_points(vp_rect)
+        if ids is not None:
+            points = {k: p for k, p in points.items() if k in ids}
         painter.setPen(QPen(QColor("#111111"), 1))
         painter.setBrush(QBrush(accent))
         half = _HANDLE_DRAW // 2
@@ -319,6 +535,13 @@ class ZoomableImageViewer(QGraphicsView):
     def _scene_rect_to_viewport(self, r: QRectF) -> QRect:
         return self.mapFromScene(r).boundingRect()
 
+    def _scene_rect_to_viewport_f(self, r: QRectF) -> QRectF:
+        """Como _scene_rect_to_viewport, pero sin redondear a píxeles enteros. Qt dibuja
+        las capas en posiciones con decimales; un recuadro redondeado (y con el -1 de
+        QRect en los bordes derecho/inferior) quedaba corrido 1-2 px, distinto en cada
+        lado -- invisible con zoom, muy notorio con la imagen alejada."""
+        return self.viewportTransform().mapRect(r)
+
     def _handle_points(self, vp_rect: QRect) -> dict:
         left, top, right, bottom = vp_rect.left(), vp_rect.top(), vp_rect.right(), vp_rect.bottom()
         cx, cy = vp_rect.center().x(), vp_rect.center().y()
@@ -332,9 +555,13 @@ class ZoomableImageViewer(QGraphicsView):
         if pixmap is None or pixmap.isNull():
             self.clear()
             return
+        self.end_text_editing()
         self._scene.clear()
         self._pixmap_item = self._scene.addPixmap(pixmap)
         self._native_size = pixmap.size()
+        self._base_original = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+        self._base_mask = None
+        self._base_work = None
         # La escena se hace más grande que la imagen (margen del 200% del propio
         # tamaño a cada lado) para poder paneAR más allá de sus bordes -- igual que en
         # DowP 1, en vez de quedar atado a los límites exactos de la imagen.
@@ -354,8 +581,12 @@ class ZoomableImageViewer(QGraphicsView):
         return self._native_size
 
     def clear(self):
+        self.end_text_editing()
         self._scene.clear()
         self._pixmap_item = None
+        self._base_original = None
+        self._base_mask = None
+        self._base_work = None
         self._native_size = None
         self._user_zoomed = False
         self._reset_edit_state()
@@ -376,6 +607,8 @@ class ZoomableImageViewer(QGraphicsView):
         self._dragging_image = False
         self._dragging_shape = False
         self._painting = False
+        self._erasing = False
+        self._erase_item = None
         self._selected_item = None
         self._drawing_item = None
         self._active_raster_item = None
@@ -387,6 +620,9 @@ class ZoomableImageViewer(QGraphicsView):
             self._canvas_resizable = True
         else:
             self._canvas_rect = None
+        # Vuelve a "pan" sin pasar por set_interaction_mode: sin esto el puntero podía
+        # quedar invisible (BlankCursor del Borrador) al cargar otra imagen.
+        self._update_tool_cursor()
 
     def _fit_to_window(self):
         if self._pixmap_item is not None:
@@ -405,6 +641,7 @@ class ZoomableImageViewer(QGraphicsView):
         assert mode in ("pan", "canvas_edit", "layers_draw")
         if mode == self._interaction_mode:
             return
+        self.end_text_editing()
         self._interaction_mode = mode
         self.setDragMode(QGraphicsView.ScrollHandDrag if mode == "pan" else QGraphicsView.NoDrag)
         self._handle_rects = {}
@@ -416,9 +653,10 @@ class ZoomableImageViewer(QGraphicsView):
         if self._panning:
             self._end_pan()
         self._painting = False
+        self._erasing = False
         if mode != "layers_draw":
             self._selected_item = None
-        self.viewport().update()
+        self._update_tool_cursor()
 
     # ------------------------------------------------------------------
     # Modo edición de canvas
@@ -481,11 +719,17 @@ class ZoomableImageViewer(QGraphicsView):
     # Modo Capas -- configuración de herramientas
     # ------------------------------------------------------------------
     def set_active_tool(self, tool: str):
-        assert tool in ("select", "rect", "ellipse", "line", "brush")
+        assert tool in ("select", "rect", "ellipse", "line", "brush", "eraser", "text")
+        if tool != getattr(self, "_active_tool", None):
+            self.end_text_editing()
         self._active_tool = tool
         if tool != "select":
             self._selected_item = None
-        self.viewport().update()
+        else:
+            marked = self._marked_item()
+            if marked is not None and marked is not self._pixmap_item:
+                self._selected_item = marked
+        self._update_tool_cursor()
 
     def set_draw_style(self, fill: QColor | None, stroke: QColor | None, stroke_width: int):
         self._draw_fill = fill
@@ -495,6 +739,220 @@ class ZoomableImageViewer(QGraphicsView):
     def set_brush_style(self, color: QColor, size: int):
         self._brush_color = color
         self._brush_size = max(1, size)
+
+    def set_eraser_style(self, size: int, softness: int = 0):
+        self._eraser_size = max(1, size)
+        self._eraser_softness = max(0, min(100, softness))
+        if self._cursor_vp_pos is not None:
+            self.viewport().update()
+
+    def set_eraser_target_provider(self, provider):
+        """`provider()` -> (item, mensaje): la capa que debe borrar el Borrador (la
+        imagen base o una capa de pincel), o (None, por qué no se puede). Se consulta
+        al empezar cada trazo, así siempre respeta la capa marcada en ese momento."""
+        self._eraser_target_provider = provider
+
+    def base_mask(self) -> QImage | None:
+        """Máscara de borrado de la imagen base (None si no se borró nada)."""
+        return QImage(self._base_mask) if self._base_mask is not None else None
+
+    def set_base_mask(self, mask: QImage | None):
+        """Repone una máscara guardada (al volver a un archivo ya editado)."""
+        if self._pixmap_item is None or self._base_original is None:
+            return
+        if mask is None:
+            self._base_mask = None
+            self._base_work = None
+            self._pixmap_item.setPixmap(QPixmap.fromImage(self._base_original))
+            return
+        size = self._base_original.size()
+        if mask.size() != size:
+            mask = mask.scaled(size, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        self._base_mask = mask.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+        self._base_work = apply_alpha_mask(self._base_original, self._base_mask)
+        self._pixmap_item.setPixmap(QPixmap.fromImage(self._base_work))
+
+    # -- Historial -------------------------------------------------------------
+    def canvas_state_before_edit(self) -> dict | None:
+        """Estado de Canvas al empezar el último ajuste manual (para deshacerlo)."""
+        return self._canvas_before_edit
+
+    def apply_pixel_patch(self, item, rect: QRect, patch: QImage):
+        """Repone un recuadro de píxeles guardado por el historial. `item` None = la
+        máscara de la imagen base (se busca la actual, ver history.py)."""
+        if item is None:
+            if self._base_original is None:
+                return
+            if self._base_mask is None:
+                self._base_mask = QImage(self._base_original.size(), QImage.Format.Format_ARGB32_Premultiplied)
+                self._base_mask.fill(QColor(0, 0, 0, 255))
+            self._paste(self._base_mask, rect, patch)
+            self._base_work = apply_alpha_mask(self._base_original, self._base_mask)
+            self._pixmap_item.setPixmap(QPixmap.fromImage(self._base_work))
+            return
+        buffer = self._raster_buffers.get(id(item))
+        if buffer is None:
+            buffer = item.pixmap().toImage().convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+            self._raster_buffers[id(item)] = buffer
+        self._paste(buffer, rect, patch)
+        item.setPixmap(QPixmap.fromImage(buffer))
+
+    @staticmethod
+    def _paste(target: QImage, rect: QRect, patch: QImage):
+        painter = QPainter(target)
+        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.drawImage(rect.topLeft(), patch)
+        painter.end()
+
+    def _start_stroke_snapshot(self, image: QImage | None):
+        # QImage comparte datos hasta que alguien pinta: la copia es gratis hasta el
+        # primer trazo, y ahí Qt duplica una sola vez.
+        self._stroke_before = QImage(image) if image is not None else None
+        self._stroke_dirty = QRect()
+
+    def _mark_dirty(self, a: QPointF, b: QPointF | None, width: float):
+        pad = width / 2 + 2
+        pts = [a] if b is None else [a, b]
+        xs = [p.x() for p in pts]
+        ys = [p.y() for p in pts]
+        r = QRectF(min(xs) - pad, min(ys) - pad, max(xs) - min(xs) + 2 * pad, max(ys) - min(ys) + 2 * pad)
+        self._stroke_dirty = self._stroke_dirty.united(r.toAlignedRect())
+
+    def _finish_stroke_snapshot(self, item, image: QImage | None):
+        before = self._stroke_before
+        self._stroke_before = None
+        if before is None or image is None:
+            return
+        rect = self._stroke_dirty.intersected(image.rect())
+        if rect.isEmpty():
+            return
+        self.pixels_changed.emit(item, rect, before.copy(rect), image.copy(rect))
+
+    @staticmethod
+    def item_geometry(item):
+        if isinstance(item, _SHAPE_ITEM_TYPES):
+            return QRectF(item.rect())
+        if isinstance(item, QGraphicsLineItem):
+            return QLineF(item.line())
+        return QPointF(item.pos())
+
+    @staticmethod
+    def set_item_geometry(item, geometry):
+        if isinstance(item, _SHAPE_ITEM_TYPES):
+            item.setRect(geometry)
+        elif isinstance(item, QGraphicsLineItem):
+            item.setLine(geometry)
+        else:
+            item.setPos(geometry)
+
+    def _capture_geometry(self, item):
+        self._geometry_before = (item, self.item_geometry(item)) if item is not None else None
+
+    def _emit_geometry_change(self):
+        captured = self._geometry_before
+        self._geometry_before = None
+        if captured is None:
+            return
+        item, before = captured
+        after = self.item_geometry(item)
+        if after != before:
+            self.item_geometry_changed.emit(item, before, after)
+
+    # -- Texto ----------------------------------------------------------------
+    _OPPOSITE = {"nw": "se", "ne": "sw", "sw": "ne", "se": "nw"}
+
+    @staticmethod
+    def _corner(rect: QRectF, corner: str) -> QPointF:
+        return {"nw": rect.topLeft(), "ne": rect.topRight(),
+                "sw": rect.bottomLeft(), "se": rect.bottomRight()}[corner]
+
+    def _resize_text(self, scene_pos: QPointF):
+        """Escala el texto arrastrando una esquina: el tamaño de la letra cambia en la
+        misma proporción que el recuadro (se toma el eje que más se estiró, como al
+        escalar proporcional en Photoshop) y la esquina opuesta queda fija. Todo se
+        calcula desde el estado al empezar el arrastre, así no se acumulan redondeos."""
+        start = self._text_resize_start
+        item = self._selected_item
+        rect0 = start["rect"]
+        anchor_id = self._OPPOSITE[self._active_handle]
+        anchor = self._corner(rect0, anchor_id)
+        fw = abs(scene_pos.x() - anchor.x()) / max(1.0, rect0.width())
+        fh = abs(scene_pos.y() - anchor.y()) / max(1.0, rect0.height())
+        factor = max(fw, fh, 0.02)
+        size = max(4, min(2000, round(start["style"]["size"] * factor)))
+        if size != item.style()["size"]:
+            item.apply_style({"size": size})
+        # Reposicionar para que la esquina ancla siga en su lugar.
+        new_rect = item.sceneBoundingRect()
+        item.setPos(item.pos() + (anchor - self._corner(new_rect, anchor_id)))
+
+    def set_text_style(self, style: dict):
+        self._text_style = dict(style)
+
+    def editing_text_item(self):
+        return self._editing_text
+
+    def _text_item_at(self, scene_pos: QPointF):
+        for item in self._scene.items(scene_pos):
+            if isinstance(item, EditableTextItem) and item.isVisible():
+                return item
+        return None
+
+    def _press_text(self, scene_pos: QPointF):
+        """Clic con Texto: sobre un texto existente lo edita; en otro lado crea uno
+        nuevo con el estilo actual, con la esquina superior izquierda en el clic."""
+        item = self._text_item_at(scene_pos)
+        if item is not None:
+            self.begin_text_editing(item, is_new=False)
+            return
+        item = EditableTextItem(self._text_style)
+        item.setPos(scene_pos)
+        self._scene.addItem(item)
+        self.text_item_created.emit(item)
+        self.begin_text_editing(item, is_new=True)
+
+    def begin_text_editing(self, item, is_new: bool = False):
+        if self._editing_text is item:
+            return
+        self.end_text_editing()
+        self._editing_text = item
+        self._editing_text_before = item.toPlainText()
+        self._editing_text_is_new = is_new
+        self._selected_item = None
+        item.finish_requested.connect(self.end_text_editing)
+        self.setFocus(Qt.MouseFocusReason)
+        item.start_editing(select_all=False)
+        self.text_editing_changed.emit(True)
+        self.viewport().update()
+
+    def end_text_editing(self):
+        item = getattr(self, "_editing_text", None)
+        if item is None:
+            return
+        self._editing_text = None
+        self._text_mouse = False
+        try:
+            item.finish_requested.disconnect(self.end_text_editing)
+        except (RuntimeError, TypeError):
+            pass
+        item.stop_editing()
+        self.text_editing_changed.emit(False)
+        self.text_edit_finished.emit(item, self._editing_text_before, self._editing_text_is_new)
+        self.viewport().update()
+
+    def _draw_text_editing_frame(self, painter: QPainter):
+        item = self._editing_text
+        if item is None:
+            return
+        rect = self._scene_rect_to_viewport_f(item.sceneBoundingRect()).adjusted(-2, -2, 2, 2)
+        painter.save()
+        painter.resetTransform()
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(QColor(0, 0, 0, 140), 3))
+        painter.drawRect(rect)
+        painter.setPen(QPen(QColor(get_theme_token("acento_primario", "#B9E640")), 1, Qt.DashLine))
+        painter.drawRect(rect)
+        painter.restore()
 
     def set_active_raster_layer(self, item: QGraphicsPixmapItem | None):
         """A qué capa raster pinta el Pincel -- None hace que el próximo trazo cree
@@ -552,6 +1010,16 @@ class ZoomableImageViewer(QGraphicsView):
         self.translate(delta_scene.x(), delta_scene.y())
 
     def mouseDoubleClickEvent(self, event):
+        # Doble clic sobre un texto (con Seleccionar o Texto): editarlo en su lugar.
+        if (event.button() == Qt.LeftButton and self._interaction_mode == "layers_draw"
+                and self._active_tool in ("select", "text") and self._editing_text is None):
+            item = self._text_item_at(self.mapToScene(event.pos()))
+            if item is not None:
+                self.begin_text_editing(item, is_new=False)
+                return
+        if self._editing_text is not None:
+            super().mouseDoubleClickEvent(event)  # doble clic dentro del texto: elegir palabra
+            return
         if event.button() == Qt.LeftButton:
             self._user_zoomed = False
             if self._canvas_rect is not None:
@@ -568,6 +1036,15 @@ class ZoomableImageViewer(QGraphicsView):
         if event.button() == Qt.MiddleButton and self._pixmap_item is not None:
             self._start_pan(event.pos())
             return
+        if self._editing_text is not None and event.button() == Qt.LeftButton:
+            # Editando un texto: el clic dentro es del texto (cursor, selección); el clic
+            # afuera solo termina la edición (no crea otro texto ni dibuja nada).
+            if self._editing_text.sceneBoundingRect().contains(self.mapToScene(event.pos())):
+                self._text_mouse = True
+                super().mousePressEvent(event)
+            else:
+                self.end_text_editing()
+            return
         if self._interaction_mode == "canvas_edit" and event.button() == Qt.LeftButton:
             self._press_canvas_edit(event.pos())
             return
@@ -577,8 +1054,17 @@ class ZoomableImageViewer(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if self._eraser_cursor_active():
+            old = self._cursor_vp_pos
+            self._cursor_vp_pos = event.pos()
+            if old is not None:
+                self.viewport().update(self._eraser_cursor_rect(old))
+            self.viewport().update(self._eraser_cursor_rect(self._cursor_vp_pos))
         if self._panning:
             self._do_pan(event.pos())
+            return
+        if self._text_mouse:
+            super().mouseMoveEvent(event)
             return
         if self._interaction_mode == "canvas_edit":
             self._move_canvas_edit(event.pos())
@@ -591,6 +1077,10 @@ class ZoomableImageViewer(QGraphicsView):
     def mouseReleaseEvent(self, event):
         if self._panning and event.button() in (Qt.MiddleButton, Qt.LeftButton):
             self._end_pan()
+            return
+        if self._text_mouse:
+            self._text_mouse = False
+            super().mouseReleaseEvent(event)
             return
         if self._interaction_mode == "canvas_edit" and (self._active_handle is not None or self._dragging_image):
             self._active_handle = None
@@ -612,10 +1102,12 @@ class ZoomableImageViewer(QGraphicsView):
             if rect.contains(pos):
                 self._active_handle = handle_id
                 self._resize_apply_fn = self._apply_canvas_resize
+                self._canvas_before_edit = self.get_canvas_state()
                 return
         if self._pixmap_item is not None:
             img_vp = self.mapFromScene(self._pixmap_item.sceneBoundingRect()).boundingRect()
             if img_vp.contains(pos):
+                self._canvas_before_edit = self.get_canvas_state()
                 self._dragging_image = True
                 self._drag_offset = self.mapToScene(pos) - self._pixmap_item.pos()
                 return
@@ -801,20 +1293,36 @@ class ZoomableImageViewer(QGraphicsView):
             self._drawing_item = item
         elif self._active_tool == "brush":
             self._begin_brush_stroke(scene_pos)
+        elif self._active_tool == "eraser":
+            self._begin_erase(pos, scene_pos)
+        elif self._active_tool == "text":
+            self._press_text(scene_pos)
 
     def _press_select(self, pos, scene_pos):
         for handle_id, rect in self._handle_rects.items():
             if rect.contains(pos):
                 self._active_handle = handle_id
+                if isinstance(self._selected_item, EditableTextItem):
+                    item = self._selected_item
+                    self._resize_apply_fn = None
+                    self._text_resize_start = {
+                        "rect": QRectF(item.sceneBoundingRect()),
+                        "style": item.style(),
+                        "pos": QPointF(item.pos()),
+                    }
+                    return
                 self._resize_apply_fn = self._apply_shape_resize
+                self._capture_geometry(self._selected_item)
                 return
         for handle_id, rect in self._line_handle_rects.items():
             if rect.contains(pos):
                 self._active_line_handle = handle_id
+                self._capture_geometry(self._selected_item)
                 return
         item = self._scene.itemAt(scene_pos, self.transform())
         if item is not None and item is not self._pixmap_item:
             self._selected_item = item
+            self._capture_geometry(item)
             self._dragging_shape = True
             self._drag_offset = scene_pos
             self.shape_selected.emit(item)
@@ -846,6 +1354,8 @@ class ZoomableImageViewer(QGraphicsView):
     def _end_pan(self):
         self._panning = False
         self.viewport().unsetCursor()
+        if self._eraser_cursor_active():
+            self.viewport().setCursor(Qt.BlankCursor)
 
     def _make_shape_item(self, kind: str, rect: QRectF):
         item = QGraphicsRectItem(rect) if kind == "rect" else QGraphicsEllipseItem(rect)
@@ -865,13 +1375,17 @@ class ZoomableImageViewer(QGraphicsView):
     def _move_layers_draw(self, pos):
         scene_pos = self.mapToScene(pos)
         if (self._active_handle is not None or self._active_line_handle is not None
-                or self._dragging_shape or self._drawing_item is not None or self._painting):
+                or self._dragging_shape or self._drawing_item is not None or self._painting
+                or self._erasing):
             # Igual que en modo Canvas: si se dibuja/arrastra/pinta más allá de los
             # límites originales de la escena (fijados según el tamaño nativo de la
             # imagen en set_pixmap), hay que agrandarla o el zoom/paneo se clampa raro
             # apenas el cursor sale de esa zona.
             self._ensure_scene_covers(QRectF(scene_pos.x() - 50, scene_pos.y() - 50, 100, 100))
-        if self._active_handle is not None:
+        if self._active_handle is not None and self._text_resize_start is not None:
+            self._resize_text(scene_pos)
+            self.viewport().update()
+        elif self._active_handle is not None:
             base_rect = self._selected_item.rect() if self._selected_item is not None else QRectF()
             new_rect = self._compute_free_resize(base_rect, self._active_handle, scene_pos)
             if self._resize_apply_fn:
@@ -897,6 +1411,8 @@ class ZoomableImageViewer(QGraphicsView):
                 self._drawing_item.setRect(rect)
         elif self._painting:
             self._paint_brush_segment(scene_pos)
+        elif self._erasing:
+            self._erase_to(scene_pos)
 
     def _apply_shape_resize(self, new_rect: QRectF):
         if isinstance(self._selected_item, _SHAPE_ITEM_TYPES):
@@ -912,15 +1428,27 @@ class ZoomableImageViewer(QGraphicsView):
             item.setPos(item.pos() + delta)
 
     def _release_layers_draw(self) -> bool:
+        if self._active_handle is not None and self._text_resize_start is not None:
+            start = self._text_resize_start
+            self._text_resize_start = None
+            self._active_handle = None
+            item = self._selected_item
+            if item is not None and item.style() != start["style"]:
+                self.text_resized.emit(item, (start["style"], start["pos"]),
+                                       (item.style(), QPointF(item.pos())))
+            return True
         if self._active_handle is not None:
             self._active_handle = None
             self._resize_apply_fn = None
+            self._emit_geometry_change()
             return True
         if self._active_line_handle is not None:
             self._active_line_handle = None
+            self._emit_geometry_change()
             return True
         if self._dragging_shape:
             self._dragging_shape = False
+            self._emit_geometry_change()
             return True
         if self._drawing_item is not None:
             item = self._drawing_item
@@ -943,16 +1471,99 @@ class ZoomableImageViewer(QGraphicsView):
         if self._painting:
             self._painting = False
             self._last_paint_scene = None
+            item = self._active_raster_item
+            self._finish_stroke_snapshot(item, self._raster_buffers.get(id(item)) if item else None)
+            self.viewport().update()
+            return True
+        if self._erasing:
+            self._erasing = False
+            self._last_erase_scene = None
+            target = self._erase_item
+            self._erase_item = None
+            if target is self._pixmap_item:
+                self._finish_stroke_snapshot(None, self._base_mask)
+                self.base_mask_changed.emit()
+            elif target is not None:
+                self._finish_stroke_snapshot(target, self._raster_buffers.get(id(target)))
+            self.viewport().update()
             return True
         return False
 
     # -- Pincel: pinta sobre un QImage propio de la capa activa --
     def _begin_brush_stroke(self, scene_pos: QPointF):
+        # El Pincel pinta en la capa marcada en Capas si es de píxeles; si no (forma,
+        # fondo, imagen o nada marcado) crea una capa nueva. Sin provider (uso suelto
+        # del visor) se mantiene el comportamiento anterior: la última capa activa.
+        if self._brush_target_provider is not None:
+            item = self._brush_target_provider()
+            if not (isinstance(item, QGraphicsPixmapItem) and item.scene() is self._scene
+                    and item is not self._pixmap_item):
+                item = None
+            self._active_raster_item = item
+        item = self._active_raster_item
+        if item is not None and id(item) not in self._raster_buffers:
+            # Capa de píxeles que no nació de un trazo en esta sesión (restaurada de
+            # otro archivo, duplicada, rasterizada): se arma su buffer desde el pixmap.
+            self._raster_buffers[id(item)] = item.pixmap().toImage().convertToFormat(
+                QImage.Format.Format_ARGB32_Premultiplied)
+        if item is not None:
+            self._grow_raster_to_cover(item)
         if self._active_raster_item is None or id(self._active_raster_item) not in self._raster_buffers:
             self._create_raster_layer()
+        image = self._raster_buffers.get(id(self._active_raster_item)) if self._active_raster_item else None
+        self._start_stroke_snapshot(image)
         self._painting = True
         self._last_paint_scene = scene_pos
         self._paint_dot(scene_pos)
+
+    def set_brush_target_provider(self, provider):
+        """`provider()` -> capa de píxeles donde pintar, o None para crear una nueva."""
+        self._brush_target_provider = provider
+
+    def _paint_area_scene(self) -> QRectF | None:
+        """Zona donde tiene sentido pintar: la imagen más el lienzo de Canvas."""
+        if self._pixmap_item is None:
+            return None
+        area = self._pixmap_item.sceneBoundingRect()
+        if self._canvas_rect is not None:
+            area = area.united(self._canvas_rect)
+        return area
+
+    def _grow_raster_to_cover(self, item):
+        """Una capa de píxeles puede ser más chica que la imagen (una forma
+        rasterizada mide lo que medía la forma). Antes de pintar se agranda para
+        cubrir la imagen/lienzo, así lo pintado fuera de su borde no se pierde. Lo
+        que ya tenía queda en el mismo lugar de la imagen."""
+        area = self._paint_area_scene()
+        if area is None:
+            return
+        buffer = self._raster_buffers[id(item)]
+        current = QRectF(item.pos(), QSizeF(buffer.size()))
+        if current.contains(area):
+            return
+        target = current.united(area).toAlignedRect()
+        old_pos = QPointF(item.pos())
+        new_pos = QPointF(target.topLeft())
+        grown = self.grown_image(buffer, old_pos, new_pos, target.size())
+        self._raster_buffers[id(item)] = grown
+        item.setPos(new_pos)
+        item.setPixmap(QPixmap.fromImage(grown))
+        self.raster_layer_grown.emit(item, QImage(buffer), old_pos, new_pos, target.size())
+
+    @staticmethod
+    def grown_image(image: QImage, old_pos: QPointF, new_pos: QPointF, size: QSize) -> QImage:
+        grown = QImage(size, QImage.Format.Format_ARGB32_Premultiplied)
+        grown.fill(Qt.transparent)
+        painter = QPainter(grown)
+        painter.drawImage(old_pos - new_pos, image)
+        painter.end()
+        return grown
+
+    def set_raster_content(self, item, image: QImage, pos: QPointF):
+        """Repone imagen y posición de una capa de píxeles (deshacer un agrandado)."""
+        self._raster_buffers[id(item)] = image
+        item.setPos(pos)
+        item.setPixmap(QPixmap.fromImage(image))
 
     def _create_raster_layer(self):
         size = self._native_size
@@ -980,6 +1591,7 @@ class ZoomableImageViewer(QGraphicsView):
         r = self._brush_size / 2
         painter.drawEllipse(local, r, r)
         painter.end()
+        self._mark_dirty(local, None, self._brush_size)
         item.setPixmap(QPixmap.fromImage(image))
 
     def _paint_brush_segment(self, scene_pos: QPointF):
@@ -995,5 +1607,131 @@ class ZoomableImageViewer(QGraphicsView):
         painter.setPen(pen)
         painter.drawLine(p1, p2)
         painter.end()
+        self._mark_dirty(p1, p2, self._brush_size)
         item.setPixmap(QPixmap.fromImage(image))
         self._last_paint_scene = scene_pos
+
+    # -- Borrador ---------------------------------------------------------------
+    def _begin_erase(self, pos, scene_pos: QPointF):
+        item, message = (self._eraser_target_provider() if self._eraser_target_provider
+                         else (None, ""))
+        if item is None:
+            if message:
+                QToolTip.showText(self.viewport().mapToGlobal(pos), message, self.viewport())
+            return
+        if item is self._pixmap_item:
+            if self._base_original is None:
+                return
+            if self._base_mask is None:
+                self._base_mask = QImage(self._base_original.size(), QImage.Format.Format_ARGB32_Premultiplied)
+                self._base_mask.fill(QColor(0, 0, 0, 255))
+                self._base_work = QImage(self._base_original)
+        elif isinstance(item, QGraphicsPixmapItem):
+            # Una capa de pincel restaurada de otro archivo no tiene buffer propio:
+            # se arma desde su pixmap (y el Pincel lo reutiliza después).
+            if id(item) not in self._raster_buffers:
+                self._raster_buffers[id(item)] = item.pixmap().toImage().convertToFormat(
+                    QImage.Format.Format_ARGB32_Premultiplied)
+        else:
+            return
+        self._erase_item = item
+        self._erasing = True
+        self._last_erase_scene = scene_pos
+        self._stamp_carry = 0.0
+        self._start_stroke_snapshot(
+            self._base_mask if item is self._pixmap_item else self._raster_buffers[id(item)])
+        self._erase_stroke(scene_pos, None)
+
+    def _erase_to(self, scene_pos: QPointF):
+        if self._erase_item is None or self._last_erase_scene is None:
+            return
+        self._erase_stroke(self._last_erase_scene, scene_pos)
+        self._last_erase_scene = scene_pos
+
+    def _erase_stroke(self, p1: QPointF, p2: QPointF | None):
+        """Borra un punto (p2 None) o un tramo en la capa objetivo. Las coordenadas
+        pasan a las locales del item con mapFromScene: la imagen base puede estar
+        movida/escalada por Canvas, y el tamaño del borrador se corrige por esa escala
+        para que en pantalla mida lo mismo que indica el panel."""
+        item = self._erase_item
+        scale = abs(item.transform().m11()) or 1.0
+        width = self._eraser_size / scale
+        a = item.mapFromScene(p1)
+        b = item.mapFromScene(p2) if p2 is not None else None
+        if item is self._pixmap_item:
+            targets = [self._base_mask, self._base_work]
+        else:
+            targets = [self._raster_buffers[id(item)]]
+        self._mark_dirty(a, b, width)
+        if self._eraser_softness > 0:
+            stamps = self._stamp_positions(a, b, width)
+            for image in targets:
+                painter = QPainter(image)
+                painter.setRenderHint(QPainter.Antialiasing)
+                painter.setCompositionMode(QPainter.CompositionMode_DestinationOut)
+                painter.setPen(Qt.NoPen)
+                for c in stamps:
+                    painter.setBrush(QBrush(self._soft_stamp_gradient(c, width / 2)))
+                    painter.drawEllipse(c, width / 2, width / 2)
+                painter.end()
+            item.setPixmap(QPixmap.fromImage(targets[-1]))
+            return
+        for image in targets:
+            painter = QPainter(image)
+            painter.setRenderHint(QPainter.Antialiasing)
+            # DestinationOut: resta alfa según la cobertura del trazo (bordes suaves).
+            painter.setCompositionMode(QPainter.CompositionMode_DestinationOut)
+            if b is None:
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QColor(0, 0, 0, 255))
+                painter.drawEllipse(a, width / 2, width / 2)
+            else:
+                painter.setPen(QPen(QColor(0, 0, 0, 255), width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+                painter.drawLine(a, b)
+            painter.end()
+        item.setPixmap(QPixmap.fromImage(targets[-1]))
+
+    def _stamp_positions(self, a: QPointF, b: QPointF | None, width: float) -> list:
+        """Centros de los sellos del borrador suave: un sello solo en un clic, o sellos
+        cada ~25% del diámetro a lo largo del tramo. _stamp_carry arrastra lo recorrido
+        desde el último sello entre tramos, así el espaciado es parejo aunque el mouse
+        mande movimientos cortos (sin él, los tramos cortos no sellaban nada)."""
+        if b is None:
+            return [a]
+        spacing = max(1.0, width * 0.25)
+        dx, dy = b.x() - a.x(), b.y() - a.y()
+        length = (dx * dx + dy * dy) ** 0.5
+        if length == 0:
+            return []
+        stamps = []
+        dist = spacing - self._stamp_carry
+        while dist <= length:
+            t = dist / length
+            stamps.append(QPointF(a.x() + dx * t, a.y() + dy * t))
+            dist += spacing
+        self._stamp_carry = length - (dist - spacing)
+        return stamps
+
+    def _soft_stamp_gradient(self, center: QPointF, radius: float) -> QRadialGradient:
+        """Borra al 100% en el núcleo y se desvanece hasta 0 en el borde; el tamaño del
+        núcleo lo da el Suavizado (0% = todo núcleo = borde duro)."""
+        core = max(0.0, min(0.99, 1 - self._eraser_softness / 100))
+        grad = QRadialGradient(center, radius)
+        grad.setColorAt(0.0, QColor(0, 0, 0, 255))
+        grad.setColorAt(core, QColor(0, 0, 0, 255))
+        grad.setColorAt(1.0, QColor(0, 0, 0, 0))
+        return grad
+
+
+def apply_alpha_mask(image: QImage, mask: QImage) -> QImage:
+    """`image` con el alfa multiplicado por el de `mask` (se escala si no coincide el
+    tamaño). La usan el visor y canvas_flatten, para que lo que se ve al borrar sea
+    exactamente lo que sale al exportar."""
+    out = image.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+    if mask.size() != out.size():
+        mask = mask.scaled(out.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    painter = QPainter(out)
+    painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+    painter.drawImage(0, 0, mask)
+    painter.end()
+    return out

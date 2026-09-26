@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import (QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
                                  QLabel, QLineEdit, QPushButton, QFileDialog, QColorDialog, QSlider, QWidget, QFrame,
                                  QComboBox)
-from PySide6.QtCore import Qt, Signal, QPoint, QCoreApplication
+from PySide6.QtCore import Qt, Signal, QPoint, QSize, QCoreApplication
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QLinearGradient
 import os
 from core.logger.logger_manager import logger
@@ -711,30 +711,112 @@ class ColorSquare(QWidget):
         self.update()
 
 
-class HueSlider(QSlider):
+class HueSlider(QWidget):
+    """Tira vertical de tono estilo Adobe: siempre muestra el espectro completo (rojo
+    arriba -> rojo abajo) y marca la posición con flechas a los lados y una línea fina,
+    sin tapar el color. Se dibuja a mano en vez de estilizar un QSlider por QSS porque el
+    tema global pinta add-page/sub-page encima del groove y escondía el arcoíris.
+    Misma interfaz que usaba el diálogo: value()/setValue() en 0..359 + valueChanged."""
+    valueChanged = Signal(int)
+
+    MAX_HUE = 359
+    STRIP_WIDTH = 14
+    ARROW = 5          # alto/ancho de cada flecha lateral
+    PAD_Y = 5          # aire arriba/abajo para que la flecha no se corte en los extremos
+
     def __init__(self, parent=None):
-        super().__init__(Qt.Vertical, parent)
-        self.setRange(0, 359)
-        self.setFixedWidth(24)
-        self.setFixedHeight(256)
-        self.setStyleSheet("""
-            QSlider::groove:vertical {
-                border: 1px solid #333333;
-                width: 14px;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0.0 #ff0000, stop:0.17 #ffff00, stop:0.33 #00ff00,
-                    stop:0.5 #00ffff, stop:0.67 #0000ff, stop:0.83 #ff00ff, stop:1.0 #ff0000);
-                border-radius: 7px;
-            }
-            QSlider::handle:vertical {
-                background: #ffffff;
-                border: 2px solid #2d2d2d;
-                height: 8px;
-                width: 20px;
-                margin: 0 -3px;
-                border-radius: 4px;
-            }
-        """)
+        super().__init__(parent)
+        self._value = 0
+        self.setFixedWidth(self.STRIP_WIDTH + 2 * (self.ARROW + 3))
+        self.setFixedHeight(256 + 2 * self.PAD_Y)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setCursor(Qt.PointingHandCursor)
+
+    # -- Interfaz tipo QSlider --------------------------------------------
+    def value(self):
+        return self._value
+
+    def setValue(self, value):
+        value = max(0, min(self.MAX_HUE, int(value)))
+        if value == self._value:
+            return
+        self._value = value
+        self.update()
+        self.valueChanged.emit(value)
+
+    # -- Geometría ----------------------------------------------------------
+    def _strip_rect(self):
+        x = (self.width() - self.STRIP_WIDTH) // 2
+        return x, self.PAD_Y, self.STRIP_WIDTH, self.height() - 2 * self.PAD_Y
+
+    def _y_for_value(self, value):
+        _, top, _, h = self._strip_rect()
+        return top + value / self.MAX_HUE * (h - 1)
+
+    def _value_for_y(self, y):
+        _, top, _, h = self._strip_rect()
+        return round((y - top) / max(1, h - 1) * self.MAX_HUE)
+
+    # -- Pintado --------------------------------------------------------------
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        x, top, w, h = self._strip_rect()
+
+        grad = QLinearGradient(0, top, 0, top + h)
+        for i in range(13):  # cada 30°: suficiente para un espectro limpio
+            grad.setColorAt(i / 12, QColor.fromHsv((i * 30) % 360, 255, 255))
+        painter.setPen(QPen(QColor("#333333"), 1))
+        painter.setBrush(grad)
+        painter.drawRoundedRect(x + 0.5, top + 0.5, w - 1, h - 1, 3, 3)
+
+        y = self._y_for_value(self._value)
+        # Línea fina sobre la tira: blanca con borde oscuro para verse en cualquier tono.
+        painter.setPen(QPen(QColor(0, 0, 0, 160), 3))
+        painter.drawLine(x + 1, y, x + w - 1, y)
+        painter.setPen(QPen(QColor("#ffffff"), 1))
+        painter.drawLine(x + 1, y, x + w - 1, y)
+
+        # Flechas a ambos lados apuntando a la tira, como en Adobe.
+        arrow_color = QColor("#ffffff" if self.hasFocus() else "#d0d0d0")
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(arrow_color)
+        a = self.ARROW
+        left_tip = x - 2
+        painter.drawPolygon([QPoint(left_tip, round(y)), QPoint(left_tip - a, round(y - a)), QPoint(left_tip - a, round(y + a))])
+        right_tip = x + w + 1
+        painter.drawPolygon([QPoint(right_tip, round(y)), QPoint(right_tip + a, round(y - a)), QPoint(right_tip + a, round(y + a))])
+        painter.end()
+
+    # -- Interacción ---------------------------------------------------------
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setValue(self._value_for_y(event.position().y()))
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self.setValue(self._value_for_y(event.position().y()))
+
+    def wheelEvent(self, event):
+        steps = event.angleDelta().y() // 120
+        if steps:
+            self.setValue(self._value - steps * 2)
+        event.accept()
+
+    def keyPressEvent(self, event):
+        step = {Qt.Key_Up: -1, Qt.Key_Down: 1, Qt.Key_PageUp: -10, Qt.Key_PageDown: 10}.get(event.key())
+        if step is None:
+            super().keyPressEvent(event)
+            return
+        self.setValue(self._value + step)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.update()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.update()
 
 
 class AdobeColorPickerDialog(QDialog):
@@ -743,7 +825,7 @@ class AdobeColorPickerDialog(QDialog):
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowTitle(self.tr("Selector de Color"))
-        self.setFixedSize(430, 322)
+        self.setFixedSize(466, 322)
         
         # Parse initial color
         color = QColor(initial_color_hex)
@@ -853,7 +935,6 @@ class AdobeColorPickerDialog(QDialog):
 
         # 2. Hue Slider
         self.slider = HueSlider()
-        self.slider.setInvertedAppearance(True)
         self.slider.setValue(self.hue)
         self.slider.valueChanged.connect(self.on_slider_changed)
         main_layout.addWidget(self.slider)
@@ -883,8 +964,37 @@ class AdobeColorPickerDialog(QDialog):
         self.hex_input.setText(QColor.fromHsv(self.hue, self.sat, self.val).name().upper())
         self.hex_input.textChanged.connect(self.on_hex_text_changed)
         
+        # Cuentagotas: toma un color de cualquier punto de la pantalla (ver
+        # gui/widgets/screen_color_picker.py).
+        from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+        self.btn_eyedropper = QPushButton()
+        self.btn_eyedropper.setObjectName("eyedropperButton")
+        self.btn_eyedropper.setFixedSize(28, 28)
+        self.btn_eyedropper.setIcon(get_colored_svg_icon(
+            "colorize.svg", get_theme_token("texto_principal", "#ffffff"), size=16))
+        self.btn_eyedropper.setIconSize(QSize(16, 16))
+        self.btn_eyedropper.setCursor(Qt.PointingHandCursor)
+        self.btn_eyedropper.setToolTip(self.tr("Tomar un color de la pantalla"))
+        self.btn_eyedropper.setStyleSheet(f"""
+            QPushButton#eyedropperButton {{
+                background-color: {get_theme_token("fondo_principal", "#121212")};
+                border: 1px solid {get_theme_token("borde", "#2d2d2d")};
+                border-radius: 6px;
+                padding: 0px;
+            }}
+            QPushButton#eyedropperButton:hover {{
+                border-color: {get_theme_token("acento_primario", "#B9E640")};
+            }}
+        """)
+        self.btn_eyedropper.clicked.connect(self._start_eyedropper)
+
+        hex_row = QHBoxLayout()
+        hex_row.setSpacing(6)
+        hex_row.addWidget(self.hex_input)
+        hex_row.addWidget(self.btn_eyedropper)
+
         panel_layout.addWidget(hex_label)
-        panel_layout.addWidget(self.hex_input)
+        panel_layout.addLayout(hex_row)
         panel_layout.addStretch()
 
         # Save/Cancel buttons
@@ -905,6 +1015,27 @@ class AdobeColorPickerDialog(QDialog):
         main_layout.addLayout(panel_layout)
 
         central_layout.addLayout(main_layout)
+
+    def _start_eyedropper(self):
+        from gui.widgets.screen_color_picker import ScreenColorPicker
+        self._screen_picker = ScreenColorPicker(self)
+        self._screen_picker.picked.connect(self._on_eyedropper_picked)
+        self._screen_picker.cancelled.connect(self._on_eyedropper_done)
+        self._screen_picker.start()
+
+    def _on_eyedropper_picked(self, color):
+        # Pasar por el campo hex reutiliza la sincronización que ya tiene
+        # (cuadro, tira de tono y vista previa).
+        self.hex_input.setText(color.name().upper())
+        self._on_eyedropper_done()
+
+    def _on_eyedropper_done(self):
+        picker = getattr(self, "_screen_picker", None)
+        self._screen_picker = None
+        if picker is not None:
+            picker.deleteLater()
+        self.activateWindow()
+        self.raise_()
 
     def on_slider_changed(self, value):
         self.hue = value

@@ -1,8 +1,9 @@
 # src/gui/tabs/image_tools/layers/layers_panel.py
 """Contenido del panel flotante "Capas" -- SIN fila de herramientas (Seleccionar/
 Rectángulo/Elipse/Línea/Pincel ahora son botones propios en la franja superior de
-image_tools_view.py, ver set_active_tool_ui); aquí solo queda el estilo de dibujo
-(relleno/borde/ancho, tamaño de pincel), "+ Fondo" y la lista de capas (LayerRow,
+image_tools_view.py); aquí solo quedan "+ Fondo" y la lista de capas. El estilo de
+dibujo (relleno/borde/grosor, pincel) se elige con clic derecho en cada herramienta,
+ver tool_options_popover.py (LayerRow,
 mismo patrón de fila-con-botones-propios que QueueItemCard en
 gui/widgets/queue_panel.py, con look más compacto/tipo Photoshop: miniatura +
 visibilidad + nombre en una sola línea, opacidad en una segunda línea sin label)."""
@@ -10,14 +11,14 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
-    QSlider, QLineEdit, QCheckBox, QSizePolicy,
+    QSlider, QCheckBox, QSizePolicy, QMenu,
 )
 
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
-from gui.dialogs.dialogs import AdobeColorPickerDialog
 
-_KIND_ICON = {"image": "image.svg", "shape": "edit.svg", "raster": "content_cut.svg", "fill": "grid_view.svg"}
+_KIND_ICON = {"image": "image.svg", "shape": "edit.svg", "raster": "content_cut.svg", "fill": "grid_view.svg",
+              "text": "title4.svg"}
 
 
 def _ignore_wheel(widget):
@@ -41,11 +42,13 @@ class LayerRow(QFrame):
     move_down_requested = Signal(int)
     delete_requested = Signal(int)
     row_clicked = Signal(int)
+    rasterize_requested = Signal(int)
 
     def __init__(self, layer_id: int, name: str, kind: str, thumb_color: QColor | None,
                  parent=None, deletable: bool = True):
         super().__init__(parent)
         self.layer_id = layer_id
+        self._kind = kind
         self._selected = False
         self._deletable = deletable
         self.setObjectName("layerRow")
@@ -85,9 +88,13 @@ class LayerRow(QFrame):
 
         self.btn_delete = self._mini_btn("close.svg", "#e74c3c", self.tr("Eliminar capa"))
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self.layer_id))
-        self.btn_delete.setVisible(self._deletable)
         top.addWidget(self.btn_delete)
         layout.addLayout(top)
+        # setVisible recién aquí, cuando `top` ya cuelga de la fila y el botón tiene padre:
+        # antes, sin padre, setVisible(True) lo abría un instante como ventana suelta que
+        # le robaba la activación a la ventana principal (el teclado dejaba de llegar al
+        # visor tras crear cada capa).
+        self.btn_delete.setVisible(self._deletable)
 
         opacity_row = QHBoxLayout()
         opacity_row.setSpacing(4)
@@ -163,16 +170,23 @@ class LayerRow(QFrame):
         if event.button() == Qt.LeftButton:
             self.row_clicked.emit(self.layer_id)
 
+    def contextMenuEvent(self, event):
+        """Clic derecho: "Rasterizar capa" para formas y fondos (convertirlas en píxeles
+        para poder borrarlas, como en Photoshop). Las demás capas no tienen menú."""
+        if self._kind not in ("shape", "fill", "text"):
+            return
+        menu = QMenu(self)
+        action = menu.addAction(self.tr("Rasterizar capa"))
+        if menu.exec(event.globalPos()) is action:
+            self.rasterize_requested.emit(self.layer_id)
+
 
 class LayersPanel(QFrame):
-    """Contenido del panel flotante "Capas": estilo de dibujo arriba, lista de capas
-    abajo. Ya no elige la herramienta activa (eso vive en los botones de la franja
-    superior, ver ImageToolsTab._on_layers_tool_selected) -- set_active_tool_ui()
-    solo decide qué fila de estilo mostrar según la herramienta que se activó ahí.
+    """Contenido del panel flotante "Capas": botón "+ Fondo" y lista de capas. Ni
+    elige la herramienta activa ni su estilo (eso vive en los botones de la franja
+    superior y en sus opciones por clic derecho, ver tool_options_popover.py).
     No conoce LayerStack directamente -- ImageToolsTab hace de puente (mismo criterio
     que los otros popovers de esta pestaña)."""
-    draw_style_changed = Signal(object, object, int)  # fill QColor|None, stroke QColor|None, stroke_width
-    brush_style_changed = Signal(QColor, int)
     add_background_requested = Signal()
 
     layer_visibility_toggled = Signal(int, bool)
@@ -181,65 +195,18 @@ class LayersPanel(QFrame):
     layer_move_down_requested = Signal(int)
     layer_delete_requested = Signal(int)
     layer_selected = Signal(int)
+    layer_rasterize_requested = Signal(int)
+    marked_changed = Signal()  # cambió la fila marcada (el visor redibuja su contorno)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("layersPanel")
         self._rows: dict[int, LayerRow] = {}
-        self._fill_color = QColor("#3498db")
-        self._stroke_color = QColor("#1a1a1a")
+        self._selected_id: int | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.setSpacing(8)
-
-        # -- Estilo de dibujo: relleno / borde / ancho -- sin labels de texto al lado
-        # de los swatches (solo tooltip, icon-only como el resto de los botones chicos
-        # de la app): así el ancho de la fila no depende de cuánto mida "Relleno:"/
-        # "Borde:" en la fuente real (offscreen vs. Windows dan anchos bien distintos
-        # para el mismo texto -- ver nota en zoomable_image_viewer sobre límites del
-        # testing headless), y de paso queda más compacto/parecido a Photoshop.
-        style_row = QHBoxLayout()
-        style_row.setSpacing(6)
-        self.btn_fill_color = self._color_swatch(self._fill_color)
-        self.btn_fill_color.setToolTip(self.tr("Color de relleno"))
-        self.btn_fill_color.clicked.connect(self._pick_fill_color)
-        style_row.addWidget(self.btn_fill_color)
-        self.btn_stroke_color = self._color_swatch(self._stroke_color)
-        self.btn_stroke_color.setToolTip(self.tr("Color de borde"))
-        self.btn_stroke_color.clicked.connect(self._pick_stroke_color)
-        style_row.addWidget(self.btn_stroke_color)
-        self.entry_stroke_width = QLineEdit("2")
-        self.entry_stroke_width.setFixedWidth(34)
-        self.entry_stroke_width.setToolTip(self.tr("Ancho de borde (px)"))
-        self.entry_stroke_width.setPlaceholderText(self.tr("Ancho"))
-        self.entry_stroke_width.editingFinished.connect(self._emit_draw_style)
-        style_row.addWidget(self.entry_stroke_width)
-        style_row.addStretch()
-        self._style_row = style_row
-        layout.addLayout(style_row)
-
-        # -- Tamaño de pincel (solo visible con la herramienta Pincel) --
-        self.brush_row = QHBoxLayout()
-        self.brush_row.setSpacing(6)
-        lbl_brush = QLabel(self.tr("Pincel:"))
-        lbl_brush.setToolTip(self.tr("Tamaño del pincel"))
-        self.brush_row.addWidget(lbl_brush)
-        self.slider_brush_size = QSlider(Qt.Horizontal)
-        self.slider_brush_size.setRange(1, 100)
-        self.slider_brush_size.setValue(12)
-        _ignore_wheel(self.slider_brush_size)
-        self.slider_brush_size.valueChanged.connect(self._emit_brush_style)
-        self.brush_row.addWidget(self.slider_brush_size, 1)
-        self.lbl_brush_size_val = QLabel("12px")
-        self.lbl_brush_size_val.setFixedWidth(30)
-        self.brush_row.addWidget(self.lbl_brush_size_val)
-        layout.addLayout(self.brush_row)
-
-        # Arranca sin ninguna fila visible -- la herramienta activa por defecto es
-        # Seleccionar (ver ImageToolsTab), y set_active_tool_ui() ya sabe resolver
-        # qué mostrar según la herramienta real en vez de hardcodear "modo Formas".
-        self.set_active_tool_ui("select")
 
         # -- Botón Fondo (acción de una sola vez, no un tool de dibujo) --
         self.btn_add_background = QPushButton(self.tr("+ Fondo"))
@@ -289,73 +256,6 @@ class LayersPanel(QFrame):
         self.scroll.setMinimumHeight(160)
         layout.addWidget(self.scroll, 1)
 
-    def _color_swatch(self, color: QColor) -> QPushButton:
-        btn = QPushButton()
-        btn.setFixedSize(22, 22)
-        btn.setCursor(Qt.PointingHandCursor)
-        self._apply_swatch_style(btn, color)
-        return btn
-
-    def _apply_swatch_style(self, btn: QPushButton, color: QColor):
-        btn.setStyleSheet(f"""
-            QPushButton {{
-                min-width: 20px; max-width: 20px;
-                min-height: 20px; max-height: 20px;
-                background-color: {color.name()};
-                border: 1px solid #555555;
-                border-radius: 4px;
-                padding: 0px;
-            }}
-            QPushButton:hover {{
-                border-color: {get_theme_token('acento_primario', '#B9E640')};
-            }}
-        """)
-
-    def _pick_fill_color(self):
-        dialog = AdobeColorPickerDialog(self._fill_color.name(), self)
-        if dialog.exec():
-            self._fill_color = QColor(dialog.get_color())
-            self._apply_swatch_style(self.btn_fill_color, self._fill_color)
-            self._emit_draw_style()
-
-    def _pick_stroke_color(self):
-        dialog = AdobeColorPickerDialog(self._stroke_color.name(), self)
-        if dialog.exec():
-            self._stroke_color = QColor(dialog.get_color())
-            self._apply_swatch_style(self.btn_stroke_color, self._stroke_color)
-            self._emit_draw_style()
-
-    def _emit_draw_style(self):
-        try:
-            width = max(0, int(self.entry_stroke_width.text()))
-        except ValueError:
-            width = 2
-        self.draw_style_changed.emit(self._fill_color, self._stroke_color, width)
-
-    def _emit_brush_style(self, size: int):
-        self.lbl_brush_size_val.setText(f"{size}px")
-        self.brush_style_changed.emit(self._fill_color, size)
-
-    def _set_row_visible(self, row_layout, visible: bool):
-        for i in range(row_layout.count()):
-            w = row_layout.itemAt(i).widget()
-            if w:
-                w.setVisible(visible)
-
-    def set_active_tool_ui(self, tool: str):
-        """Llamado por ImageToolsTab cuando cambia la herramienta activa (botones de
-        la franja superior) -- decide si mostrar la fila de Relleno/Borde/Ancho
-        (formas), la de tamaño de Pincel, o ninguna (Seleccionar), y reemite el
-        estilo correspondiente para que el visor lo tenga aplicado desde ya."""
-        is_shape = tool in ("rect", "ellipse", "line")
-        is_brush = tool == "brush"
-        self._set_row_visible(self._style_row, is_shape)
-        self._set_row_visible(self.brush_row, is_brush)
-        if is_shape:
-            self._emit_draw_style()
-        elif is_brush:
-            self._emit_brush_style(self.slider_brush_size.value())
-
     # ------------------------------------------------------------------
     # Sincronización con LayerStack (llamado desde ImageToolsTab)
     # ------------------------------------------------------------------
@@ -381,6 +281,7 @@ class LayersPanel(QFrame):
             row.move_down_requested.connect(self.layer_move_down_requested.emit)
             row.delete_requested.connect(self.layer_delete_requested.emit)
             row.row_clicked.connect(self.layer_selected.emit)
+            row.rasterize_requested.connect(self.layer_rasterize_requested.emit)
             self.scroll_layout.addWidget(row)
             self._rows[layer.id] = row
 
@@ -402,5 +303,11 @@ class LayersPanel(QFrame):
         return None
 
     def select_row(self, layer_id: int | None):
+        self._selected_id = layer_id
         for lid, row in self._rows.items():
             row.set_selected(lid == layer_id)
+        self.marked_changed.emit()
+
+    def selected_layer_id(self) -> int | None:
+        """Capa marcada en la lista, o None si no hay ninguna (o si ya se borró)."""
+        return self._selected_id if self._selected_id in self._rows else None

@@ -30,7 +30,8 @@ class PixabayProvider(WebSourceProvider):
     api_key_instructions = QCoreApplication.translate(
         "PixabayProvider",
         "1. Inicia sesión o crea una cuenta gratuita en Pixabay.\n"
-        "2. En esa misma página, tu API key va a estar visible (se genera automáticamente).\n"
+        "2. Vuelve a esa misma página y baja hasta la tabla \"Parameters\": tu API key "
+        "aparece en la fila \"key\" (se genera automáticamente).\n"
         "3. Cópiala y pégala aquí abajo."
     )
 

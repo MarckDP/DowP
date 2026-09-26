@@ -35,6 +35,7 @@ from core.setup.ghostscript_setup import (
     check_ghostscript, download_ghostscript, get_local_version as gs_local,
     get_remote_version as gs_remote, get_install_info as gs_install_info,
 )
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class UpdateCheckWorker(QThread):
@@ -1989,6 +1990,7 @@ class DependenciesPage(QWidget):
         layout.addWidget(line)
 
         self.desc_label = QLabel(self.tr("Configura y administra los motores y dependencias externas de DowP 2.0."))
+        self.desc_label.setWordWrap(True)
         self.desc_label.setObjectName("settingsLabel")
         layout.addWidget(self.desc_label)
 
@@ -2001,10 +2003,9 @@ class DependenciesPage(QWidget):
         scroll_content = QWidget()
         scroll_content.setObjectName("settingsScrollContent")
         scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
-        self.scroll_layout = QVBoxLayout(scroll_content)
+        self.scroll_layout = TopAlignedVBoxLayout(scroll_content)
         self.scroll_layout.setContentsMargins(0, 0, 10, 0)
         self.scroll_layout.setSpacing(12)
-        self.scroll_layout.setAlignment(Qt.AlignTop)
 
         # 1. Tarjeta FFmpeg con opciones avanzadas
         self.ffmpeg_panel = FFmpegOptionsPanel()

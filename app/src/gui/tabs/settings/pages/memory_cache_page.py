@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from core.utils.i18n import logger
 from core.utils.cache_manager import CacheManager, format_bytes
 from gui.styles import apply_folder_browse_button_style
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class CacheCard(QFrame):
@@ -130,10 +131,9 @@ class MemoryCachePage(QWidget):
         self.scroll_content.setObjectName("settingsScrollContent")
         self.scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; }")
 
-        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(16)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         # ---------------- TARJETA RESUMEN TOTAL / MEDIDOR GLOBAL ----------------
         self.total_card = QFrame()

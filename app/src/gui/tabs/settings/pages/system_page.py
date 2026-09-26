@@ -17,6 +17,7 @@ from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config
 from core.utils.hardware_detector import detect_hardware
 from gui.styles import get_theme_token
+from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
 class ScanHardwareThread(QThread):
@@ -64,10 +65,9 @@ class SystemPage(QWidget):
         self.scroll_content.setObjectName("settingsScrollContent")
         self.scroll_content.setStyleSheet("QWidget#settingsScrollContent { background-color: transparent; border: none; }")
 
-        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout = TopAlignedVBoxLayout(self.scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(14)
-        self.content_layout.setAlignment(Qt.AlignTop)
 
         # --- SECCIÓN: VERSIÓN Y NOVEDADES ---
         # Mismo contenido que la ventana de "Novedades" que se muestra una vez
