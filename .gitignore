@@ -77,3 +77,10 @@ tools/updater/.staging/
 installer/
 
 PRUEBAS_PENDIENTES.md
+
+# Ignorar archivos Markdown (.md)
+*.md
+
+# Excepciones de archivos Markdown que SI queremos versionar
+!app/src/gui/themes/TEMAS.md
+!README.md
