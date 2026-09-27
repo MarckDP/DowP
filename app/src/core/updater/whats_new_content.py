@@ -24,30 +24,13 @@ def get_whats_new_items(version: str) -> list:
     version publicada, pero evita un IndexError/KeyError si se llama con
     algo inesperado).
 
-    "1.9.0" y "2.0.0" comparten el mismo contenido comparativo contra DowP 1
-    (el salto de version es el mismo, 1.9.0 es la beta previa) -- lo unico
+    "1.9.0", "1.9.1" y "2.0.0" comparten el mismo contenido comparativo contra
+    DowP 1: la 1.9.1 es el primer release publico (el de la 1.9.0 se retiro), asi
+    que quien la instala viene de DowP 1, igual que en la 2.0.0 -- lo unico
     que cambia es el aviso de beta, agregado arriba segun IS_BETA. Cuando
-    salgan mas betas (1.9.1, 1.9.2...) van a necesitar contenido propio, no
+    salgan mas betas (1.9.2, 1.9.3...) van a necesitar contenido propio, no
     reusar esto sin mas (ver ACTUALIZACIONES.md, "Lo que falta")."""
-    if version == "1.9.1":
-        items = []
-        if IS_BETA:
-            items.append((
-                QCoreApplication.translate("WhatsNewContent", "Estás probando una Beta"),
-                QCoreApplication.translate(
-                    "WhatsNewContent",
-                    "Esta es una versión de prueba, previa al lanzamiento oficial de DowP 2.0.0 "
-                    "-- puede tener errores todavía sin detectar. Vas a recibir actualizaciones "
-                    "seguidas mientras se termina de pulir, sin que tengas que reinstalar nada.",
-                ),
-            ))
-        items.append((
-            QCoreApplication.translate("WhatsNewContent", "Nuevos idiomas"),
-            QCoreApplication.translate("WhatsNewContent", "La aplicación ahora está completamente traducida al inglés y al portugués (Brasil)."),
-        ))
-        return items
-
-    if version not in ("1.9.0", "2.0.0"):
+    if version not in ("1.9.0", "1.9.1", "2.0.0"):
         return []
 
     items = []
@@ -80,12 +63,28 @@ def get_whats_new_items(version: str) -> list:
                 QCoreApplication.translate("WhatsNewContent", "Interfaz renovada para las herramientas de imagen."),
             ),
             (
+                QCoreApplication.translate("WhatsNewContent", "Herramientas de IA"),
+                QCoreApplication.translate("WhatsNewContent", "Mapas de profundidad y mapas de normales para imágenes y videos, con varios modelos a elegir, y reescalado de video con IA."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Más conversiones de imagen"),
+                QCoreApplication.translate("WhatsNewContent", "Convierte PDF a imágenes y vectoriza imágenes a SVG."),
+            ),
+            (
                 QCoreApplication.translate("WhatsNewContent", "Recodificación mejorada"),
                 QCoreApplication.translate("WhatsNewContent", "Proceso de recodificación con su propia pestaña dentro de Herramientas Multimedia."),
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Organizador de medios"),
-                QCoreApplication.translate("WhatsNewContent", "Nueva ventana para organizar archivos, cortar fragmentos, y buscar medios en Wikimedia y Freesound."),
+                QCoreApplication.translate("WhatsNewContent", "Nueva ventana para organizar archivos, cortar fragmentos y buscar medios en Wikimedia, Freesound, Pexels y Pixabay."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Buscador integrado"),
+                QCoreApplication.translate("WhatsNewContent", "Busca videos, canales y listas de reproducción de YouTube y SoundCloud sin salir de DowP."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Historial de descargas"),
+                QCoreApplication.translate("WhatsNewContent", "Consulta todo lo que has descargado desde un solo lugar."),
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Envío a editores mejorado"),
@@ -94,6 +93,10 @@ def get_whats_new_items(version: str) -> list:
             (
                 QCoreApplication.translate("WhatsNewContent", "Arrastre universal"),
                 QCoreApplication.translate("WhatsNewContent", "Arrastra fragmentos, medios locales o descargas directamente a cualquier editor, como si arrastraras desde una carpeta."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Nuevos idiomas"),
+                QCoreApplication.translate("WhatsNewContent", "La aplicación ahora está completamente traducida al inglés y al portugués (Brasil)."),
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Multiplataforma"),

@@ -1758,8 +1758,8 @@ Tem certeza?</translation>
     <name>CompressPanel</name>
     <message>
         <location filename="../../gui/tabs/video_tools/compress_panel.py" line="111"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="801"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="839"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="805"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="843"/>
         <source>Rápido</source>
         <translation>Rápido</translation>
     </message>
@@ -1771,7 +1771,7 @@ Tem certeza?</translation>
     <message>
         <location filename="../../gui/tabs/video_tools/compress_panel.py" line="166"/>
         <location filename="../../gui/tabs/video_tools/compress_panel.py" line="243"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="845"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="849"/>
         <source>Compatibilidad universal</source>
         <translation>Compatibilidade universal</translation>
     </message>
@@ -1786,196 +1786,196 @@ Tem certeza?</translation>
         <translation>Universal: H.264, reproduz em tudo. Melhor compressão: HEVC, arquivos menores.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="265"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="569"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="269"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="573"/>
         <source>La transparencia solo se puede codificar por CPU.</source>
         <translation>A transparência só pode ser codificada pela CPU.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="290"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="294"/>
         <source>Con transparencia siempre se usa VP9 en WebM: esta opción no cambia nada.</source>
         <translation>Com transparência, sempre se usa VP9 em WebM: esta opção não muda nada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="296"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="300"/>
         <source>Universal: AAC/MP3. Mejor compresión: Opus, pesa menos.</source>
         <translation>Universal: AAC/MP3. Melhor compressão: Opus, arquivos menores.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="314"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="318"/>
         <source>Selecciona un archivo en la cola para ver una sugerencia.</source>
         <translation>Selecione um arquivo na fila para ver uma sugestão.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="319"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="323"/>
         <source>Sugerencia: {0}. {1}</source>
         <translation>Sugestão: {0}. {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="338"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="342"/>
         <source>Peso total estimado de la cola ({0} archivos): ~{1:.0f} MB (-{2:.0f}% vs. ~{3:.0f} MB actuales)</source>
         <translation>Tamanho total estimado da fila ({0} arquivos): ~{1:.0f} MB (-{2:.0f}% vs. ~{3:.0f} MB atuais)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="343"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="347"/>
         <source>Peso total estimado de la cola ({0} archivos): ~{1:.0f} MB</source>
         <translation>Tamanho total estimado da fila ({0} arquivos): ~{1:.0f} MB</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="357"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="361"/>
         <source>Video + Audio</source>
         <translation>Vídeo + Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="357"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="494"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="361"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="498"/>
         <source>Solo Video</source>
         <translation>Somente Vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="357"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="492"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="361"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="496"/>
         <source>Solo Audio</source>
         <translation>Somente Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="363"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="367"/>
         <source>Video</source>
         <translation>Vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="366"/>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="438"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="370"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="442"/>
         <source>Códec:</source>
         <translation>Códec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="379"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="383"/>
         <source>Modo de calidad:</source>
         <translation>Modo de qualidade:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="384"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="388"/>
         <source>Calidad constante (CRF)</source>
         <translation>Qualidade constante (CRF)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="385"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="389"/>
         <source>Bitrate de video (kbps)</source>
         <translation>Bitrate de vídeo (kbps)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="386"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="390"/>
         <source>Tamaño objetivo (MB)</source>
         <translation>Tamanho alvo (MB)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="397"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="401"/>
         <source> (CRF/CQ — más bajo = más calidad y más peso)</source>
         <translation> (CRF/CQ — mais baixo = mais qualidade e mais tamanho)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="420"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="424"/>
         <source>El bitrate se calcula según la duración real de CADA archivo al iniciar — el tamaño final de cada uno se acerca al objetivo, sin importar cuánto dure.</source>
         <translation>O bitrate é calculado pela duração real de CADA arquivo ao iniciar — o tamanho final de cada um fica perto do alvo, não importa a duração.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="436"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="440"/>
         <source>Audio</source>
         <translation>Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="452"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="456"/>
         <source>Bitrate de audio:</source>
         <translation>Bitrate de áudio:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="466"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="470"/>
         <source>Contenedor de salida</source>
         <translation>Contêiner de saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="472"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="476"/>
         <source>Solo se muestran los contenedores compatibles con los códecs elegidos.</source>
         <translation>São mostrados apenas os contêineres compatíveis com os códecs escolhidos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="479"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="483"/>
         <source>Peso final estimado</source>
         <translation>Tamanho final estimado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="642"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="646"/>
         <source>Mismo que el original</source>
         <translation>Igual ao original</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="713"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="717"/>
         <source>Se guarda en WebM (VP9) para conservarla.</source>
         <translation>Salvo em WebM (VP9) para conservá-la.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="715"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="719"/>
         <source>Se descarta la transparencia (MP4).</source>
         <translation>A transparência é descartada (MP4).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="717"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="721"/>
         <source>La cola mezcla archivos con transparencia ({0}) y sin ella ({1}): los primeros se guardan en WebM (VP9, por CPU); el resto, en MP4 como siempre.</source>
         <translation>A fila mistura arquivos com transparência ({0}) e sem ela ({1}): os primeiros são salvos em WebM (VP9, pela CPU); o resto, em MP4 como sempre.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="728"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="732"/>
         <source>Se descarta la transparencia.</source>
         <translation>A transparência é descartada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="732"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="736"/>
         <source>Cambiado a VP9 para conservar la transparencia.</source>
         <translation>Alterado para VP9 para conservar a transparência.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="739"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="743"/>
         <source>Se conserva la transparencia.</source>
         <translation>A transparência é conservada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="742"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="746"/>
         <source>{0} en {1} no conserva la transparencia: se perderá. Para conservarla usa VP9 en WebM o MKV.</source>
         <translation>{0} em {1} não conserva a transparência: ela será perdida. Para conservá-la, use VP9 em WebM ou MKV.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="750"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="754"/>
         <source>Selecciona un archivo en la cola para estimar el peso.</source>
         <translation>Selecione um arquivo na fila para estimar o tamanho.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="754"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="758"/>
         <source>Duración del archivo todavía no disponible.</source>
         <translation>A duração do arquivo ainda não está disponível.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="767"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="771"/>
         <source>~{0:.1f} MB (audio: {1:.0f} kbps)</source>
         <translation>~{0:.1f} MB (áudio: {1:.0f} kbps)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="773"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="777"/>
         <source>No se puede estimar con calidad constante (CRF): el tamaño final depende del contenido del video, no es predecible de antemano.</source>
         <translation>Não dá para estimar com qualidade constante (CRF): o tamanho final depende do conteúdo do vídeo, não é previsível de antemão.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="785"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="789"/>
         <source>~{0:.1f} MB (video: {1:.0f} kbps)</source>
         <translation>~{0:.1f} MB (vídeo: {1:.0f} kbps)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="795"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="799"/>
         <source>~{0:.1f} MB (video: {1:.0f} kbps, audio: {2:.0f} kbps)</source>
         <translation>~{0:.1f} MB (vídeo: {1:.0f} kbps, áudio: {2:.0f} kbps)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="809"/>
+        <location filename="../../gui/tabs/video_tools/compress_panel.py" line="813"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
@@ -3556,9 +3556,9 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
     </message>
     <message>
         <location filename="../../gui/tabs/video_tools/editing_panel.py" line="156"/>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="488"/>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="525"/>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="558"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="494"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="531"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="564"/>
         <source>Rápido</source>
         <translation>Rápido</translation>
     </message>
@@ -3568,102 +3568,102 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="264"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="266"/>
         <source>Códec (siempre a su calidad más liviana/proxy):</source>
         <translation>Códec (sempre na qualidade mais leve/proxy):</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="272"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="274"/>
         <source>Resolución:</source>
         <translation>Resolução:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="308"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="310"/>
         <source>resolución completa</source>
         <translation>resolução completa</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="309"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="311"/>
         <source>mitad de resolución</source>
         <translation>metade da resolução</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="310"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="312"/>
         <source>un cuarto de resolución</source>
         <translation>um quarto da resolução</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="313"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="319"/>
         <source>Se generará como {0} en un archivo .mov, a {1}. El audio se copia tal cual si el original entra en .mov, o se pasa a PCM sin comprimir si no.</source>
         <translation>Será gerado como {0} em um arquivo .mov, a {1}. O áudio é copiado como está se o original couber no .mov, ou convertido para PCM sem compressão se não couber.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="326"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="332"/>
         <source>Códec y calidad</source>
         <translation>Códec e qualidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="338"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="344"/>
         <source>Implementación:</source>
         <translation>Implementação:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="346"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="352"/>
         <source>Calidad:</source>
         <translation>Qualidade:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="355"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="361"/>
         <source>Resolución</source>
         <translation>Resolução</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="364"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="370"/>
         <source>El audio se copia tal cual cuando el original entra en .mov; si no, se recodifica a PCM sin comprimir. Estos códecs no tienen aceleración por hardware en ffmpeg: siempre se codifican por CPU.</source>
         <translation>O áudio é copiado como está quando o original cabe no .mov; se não, é recodificado para PCM sem compressão. Estes códecs não têm aceleração por hardware no ffmpeg: são sempre codificados pela CPU.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="443"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="449"/>
         <source>DNxHR no admite transparencia.</source>
         <translation>O DNxHR não admite transparência.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="491"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="497"/>
         <source>La cola mezcla archivos con transparencia ({0}) y sin ella ({1}): los primeros usan ProRes 4444; el resto, el perfil Proxy.</source>
         <translation>A fila mistura arquivos com transparência ({0}) e sem ela ({1}): os primeiros usam ProRes 4444; o resto, o perfil Proxy.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="494"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="500"/>
         <source>Se descarta la transparencia.</source>
         <translation>A transparência é descartada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="499"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="505"/>
         <source>Cambiado a ProRes para conservar la transparencia (DNxHR no la admite).</source>
         <translation>Alterado para ProRes para conservar a transparência (o DNxHR não a admite).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="503"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="509"/>
         <source>DNxHR no admite transparencia: se perderá. Para conservarla usa ProRes o CineForm.</source>
         <translation>O DNxHR não admite transparência: ela será perdida. Para conservá-la, use ProRes ou CineForm.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="506"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="512"/>
         <source>Se conserva la transparencia: se usa ProRes 4444 en vez del perfil Proxy (el Proxy no admite transparencia; el archivo será más pesado).</source>
         <translation>A transparência é conservada: usa-se ProRes 4444 em vez do perfil Proxy (o Proxy não admite transparência; o arquivo será mais pesado).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="510"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="516"/>
         <source>Este perfil de ProRes no admite transparencia: se perderá. Para conservarla elige 4444 o 4444 XQ.</source>
         <translation>Este perfil de ProRes não admite transparência: ela será perdida. Para conservá-la, escolha 4444 ou 4444 XQ.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="513"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="519"/>
         <source>Se conserva la transparencia.</source>
         <translation>A transparência é conservada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="531"/>
+        <location filename="../../gui/tabs/video_tools/editing_panel.py" line="537"/>
         <source>Iniciar Recodificación</source>
         <translation>Iniciar Recodificação</translation>
     </message>
@@ -11811,114 +11811,152 @@ só é necessário se você for exportar para esse formato.</translation>
 <context>
     <name>WhatsNewContent</name>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="36"/>
-        <location filename="../../core/updater/whats_new_content.py" line="56"/>
+        <location filename="../../core/updater/whats_new_content.py" line="39"/>
         <source>Estás probando una Beta</source>
         <translation>Você está testando uma Beta</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="37"/>
-        <location filename="../../core/updater/whats_new_content.py" line="57"/>
+        <location filename="../../core/updater/whats_new_content.py" line="40"/>
         <source>Esta es una versión de prueba, previa al lanzamiento oficial de DowP 2.0.0 -- puede tener errores todavía sin detectar. Vas a recibir actualizaciones seguidas mientras se termina de pulir, sin que tengas que reinstalar nada.</source>
         <translation>Esta é uma versão de teste, anterior ao lançamento oficial do DowP 2.0.0 -- ela pode ter erros ainda não detectados. Você vai receber atualizações seguidas enquanto ela é finalizada, sem precisar reinstalar nada.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="45"/>
+        <location filename="../../core/updater/whats_new_content.py" line="79"/>
+        <source>Nueva ventana para organizar archivos, cortar fragmentos y buscar medios en Wikimedia, Freesound, Pexels y Pixabay.</source>
+        <translation>Nova janela para organizar arquivos, cortar trechos e buscar mídias no Wikimedia, Freesound, Pexels e Pixabay.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="82"/>
+        <source>Buscador integrado</source>
+        <translation>Busca integrada</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="83"/>
+        <source>Busca videos, canales y listas de reproducción de YouTube y SoundCloud sin salir de DowP.</source>
+        <translation>Busque vídeos, canais e playlists do YouTube e do SoundCloud sem sair do DowP.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="86"/>
+        <source>Historial de descargas</source>
+        <translation>Histórico de downloads</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="87"/>
+        <source>Consulta todo lo que has descargado desde un solo lugar.</source>
+        <translation>Veja tudo o que você baixou em um só lugar.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="98"/>
         <source>Nuevos idiomas</source>
         <translation>Novos idiomas</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="46"/>
+        <location filename="../../core/updater/whats_new_content.py" line="99"/>
         <source>La aplicación ahora está completamente traducida al inglés y al portugués (Brasil).</source>
         <translation>O aplicativo agora está totalmente traduzido para inglês e português (Brasil).</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="67"/>
+        <location filename="../../core/updater/whats_new_content.py" line="50"/>
         <source>Interfaz renovada</source>
         <translation>Interface renovada</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="68"/>
+        <location filename="../../core/updater/whats_new_content.py" line="51"/>
         <source>Rediseño visual completo de la aplicación.</source>
         <translation>Redesign visual completo do aplicativo.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="71"/>
+        <location filename="../../core/updater/whats_new_content.py" line="54"/>
         <source>Modo Rápido</source>
         <translation>Modo Rápido</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="72"/>
+        <location filename="../../core/updater/whats_new_content.py" line="55"/>
         <source>Nueva forma de descargar en segundos, sin pasar por el proceso avanzado.</source>
         <translation>Nova forma de baixar em segundos, sem passar pelo processo avançado.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="75"/>
+        <location filename="../../core/updater/whats_new_content.py" line="58"/>
         <source>Proceso Avanzado unificado</source>
         <translation>Processo Avançado unificado</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="76"/>
+        <location filename="../../core/updater/whats_new_content.py" line="59"/>
         <source>Proceso único y proceso por lotes ahora viven en una sola pestaña.</source>
         <translation>Processo único e processo em lotes agora ficam numa aba só.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="79"/>
+        <location filename="../../core/updater/whats_new_content.py" line="62"/>
         <source>Editor de Imagen mejorado</source>
         <translation>Editor de Imagem melhorado</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="80"/>
+        <location filename="../../core/updater/whats_new_content.py" line="63"/>
         <source>Interfaz renovada para las herramientas de imagen.</source>
         <translation>Interface renovada para as ferramentas de imagem.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="83"/>
+        <location filename="../../core/updater/whats_new_content.py" line="66"/>
+        <source>Herramientas de IA</source>
+        <translation>Ferramentas de IA</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="67"/>
+        <source>Mapas de profundidad y mapas de normales para imágenes y videos, con varios modelos a elegir, y reescalado de video con IA.</source>
+        <translation>Mapas de profundidade e mapas normais para imagens e vídeos, com vários modelos para escolher, além de upscaling de vídeo com IA.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="70"/>
+        <source>Más conversiones de imagen</source>
+        <translation>Mais conversões de imagem</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="71"/>
+        <source>Convierte PDF a imágenes y vectoriza imágenes a SVG.</source>
+        <translation>Converta PDFs em imagens e vetorize imagens em SVG.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="74"/>
         <source>Recodificación mejorada</source>
         <translation>Recodificação melhorada</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="84"/>
+        <location filename="../../core/updater/whats_new_content.py" line="75"/>
         <source>Proceso de recodificación con su propia pestaña dentro de Herramientas Multimedia.</source>
         <translation>Processo de recodificação com aba própria dentro das Ferramentas de Mídia.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="87"/>
+        <location filename="../../core/updater/whats_new_content.py" line="78"/>
         <source>Organizador de medios</source>
         <translation>Organizador de mídias</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="88"/>
-        <source>Nueva ventana para organizar archivos, cortar fragmentos, y buscar medios en Wikimedia y Freesound.</source>
-        <translation>Nova janela para organizar arquivos, cortar trechos e buscar mídias na Wikimedia e no Freesound.</translation>
-    </message>
-    <message>
-        <location filename="../../core/updater/whats_new_content.py" line="91"/>
+        <location filename="../../core/updater/whats_new_content.py" line="90"/>
         <source>Envío a editores mejorado</source>
         <translation>Envio a editores melhorado</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="92"/>
+        <location filename="../../core/updater/whats_new_content.py" line="91"/>
         <source>Sistema mejorado para mandar medios a los editores compatibles (Premiere, After Effects, DaVinci...).</source>
         <translation>Sistema melhorado para mandar mídias aos editores compatíveis (Premiere, After Effects, DaVinci...).</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="95"/>
+        <location filename="../../core/updater/whats_new_content.py" line="94"/>
         <source>Arrastre universal</source>
         <translation>Arrasto universal</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="96"/>
+        <location filename="../../core/updater/whats_new_content.py" line="95"/>
         <source>Arrastra fragmentos, medios locales o descargas directamente a cualquier editor, como si arrastraras desde una carpeta.</source>
         <translation>Arraste fragmentos, mídias locais ou downloads direto para qualquer editor, como se estivesse arrastando de uma pasta.</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="99"/>
+        <location filename="../../core/updater/whats_new_content.py" line="102"/>
         <source>Multiplataforma</source>
         <translation>Multiplataforma</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="100"/>
+        <location filename="../../core/updater/whats_new_content.py" line="103"/>
         <source>Ahora compatible con macOS, y en teoría con Linux.</source>
         <translation>Agora compatível com macOS, e em tese com Linux.</translation>
     </message>
