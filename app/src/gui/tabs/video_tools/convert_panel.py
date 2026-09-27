@@ -28,12 +28,20 @@ from core.utils.recode_guard import (
 from core.tabs.video_tools.codec_profiles import build_custom_quality_args, build_custom_bitrate_args, build_custom_audio_bitrate_args
 from core.tabs.video_tools.size_estimator import parse_duration_to_seconds
 import core.tabs.video_tools.convert_advisor as advisor
+from core.tabs.video_tools.alpha_policy import (
+    meta_has_alpha, keeps_alpha, is_one_bit, codec_label, quick_alpha_containers,
+    quick_alpha_codec, alpha_capable_codecs, alpha_video_args, QUICK_ALPHA_CODECS,
+)
+from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
 
 # Mismo criterio que Comprimir: solo familias de video/audio orientadas a
 # distribucion (ProRes/DNxHR/GIF/lossless quedan exclusivos de Avanzado).
 _VIDEO_CODEC_IDS = ["h264", "hevc", "av1", "vp9"]
+# Con "Conservar transparencia" activa, Manual ofrece en cambio los códecs que la
+# conservan (de uso común + QuickTime Animation), filtrados por el contenedor elegido.
+_ALPHA_CODEC_IDS = ["vp9", "prores", "vp8", "cfhd", "qtrle", "gif", "webp", "apng"]
 _AUDIO_CODEC_IDS = ["aac", "opus", "mp3"]
 
 _QUALITY_MODE_CQ = "cq"
@@ -65,6 +73,12 @@ class ConvertPanel(QWidget):
         self._source_filepath = None
         self._queue_entries: list[tuple[str, dict]] = []
         self._force_cpu_manual = False
+        # Transparencia en la cola (ver set_queue_alpha_counts) y lo que había elegido el
+        # usuario antes de que la casilla lo cambiara solo (se restaura al desmarcar).
+        self._queue_alpha = (0, 0)
+        self._quick_container_before_alpha = None
+        self._manual_container_before_alpha = None
+        self._manual_codec_before_alpha = None
         self._init_ui()
         self._reload_manual_video_codecs()
         self._refresh_quick_status()
@@ -140,7 +154,36 @@ class ConvertPanel(QWidget):
         combo.setItemDelegate(CheckmarkComboDelegate(combo))
         combo.setCursor(Qt.PointingHandCursor)
 
-    def _populate_container_combo(self, combo: QComboBox):
+    def _repopulate_container_combo(self, combo: QComboBox, keeps_fn, before_attr: str):
+        """Rearma el combo mostrando solo los contenedores de video donde `keeps_fn(c)` es
+        True (o todos si keeps_fn es None). Si el elegido desaparece se pasa solo al
+        primero que conserva transparencia (WebM si está) y se recuerda en `before_attr`
+        para volver a él al desmarcar la casilla."""
+        current = combo.currentData()
+        before = getattr(self, before_attr)
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            self._populate_container_combo(combo, keeps_fn)
+            if keeps_fn is None and before:
+                wanted = before
+                setattr(self, before_attr, None)
+            else:
+                wanted = current
+            idx = combo.findData(wanted) if wanted else -1
+            if idx < 0 and keeps_fn is not None:
+                if current and before is None:
+                    setattr(self, before_attr, current)
+                idx = combo.findData("webm")
+            if idx < 0:
+                idx = combo.findData("mp4")
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+        finally:
+            combo.blockSignals(False)
+        return combo.currentData() != current
+
+    def _populate_container_combo(self, combo: QComboBox, keeps_fn=None):
         """Lista COMPLETA de contenedores del matrix (a diferencia de Comprimir, aquí no
         se filtra por códec de origen: el usuario elige destino libremente, la app decide
         después si hace falta recodificar - ver convert_advisor.plan_conversion), agrupada
@@ -151,7 +194,8 @@ class ConvertPanel(QWidget):
         códec de video (ver advisor._FORCE_AUDIO_ONLY_CONTAINERS) - para que sea obvio de
         entrada qué contenedores implican descartar el video."""
         all_ids = get_compatible_containers([])
-        video_ids = [c for c in all_ids if advisor.container_accepts_video_for_convert(c)]
+        video_ids = [c for c in all_ids if advisor.container_accepts_video_for_convert(c)
+                     and (keeps_fn is None or keeps_fn(c))]
         audio_ids = [c for c in all_ids if not advisor.container_accepts_video_for_convert(c)]
         model = combo.model()
 
@@ -194,6 +238,10 @@ class ConvertPanel(QWidget):
         self.combo_quick_container.currentIndexChanged.connect(self._on_quick_container_changed)
         v.addWidget(self.combo_quick_container)
 
+        self.alpha_quick = KeepAlphaOption(page)
+        self.alpha_quick.toggled.connect(lambda _c: self._refresh_quick_containers())
+        v.addWidget(self.alpha_quick)
+
         status_frame, status_layout = self._card_frame(self.tr("Este archivo"), page)
         self.lbl_quick_video_status = QLabel("", status_frame)
         self.lbl_quick_video_status.setWordWrap(True)
@@ -212,6 +260,15 @@ class ConvertPanel(QWidget):
         return page
 
     def _on_quick_container_changed(self, *_args):
+        self._quick_container_before_alpha = None  # elección del usuario: no se restaura otra
+        self._refresh_quick_status()
+
+    def _refresh_quick_containers(self):
+        """Con "Conservar transparencia" activa, solo contenedores que la guardan."""
+        active = self.alpha_quick.is_active()
+        self._repopulate_container_combo(
+            self.combo_quick_container, (lambda c: quick_alpha_codec(c) is not None) if active else None,
+            "_quick_container_before_alpha")
         self._refresh_quick_status()
 
     def _current_quick_container(self) -> str:
@@ -232,14 +289,56 @@ class ConvertPanel(QWidget):
             self.lbl_quick_video_status.setText(self.tr("Selecciona un archivo en la cola para ver el detalle."))
             self.lbl_quick_audio_status.setText("")
         else:
-            plan = advisor.plan_conversion(self._source_meta, self._current_quick_container())
+            container = self._current_quick_container()
+            plan = advisor.plan_conversion(self._source_meta, container)
+            a_plan = advisor.alpha_plan(self._source_meta, container, self.alpha_quick.is_checked())
             if plan["video_dropped_audio_only_container"]:
                 self.lbl_quick_video_status.setText(self.tr("Video: se descarta — este contenedor es solo de audio."))
+            elif a_plan and a_plan["action"] == "recode":
+                self.lbl_quick_video_status.setText(self.tr(
+                    "Video: se recodifica a {0} para conservar la transparencia.").format(codec_label(a_plan["codec"])))
             else:
                 self.lbl_quick_video_status.setText(self._stream_status_text(self.tr("Video"), plan["video"], plan["video_codec_source"]))
             self.lbl_quick_audio_status.setText(self._stream_status_text(self.tr("Audio"), plan["audio"], plan["audio_codec_source"]))
+        self._refresh_quick_alpha_status()
 
         self._refresh_queue_summary()
+
+    def _alpha_containers_text(self) -> str:
+        names = [CONTAINER_LABELS.get(c, c.upper()) for c in quick_alpha_containers()]
+        if len(names) > 1:
+            return self.tr("{0} o {1}").format(", ".join(names[:-1]), names[-1])
+        return names[0] if names else ""
+
+    def _refresh_quick_alpha_status(self):
+        if not hasattr(self, "alpha_quick"):
+            return
+        self.alpha_quick.set_availability(meta_has_alpha(self._source_meta), self._queue_alpha[0])
+        self.alpha_quick.set_queue_mix(*self._queue_alpha)
+        container = self._current_quick_container()
+        if self.alpha_quick.is_active() and self._quick_container_before_alpha:
+            self.alpha_quick.set_status(self.tr("Cambiado a {0} para conservar la transparencia.").format(
+                CONTAINER_LABELS.get(container, container.upper())), "ok")
+            return
+        # Archivo seleccionado opaco (la casilla está por otros de la cola): se describe
+        # qué les pasa a esos, como si el seleccionado la tuviera.
+        meta = self._source_meta if meta_has_alpha(self._source_meta) else {**(self._source_meta or {}), "has_alpha": True}
+        a_plan = advisor.alpha_plan(meta, container, self.alpha_quick.is_checked())
+        if a_plan is None:
+            self.alpha_quick.set_status("", "muted")
+        elif a_plan["action"] == "dropped":
+            self.alpha_quick.set_status(self.tr("Se descarta la transparencia."), "muted")
+        elif a_plan["action"] == "lost":
+            self.alpha_quick.set_status(self.tr(
+                "{0} no guarda transparencia: se perderá. Para conservarla elige {1}.").format(
+                CONTAINER_LABELS.get(container, container.upper()), self._alpha_containers_text()), "warning")
+        elif is_one_bit(a_plan["codec"], container):
+            self.alpha_quick.set_status(self.tr(
+                "Se conserva la transparencia, pero solo como transparente u opaco (los bordes "
+                "semitransparentes quedan opacos)."), "ok")
+        else:
+            self.alpha_quick.set_status(self.tr("Se conserva la transparencia ({0}).").format(
+                codec_label(a_plan["codec"])), "ok")
 
     def _refresh_queue_summary(self):
         if not hasattr(self, "lbl_queue_summary"):
@@ -339,6 +438,10 @@ class ConvertPanel(QWidget):
         self.spin_manual_target_mb.setVisible(False)
         vv.addWidget(self.spin_manual_target_mb)
 
+        self.alpha_manual = KeepAlphaOption(frame_video)
+        self.alpha_manual.toggled.connect(self._on_manual_alpha_toggled)
+        vv.addWidget(self.alpha_manual)
+
         v.addWidget(frame_video)
 
         # Audio
@@ -370,14 +473,61 @@ class ConvertPanel(QWidget):
         self._reload_manual_audio_codecs()
         return page
 
+    def _manual_alpha_active(self) -> bool:
+        return hasattr(self, "alpha_manual") and self.alpha_manual.is_active()
+
+    def _source_video_codec(self) -> str | None:
+        if not self._source_meta:
+            return None
+        return advisor.plan_conversion(self._source_meta, "mkv").get("video_codec_source")
+
+    def _manual_container_keeps_alpha(self, container_id: str) -> bool:
+        source = self._source_video_codec()
+        return bool(alpha_capable_codecs(_ALPHA_CODEC_IDS, [container_id])
+                    or (source and keeps_alpha(source, container_id)))
+
+    def _on_manual_alpha_toggled(self, *_args):
+        active = self._manual_alpha_active()
+        self._repopulate_container_combo(
+            self.combo_manual_container, self._manual_container_keeps_alpha if active else None,
+            "_manual_container_before_alpha")
+        self._building = True
+        self._on_manual_container_changed_impl()
+        self._building = False
+        self._reload_manual_video_codecs()
+
     def _reload_manual_video_codecs(self):
+        """Lista de códecs. Con "Conservar transparencia" activa: los que la conservan en
+        el contenedor elegido (+ Copiar si el códec de origen ya la conserva ahí). Si el
+        elegido no queda en la lista se cambia solo al primero y se recuerda para volver a
+        él al desmarcar."""
+        alpha = self._manual_alpha_active()
+        container_id = self.combo_manual_container.currentData() or "mp4"
+        current = self.combo_manual_video_codec.currentData()
         self._building = True
         try:
             self.combo_manual_video_codec.clear()
-            self.combo_manual_video_codec.addItem(self.tr("Copiar (si es compatible)"), "copy")
-            for codec in get_video_codecs(only_verified=False):
-                if codec["codec_id"] in _VIDEO_CODEC_IDS:
-                    self.combo_manual_video_codec.addItem(codec["display_name"], codec["codec_id"])
+            source = self._source_video_codec()
+            if not alpha or (source and keeps_alpha(source, container_id)):
+                self.combo_manual_video_codec.addItem(self.tr("Copiar (si es compatible)"), "copy")
+            if alpha:
+                for codec_id in alpha_capable_codecs(_ALPHA_CODEC_IDS, [container_id]):
+                    self.combo_manual_video_codec.addItem(codec_label(codec_id), codec_id)
+            else:
+                for codec in get_video_codecs(only_verified=False):
+                    if codec["codec_id"] in _VIDEO_CODEC_IDS:
+                        self.combo_manual_video_codec.addItem(codec["display_name"], codec["codec_id"])
+            if not alpha and self._manual_codec_before_alpha:
+                wanted = self._manual_codec_before_alpha
+                self._manual_codec_before_alpha = None
+            else:
+                wanted = current
+            idx = self.combo_manual_video_codec.findData(wanted) if wanted else -1
+            if idx < 0:
+                if alpha and current and self._manual_codec_before_alpha is None:
+                    self._manual_codec_before_alpha = current
+                idx = 0  # con transparencia, "Copiar" solo está si el origen ya la conserva ahí
+            self.combo_manual_video_codec.setCurrentIndex(max(idx, 0))
         finally:
             self._building = False
         self._on_manual_video_codec_changed()
@@ -400,6 +550,9 @@ class ConvertPanel(QWidget):
         return self.combo_manual_audio_codec.currentData() or "copy"
 
     def _current_manual_video_encoder(self, codec_id: str) -> str:
+        if self._manual_alpha_active():
+            # Ningún encoder por GPU guarda transparencia.
+            return software_encoder(codec_id) or resolve_encoder(codec_id) or "libvpx-vp9"
         if self._force_cpu_manual:
             return software_encoder(codec_id) or resolve_encoder(codec_id) or "libx264"
         return resolve_encoder(codec_id) or "libx264"
@@ -409,25 +562,34 @@ class ConvertPanel(QWidget):
             return
         choice = self._current_manual_video_choice()
         is_copy = (choice == "copy")
-        self.rb_quality_cq.setEnabled(not is_copy)
-        self.rb_quality_bitrate.setEnabled(not is_copy)
-        self.rb_quality_target.setEnabled(not is_copy)
-        self.spin_manual_cq.setEnabled(not is_copy)
-        self.spin_manual_bitrate.setEnabled(not is_copy)
-        self.spin_manual_target_mb.setEnabled(not is_copy)
-        if is_copy:
+        # Códecs de transparencia sin control de CRF/bitrate (ProRes 4444, CineForm, GIF,
+        # WebP...): se codifican con su calidad fija de alfa (ver alpha_video_args).
+        fixed_quality = is_copy or self._manual_uses_alpha_args(choice)
+        self.rb_quality_cq.setEnabled(not fixed_quality)
+        self.rb_quality_bitrate.setEnabled(not fixed_quality)
+        self.rb_quality_target.setEnabled(not fixed_quality)
+        self.spin_manual_cq.setEnabled(not fixed_quality)
+        self.spin_manual_bitrate.setEnabled(not fixed_quality)
+        self.spin_manual_target_mb.setEnabled(not fixed_quality)
+        self._refresh_manual_engine_badge()
+        self._on_manual_changed()
+
+    def _manual_uses_alpha_args(self, choice: str) -> bool:
+        return self._manual_alpha_active() and choice not in ("copy", "vp9")
+
+    def _refresh_manual_engine_badge(self):
+        choice = self._current_manual_video_choice()
+        if choice == "copy":
             self.badge_manual_video_engine.set_state(False, False)
             self.badge_manual_video_engine.setVisible(False)
-        else:
-            self.badge_manual_video_engine.setVisible(True)
-            self.badge_manual_video_engine.set_state(has_hardware_encoder(choice), self._force_cpu_manual)
-        self._on_manual_changed()
+            return
+        self.badge_manual_video_engine.setVisible(True)
+        locked = self.tr("La transparencia solo se puede codificar por CPU.") if self._manual_alpha_active() else None
+        self.badge_manual_video_engine.set_state(has_hardware_encoder(choice), self._force_cpu_manual, locked)
 
     def _on_manual_force_cpu_toggled(self, force_cpu: bool):
         self._force_cpu_manual = force_cpu
-        choice = self._current_manual_video_choice()
-        if choice != "copy":
-            self.badge_manual_video_engine.set_state(has_hardware_encoder(choice), self._force_cpu_manual)
+        self._refresh_manual_engine_badge()
         self._on_manual_changed()
 
     def _on_quality_mode_toggled(self, *_args):
@@ -460,6 +622,8 @@ class ConvertPanel(QWidget):
         return None  # CRF: sin bitrate fijo.
 
     def _build_manual_video_args(self, codec_id: str, duration_sec: float | None) -> list[str]:
+        if self._manual_uses_alpha_args(codec_id):
+            return alpha_video_args(codec_id)
         encoder = self._current_manual_video_encoder(codec_id)
         mode = self._current_quality_mode()
         if mode == _QUALITY_MODE_CQ:
@@ -477,9 +641,15 @@ class ConvertPanel(QWidget):
         # (ver advisor._FORCE_AUDIO_ONLY_CONTAINERS - ej. m4a/ogg), no tiene sentido
         # mostrar la tarjeta de Video ni dejar que el usuario elija un códec que Convertir
         # va a descartar de todos modos.
+        self._manual_container_before_alpha = None  # elección del usuario
+        self._on_manual_container_changed_impl()
+        if self._manual_alpha_active():
+            self._reload_manual_video_codecs()  # los códecs con alfa dependen del contenedor
+        self._on_manual_changed()
+
+    def _on_manual_container_changed_impl(self):
         container_id = self.combo_manual_container.currentData() or "mp4"
         self.frame_video.setVisible(advisor.container_accepts_video_for_convert(container_id))
-        self._on_manual_changed()
 
     def _on_manual_changed(self, *_args):
         if self._building:
@@ -489,6 +659,7 @@ class ConvertPanel(QWidget):
     def _revalidate_manual(self):
         if not hasattr(self, "lbl_manual_status"):
             return
+        self._refresh_manual_alpha_status()
         if not self._source_meta:
             self._set_valid(True, "")
             self.lbl_manual_status.setText(self.tr("Selecciona un archivo en la cola para validar la configuración."))
@@ -538,6 +709,29 @@ class ConvertPanel(QWidget):
         self._set_valid(True, "")
         self.lbl_manual_status.setText(self.tr("Configuración válida para este archivo."))
 
+    def _refresh_manual_alpha_status(self):
+        container_id = self.combo_manual_container.currentData() or "mp4"
+        has_video = advisor.container_accepts_video_for_convert(container_id)
+        self.alpha_manual.set_availability(meta_has_alpha(self._source_meta) and has_video,
+                                           self._queue_alpha[0] if has_video else 0)
+        self.alpha_manual.set_queue_mix(*self._queue_alpha)
+        if not self.alpha_manual.is_checked():
+            self.alpha_manual.set_status(self.tr("Se descarta la transparencia."), "muted")
+            return
+        choice = self._current_manual_video_choice()
+        if self._manual_codec_before_alpha or self._manual_container_before_alpha:
+            changed = codec_label(choice) if choice != "copy" else CONTAINER_LABELS.get(container_id, container_id.upper())
+            self.alpha_manual.set_status(self.tr("Cambiado a {0} para conservar la transparencia.").format(changed), "ok")
+            return
+        codec = self._source_video_codec() if choice == "copy" else choice
+        container_label = CONTAINER_LABELS.get(container_id, container_id.upper())
+        if keeps_alpha(codec, container_id):
+            self.alpha_manual.set_status(self.tr("Se conserva la transparencia."), "ok")
+        else:
+            self.alpha_manual.set_status(self.tr(
+                "{0} en {1} no conserva la transparencia: se perderá. Para conservarla usa VP9 "
+                "en WebM o MKV.").format(codec_label(codec), container_label), "warning")
+
     def _set_valid(self, valid: bool, reason: str):
         self._invalid_reason = reason
         changed = valid != self._last_valid
@@ -567,12 +761,24 @@ class ConvertPanel(QWidget):
     def set_source_media(self, meta: dict, filepath: str):
         self._source_meta = meta or None
         self._source_filepath = filepath
-        self._refresh_quick_status()
+        self._refresh_alpha_filters()
         self._revalidate_manual()
 
     def set_queue_entries(self, entries: list[tuple[str, dict]]):
         self._queue_entries = entries or []
         self._refresh_queue_summary()
+
+    def set_queue_alpha_counts(self, with_alpha: int, without_alpha: int):
+        self._queue_alpha = (with_alpha, without_alpha)
+        self._refresh_alpha_filters()
+
+    def _refresh_alpha_filters(self):
+        """La disponibilidad de la casilla cambió (otro archivo o la cola): se re-filtran
+        las listas de ambos modos."""
+        self._refresh_quick_alpha_status()
+        self._refresh_quick_containers()
+        self._refresh_manual_alpha_status()
+        self._on_manual_alpha_toggled()
 
     def get_settings(self, meta_override: dict | None = None, filepath_override: str | None = None) -> dict:
         is_quick = self.mode_selector.current_mode() == self.tr("Rápido")
@@ -580,7 +786,7 @@ class ConvertPanel(QWidget):
 
         if is_quick:
             container_id = self._current_quick_container()
-            return advisor.build_settings(meta, container_id)
+            return advisor.build_settings(meta, container_id, keep_alpha=self.alpha_quick.is_checked())
 
         container_id = self.combo_manual_container.currentData() or "mp4"
         plan = advisor.plan_conversion(meta, container_id)
@@ -593,6 +799,8 @@ class ConvertPanel(QWidget):
             stream_mode = "video_only"
 
         settings = {"container": container_id, "stream_mode": stream_mode}
+        if meta_has_alpha(meta):
+            settings["keep_alpha"] = self.alpha_manual.is_checked()
 
         if plan["video"] is not None:
             video_choice = self._current_manual_video_choice()

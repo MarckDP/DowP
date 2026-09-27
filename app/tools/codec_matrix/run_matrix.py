@@ -25,7 +25,10 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
-from codec_specs import CONTAINERS, VIDEO_CODECS, AUDIO_CODECS, MXF_COMPANION_VIDEO_ENCODER, MXF_REQUIRED_AUDIO_RATE
+from codec_specs import (
+    CONTAINERS, VIDEO_CODECS, AUDIO_CODECS, MXF_COMPANION_VIDEO_ENCODER, MXF_REQUIRED_AUDIO_RATE,
+    ALPHA_OVERRIDES, ALPHA_DECODERS,
+)
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_FFMPEG = os.path.join(REPO_ROOT, "bin", "dependences", "ffmpeg", "ffmpeg.exe")
@@ -295,6 +298,184 @@ def _probe_dimension_alignment(ffmpeg, spec):
     }
 
 
+# ─── Transparencia (canal alfa) ───────────────────────────────────────────────
+# Clasificacion del alfa leido en las 3 franjas (0 / 128 / 255):
+#   "full"       alfa completo (la franja semitransparente sigue semitransparente)
+#   "1bit"       solo transparente u opaco (GIF): la semitransparente pasa a 0 o 255
+#   "lost"       todo opaco: el alfa se descarto
+#   "partial"    otro patron (se guarda el alfa leido para revisarlo a mano)
+#   "write_error" el encoder/muxer no pudo escribir el archivo con alfa
+#   "unreadable" se escribio, pero ffmpeg no puede volver a leerlo
+_ALPHA_STRIPES = (0, 128, 255)
+
+
+def _alpha_source(spec):
+    size = spec.get("size", "256x256")
+    fps = spec.get("fps", "25")
+    geq = "geq=r='255':g='0':b='0':a='if(lt(X,W/3),0,if(lt(X,2*W/3),128,255))'"
+    return ["-f", "lavfi", "-i", f"color=c=red:s={size}:r={fps}:d=1,format=rgba,{geq}"]
+
+
+def _alpha_encode_cmd(ffmpeg, spec, override, pix_fmt, muxer, out_path):
+    cmd = [ffmpeg, "-y", "-v", "error", *_alpha_source(spec)]
+    if pix_fmt:
+        cmd += ["-pix_fmt", pix_fmt]
+    # 12 fotogramas, no 3: con muy pocos, MPEG-TS/PS no llegan a exponer los parametros
+    # del codec al releer (H.264 en TS con 3 fotogramas da "could not find codec
+    # parameters", con 12 se lee bien) y el resultado seria un falso "unreadable".
+    cmd += ["-frames:v", "12", "-c:v", spec["encoder"]]
+    extra = override.get("extra") if override else spec.get("extra", [])
+    cmd += list(extra or [])
+    cmd += ["-f", muxer, out_path]
+    return cmd
+
+
+def _read_alpha(ffmpeg, path, size, decoder=None):
+    """Alfa real del primer fotograma en el centro de cada franja, o None si no se puede
+    decodificar."""
+    w, h = (int(x) for x in size.split("x"))
+    cmd = [ffmpeg, "-v", "error"]
+    if decoder:
+        cmd += ["-c:v", decoder]
+    cmd += ["-i", path, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgba", "-"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, timeout=TIMEOUT)
+    except Exception:
+        return None
+    data = res.stdout
+    if len(data) < w * h * 4:
+        return None
+    y = h // 2
+    return [data[(y * w + x) * 4 + 3] for x in (w // 6, w // 2, (5 * w) // 6)]
+
+
+def _opaque_readable(ffmpeg, spec, muxer, out_path, size):
+    cmd = [ffmpeg, "-y", "-v", "error", "-f", "lavfi", "-i",
+           f"testsrc=s={size}:r={spec.get('fps', '25')}:d=1"]
+    if spec.get("pix_fmt"):
+        cmd += ["-pix_fmt", spec["pix_fmt"]]
+    cmd += ["-frames:v", "12", "-c:v", spec["encoder"], *spec.get("extra", []), "-f", muxer, out_path]
+    rc, _ = _run(cmd)
+    if rc != 0 or not os.path.exists(out_path):
+        return False
+    return _read_alpha(ffmpeg, out_path, size) is not None
+
+
+def _classify_alpha(values):
+    if values is None:
+        return "unreadable"
+    t, m, o = values
+    if t <= 10 and o >= 245 and 90 <= m <= 166:
+        return "full"
+    if t <= 10 and o >= 245 and (m <= 10 or m >= 245):
+        return "1bit"
+    if min(values) >= 245:
+        return "lost"
+    return "partial"
+
+
+def probe_alpha(ffmpeg, name, spec, base_containers):
+    """¿Este codec conserva transparencia, y en que contenedores? Solo se prueban los
+    contenedores donde el mux base ya paso (si el codec no entra, no hay alfa que medir).
+    Devuelve lo que se uso para codificar (pix_fmt/extra/decoder) junto al resultado, para
+    que la app pueda repetir exactamente lo que se verifico."""
+    override = ALPHA_OVERRIDES.get(name)
+    decoder = ALPHA_DECODERS.get(name)
+    size = spec.get("size", "256x256")
+    if override is not None:
+        pix_candidates = [override.get("pix_fmt")]
+    else:
+        # Sin -pix_fmt primero (ffmpeg negocia desde RGBA, con alfa si el encoder tiene),
+        # y el del spec base como respaldo si eso no codifica.
+        pix_candidates = [None] + ([spec["pix_fmt"]] if spec.get("pix_fmt") else [])
+        # Ultimo intento SIN alfa: si pedir alfa hace fallar al encoder (x265 de este build:
+        # "does not support alpha layer encoding") pero codifica normal, el resultado real
+        # para la app es "lost" (se codifica, sin transparencia), no "write_error".
+        if "yuv420p" not in pix_candidates:
+            pix_candidates.append("yuv420p")
+
+    containers = {}
+    used_pix_fmt = pix_candidates[0]
+    for cont_id, c in base_containers.items():
+        if c.get("result") != "pass":
+            continue
+        muxer, ext = CONTAINERS[cont_id][0]
+        out_path = os.path.join(TMP_DIR, f"alpha_{name}_{cont_id}.{ext}".replace(" ", "_"))
+        entry = None
+        first_error = None
+        for pix_fmt in pix_candidates:
+            rc, err = _run(_alpha_encode_cmd(ffmpeg, spec, override, pix_fmt, muxer, out_path))
+            ok = rc == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0
+            if not ok:
+                first_error = first_error or (_first_meaningful_line(err) or f"exit code {rc}")
+                entry = {"result": "write_error", "error": first_error}
+                continue
+            values = _read_alpha(ffmpeg, out_path, size, decoder)
+            result = _classify_alpha(values)
+            entry = {"result": result, "error": None, "pix_fmt": pix_fmt}
+            if result == "unreadable":
+                # ¿Ilegible por el alfa, o el contenedor directamente no sabe releer este
+                # codec? Se repite SIN alfa: si tampoco se lee, la combinacion no sirve
+                # para nada (el mux base la marca "pass" porque solo mira que se escriba).
+                entry["opaque_readable"] = _opaque_readable(ffmpeg, spec, muxer, out_path, size)
+            if first_error:
+                # Por que no hubo alfa aunque el codec codifique (ej. x265 sin capa alfa).
+                entry["alpha_error"] = first_error
+            if result in ("partial", "unreadable"):
+                entry["alpha_read"] = values
+            used_pix_fmt = pix_fmt
+            break
+        containers[cont_id] = entry
+        if os.path.exists(out_path):
+            try:
+                os.remove(out_path)
+            except OSError:
+                pass
+
+    return {
+        "pix_fmt": used_pix_fmt,
+        "extra": list((override or {}).get("extra") or []) if override else list(spec.get("extra", [])),
+        "decoder": decoder,
+        "containers": containers,
+    }
+
+
+def probe_video_codec_multi_audio(ffmpeg, results, v_name, container_streams):
+    """Multipista "1 video + 2 audios" SOLO para un codec de video (ver
+    probe_container_streams, que lo hace para todos): la usa --codecs para sumar un codec
+    nuevo sin rehacer el matrix completo. Mezcla los resultados en container_streams."""
+    v_spec = VIDEO_CODECS[v_name]
+    for cont_id, c in results["video_codecs"][v_name]["containers"].items():
+        if c.get("result") != "pass" or cont_id == "mxf":
+            continue
+        muxer, ext = CONTAINERS[cont_id][0]
+        entry = container_streams.setdefault(cont_id, {"audio_only_multi": {}, "video_audio_multi": {}})
+        for a_name in _passing_codecs(results, "audio", cont_id):
+            out_path = os.path.join(TMP_DIR, f"multi_{cont_id}_va_{v_name}_{a_name}.{ext}")
+            rc, err = _run(_multi_audio_with_video_cmd(ffmpeg, v_spec, AUDIO_CODECS[a_name], muxer, out_path))
+            ok = (rc == 0) and os.path.exists(out_path) and os.path.getsize(out_path) > 0
+            entry["video_audio_multi"][f"{v_name}+{a_name}"] = {
+                "result": "pass" if ok else "fail",
+                "error": None if ok else (_first_meaningful_line(err) or f"exit code {rc}"),
+            }
+            if os.path.exists(out_path):
+                try:
+                    os.remove(out_path)
+                except OSError:
+                    pass
+
+
+def run_alpha_axis(ffmpeg, results):
+    """Agrega results["video_codecs"][name]["alpha"] a una corrida ya hecha."""
+    names = [n for n, e in results["video_codecs"].items() if e.get("testable")]
+    t0 = time.time()
+    for i, name in enumerate(names, 1):
+        print(f"  [{i}/{len(names)}] alfa: {name}", file=sys.stderr)
+        entry = results["video_codecs"][name]
+        entry["alpha"] = probe_alpha(ffmpeg, name, VIDEO_CODECS[name], entry["containers"])
+    return round(time.time() - t0, 1)
+
+
 def probe(ffmpeg, kind, name, spec):
     if not spec.get("encoder"):
         return {"testable": False, "skip_reason": spec.get("skip_reason", "Sin encoder disponible."), "containers": {}}
@@ -380,6 +561,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ffmpeg", default=DEFAULT_FFMPEG, help="Ruta al ejecutable de ffmpeg a verificar.")
     parser.add_argument("--out-dir", default=RUNS_DIR, help="Carpeta donde guardar el resultado.")
+    parser.add_argument("--codecs", metavar="NOMBRES",
+                        help="Solo estos codecs de video (separados por coma, claves de VIDEO_CODECS), "
+                             "sumados a runs/latest.json: contenedores, medidas, alfa y multipista. Para "
+                             "agregar un codec nuevo sin rehacer el matrix completo.")
+    parser.add_argument("--only-alpha", metavar="RUN_JSON", nargs="?", const=os.path.join(RUNS_DIR, "latest.json"),
+                        help="Solo el eje de transparencia, sumado a una corrida existente (por defecto "
+                             "runs/latest.json) -- sin repetir el matrix completo.")
     args = parser.parse_args()
 
     if not os.path.exists(args.ffmpeg):
@@ -388,6 +576,59 @@ def main():
 
     os.makedirs(TMP_DIR, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
+
+    if args.codecs:
+        run_path = os.path.join(args.out_dir, "latest.json")
+        with open(run_path, "r", encoding="utf-8") as f:
+            run = json.load(f)
+        names = [n.strip() for n in args.codecs.split(",") if n.strip()]
+        unknown = [n for n in names if n not in VIDEO_CODECS]
+        if unknown:
+            print(f"No estan en VIDEO_CODECS: {', '.join(unknown)}", file=sys.stderr)
+            sys.exit(1)
+        container_streams = run.setdefault("container_streams", {})
+        for i, name in enumerate(names, 1):
+            spec = VIDEO_CODECS[name]
+            print(f"[{i}/{len(names)}] video: {name}", file=sys.stderr)
+            r = probe(args.ffmpeg, "video", name, spec)
+            r["codec_id"] = spec.get("codec_id", name)
+            r["wiki"] = spec.get("wiki")
+            r["encoder"] = spec.get("encoder")
+            r["display_name"] = spec.get("display_name") or spec.get("wiki") or spec.get("codec_id", name)
+            if spec.get("note"):
+                r["note"] = spec["note"]
+            run["results"]["video_codecs"][name] = r
+            if r.get("testable"):
+                r["alpha"] = probe_alpha(args.ffmpeg, name, spec, r["containers"])
+                probe_video_codec_multi_audio(args.ffmpeg, run["results"], name, container_streams)
+        run["meta"]["codecs_updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", run["meta"].get("ffmpeg_version", "unknown"))
+        for p in (run_path, os.path.join(args.out_dir, f"{safe}.json")):
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(run, f, indent=2, ensure_ascii=False)
+            print(f"Escrito: {p}", file=sys.stderr)
+        return
+
+    if args.only_alpha:
+        with open(args.only_alpha, "r", encoding="utf-8") as f:
+            run = json.load(f)
+        this_version = subprocess.run([args.ffmpeg, "-version"], capture_output=True, text=True).stdout.splitlines()[0]
+        if run["meta"].get("ffmpeg_version_full") != this_version:
+            print("Aviso: la corrida es de otro ffmpeg; el eje de alfa se mide con el ffmpeg indicado.",
+                  file=sys.stderr)
+        print("Probando transparencia (canal alfa) por codec y contenedor...", file=sys.stderr)
+        run["meta"]["alpha_elapsed_sec"] = run_alpha_axis(args.ffmpeg, run["results"])
+        run["meta"]["alpha_generated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        targets = [args.only_alpha]
+        # Igual que la corrida completa: latest.json y la copia con nombre de version van juntas.
+        if os.path.basename(args.only_alpha) == "latest.json":
+            safe = re.sub(r"[^A-Za-z0-9._-]", "_", run["meta"].get("ffmpeg_version", "unknown"))
+            targets.append(os.path.join(os.path.dirname(args.only_alpha), f"{safe}.json"))
+        for p in targets:
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(run, f, indent=2, ensure_ascii=False)
+            print(f"Escrito: {p}", file=sys.stderr)
+        return
 
     version_line = subprocess.run([args.ffmpeg, "-version"], capture_output=True, text=True).stdout.splitlines()[0]
     version_match = re.search(r"ffmpeg version (\S+)", version_line)
@@ -429,6 +670,12 @@ def main():
         container_streams[cont_id] = probe_container_streams(args.ffmpeg, results, cont_id, muxer, ext)
     elapsed_streams = round(time.time() - t1, 1)
     print(f"Multipista lista en {elapsed_streams}s", file=sys.stderr)
+
+    # Transparencia: eje aparte, tambien DESPUES del loop principal (solo se prueba el
+    # alfa en los contenedores donde el mux base ya paso).
+    print("Probando transparencia (canal alfa) por codec y contenedor...", file=sys.stderr)
+    elapsed_alpha = run_alpha_axis(args.ffmpeg, results)
+    print(f"Transparencia lista en {elapsed_alpha}s", file=sys.stderr)
 
     elapsed = round(time.time() - t0, 1)
     print(f"Listo en {elapsed}s", file=sys.stderr)

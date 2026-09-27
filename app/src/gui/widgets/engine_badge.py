@@ -27,9 +27,12 @@ class EngineBadge(QPushButton):
         self._force_cpu = not self._force_cpu
         self.toggled_force_cpu.emit(self._force_cpu)
 
-    def set_state(self, has_hw: bool, force_cpu: bool):
+    def set_state(self, has_hw: bool, force_cpu: bool, locked_reason: str | None = None):
+        """`locked_reason`: el motor está obligado a CPU por algo ajeno a la elección del
+        usuario (ej. conservar transparencia: ningún encoder por GPU guarda alfa). Se
+        muestra "CPU" bloqueado con ese motivo de tooltip, sin tocar su preferencia."""
         self._force_cpu = force_cpu
-        active_hw = has_hw and not force_cpu
+        active_hw = has_hw and not force_cpu and not locked_reason
 
         if active_hw:
             self.setText(self.tr("GPU Acelerado"))
@@ -60,6 +63,6 @@ class EngineBadge(QPushButton):
                 }
                 QPushButton:hover { background-color: rgba(255, 255, 255, 0.15); }
             """)
-            self.setToolTip(self.tr("Clic para usar aceleración por GPU") if has_hw else "")
+            self.setToolTip(locked_reason or (self.tr("Clic para usar aceleración por GPU") if has_hw else ""))
 
-        self.setEnabled(has_hw)
+        self.setEnabled(has_hw and not locked_reason)

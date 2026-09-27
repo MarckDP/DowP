@@ -166,6 +166,7 @@ def probe_video_source(path: str) -> dict:
         pix_fmt=pix_fmt,
     )
     codec = (video.get("codec_name") or "").lower()
+    info["codec"] = codec
     tags = {str(k).lower(): str(v) for k, v in (video.get("tags") or {}).items()}
     if codec in ("vp8", "vp9") and tags.get("alpha_mode") == "1":
         info["has_alpha"] = True

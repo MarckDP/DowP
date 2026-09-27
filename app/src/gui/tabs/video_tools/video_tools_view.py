@@ -21,6 +21,7 @@ from gui.widgets.animated_button import AnimatedButton
 from gui.widgets.bouncing_progress_bar import BouncingProgressBar
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.collapsible_panel import CollapsiblePanel
+from gui.widgets.resettable_splitter import ResettableSplitter
 from gui.styles import apply_folder_browse_button_style, apply_folder_open_button_style, create_colored_circle_icon, update_label_combobox_style
 from gui.widgets.media_trim_player_widget import MediaTrimPlayerWidget
 from gui.tabs.video_tools.media_queue_widget import MediaQueueWidget, entry_path
@@ -32,11 +33,12 @@ from core.utils.queue_manager import get_queue_manager, JobStatus
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup, find_available_rename
 from core.utils.recode_guard import container_supports_multi_audio, CONTAINER_TO_EXTENSION
 from core.tabs.video_tools.ia_video_common import trimmed_duration
+from core.tabs.video_tools.alpha_policy import queue_alpha_counts
 from gui.tabs.video_tools.upscale_ia_panel import (
     FUNCTION_DEPTH, FUNCTION_NORMALS, FUNCTION_UPSCALE, ia_function_of,
 )
 
-AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
+from core.utils.media_extensions import AUDIO_EXTS as AUDIO_ONLY_EXTENSIONS
 
 
 class _QueueMetadataThread(QThread):
@@ -93,17 +95,14 @@ class VideoToolsTab(QWidget):
     # tan generoso como el acoplado, para no repetir el mismo problema ahí.
     OPTIONS_OVERLAY_MAX_WIDTH = 520
     PREVIEW_MIN_WIDTH = 600
-    PREVIEW_MAX_WIDTH_RATIO = 0.35
     # 294px (su mínimo técnico) se veía apretado en la práctica (campos truncados) — igual
     # que con Opciones, un mínimo "cómodo" real en vez de dejar que el stretch lo deje en
     # el piso técnico por defecto.
     OUTPUT_CARD_MIN_WIDTH = 380
-    OUTPUT_CARD_MAX_WIDTH_RATIO = 0.35
-    # Techo de seguridad para cola/opciones, no un objetivo: el reparto real lo hace el
-    # stretch (1:3:1) de top_row_layout, que ya consume el 100% del espacio disponible.
-    # Este valor solo evita un ancho absurdo en monitores ultra-anchos (>2560px); a
-    # resoluciones normales/maximizadas nunca debería ser lo que los limita.
-    SIDE_PANEL_MAX_WIDTH_CAP = 900
+    # Paneles ajustables (separadores): lo mínimo a lo que el usuario puede achicar la
+    # cola, y dónde se guardan los anchos elegidos.
+    QUEUE_MIN_WIDTH = 240
+    LAYOUT_CONFIG_KEY = "video_tools_layout"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -128,6 +127,15 @@ class VideoToolsTab(QWidget):
         # un cambio de cola más nuevo mientras el hilo anterior seguía corriendo.
         self._queue_meta_thread = None
         self._queue_meta_request_id = 0
+        # Cuántos archivos de la cola traen transparencia (ver _push_queue_alpha_counts):
+        # la metadata completa de un archivo recién importado llega después, por
+        # metadata_ready, así que se recuenta (con un pequeño retraso, para agrupar una
+        # importación grande) sin volver a recorrer la cola entera en el hilo.
+        self._queue_entries_with_paths: dict[str, dict] = {}
+        self._alpha_recount_timer = QTimer(self)
+        self._alpha_recount_timer.setSingleShot(True)
+        self._alpha_recount_timer.setInterval(300)
+        self._alpha_recount_timer.timeout.connect(self._push_queue_alpha_counts)
         # job_id -> backup_path pendiente (o None) para la política "Sobrescribir" - ver
         # file_conflict_manager.py: se confirma (se borra el .dbak) si el job termina bien,
         # se revierte (se restaura el original) si falla o se cancela.
@@ -194,10 +202,8 @@ class VideoToolsTab(QWidget):
         self.preview_widget = MediaTrimPlayerWidget(self, card_style=True)
         self.preview_widget.range_changed.connect(self._on_trim_range_changed)
         self.preview_widget.audio_track_selection_changed.connect(self._on_audio_track_selection_changed)
-        # El tope de ancho se recalcula en vivo según el ancho de ventana (ver
-        # _preview_max_width) en vez de ser un número fijo: así el preview queda chico y
-        # centrado en la resolución default, pero aprovecha el espacio extra en pantallas
-        # grandes en vez de dejarlo como hueco muerto a los costados.
+        # Su ancho lo decide el usuario con los separadores de la fila superior (ver
+        # _apply_layout_sizes); al cambiar el tamaño de la ventana, la diferencia es suya.
 
         # La waveform/regla/vúmetro + barra de controles se extraen del preview para vivir
         # en la fila inferior, siempre visible a todo el ancho (ver bottom_row más abajo).
@@ -388,8 +394,15 @@ class VideoToolsTab(QWidget):
         # Estado y texto inicial contextual del botón
         self._on_start_status_changed(*self.options_widget.get_current_status())
 
-        bottom_row_layout.addWidget(self.output_card, 1)
-        bottom_row_layout.addWidget(self.timeline_widget, 2)
+        # Separador ajustable entre las Opciones de Salida y la línea de tiempo (waveform).
+        self.bottom_splitter = ResettableSplitter(Qt.Horizontal)
+        self.bottom_splitter.addWidget(self.output_card)
+        self.bottom_splitter.addWidget(self.timeline_widget)
+        self.bottom_splitter.setStretchFactor(0, 0)
+        self.bottom_splitter.setStretchFactor(1, 1)
+        self.bottom_splitter.splitterMoved.connect(lambda *_: self._layout_save_timer.start())
+        self.bottom_splitter.reset_requested.connect(lambda: self._reset_layout("output"))
+        bottom_row_layout.addWidget(self.bottom_splitter)
 
         # -------------------------------------------------------------
         # Cola de medios (izq): SIEMPRE visible/acoplada, cabe bien incluso en el ancho
@@ -398,7 +411,7 @@ class VideoToolsTab(QWidget):
         # -------------------------------------------------------------
         # Ancho "preferido" (arranque) fijo vía minimumWidth; el techo real de crecimiento
         # (más allá de este valor cuando sobra espacio) lo pone _update_responsive_mode.
-        self.queue_widget.setMinimumWidth(self.QUEUE_WIDTH)
+        self.queue_widget.setMinimumWidth(self.QUEUE_MIN_WIDTH)
         self.right_panel = CollapsiblePanel(
             self.options_widget, edge="right",
             docked_size=self.OPTIONS_DOCKED_WIDTH,
@@ -422,15 +435,31 @@ class VideoToolsTab(QWidget):
         # más) porque sus controles se benefician más del ancho extra que una lista simple
         # de archivos — ninguno se queda 100% fijo, para no dejar hueco muerto a los
         # costados en ventanas grandes/maximizadas.
-        self.top_row_layout.addWidget(self.queue_widget, 1)
-        self.top_row_layout.addWidget(self.preview_center_wrapper, 3)
-        self.top_row_layout.addWidget(self.right_panel, 2)
+        # Separadores ajustables Cola | Vista previa | Opciones (los anchos los decide el
+        # usuario y se recuerdan; ver _apply_layout_sizes). Al agrandar/achicar la ventana,
+        # la diferencia la absorbe la vista previa.
+        self.top_splitter = ResettableSplitter(Qt.Horizontal)
+        self.top_splitter.addWidget(self.queue_widget)
+        self.top_splitter.addWidget(self.preview_center_wrapper)
+        self.top_splitter.addWidget(self.right_panel)
+        self.top_splitter.setStretchFactor(0, 0)
+        self.top_splitter.setStretchFactor(1, 1)
+        self.top_splitter.setStretchFactor(2, 0)
+        self.top_splitter.splitterMoved.connect(lambda *_: self._layout_save_timer.start())
+        self.top_splitter.reset_requested.connect(lambda: self._reset_layout("top"))
+        self.top_row_layout.addWidget(self.top_splitter)
+
+        self._layout_save_timer = QTimer(self)
+        self._layout_save_timer.setSingleShot(True)
+        self._layout_save_timer.setInterval(400)
+        self._layout_save_timer.timeout.connect(self._save_layout_sizes)
 
         # El host del overlay es la pestaña completa (self), no self.top_row: Qt recorta
         # los hijos al área de su padre, así que si quedara colgado de top_row jamás podría
         # pintarse por encima de bottom_row. Al no empujar ni redimensionar nada (es un
-        # overlay flotante), no hay problema en que use toda la altura disponible.
-        self.right_panel.configure_container(self, self.top_row_layout, 2, dock_stretch=2)
+        # overlay flotante), no hay problema en que use toda la altura disponible. Cuando
+        # vuelve a acoplarse, se reinserta en el separador (índice 2).
+        self.right_panel.configure_container(self, self.top_splitter, 2)
 
         main_layout.addWidget(self.top_row, 1)
         main_layout.addWidget(self.bottom_row)
@@ -438,6 +467,7 @@ class VideoToolsTab(QWidget):
         # El tamaño real de la ventana no es confiable hasta que el layout se asiente;
         # se evalúa una vez apenas se procese el primer ciclo de eventos.
         QTimer.singleShot(0, self._update_responsive_mode)
+        QTimer.singleShot(0, self._apply_layout_sizes)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -503,32 +533,6 @@ class VideoToolsTab(QWidget):
             + 20  # margen de seguridad
         )
 
-    def _preview_max_width(self) -> int:
-        """Tope de ancho del preview: un porcentaje del ancho de la ventana (no un número
-        fijo) para que no "siga y siga creciendo" en pantallas grandes/maximizadas a costa
-        de dejar la cola de medios y las opciones (de ancho fijo) desproporcionadamente
-        chicas — en la resolución default queda pequeño y centrado."""
-        return max(self.PREVIEW_MIN_WIDTH, int(self.width() * self.PREVIEW_MAX_WIDTH_RATIO))
-
-    def _output_card_max_width(self) -> int:
-        """Tope de ancho del cubo de Opciones de Salida y Procesamiento: antes tenía
-        stretch=0 en bottom_row_layout, así que se quedaba SIEMPRE en su ancho natural sin
-        importar cuánto creciera la ventana. Ahora tiene stretch>0 (crece de verdad), y este
-        método solo pone el TECHO (35% del ancho de ventana) — el piso lo sigue poniendo su
-        propio minimumSizeHint natural, nunca forzado, para no repetir el mismo bloqueo de
-        `setFixedWidth` que ya tuvimos con el panel de opciones."""
-        return int(self.width() * self.OUTPUT_CARD_MAX_WIDTH_RATIO)
-
-    def _queue_max_width(self) -> int:
-        """Techo de la cola de medios: antes ancho 100% fijo (nunca crecía). Ahora el
-        reparto real lo hace el stretch de top_row_layout (que ya usa el 100% del espacio
-        disponible); esto solo pone un techo de seguridad para ventanas ultra-anchas."""
-        return max(self.QUEUE_WIDTH, self.SIDE_PANEL_MAX_WIDTH_CAP)
-
-    def _options_max_width(self) -> int:
-        """Mismo criterio que _queue_max_width, para el panel de Opciones acoplado."""
-        return max(self.OPTIONS_DOCKED_WIDTH, self.SIDE_PANEL_MAX_WIDTH_CAP)
-
     def _update_responsive_mode(self):
         if not hasattr(self, "right_panel"):
             return
@@ -536,19 +540,63 @@ class VideoToolsTab(QWidget):
         want_docked = self.width() >= threshold
         if want_docked != self.right_panel.is_docked():
             self.right_panel.set_mode(docked=want_docked)
-        self.right_panel.set_dock_max_width(self._options_max_width())
+            if want_docked:
+                # Volvió a entrar al separador: reponer el ancho que el usuario le dio.
+                QTimer.singleShot(0, self._apply_layout_sizes)
+        # Los anchos de cola, vista previa, opciones y cubo de salida ya no tienen topes
+        # automáticos: los decide el usuario con los separadores (ver _apply_layout_sizes).
+        self.right_panel.set_dock_max_width(16777215)
         self.right_panel.sync_overlay_geometry()
-        self.queue_widget.setMaximumWidth(self._queue_max_width())
-        # Se recalcula después de resolver el modo acoplado/overlay para que el tope de
-        # ancho del preview refleje el espacio realmente disponible en este mismo resize.
-        preview_cap = self._preview_max_width()
-        self.preview_widget.setMaximumWidth(preview_cap)
-        # Sin esto, preview_center_wrapper (que tiene más peso de stretch que la cola/
-        # opciones para que el preview crezca primero) reclama más ancho del que el
-        # preview realmente usa una vez alcanza su propio tope, y ese sobrante queda como
-        # hueco muerto alrededor del preview en vez de repartirse hacia los costados.
-        self.preview_center_wrapper.setMaximumWidth(preview_cap)
-        self.output_card.setMaximumWidth(self._output_card_max_width())
+
+    # ------------------------------------------------------------------
+    # Paneles ajustables (separadores)
+    # ------------------------------------------------------------------
+    def _saved_layout(self) -> dict:
+        return dict(get_config().get(self.LAYOUT_CONFIG_KEY) or {})
+
+    def _apply_layout_sizes(self):
+        """Reparte los separadores según lo guardado (o los anchos por defecto). La vista
+        previa se queda con el resto; Qt respeta los mínimos de cada panel."""
+        saved = self._saved_layout()
+        total = sum(self.top_splitter.sizes())
+        if total > 0:
+            queue = int(saved.get("queue", self.QUEUE_WIDTH))
+            if self.top_splitter.count() == 3:
+                options = int(saved.get("options", self.OPTIONS_DOCKED_WIDTH))
+                self.top_splitter.setSizes([queue, max(1, total - queue - options), options])
+            else:
+                self.top_splitter.setSizes([queue, max(1, total - queue)])
+        total = sum(self.bottom_splitter.sizes())
+        if total > 0:
+            default_output = max(self.OUTPUT_CARD_MIN_WIDTH, total // 3)
+            output = int(saved.get("output", default_output))
+            self.bottom_splitter.setSizes([output, max(1, total - output)])
+
+    def _save_layout_sizes(self):
+        layout = self._saved_layout()
+        top = self.top_splitter.sizes()
+        if top and top[0] > 0:
+            layout["queue"] = top[0]
+        # El ancho de Opciones solo se guarda acoplado (en overlay no está en el separador).
+        if self.top_splitter.count() == 3 and top[2] > 0:
+            layout["options"] = top[2]
+        bottom = self.bottom_splitter.sizes()
+        if bottom and bottom[0] > 0:
+            layout["output"] = bottom[0]
+        config = get_config()
+        config[self.LAYOUT_CONFIG_KEY] = layout
+        save_config(config)
+
+    def _reset_layout(self, which: str):
+        """Doble clic en un separador: vuelve esa fila a su distribución por defecto."""
+        layout = self._saved_layout()
+        keys = ("queue", "options") if which == "top" else ("output",)
+        for key in keys:
+            layout.pop(key, None)
+        config = get_config()
+        config[self.LAYOUT_CONFIG_KEY] = layout
+        save_config(config)
+        self._apply_layout_sizes()
 
     def _on_file_selected(self, filepath: str):
         # filepath es la CLAVE de la entrada de la cola: para tocar disco hay que
@@ -658,8 +706,21 @@ class VideoToolsTab(QWidget):
             return  # Una importación más nueva ya disparó otro cálculo -- este quedó obsoleto.
         self.options_widget.tab_compress.set_queue_entries(entries)
         self.options_widget.tab_convert.set_queue_entries(entries_with_paths)
+        self._queue_entries_with_paths = dict(entries_with_paths)
+        self._push_queue_alpha_counts()
+
+    def _push_queue_alpha_counts(self):
+        """Transparencia en la cola -> los 4 paneles: muestran la casilla aunque el archivo
+        seleccionado sea opaco, y avisan si hay archivos con y sin transparencia."""
+        counts = queue_alpha_counts(self._queue_entries_with_paths.items())
+        for tab in (self.options_widget.tab_compress, self.options_widget.tab_convert,
+                    self.options_widget.tab_editing, self.options_widget.tab_advanced):
+            tab.set_queue_alpha_counts(*counts)
 
     def _on_metadata_ready(self, path: str, meta: dict):
+        if path in self._queue_entries_with_paths:
+            self._queue_entries_with_paths[path] = meta
+            self._alpha_recount_timer.start()
         if path == entry_path(self.current_preview_file):
             self.preview_widget.set_fps(self._parse_fps(meta.get("fps", "30")))
             self.options_widget.tab_advanced.set_source_media(meta, path)

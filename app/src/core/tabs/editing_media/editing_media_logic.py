@@ -37,6 +37,7 @@ VALID_AUDIO_EXTS = {
     '.aiff', '.aif', '.ac3', '.amr', '.ape', '.caf', '.dsf', '.au',
     '.gsm', '.voc', '.wv', '.tta', '.mka', '.eac3', '.m4b', '.3ga', '.adts',
     '.dts', '.thd', '.mlp', '.mpc', '.w64', '.shn',
+    '.oga', '.aifc', '.weba', '.spx', '.mp2', '.mpa', '.ra', '.mp31', '.mp32',
 }
 VALID_EXTS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS | VALID_VIDEO_EXTS | VALID_AUDIO_EXTS
 

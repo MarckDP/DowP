@@ -85,7 +85,9 @@ VIDEO_CODECS = {
                          extra=["-b:v", "36M"],
                          note="No esta en la tabla de Wikipedia original; agregado por relevancia para editores NLE. Perfil 1080p25@36Mbps."),
     "gif":         dict(codec_id="gif", wiki="GIF", encoder="gif", size="256x256"),
-    "webp":        dict(codec_id="webp", wiki="WebP", encoder="libwebp", size="256x256"),
+    # libwebp_anim y no libwebp: los dos producen WebP ANIMADO en el muxer webp, pero
+    # _anim comprime entre fotogramas (~7% menos peso medido con ffmpeg 9.0.1).
+    "webp":        dict(codec_id="webp", wiki="WebP", encoder="libwebp_anim", size="256x256"),
     "apng":        dict(codec_id="apng", wiki="APNG", encoder="apng", size="256x256"),
     "ffv1":        dict(codec_id="ffv1", wiki="FFV1", encoder="ffv1", size="256x256"),
     "utvideo":     dict(codec_id="utvideo", wiki="Ut Video", encoder="utvideo", size="256x256", pix_fmt="yuv420p"),
@@ -93,7 +95,56 @@ VIDEO_CODECS = {
     "wmv1":        dict(codec_id="wmv1", wiki="Windows Media Video 7", encoder="wmv1", size="256x256"),
     "wmv2":        dict(codec_id="wmv2", wiki="Windows Media Video 8", encoder="wmv2", size="256x256"),
     "flv1":        dict(codec_id="flv1", wiki="Sorenson Spark", encoder="flv", size="256x256"),
+    # Agregados por transparencia (canal alfa): los tres la conservan -- ver ALPHA_OVERRIDES.
+    "qtrle":       dict(codec_id="qtrle", wiki=None, display_name="QuickTime Animation", encoder="qtrle",
+                         size="256x256", note="Sin perdida (RLE). Clasico de After Effects/Premiere para video con alfa."),
+    "png":         dict(codec_id="png", wiki=None, display_name="PNG (video)", encoder="png", size="256x256",
+                         note="Cada fotograma es un PNG: sin perdida, con alfa, archivos grandes."),
+    "hap":         dict(codec_id="hap", wiki=None, display_name="HAP (Vidvox)", encoder="hap", size="256x256",
+                         extra=["-format", "hap"],
+                         note="Para reproduccion en tiempo real (VJ, Resolume, TouchDesigner). Ancho y alto multiplos de 4."),
 }
+
+# ─── Transparencia (canal alfa) ───
+# Eje aparte del matrix (ver run_matrix.py::probe_alpha): para cada codec de video y cada
+# contenedor donde el mux base ya paso, se codifica un origen RGBA con 3 franjas de alfa
+# conocido (0 / 128 / 255), se DECODIFICA el resultado y se lee el alfa real. No se confia
+# en el pix_fmt que reporta ffprobe: VP8/VP9 guardan el alfa aparte y ffprobe dice yuv420p.
+#
+# ALPHA_OVERRIDES: lo que un codec EXIGE para conservar alfa, verificado a mano contra
+# ffmpeg 9.0.1 antes de volcarlo aca. Un codec sin entrada se prueba sin -pix_fmt: ffmpeg
+# elige solo el formato mas cercano al RGBA de origen (con alfa si el encoder tiene uno),
+# y si eso no codifica se reintenta con el pix_fmt del spec base -- asi no se esconde un
+# soporte de alfa que nadie haya anotado todavia.
+ALPHA_OVERRIDES = {
+    "vp9":     dict(pix_fmt="yuva420p", extra=["-b:v", "0", "-crf", "30"]),
+    # Sin -auto-alt-ref 0 libvpx (VP8) se niega a abrir: "Transparency encoding with
+    # auto_alt_ref does not work".
+    "vp8":     dict(pix_fmt="yuva420p", extra=["-b:v", "1M", "-auto-alt-ref", "0"]),
+    # 4444 (perfil 4) con yuva: el spec base usa yuv422p10le (422, que no admite alfa).
+    "prores":  dict(pix_fmt="yuva444p10le", extra=["-profile:v", "4"]),
+    "cfhd":    dict(pix_fmt="gbrap12le"),
+    "utvideo": dict(pix_fmt="gbrap"),
+    "huffyuv": dict(pix_fmt="bgra"),
+    "ffv1":    dict(pix_fmt="yuva420p"),
+    "apng":    dict(pix_fmt="rgba"),
+    "webp":    dict(pix_fmt="yuva420p"),
+    "qtrle":   dict(pix_fmt="argb"),
+    "png":     dict(pix_fmt="rgba"),
+    # HAP normal (DXT1) no tiene alfa: hace falta la variante hap_alpha.
+    "hap":     dict(pix_fmt=None, extra=["-format", "hap_alpha"]),
+    # GIF: paleta de 256 colores con un indice reservado para "transparente" (lo que ya
+    # hacen los perfiles Alta/Media de DowP). El resultado esperado es alfa de 1 bit.
+    "gif":     dict(pix_fmt=None, extra=["-vf", "split[s0][s1];[s0]palettegen=stats_mode=full:max_colors=256"
+                                                "[p];[s1][p]paletteuse=dither=floyd_steinberg"]),
+}
+
+# Decoder con el que hay que LEER el resultado para que el alfa aparezca: el decoder
+# nativo de ffmpeg para VP8/VP9 ignora el canal alfa (lo descarta sin avisar).
+ALPHA_DECODERS = {"vp9": "libvpx-vp9", "vp8": "libvpx"}
+
+# Candidato con alfa que HOY no esta en VIDEO_CODECS: magicyuv (gbrap, AVI/MKV) -- no se
+# agrego porque sin perdida ya estan UT Video, FFV1 y HuffYUV.
 
 # ─── Codecs de audio ───
 AUDIO_CODECS = {

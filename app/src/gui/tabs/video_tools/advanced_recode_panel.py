@@ -30,6 +30,10 @@ from gui.widgets.preset_bar import PresetBar
 from gui.widgets.collapsible_section import CollapsibleSection
 from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
 from core.logger.logger_manager import logger
+from core.tabs.video_tools.alpha_policy import (
+    meta_has_alpha, keeps_alpha, is_one_bit, codec_label, alpha_capable_codecs, profile_keeps_alpha,
+)
+from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
 from core.utils.recode_guard import evaluate_recode, get_video_codecs, get_audio_codecs, get_compatible_containers, resolve_encoder, get_channel_support, get_dimension_alignment, CONTAINER_LABELS
 from core.utils.hardware_detector import detect_hardware
 from core.utils.font_manager import get_available_fonts, get_active_font_family, get_static_font_path, STANDARD_WEIGHTS
@@ -108,6 +112,10 @@ _FIT_MODE_TOOLTIPS = {
     "crop": QCoreApplication.translate("advanced_recode_panel", "Agranda la imagen para cubrir todo el tamaño elegido y recorta lo que sobre por los bordes."),
 }
 
+# Códecs de animación cuyos contenedores (GIF, APNG, WebP) no aceptan audio: al elegirlos
+# se desactiva la columna de audio, si no la intersección de contenedores queda vacía.
+_NO_AUDIO_VIDEO_CODECS = {"gif", "apng", "webp"}
+
 _PREFERRED_CONTAINER_BY_CODEC = {
     # Video profesional / edición -> qtff (MOV)
     "prores": "qtff",
@@ -119,6 +127,7 @@ _PREFERRED_CONTAINER_BY_CODEC = {
     # Animaciones
     "gif": "gif",
     "apng": "apng",
+    "webp": "webp",
     # Web / Abiertos
     "theora": "ogg",
     "vp8": "webm",
@@ -159,6 +168,12 @@ class AdvancedRecodePanel(QWidget):
         self._last_valid = True
         self._force_cpu_engine = False
         self._last_profile_codec = {"video": None, "audio": None}
+        # "Conservar transparencia" (ver _apply_alpha_filters): transparencia en la cola,
+        # si las listas están filtradas ahora mismo, y el códec que había elegido el
+        # usuario antes de que la casilla lo cambiara solo (se restaura al desmarcar).
+        self._queue_alpha = (0, 0)
+        self._alpha_filtered = False
+        self._codec_before_alpha = None
         self._source_meta = None
         self._crop_active = False
         self._source_filepath = None
@@ -529,6 +544,40 @@ class AdvancedRecodePanel(QWidget):
             self.rb_video_pass2 = rb_pass2
             pass_container.setVisible(False)
             rb_pass1.toggled.connect(self._update_size_estimate)
+
+            # ── Transparencia (solo visible si el archivo la trae) ──
+            self.alpha_video = KeepAlphaOption(frame)
+            self.alpha_video.toggled.connect(lambda _c: (self._apply_alpha_filters(), self._refresh_alpha_ui()))
+            v.addWidget(self.alpha_video)
+
+            alpha_opts = QWidget(frame)
+            alpha_layout = QVBoxLayout(alpha_opts)
+            alpha_layout.setContentsMargins(0, 0, 0, 4)
+            alpha_layout.setSpacing(4)
+            # ProRes (solo prores_ks tiene -alpha_bits; prores_aw no): precisión del canal alfa.
+            self.lbl_alpha_bits = QLabel(self.tr("Canal alfa (ProRes):"), alpha_opts)
+            self.lbl_alpha_bits.setObjectName("menuLabel")
+            alpha_layout.addWidget(self.lbl_alpha_bits)
+            self.combo_alpha_bits = AutoPopupComboBox(alpha_opts)
+            self._setup_fixed_combo(self.combo_alpha_bits)
+            self.combo_alpha_bits.addItem(self.tr("16 bits (máxima precisión)"), 16)
+            self.combo_alpha_bits.addItem(self.tr("8 bits (más liviano)"), 8)
+            alpha_layout.addWidget(self.combo_alpha_bits)
+            # GIF: la transparencia es de 1 bit -- este umbral decide qué píxeles
+            # semitransparentes quedan transparentes y cuáles opacos.
+            self.lbl_gif_alpha_threshold = QLabel(self.tr("Umbral de transparencia (GIF):"), alpha_opts)
+            self.lbl_gif_alpha_threshold.setObjectName("menuLabel")
+            alpha_layout.addWidget(self.lbl_gif_alpha_threshold)
+            self.spin_gif_alpha_threshold = QSpinBox(alpha_opts)
+            self.spin_gif_alpha_threshold.setRange(1, 254)
+            self.spin_gif_alpha_threshold.setValue(128)
+            self.spin_gif_alpha_threshold.setToolTip(self.tr(
+                "GIF solo admite píxeles transparentes u opacos. Los que tengan una opacidad menor "
+                "a este valor (de 255) quedan transparentes; el resto, opacos."))
+            alpha_layout.addWidget(self.spin_gif_alpha_threshold)
+            alpha_opts.setVisible(False)
+            v.addWidget(alpha_opts)
+            self.widget_alpha_options = alpha_opts
 
         if not is_video:
             channels_container = QWidget(frame)
@@ -1287,13 +1336,18 @@ class AdvancedRecodePanel(QWidget):
 
     # ─── Poblado de combos ──────────────────────────────────────
 
-    def _reload_codec_lists(self):
+    def _reload_codec_lists(self, video_only: bool = False):
+        video_codecs = get_video_codecs(only_verified=False)
+        if self._alpha_filtered:
+            # Solo los que conservan transparencia en algún contenedor (eje de alfa del matrix).
+            keep = set(alpha_capable_codecs([c["codec_id"] for c in video_codecs], get_compatible_containers([])))
+            video_codecs = [c for c in video_codecs if c["codec_id"] in keep]
+        lists = [(self.combo_video_codec, video_codecs)]
+        if not video_only:
+            lists.append((self.combo_audio_codec, get_audio_codecs(only_verified=False)))
         self._building = True
         try:
-            for combo, codecs in (
-                (self.combo_video_codec, get_video_codecs(only_verified=False)),
-                (self.combo_audio_codec, get_audio_codecs(only_verified=False)),
-            ):
+            for combo, codecs in lists:
                 combo.clear()
                 model = combo.model()
                 current_cat = None
@@ -1363,6 +1417,8 @@ class AdvancedRecodePanel(QWidget):
     def _on_video_codec_changed(self, *_args):
         if self._building:
             return
+        if self.sender() is self.combo_video_codec:
+            self._codec_before_alpha = None  # lo eligió el usuario: nada que restaurar
         video_codec = self._current_video_codec()
         if video_codec and self.rb_audio_recode.isChecked():
             self._apply_audio_recommendation(video_codec)
@@ -1385,6 +1441,8 @@ class AdvancedRecodePanel(QWidget):
     def _on_selection_changed(self, *_args):
         if self._building:
             return
+        # Copiar/Recodificar y Solo Audio cambian si la transparencia está en juego.
+        self._apply_alpha_filters()
 
         stream_mode = self._current_stream_mode()
         is_audio_only = (stream_mode == "audio_only")
@@ -1394,7 +1452,7 @@ class AdvancedRecodePanel(QWidget):
         if getattr(self, "frame_video", None):
             self.frame_video.setEnabled(not is_audio_only)
 
-        is_gif = (self.combo_video_codec.currentData() == "gif" and self.rb_video_recode.isChecked() and not is_audio_only)
+        is_gif = (self.combo_video_codec.currentData() in _NO_AUDIO_VIDEO_CODECS and self.rb_video_recode.isChecked() and not is_audio_only)
         if getattr(self, "frame_audio", None):
             self.frame_audio.setEnabled((not is_video_only) and (not is_gif))
 
@@ -1490,6 +1548,129 @@ class AdvancedRecodePanel(QWidget):
         finally:
             self._building = False
 
+    # ─── Transparencia ───────────────────────────────────────────
+
+    def _update_alpha_availability(self):
+        if not hasattr(self, "alpha_video"):
+            return
+        has_video = self._current_stream_mode() != "audio_only"
+        self.alpha_video.set_availability(meta_has_alpha(self._source_meta) and has_video,
+                                          self._queue_alpha[0] if has_video else 0)
+
+    def _alpha_filter_active(self) -> bool:
+        """Se recodifica el video y se quiere conservar la transparencia (del archivo
+        seleccionado o de alguno de la cola): las listas ofrecen solo lo que la conserva
+        y el motor va por CPU (ningún encoder por GPU guarda alfa)."""
+        return (hasattr(self, "alpha_video") and self.alpha_video.is_active()
+                and self._current_stream_mode() != "audio_only" and self.rb_video_recode.isChecked())
+
+    def _apply_alpha_filters(self):
+        """Filtra (o restaura) la lista de códecs de video cuando cambia si la
+        transparencia está en juego. Si el códec elegido no la conserva se cambia solo
+        (VP9 si está) y se recuerda para volver a él al desmarcar."""
+        if not hasattr(self, "alpha_video"):
+            return
+        self._update_alpha_availability()
+        active = self._alpha_filter_active()
+        if active == self._alpha_filtered:
+            return
+        self._alpha_filtered = active
+        current = self.combo_video_codec.currentData()
+        self._reload_codec_lists(video_only=True)
+        if active:
+            wanted = current
+            if self.combo_video_codec.findData(current) < 0:
+                self._codec_before_alpha = current
+                wanted = "vp9"
+        else:
+            wanted = self._codec_before_alpha or current
+            self._codec_before_alpha = None
+        idx = self.combo_video_codec.findData(wanted)
+        if idx >= 0:
+            self._building = True
+            self.combo_video_codec.setCurrentIndex(idx)
+            self._building = False
+        # Los perfiles (ProRes 4444, HAP Alpha) y el encoder (CPU) dependen del filtro.
+        self._last_profile_codec["video"] = None
+        self._on_video_codec_changed()
+
+    def _alpha_applies(self) -> bool:
+        """Transparencia en juego (archivo seleccionado o cola) y se quiere conservar."""
+        return hasattr(self, "alpha_video") and self.alpha_video.is_active()
+
+    def _video_profile_is_444(self) -> bool:
+        profile = self.combo_video_profile.currentData() if hasattr(self, "combo_video_profile") else None
+        args = (profile or {}).get("args") or []
+        return any(str(a).startswith(("yuv444", "yuva444")) for a in args)
+
+    def _refresh_alpha_ui(self):
+        if not hasattr(self, "alpha_video"):
+            return
+        self._update_alpha_availability()
+        self.alpha_video.set_queue_mix(*self._queue_alpha)
+        show = self.alpha_video.is_available()
+        show_bits = show_gif = False
+        if show and self._codec_before_alpha and self._alpha_filtered:
+            self.alpha_video.set_status(self.tr("Cambiado a {0} para conservar la transparencia.").format(
+                codec_label(self._current_video_codec())), "ok")
+        elif show:
+            container = self.combo_container.currentData()
+            recode = self.rb_video_recode.isChecked()
+            codec = self._current_video_codec() if recode else self._source_codec("video")
+            encoder = self._effective_encoder("video", codec) if recode else None
+            container_label = CONTAINER_LABELS.get(container, (container or "").upper())
+            if not self.alpha_video.is_checked():
+                self.alpha_video.set_status(
+                    self.tr("Se descarta la transparencia.") if recode else
+                    self.tr("Al copiar sin recodificar, la transparencia queda como esté en el original."),
+                    "muted")
+            elif not container:
+                self.alpha_video.set_status("", "muted")
+            elif not keeps_alpha(codec, container):
+                self.alpha_video.set_status(self.tr(
+                    "{0} en {1} no conserva la transparencia: se perderá.").format(
+                    codec_label(codec), container_label), "warning")
+            elif encoder and any(hw in encoder for hw in ("nvenc", "qsv", "amf")):
+                self.alpha_video.set_status(self.tr(
+                    "La aceleración por GPU no admite transparencia: cambia el motor a CPU para "
+                    "conservarla."), "warning")
+            elif codec == "hap" and recode and "hap_alpha" not in (
+                    (self.combo_video_profile.currentData() or {}).get("args") or []):
+                self.alpha_video.set_status(self.tr(
+                    "Este perfil de HAP no admite transparencia: se perderá. Usa HAP Alpha."), "warning")
+            elif codec == "prores" and recode and not self._video_profile_is_444():
+                self.alpha_video.set_status(self.tr(
+                    "Este perfil de ProRes no admite transparencia: se perderá. Usa 4444 o 4444 XQ."),
+                    "warning")
+            elif is_one_bit(codec, container):
+                self.alpha_video.set_status(self.tr(
+                    "Se conserva la transparencia, pero solo como transparente u opaco."), "ok")
+            else:
+                self.alpha_video.set_status(self.tr("Se conserva la transparencia."), "ok")
+            if self.alpha_video.is_checked() and recode:
+                show_bits = encoder == "prores_ks" and self._video_profile_is_444()
+                show_gif = codec == "gif"
+        self.lbl_alpha_bits.setVisible(show_bits)
+        self.combo_alpha_bits.setVisible(show_bits)
+        self.lbl_gif_alpha_threshold.setVisible(show_gif)
+        self.spin_gif_alpha_threshold.setVisible(show_gif)
+        self.widget_alpha_options.setVisible(show_bits or show_gif)
+
+    def _alpha_video_args(self, args: list[str]) -> list[str]:
+        """Opciones de alfa elegidas (solo si difieren del valor por defecto de ffmpeg, así
+        un preajuste sin tocarlas guarda los mismos args de siempre)."""
+        if not self._alpha_applies():
+            return args
+        args = list(args)
+        if not self.combo_alpha_bits.isHidden() and self.combo_alpha_bits.currentData() == 8:
+            args += ["-alpha_bits", "8"]
+        threshold = self.spin_gif_alpha_threshold.value()
+        if not self.spin_gif_alpha_threshold.isHidden() and threshold != 128:
+            for i in range(len(args) - 1):
+                if args[i] in ("-vf", "-filter:v") and "paletteuse=" in args[i + 1]:
+                    args[i + 1] = args[i + 1].replace("paletteuse=", f"paletteuse=alpha_threshold={threshold}:", 1)
+        return args
+
     def _on_variant_changed(self, prefix: str):
         if self._building:
             return
@@ -1507,7 +1688,7 @@ class AdvancedRecodePanel(QWidget):
         if variant_combo.isVisible() and variant_combo.currentData():
             return variant_combo.currentData()
             
-        if prefix == "video" and self._force_cpu_engine:
+        if prefix == "video" and (self._force_cpu_engine or self._alpha_filtered):
             from core.utils.recode_guard import _load_matrix
             matrix = _load_matrix()
             entry = matrix.get("codecs", {}).get(codec_id)
@@ -1557,6 +1738,7 @@ class AdvancedRecodePanel(QWidget):
         if prefix == "video":
             self._update_two_pass_visibility()
         self._update_size_estimate()
+        self._refresh_alpha_ui()
 
     def _update_two_pass_visibility(self):
         if not hasattr(self, "widget_video_passes"):
@@ -1611,6 +1793,9 @@ class AdvancedRecodePanel(QWidget):
         else:
             args = list(profile["args"])
             
+        if prefix == "video":
+            args = self._alpha_video_args(args)
+
         if prefix == "audio":
             if hasattr(self, "combo_audio_channels"):
                 channels = self.combo_audio_channels.currentData()
@@ -1629,9 +1814,15 @@ class AdvancedRecodePanel(QWidget):
 
     # ─── Datos del archivo fuente (cola de medios) ──────────────
 
+    def set_queue_alpha_counts(self, with_alpha: int, without_alpha: int):
+        self._queue_alpha = (with_alpha, without_alpha)
+        self._apply_alpha_filters()
+        self._refresh_alpha_ui()
+
     def set_source_media(self, meta: dict, filepath: str):
         self._source_meta = meta or None
         self._source_filepath = filepath
+        self._apply_alpha_filters()
         self._update_source_info_label()
         self._update_source_aspect_label()
         self._evaluate_and_render()
@@ -1922,6 +2113,11 @@ class AdvancedRecodePanel(QWidget):
         if text_watermark_expr:
             vf_expr = f"{vf_expr},{text_watermark_expr}" if vf_expr else text_watermark_expr
         if vf_expr:
+            # HAP exige medidas múltiplos de 4: si el usuario cambia la resolución, el
+            # ajuste del perfil queda ANTES de su escala y el resultado volvería a fallar
+            # (ej. 854x480). Se repite al final de la cadena.
+            if "hap" in args:
+                vf_expr = f"{vf_expr},scale=trunc(iw/4)*4:trunc(ih/4)*4"
             if "-vf" in args:
                 idx = args.index("-vf") + 1
                 args[idx] = f"{args[idx]},{vf_expr}"
@@ -2017,6 +2213,8 @@ class AdvancedRecodePanel(QWidget):
                 return
             encoder = self._effective_encoder(prefix, codec_id)
             profiles = get_profiles(prefix, encoder)
+            if prefix == "video" and self._alpha_filtered:
+                profiles = [p for p in profiles if profile_keeps_alpha(codec_id, p)]
             for p in profiles:
                 combo.addItem(p["label"], p)
             if tier_previo:
@@ -2056,7 +2254,8 @@ class AdvancedRecodePanel(QWidget):
         status = hw_info.get("codec_status", {}).get(codec_id)
         
         has_hw = bool(status and status.get("status") == "full")
-        is_cpu_forced = self._force_cpu_engine
+        alpha_lock = self._alpha_filtered
+        is_cpu_forced = self._force_cpu_engine or alpha_lock
 
         if is_cpu_forced or not has_hw:
             self.lbl_video_engine.setText(self.tr("CPU"))
@@ -2072,7 +2271,9 @@ class AdvancedRecodePanel(QWidget):
                 }
                 QPushButton:hover { background-color: rgba(255, 255, 255, 0.15); }
             """)
-            if has_hw:
+            if alpha_lock:
+                self.lbl_video_engine.setToolTip(self.tr("La transparencia solo se puede codificar por CPU."))
+            elif has_hw:
                 self.lbl_video_engine.setToolTip(self.tr("Clic para usar aceleración por GPU"))
             else:
                 self.lbl_video_engine.setToolTip("")
@@ -2093,7 +2294,7 @@ class AdvancedRecodePanel(QWidget):
             self.lbl_video_engine.setToolTip(self.tr("Clic para usar codificación por CPU"))
 
         self.lbl_video_engine.setVisible(True)
-        self.lbl_video_engine.setEnabled(has_hw)
+        self.lbl_video_engine.setEnabled(has_hw and not alpha_lock)
 
     def _refresh_container_options(self):
         self._building = True
@@ -2102,6 +2303,8 @@ class AdvancedRecodePanel(QWidget):
             a_codec = self._guard_codec("audio")
             codec_ids = [c for c in (v_codec, a_codec) if c]
             containers = get_compatible_containers(codec_ids) if codec_ids else []
+            if v_codec and self._alpha_filtered:
+                containers = [c for c in containers if keeps_alpha(v_codec, c)]
             current = self.combo_container.currentData()
             self.combo_container.clear()
             for cont_id in containers:
@@ -2118,7 +2321,7 @@ class AdvancedRecodePanel(QWidget):
             if is_audio_only and preferred in containers:
                 target = preferred
             # 2. En video: Códecs con contenedor obligatorio / estándar de la industria (ProRes/DNxHD/etc -> MOV, GIF -> GIF):
-            elif primary_codec in ("prores", "dnxhd", "dnxhr", "cfhd", "qtrle", "hap", "gif", "apng") and preferred in containers:
+            elif primary_codec in ("prores", "dnxhd", "dnxhr", "cfhd", "qtrle", "hap", "gif", "apng", "webp") and preferred in containers:
                 target = preferred
             # 3. Si el contenedor actual sigue siendo compatible y válido en la lista, conservarlo
             elif current and self.combo_container.findData(current) >= 0:
@@ -2242,6 +2445,7 @@ class AdvancedRecodePanel(QWidget):
                 self._invalid_reason = wm_msg
 
         self.validity_changed.emit(self._last_valid)
+        self._refresh_alpha_ui()
 
     def _format_playback_risk_message(self, risk: dict) -> str:
         """Arma el texto final del warning de "riesgo de reproducción" (ver
@@ -2305,7 +2509,7 @@ class AdvancedRecodePanel(QWidget):
     def get_settings(self, crop_fraction_override: tuple[float, float, float, float] | None = None) -> dict:
         stream_mode = self._current_stream_mode()
         v_codec = self._current_video_codec()
-        is_gif = (v_codec == "gif" and self.rb_video_recode.isChecked())
+        is_gif = (v_codec in _NO_AUDIO_VIDEO_CODECS and self.rb_video_recode.isChecked())
         video_recode_active = (stream_mode != "audio_only" and self.rb_video_recode.isChecked())
         video_args = self._effective_args("video") if video_recode_active else None
         if video_args is not None and video_recode_active:
@@ -2336,7 +2540,7 @@ class AdvancedRecodePanel(QWidget):
             "video_codec": v_codec,
             "video_args": video_args,
             "video_tier": video_tier,
-            "video_engine_mode": ("cpu" if self._force_cpu_engine else "auto") if video_tier else "fixed",
+            "video_engine_mode": ("cpu" if (self._force_cpu_engine or self._alpha_filtered) else "auto") if video_tier else "fixed",
             "video_passes": passes,
             "audio_mode": "copy" if self.rb_audio_copy.isChecked() else "recode",
             "audio_codec": self._current_audio_codec() if not is_gif else None,
@@ -2356,6 +2560,9 @@ class AdvancedRecodePanel(QWidget):
             ),
             "watermark_image_path": watermark_image_path,
             "watermark_overlay_filter": watermark_overlay_filter,
+            # Transparencia (ver alpha_policy.py): el motor la aplica solo a los archivos
+            # del lote que realmente la traen.
+            "keep_alpha": self.alpha_video.is_checked() if hasattr(self, "alpha_video") else None,
             "audio_normalize": bool(hasattr(self, "chk_audio_normalize") and self.chk_audio_normalize.isChecked() and self.rb_audio_recode.isChecked() and stream_mode != "video_only" and not is_gif),
             "audio_normalize_method": self.combo_audio_norm_method.currentData() if hasattr(self, "combo_audio_norm_method") else "loudnorm",
             "audio_filter": self._build_audio_normalization_filter() if (hasattr(self, "chk_audio_normalize") and self.chk_audio_normalize.isChecked() and self.rb_audio_recode.isChecked() and stream_mode != "video_only" and not is_gif) else None,

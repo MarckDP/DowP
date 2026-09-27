@@ -27,7 +27,8 @@ EXT_MAP = {
     "Audio": [
         ".mp3", ".wav", ".m4a", ".flac", ".ogg", ".opus", ".aac", ".wma", ".aiff",
         ".aif", ".ac3", ".dts", ".weba", ".mka", ".amr", ".caf", ".adts",
-        ".thd", ".mlp", ".mpc", ".w64", ".shn",
+        ".thd", ".mlp", ".mpc", ".w64", ".shn", ".oga", ".m4b", ".ape", ".wv",
+        ".mp2", ".mp31", ".mp32",
     ],
 }
 

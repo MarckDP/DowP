@@ -65,8 +65,8 @@ AUDIO_BITRATE_BY_LEVEL = {
 
 import os
 
-# Extensiones estándar de solo audio
-AUDIO_ONLY_EXTS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
+# Extensiones estándar de solo audio (lista compartida con la cola de Herramientas Multimedia)
+from core.utils.media_extensions import AUDIO_EXTS as AUDIO_ONLY_EXTS
 
 # Piso duro para video y audio
 _MIN_VIDEO_KBPS = 300

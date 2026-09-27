@@ -80,6 +80,101 @@ def probe_video_streams(input_file: str) -> tuple[bool, int | None]:
         return True, None
 
 
+def probe_source_alpha(input_file: str) -> dict:
+    """¿El video de origen trae transparencia, y con qué decodificador hay que leerlo para
+    no perderla? Reutiliza la detección de las herramientas de IA (ia_video_common):
+    WebM VP8/VP9 guarda el alfa aparte (alpha_mode=1) y el decodificador nativo de ffmpeg
+    lo descarta en silencio -- solo libvpx lo entrega (verificado en el eje de alfa de
+    ffmpeg_codec_matrix.json).
+
+    Ante cualquier fallo devuelve "sin alfa", que es el comportamiento de siempre."""
+    try:
+        from core.tabs.video_tools.ia_video_common import probe_video_source
+        info = probe_video_source(input_file)
+        return {"has_alpha": bool(info.get("has_alpha")),
+                "decoder_args": list(info.get("decoder_args") or [])}
+    except Exception as e:
+        logger.warning(f"QueueWorker: No se pudo detectar transparencia en '{input_file}': {e}")
+        return {"has_alpha": False, "decoder_args": []}
+
+
+# ProRes 4444/4444 XQ: su formato "sin alfa" -> el mismo con alfa. Los perfiles de
+# codec_profiles.py fijan yuv444p10le, que descarta la transparencia aunque el origen la
+# tenga (verificado: con yuva444p10le se conserva completa).
+_PRORES_ALPHA_PIX_FMTS = {"yuv444p10le": "yuva444p10le", "yuv444p12le": "yuva444p12le"}
+
+
+# Encoders que, sin -pix_fmt explícito, eligen SOLOS un formato con alfa cuando el origen
+# lo trae (verificado en el eje de alfa del matrix) -> su formato equivalente sin alfa,
+# para cuando el usuario pide descartar la transparencia (keep_alpha=False).
+_OPAQUE_PIX_FMT_FOR = {
+    "libvpx-vp9": "yuv420p", "libvpx": "yuv420p", "ffv1": "yuv420p", "cfhd": "gbrp12le",
+    "utvideo": "gbrp", "huffyuv": "yuv422p", "jpeg2000": "rgb24", "png": "rgb24",
+    "apng": "rgb24", "libwebp": "yuv420p", "libwebp_anim": "yuv420p", "qtrle": "rgb24",
+}
+# Encoders que conservan el alfa en yuva420p (verificado en el eje de alfa del matrix).
+_YUVA420_ENCODERS = {"libvpx-vp9", "libvpx", "libwebp", "libwebp_anim"}
+_ALPHA_TO_OPAQUE_PIX_FMT = {
+    "yuva420p": "yuv420p", "yuva422p": "yuv422p", "yuva444p": "yuv444p",
+    "yuva444p10le": "yuv444p10le", "yuva444p12le": "yuv444p12le",
+    "gbrap": "gbrp", "gbrap12le": "gbrp12le", "rgba": "rgb24", "bgra": "rgb24", "argb": "rgb24",
+}
+
+
+def strip_alpha_from_video_args(video_args: list) -> list:
+    """El usuario pidió NO conservar la transparencia de un origen que la trae: formato de
+    píxel sin alfa (o el equivalente opaco del que el encoder elegiría solo) y, en GIF,
+    paleta sin color transparente."""
+    from core.utils.recode_guard import encoder_in_args
+    args = list(video_args or [])
+    encoder = encoder_in_args(args)
+    has_pix_fmt = False
+    for i in range(len(args) - 1):
+        if args[i] == "-pix_fmt":
+            has_pix_fmt = True
+            args[i + 1] = _ALPHA_TO_OPAQUE_PIX_FMT.get(args[i + 1], args[i + 1])
+        elif args[i] == "-format" and args[i + 1] == "hap_alpha":
+            args[i + 1] = "hap"
+        elif args[i] in ("-vf", "-filter:v") and "palettegen" in args[i + 1] \
+                and "reserve_transparent" not in args[i + 1]:
+            args[i + 1] = args[i + 1].replace("palettegen=", "palettegen=reserve_transparent=0:", 1)
+    if not has_pix_fmt and encoder in _OPAQUE_PIX_FMT_FOR:
+        args += ["-pix_fmt", _OPAQUE_PIX_FMT_FOR[encoder]]
+    if encoder == "libvpx":
+        args = [a for i, a in enumerate(args)
+                if not (a == "-auto-alt-ref" or (i > 0 and args[i - 1] == "-auto-alt-ref"))]
+    return args
+
+
+def adapt_video_args_for_alpha(video_args: list, has_alpha: bool, keep_alpha: bool | None = None) -> list:
+    """Ajusta los args de video cuando el origen trae transparencia, para no perderla
+    (o no fallar) por un detalle del encoder -- sin cambiar nada si el origen no la trae:
+
+    - ProRes 4444 / 4444 XQ: yuv444p10le -> yuva444p10le. Solo con origen transparente: a
+      un origen opaco se le sumaría un canal alfa vacío que agranda el archivo.
+    - VP8 (libvpx): al leer el alfa, ffmpeg le entrega yuva420p y libvpx se niega a abrir
+      sin -auto-alt-ref 0 ("Transparency encoding with auto_alt_ref does not work")."""
+    if not has_alpha or not video_args:
+        return video_args
+    if keep_alpha is False:
+        return strip_alpha_from_video_args(video_args)
+    from core.utils.recode_guard import encoder_in_args
+    args = list(video_args)
+    encoder = encoder_in_args(args)
+    if encoder in ("prores_ks", "prores_aw"):
+        for i in range(len(args) - 1):
+            if args[i] == "-pix_fmt" and args[i + 1] in _PRORES_ALPHA_PIX_FMTS:
+                args[i + 1] = _PRORES_ALPHA_PIX_FMTS[args[i + 1]]
+    elif encoder in _YUVA420_ENCODERS and "-pix_fmt" not in args:
+        # VP9/VP8/WebP sin -pix_fmt: con un origen RGB con alfa (argb de QuickTime
+        # Animation, rgba de PNG/APNG) libvpx-vp9 elige un formato RGB que no puede abrir
+        # ("Error while opening encoder"). Con yuva420p abre y conserva el alfa.
+        args += ["-pix_fmt", "yuva420p"]
+    if encoder == "libvpx" and "-auto-alt-ref" not in args:
+        args += ["-auto-alt-ref", "0"]
+    return args
+
+
 def source_has_real_video(input_file: str) -> bool:
     """True si el archivo tiene un stream de video de verdad.
 
@@ -891,6 +986,16 @@ class QueueWorker(QThread):
             cmd.extend(["-ss", f"{trim_in:.3f}"])
         if trim_out is not None and trim_out > 0:
             cmd.extend(["-to", f"{trim_out:.3f}"])
+        # Transparencia del origen: un WebM VP8/VP9 con alfa hay que LEERLO con libvpx o
+        # ffmpeg descarta el canal alfa antes de que llegue a ningún encoder. Al copiar el
+        # stream (sin recodificar) no hay decodificación, así que no hace falta.
+        # keep_alpha (ver alpha_policy.py): False = el usuario pidió descartar la
+        # transparencia -> tampoco se fuerza el decodificador que la lee.
+        keep_alpha = settings.get("keep_alpha")
+        source_alpha = probe_source_alpha(input_file)
+        if (source_alpha["decoder_args"] and settings.get("video_mode", "recode") != "copy"
+                and keep_alpha is not False):
+            cmd.extend(source_alpha["decoder_args"])
         cmd.extend(["-i", input_file])
 
         # Marca de agua de imagen: segundo input (índice 1), en loop porque una imagen es
@@ -923,7 +1028,9 @@ class QueueWorker(QThread):
 
         # Opciones de Video
         video_mode = settings.get("video_mode", "recode")
-        is_gif = (settings.get("video_codec") == "gif" or settings.get("container") == "gif")
+        # GIF, APNG y WebP animado no aceptan audio: se descarta siempre (-an).
+        is_gif = (settings.get("video_codec") in ("gif", "apng", "webp")
+                  or settings.get("container") in ("gif", "apng", "webp"))
         # Un preset de video sobre un archivo SIN video (un audio con carátula
         # incrustada) hacía que ffmpeg intentase codificar la carátula y el job entero
         # fallaba. Con una playlist de audio eso tumbaba la recodificación de todos los
@@ -966,7 +1073,7 @@ class QueueWorker(QThread):
             # No se puede usar -vf junto con -filter_complex apuntando al mismo stream:
             # se extrae el valor de -vf que ya armó advanced_recode_panel.py (escala/
             # recorte/texto) y se reinyecta como primera etapa del grafo fusionado.
-            v_args = settings.get("video_args", [])
+            v_args = adapt_video_args_for_alpha(settings.get("video_args", []), source_alpha["has_alpha"], keep_alpha)
             vf_value, v_args = _extract_vf_value(v_args)
             main_stage = vf_value if vf_value else "null"  # 'null' = passthrough de ffmpeg
             filter_complex = f"[0:v]{main_stage}[main];{watermark_overlay_filter}"
@@ -983,7 +1090,7 @@ class QueueWorker(QThread):
             if video_mode == "copy":
                 cmd.extend(["-c:v", "copy"])
             else:
-                v_args = settings.get("video_args", [])
+                v_args = adapt_video_args_for_alpha(settings.get("video_args", []), source_alpha["has_alpha"], keep_alpha)
                 if v_args:
                     cmd.extend(v_args)
                 else:

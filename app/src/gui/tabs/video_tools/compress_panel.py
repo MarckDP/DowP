@@ -37,6 +37,9 @@ _MAX_VISIBLE_COMBO_ITEMS = 12
 # real (h264/hevc/av1/vp9) — ProRes/DNxHR/GIF/lossless etc. quedan exclusivos de Avanzado,
 # donde tienen sentido (mezcla/edición), no aquí.
 _VIDEO_CODEC_IDS = ["h264", "hevc", "av1", "vp9"]
+
+from core.tabs.video_tools.alpha_policy import meta_has_alpha, keeps_alpha, codec_label
+from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
 _AUDIO_CODEC_IDS = ["aac", "opus", "mp3"]
 
 _QUALITY_MODE_CQ = "cq"
@@ -69,6 +72,12 @@ class CompressPanel(QWidget):
         self._force_cpu_quick = False
         self._force_cpu_manual = False
         self._container_touched = False
+        # Transparencia en la cola (ver set_queue_alpha_counts) y códec que eligió el
+        # usuario antes de que "Conservar transparencia" lo cambiara solo a VP9 (se
+        # restaura al desmarcar).
+        self._queue_alpha = (0, 0)
+        self._codec_before_alpha = None
+        self._audio_before_alpha = None
         self._init_ui()
         self._reload_manual_video_codecs()
         self._refresh_quick_estimates()
@@ -162,15 +171,15 @@ class CompressPanel(QWidget):
         compat_row.addWidget(self.badge_quick_engine)
         v.addLayout(compat_row)
 
-        self.lbl_compat_hint = QLabel(self.tr(
-            "Compatibilidad universal usa H.264 (se reproduce en cualquier dispositivo). "
-            "Mejor compresión usa HEVC si este equipo tiene un encoder disponible: mismo nivel de "
-            "calidad en menos peso, con algo menos de compatibilidad. Ambas usan aceleración por "
-            "GPU cuando este equipo la tiene — el badge de la derecha lo confirma y permite forzar CPU."
-        ), page)
+        self.lbl_compat_hint = QLabel(self._video_hint_text(), page)
         self.lbl_compat_hint.setObjectName("mutedLabel")
         self.lbl_compat_hint.setWordWrap(True)
         v.addWidget(self.lbl_compat_hint)
+
+        self.alpha_quick = KeepAlphaOption(page)
+        self.alpha_quick.toggled.connect(lambda _c: (self._refresh_quick_alpha_status(),
+                                                     self._refresh_quick_estimates()))
+        v.addWidget(self.alpha_quick)
 
         suggestion_frame, suggestion_layout = self._card_frame(parent=page)
         self.lbl_suggestion = QLabel("", suggestion_frame)
@@ -221,6 +230,9 @@ class CompressPanel(QWidget):
         v.addStretch(1)
         return page
 
+    def _video_hint_text(self) -> str:
+        return self.tr("Universal: H.264, se reproduce en todo. Mejor compresión: HEVC, pesa menos.")
+
     def _current_quick_level(self) -> str:
         for level, btn in self._level_buttons.items():
             if btn.isChecked():
@@ -237,9 +249,25 @@ class CompressPanel(QWidget):
             return software_encoder(family) or resolve_encoder(family) or "libx264"
         return resolve_encoder(family) or "libx264"
 
+    def _quick_all_alpha(self) -> bool:
+        """Con "Conservar transparencia", Rápido comprime a WebM/VP9 por CPU los archivos
+        que la tienen (y a MP4 como siempre los que no). True si eso le toca al archivo
+        SELECCIONADO -- el panel describe ese archivo (igual que "Este archivo" en
+        Convertir): el selector Universal/Mejor compresión no le cambia nada y va por CPU.
+        Con la cola mezclada, el aviso de la casilla explica qué pasa con los demás. Sin
+        archivo seleccionado, se mira si toda la cola lleva transparencia."""
+        if not self.alpha_quick.is_active():
+            return False
+        if self._source_meta:
+            return meta_has_alpha(self._source_meta) and not advisor.is_audio_only(
+                self._source_meta, self._source_filepath)
+        with_alpha, without = self._queue_alpha
+        return with_alpha > 0 and without == 0
+
     def _refresh_quick_engine_badge(self):
         family = self._current_quick_family()
-        self.badge_quick_engine.set_state(has_hardware_encoder(family), self._force_cpu_quick)
+        locked = self.tr("La transparencia solo se puede codificar por CPU.") if self._quick_all_alpha() else None
+        self.badge_quick_engine.set_state(has_hardware_encoder(family), self._force_cpu_quick, locked)
 
     def _on_quick_compat_changed(self, *_args):
         self._refresh_quick_estimates()
@@ -260,20 +288,18 @@ class CompressPanel(QWidget):
 
         self.badge_quick_engine.setVisible(True)
         self._refresh_quick_engine_badge()
+        all_alpha = self._quick_all_alpha() and not is_audio
+        self.compat_toggle.setEnabled(not all_alpha)
+        self.compat_toggle.setToolTip(self.tr(
+            "Con transparencia siempre se usa VP9 en WebM: esta opción no cambia nada.") if all_alpha else "")
 
         if hasattr(self, "lbl_compat_hint"):
+            self.lbl_compat_hint.setVisible(not all_alpha)
             if is_audio:
                 self.lbl_compat_hint.setText(self.tr(
-                    "Compatibilidad universal usa AAC/MP3 y Mejor compresión usa Opus. "
-                    "Para archivos de video se usará aceleración por GPU (configurable arriba a la derecha); los audios se procesan por CPU."
-                ))
+                    "Universal: AAC/MP3. Mejor compresión: Opus, pesa menos."))
             else:
-                self.lbl_compat_hint.setText(self.tr(
-                    "Compatibilidad universal usa H.264 (se reproduce en cualquier dispositivo). "
-                    "Mejor compresión usa HEVC si este equipo tiene un encoder disponible: mismo nivel de "
-                    "calidad en menos peso, con algo menos de compatibilidad. Ambas usan aceleración por "
-                    "GPU cuando este equipo la tiene — el badge de la derecha lo confirma y permite forzar CPU."
-                ))
+                self.lbl_compat_hint.setText(self._video_hint_text())
 
         source_mb = advisor.source_size_mb(meta) if self._source_meta else None
 
@@ -404,6 +430,10 @@ class CompressPanel(QWidget):
         vv.addWidget(lbl_target_hint)
         self._lbl_target_hint = lbl_target_hint
 
+        self.alpha_manual = KeepAlphaOption(frame_video)
+        self.alpha_manual.toggled.connect(self._on_manual_alpha_toggled)
+        vv.addWidget(self.alpha_manual)
+
         v.addWidget(frame_video)
 
         # Audio
@@ -420,7 +450,7 @@ class CompressPanel(QWidget):
         default_idx = self.combo_manual_audio_codec.findData("aac")
         if default_idx >= 0:
             self.combo_manual_audio_codec.setCurrentIndex(default_idx)
-        self.combo_manual_audio_codec.currentIndexChanged.connect(self._on_manual_changed)
+        self.combo_manual_audio_codec.currentIndexChanged.connect(self._on_manual_audio_changed)
         av.addWidget(self.combo_manual_audio_codec)
 
         lbl_audio_bitrate = QLabel(self.tr("Bitrate de audio:"), frame_audio)
@@ -476,15 +506,42 @@ class CompressPanel(QWidget):
         self._on_manual_changed()
 
     def _reload_manual_video_codecs(self):
+        """Con "Conservar transparencia" activa solo queda VP9 (HEVC con alfa no está en
+        este ffmpeg y AV1 con alfa no existe en ffmpeg): el combo queda fijo en VP9. Al
+        desmarcar vuelve la lista completa con el códec que había antes."""
+        alpha = self._manual_alpha_active()
+        current = self.combo_manual_video_codec.currentData()
         self._building = True
         try:
             self.combo_manual_video_codec.clear()
             for codec in get_video_codecs(only_verified=False):
-                if codec["codec_id"] in _VIDEO_CODEC_IDS:
+                if codec["codec_id"] in _VIDEO_CODEC_IDS and (not alpha or codec["codec_id"] == "vp9"):
                     self.combo_manual_video_codec.addItem(codec["display_name"], codec["codec_id"])
-            idx = self.combo_manual_video_codec.findData("h264")
-            if idx >= 0:
-                self.combo_manual_video_codec.setCurrentIndex(idx)
+            if alpha:
+                if current and current != "vp9" and self._codec_before_alpha is None:
+                    self._codec_before_alpha = current
+                wanted = "vp9"
+            else:
+                wanted = self._codec_before_alpha or current or "h264"
+                self._codec_before_alpha = None
+            idx = self.combo_manual_video_codec.findData(wanted)
+            self.combo_manual_video_codec.setCurrentIndex(idx if idx >= 0 else 0)
+            self.combo_manual_video_codec.setEnabled(not alpha)
+            # Audio: WebM (el contenedor natural de VP9 con transparencia) solo admite
+            # Opus/Vorbis -- con AAC la lista quedaba solo en MKV.
+            audio = self.combo_manual_audio_codec.currentData()
+            if alpha and audio not in ("opus", "vorbis") and self._audio_before_alpha is None:
+                self._audio_before_alpha = audio
+                wanted_audio = "opus"
+            elif not alpha and self._audio_before_alpha:
+                wanted_audio = self._audio_before_alpha
+                self._audio_before_alpha = None
+            else:
+                wanted_audio = None
+            if wanted_audio:
+                a_idx = self.combo_manual_audio_codec.findData(wanted_audio)
+                if a_idx >= 0:
+                    self.combo_manual_audio_codec.setCurrentIndex(a_idx)
         finally:
             self._building = False
         self._on_manual_video_codec_changed()
@@ -492,8 +549,15 @@ class CompressPanel(QWidget):
     def _current_manual_video_codec_id(self) -> str:
         return self.combo_manual_video_codec.currentData() or "h264"
 
+    def _manual_alpha_active(self) -> bool:
+        return (hasattr(self, "alpha_manual") and self.alpha_manual.is_active()
+                and self._current_manual_stream_mode() != "audio_only")
+
     def _current_manual_video_encoder(self) -> str:
         codec_id = self._current_manual_video_codec_id()
+        if self._manual_alpha_active():
+            # Ningún encoder por GPU guarda transparencia: libvpx-vp9 sí.
+            return software_encoder(codec_id) or "libvpx-vp9"
         if self._force_cpu_manual:
             return software_encoder(codec_id) or resolve_encoder(codec_id) or "libx264"
         return resolve_encoder(codec_id) or "libx264"
@@ -504,18 +568,29 @@ class CompressPanel(QWidget):
     def _current_manual_audio_encoder(self) -> str:
         return resolve_encoder(self._current_manual_audio_codec_id()) or "aac"
 
+    def _refresh_manual_engine_badge(self):
+        codec_id = self._current_manual_video_codec_id()
+        locked = self.tr("La transparencia solo se puede codificar por CPU.") if self._manual_alpha_active() else None
+        self.badge_manual_engine.set_state(has_hardware_encoder(codec_id), self._force_cpu_manual, locked)
+
     def _on_manual_video_codec_changed(self, *_args):
         if self._building:
             return
-        codec_id = self._current_manual_video_codec_id()
-        self.badge_manual_engine.set_state(has_hardware_encoder(codec_id), self._force_cpu_manual)
+        self._refresh_manual_engine_badge()
         self._on_manual_changed()
 
     def _on_manual_force_cpu_toggled(self, force_cpu: bool):
         self._force_cpu_manual = force_cpu
-        codec_id = self._current_manual_video_codec_id()
-        self.badge_manual_engine.set_state(has_hardware_encoder(codec_id), self._force_cpu_manual)
+        self._refresh_manual_engine_badge()
         self._on_manual_changed()
+
+    def _on_manual_audio_changed(self, *_args):
+        if not self._building:
+            self._audio_before_alpha = None
+        self._on_manual_changed()
+
+    def _on_manual_alpha_toggled(self, *_args):
+        self._reload_manual_video_codecs()
 
     def _on_quality_mode_toggled(self, *_args):
         is_cq = self.rb_quality_cq.isChecked()
@@ -562,6 +637,10 @@ class CompressPanel(QWidget):
                 codec_ids = [self._current_manual_video_codec_id(), self._current_manual_audio_codec_id()]
                 compatible = get_compatible_containers(codec_ids)
 
+            if stream_mode != "audio_only" and self._manual_alpha_active():
+                vcodec = self._current_manual_video_codec_id()
+                compatible = [c for c in compatible if keeps_alpha(vcodec, c)]
+
             source_id = self._source_container_id()
             if source_id and source_id in compatible:
                 self.combo_manual_container.addItem(self.tr("Mismo que el original"), "same")
@@ -578,6 +657,8 @@ class CompressPanel(QWidget):
                 idx = -1
             if idx < 0:
                 idx = self.combo_manual_container.findData("same")
+                if idx < 0 and stream_mode != "audio_only" and self._manual_alpha_active():
+                    idx = self.combo_manual_container.findData("webm")
                 if idx < 0:
                     if stream_mode == "audio_only":
                         acodec = self._current_manual_audio_codec_id()
@@ -585,6 +666,8 @@ class CompressPanel(QWidget):
                         idx = self.combo_manual_container.findData(pref)
                     else:
                         idx = self.combo_manual_container.findData("mp4")
+                        if idx < 0:
+                            idx = self.combo_manual_container.findData("webm")
                 if idx < 0:
                     idx = 0
             self.combo_manual_container.setCurrentIndex(max(idx, 0))
@@ -620,6 +703,49 @@ class CompressPanel(QWidget):
             return
         self._reload_manual_containers()
         self._refresh_manual_size_estimate()
+        self._refresh_manual_alpha_status()
+
+    # ─── Transparencia ───────────────────────────────────────────
+
+    def _refresh_quick_alpha_status(self):
+        if not hasattr(self, "alpha_quick"):
+            return
+        has_alpha = meta_has_alpha(self._source_meta) and not advisor.is_audio_only(
+            self._source_meta or {}, self._source_filepath)
+        self.alpha_quick.set_availability(has_alpha, self._queue_alpha[0])
+        if self.alpha_quick.is_checked():
+            self.alpha_quick.set_status(self.tr("Se guarda en WebM (VP9) para conservarla."), "ok")
+        else:
+            self.alpha_quick.set_status(self.tr("Se descarta la transparencia (MP4)."), "muted")
+        self.alpha_quick.set_queue_mix(*self._queue_alpha, per_file_text=self.tr(
+            "La cola mezcla archivos con transparencia ({0}) y sin ella ({1}): los primeros se "
+            "guardan en WebM (VP9, por CPU); el resto, en MP4 como siempre."))
+
+    def _refresh_manual_alpha_status(self):
+        if not hasattr(self, "alpha_manual"):
+            return
+        has_video = self._current_manual_stream_mode() != "audio_only"
+        self.alpha_manual.set_availability(meta_has_alpha(self._source_meta) and has_video,
+                                           self._queue_alpha[0] if has_video else 0)
+        self.alpha_manual.set_queue_mix(*self._queue_alpha)
+        if not self.alpha_manual.is_checked():
+            self.alpha_manual.set_status(self.tr("Se descarta la transparencia."), "muted")
+            return
+        if self._codec_before_alpha:
+            self.alpha_manual.set_status(self.tr(
+                "Cambiado a VP9 para conservar la transparencia."), "ok")
+            return
+        codec_id = self._current_manual_video_codec_id()
+        container = self.combo_manual_container.currentData() or "mp4"
+        if container == "same":
+            container = self._source_container_id() or "mp4"
+        if keeps_alpha(codec_id, container):
+            self.alpha_manual.set_status(self.tr("Se conserva la transparencia."), "ok")
+        else:
+            self.alpha_manual.set_status(self.tr(
+                "{0} en {1} no conserva la transparencia: se perderá. Para conservarla usa VP9 "
+                "en WebM o MKV.").format(codec_label(codec_id), CONTAINER_LABELS.get(container, container.upper())),
+                "warning")
 
     def _refresh_manual_size_estimate(self):
         if not hasattr(self, "lbl_manual_size_estimate"):
@@ -692,10 +818,21 @@ class CompressPanel(QWidget):
         self._refresh_quick_estimates()
         self._reload_manual_containers()
         self._refresh_manual_size_estimate()
+        self._refresh_quick_alpha_status()
+        self._refresh_manual_alpha_status()
+        self._reload_manual_video_codecs()
+        self._refresh_quick_estimates()
 
     def set_queue_entries(self, entries: list[dict]):
         self._queue_entries = entries or []
         self._refresh_queue_total_label()
+
+    def set_queue_alpha_counts(self, with_alpha: int, without_alpha: int):
+        self._queue_alpha = (with_alpha, without_alpha)
+        self._refresh_quick_alpha_status()
+        self._refresh_quick_estimates()
+        self._refresh_manual_alpha_status()
+        self._reload_manual_video_codecs()
 
     def get_settings(self, meta_override: dict | None = None, filepath_override: str | None = None) -> dict:
         """`meta_override`/`filepath_override`, si se pasan, describen un archivo DISTINTO
@@ -732,10 +869,28 @@ class CompressPanel(QWidget):
                     "container": container,
                 }
 
+            audio_kbps = advisor.AUDIO_BITRATE_BY_LEVEL[level]
+            if meta_has_alpha(meta):
+                keep = self.alpha_quick.is_checked()
+                if keep:
+                    # MP4 (H.264/HEVC) no guarda transparencia y la GPU tampoco la admite:
+                    # a ESTE archivo le toca WebM con VP9 por CPU, al mismo nivel (misma
+                    # fracción de su bitrate). Audio Opus: el que admite WebM.
+                    return {
+                        "stream_mode": "video+audio",
+                        "video_mode": "recode",
+                        "video_codec": "vp9",
+                        "video_args": advisor.build_level_video_args(meta, level, "libvpx-vp9")
+                                      + ["-pix_fmt", "yuva420p"],
+                        "audio_mode": "recode",
+                        "audio_codec": "opus",
+                        "audio_args": build_custom_audio_bitrate_args("libopus", audio_kbps),
+                        "container": "webm",
+                        "keep_alpha": True,
+                    }
             family = self._current_quick_family()
             encoder = self._current_quick_encoder()
             video_args = advisor.build_level_video_args(meta, level, encoder)
-            audio_kbps = advisor.AUDIO_BITRATE_BY_LEVEL[level]
             return {
                 "stream_mode": "video+audio",
                 "video_mode": "recode",
@@ -790,6 +945,7 @@ class CompressPanel(QWidget):
                 "audio_codec": None,
                 "audio_args": [],
                 "container": container,
+                "keep_alpha": self.alpha_manual.is_checked(),
             }
 
         # stream_mode == "video+audio"
@@ -817,4 +973,5 @@ class CompressPanel(QWidget):
             "audio_codec": audio_codec_id,
             "audio_args": audio_args,
             "container": container,
+            "keep_alpha": self.alpha_manual.is_checked(),
         }

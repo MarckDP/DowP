@@ -16,7 +16,11 @@ CACHE_FILE = os.path.join(get_cache_dir(), "metadata_cache.json")
 # entrada de cache vieja (guardada con un esquema anterior, ej. sin "audio_streams")
 # se sigue devolviendo tal cual por mtime/size aunque le falten campos nuevos, y la UI
 # que los consume nunca los ve hasta que el usuario borra la cache a mano.
-CACHE_SCHEMA_VERSION = 3
+CACHE_SCHEMA_VERSION = 5  # 4: + has_alpha (transparencia del video). 5: duración de APNG/WebP animado
+
+# Formatos de píxel con canal alfa (mismo criterio que ia_video_common._ALPHA_PIX_FMTS).
+_ALPHA_PIX_FMTS = {"rgba", "bgra", "argb", "abgr", "ya8", "ya16le", "ya16be",
+                   "rgba64le", "rgba64be", "bgra64le", "bgra64be"}
 
 class FFprobeTask(QRunnable):
     """Tarea asíncrona para ejecutar ffprobe en un archivo multimedia."""
@@ -352,6 +356,9 @@ class FFprobeMetadataManager(QObject):
                 if res.returncode == 0 and res.stdout:
                     data = json.loads(res.stdout)
                     self._parse_ffprobe_json(data, meta)
+                    if meta.get("duración") == "-" and any(
+                            st.get("codec_type") == "video" for st in data.get("streams", [])):
+                        self._duration_from_packets(probe_exe, path, meta, startupinfo)
                     return meta
             except Exception as e:
                 logger.error(f"FFprobeMetadataManager: Error al ejecutar ffprobe en {path}: {e}")
@@ -359,6 +366,26 @@ class FFprobeMetadataManager(QObject):
         # Fallback a ffmpeg -i si ffprobe falla o no está instalado
         self._fallback_ffmpeg_i(path, meta)
         return meta
+
+    def _duration_from_packets(self, probe_exe: str, path: str, meta: dict, startupinfo=None):
+        """APNG y WebP animado no informan duración (ni en el formato ni en el stream):
+        se toma del último paquete de video (inicio + duración). Solo se llama cuando
+        falta, así que no agrega un segundo ffprobe a los formatos comunes."""
+        try:
+            res = subprocess.run(
+                [probe_exe, "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "packet=pts_time,duration_time", "-of", "csv=p=0", path],
+                capture_output=True, text=True, encoding='utf-8', errors='ignore',
+                startupinfo=startupinfo, timeout=8)
+            last = [l for l in (res.stdout or "").splitlines() if l.strip()][-1].split(",")
+            total = float(last[0]) + (float(last[1]) if len(last) > 1 and last[1] not in ("", "N/A") else 0.0)
+        except Exception:
+            return
+        if total > 0:
+            # Redondeo hacia arriba: una animación de 0,9 s no debe quedar en "00:00".
+            total_sec = max(1, int(-(-total // 1)))
+            hrs, mins, secs = total_sec // 3600, (total_sec % 3600) // 60, total_sec % 60
+            meta["duración"] = f"{hrs:02d}:{mins:02d}:{secs:02d}" if hrs else f"{mins:02d}:{secs:02d}"
 
     def _parse_ffprobe_json(self, data: dict, meta: dict):
         fmt = data.get("format", {})
@@ -428,6 +455,15 @@ class FFprobeMetadataManager(QObject):
                 pix_fmt = st.get("pix_fmt")
                 if pix_fmt:
                     meta["color"] = str(pix_fmt)
+
+                # Transparencia: por el formato de píxel, o -- en WebM VP8/VP9, que guarda
+                # el alfa aparte y reporta "yuv420p" -- por la etiqueta alpha_mode=1.
+                tags = {str(k).lower(): str(v) for k, v in (st.get("tags") or {}).items()}
+                pf = str(pix_fmt or "").lower()
+                meta["has_alpha"] = (
+                    (codec_name in ("VP8", "VP9") and tags.get("alpha_mode") == "1")
+                    or pf in _ALPHA_PIX_FMTS or pf.startswith(("yuva", "gbrap"))
+                )
 
                 # Bitrate
                 v_bitrate = 0

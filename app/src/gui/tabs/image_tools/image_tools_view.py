@@ -29,6 +29,7 @@ from gui.widgets.animated_button import AnimatedButton
 from gui.widgets.bouncing_progress_bar import BouncingProgressBar
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.collapsible_panel import CollapsiblePanel
+from gui.widgets.resettable_splitter import ResettableSplitter
 from gui.widgets.floating_panel import FloatingPanel
 from gui.widgets.popover_button import PopoverTriggerButton
 from gui.tabs.editing_media.preview_panel import PreviewContainerWidget
@@ -467,7 +468,11 @@ class ImageToolsTab(QWidget):
         self.preview.set_zoomable(True)
         preview_column_layout.addWidget(self.preview, 1)
 
-        body_layout.addWidget(preview_column, 1)
+        # Separador ajustable Vista previa | Panel derecho (lista de imágenes + formato):
+        # el ancho del panel lo decide el usuario y se recuerda (ver _apply_layout_sizes).
+        self.body_splitter = ResettableSplitter(Qt.Horizontal)
+        self.body_splitter.addWidget(preview_column)
+        body_layout.addWidget(self.body_splitter, 1)
 
         self.queue_content = self._build_queue_content()
         self.right_panel = CollapsiblePanel(
@@ -475,7 +480,18 @@ class ImageToolsTab(QWidget):
             docked_size=self.RIGHT_DOCKED_WIDTH,
             overlay_max_width=self.RIGHT_OVERLAY_MAX_WIDTH,
         )
-        body_layout.addWidget(self.right_panel, 0)
+        self.body_splitter.addWidget(self.right_panel)
+        self.body_splitter.setStretchFactor(0, 1)
+        self.body_splitter.setStretchFactor(1, 0)
+        # Sin techo: docked_size sigue siendo el mínimo (que la lista no se recorte),
+        # pero el usuario puede ensancharlo cuanto quiera.
+        self.right_panel.set_dock_max_width(16777215)
+        self._layout_save_timer = QTimer(self)
+        self._layout_save_timer.setSingleShot(True)
+        self._layout_save_timer.setInterval(400)
+        self._layout_save_timer.timeout.connect(self._save_layout_sizes)
+        self.body_splitter.splitterMoved.connect(lambda *_: self._layout_save_timer.start())
+        self.body_splitter.reset_requested.connect(self._reset_layout)
 
         # Panel "Capas": ventana flotante arrastrable (estilo panel de Photoshop), no
         # acoplada a ningún layout -- flota libremente sobre self.body_row, la mueve
@@ -538,7 +554,8 @@ class ImageToolsTab(QWidget):
         # pintarse por encima de output_bar. Al no empujar ni redimensionar nada (es un
         # overlay flotante), cubre toda la altura disponible y el botón de borde queda
         # pegado al límite de la ventana (mismo comportamiento que en VideoToolsTab).
-        self.right_panel.configure_container(self, body_layout, 1, dock_stretch=0)
+        self.right_panel.configure_container(self, self.body_splitter, 1)
+        QTimer.singleShot(0, self._apply_layout_sizes)
 
         self.image_queue.file_selected.connect(self._on_file_selected)
 
@@ -2544,6 +2561,33 @@ class ImageToolsTab(QWidget):
             if btn.is_open():
                 btn.reposition()
 
+    LAYOUT_CONFIG_KEY = "image_tools_layout"
+
+    def _apply_layout_sizes(self):
+        """Ancho guardado del panel derecho (o el por defecto); la vista previa se queda
+        con el resto. Solo aplica con el panel acoplado (en overlay no está en el separador)."""
+        if self.body_splitter.count() < 2:
+            return
+        total = sum(self.body_splitter.sizes())
+        if total <= 0:
+            return
+        panel = int((get_config().get(self.LAYOUT_CONFIG_KEY) or {}).get("panel", self.RIGHT_DOCKED_WIDTH))
+        self.body_splitter.setSizes([max(1, total - panel), panel])
+
+    def _save_layout_sizes(self):
+        sizes = self.body_splitter.sizes()
+        if len(sizes) == 2 and sizes[1] > 0:
+            config = get_config()
+            config[self.LAYOUT_CONFIG_KEY] = {"panel": sizes[1]}
+            save_config(config)
+
+    def _reset_layout(self):
+        """Doble clic en el separador: panel derecho a su ancho por defecto."""
+        config = get_config()
+        config.pop(self.LAYOUT_CONFIG_KEY, None)
+        save_config(config)
+        self._apply_layout_sizes()
+
     def _update_responsive_mode(self):
         if not hasattr(self, "right_panel"):
             return
@@ -2551,6 +2595,9 @@ class ImageToolsTab(QWidget):
         want_docked = self.width() >= threshold
         if want_docked != self.right_panel.is_docked():
             self.right_panel.set_mode(docked=want_docked)
+            if want_docked:
+                # Volvió al separador: reponer el ancho que el usuario le había dado.
+                QTimer.singleShot(0, self._apply_layout_sizes)
         self.right_panel.sync_overlay_geometry()
         for btn in getattr(self, "_popover_buttons", []):
             if btn.is_open():

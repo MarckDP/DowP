@@ -27,7 +27,26 @@ def flatten(run):
                 continue
             for cont_id, c in entry["containers"].items():
                 flat[(codec_id, cont_id)] = (c["result"], c.get("error"))
+            # Eje de transparencia (ver run_matrix.py::probe_alpha): clave "alfa:<cont>".
+            for cont_id, c in ((entry.get("alpha") or {}).get("containers") or {}).items():
+                flat[(codec_id, f"alfa:{cont_id}")] = (c["result"], c.get("alpha_error") or c.get("error"))
     return flat
+
+
+# Estados del eje de alfa que conservan transparencia (el resto la pierde o no se puede usar).
+_ALPHA_OK = ("full", "1bit")
+
+
+def _is_regression(old, new):
+    if old in ("pass", "fail") or new in ("pass", "fail"):
+        return old == "pass" and new == "fail"
+    return old in _ALPHA_OK and new not in _ALPHA_OK
+
+
+def _is_improvement(old, new):
+    if old in ("pass", "fail") or new in ("pass", "fail"):
+        return old == "fail" and new == "pass"
+    return old not in _ALPHA_OK and new in _ALPHA_OK
 
 
 def main():
@@ -53,8 +72,8 @@ def main():
         print("Sin cambios de estado entre las dos versiones de ffmpeg.")
         return
 
-    regressions = [c for c in changed if c[1][0] == "pass" and c[2][0] == "fail"]
-    improvements = [c for c in changed if c[1][0] == "fail" and c[2][0] == "pass"]
+    regressions = [c for c in changed if _is_regression(c[1][0], c[2][0])]
+    improvements = [c for c in changed if _is_improvement(c[1][0], c[2][0])]
     other = [c for c in changed if c not in regressions and c not in improvements]
 
     def show(title, items):

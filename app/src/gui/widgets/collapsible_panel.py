@@ -10,7 +10,7 @@ izquierda y panel de opciones de codificación a la derecha, ambos colapsables e
 ventanas angostas mientras el preview central y la fila inferior (timeline + salida)
 permanecen siempre visibles.
 """
-from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea
+from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea, QSplitter
 from PySide6.QtCore import Qt, QRect, QPoint, QSize, QEasingCurve, QPropertyAnimation, Signal
 from PySide6.QtGui import QPainter, QColor, QPolygon
 
@@ -206,21 +206,30 @@ class CollapsiblePanel(QFrame):
         self._overlay_open = False
         self._anim.stop()
         self.edge_tab.hide()
-        self.setParent(self._dock_layout.parentWidget())
+        in_splitter = isinstance(self._dock_layout, QSplitter)
+        if not in_splitter:
+            self.setParent(self._dock_layout.parentWidget())
         self.setMinimumWidth(self.docked_size)
         self.setMaximumWidth(self._dock_max_width)
         self.setProperty("dockMode", "docked")
         self.style().unpolish(self)
         self.style().polish(self)
         self.updateGeometry()
-        self._dock_layout.insertWidget(self._dock_index, self, self._dock_stretch)
+        if in_splitter:
+            # Paneles ajustables por el usuario (ver VideoToolsTab): el splitter reparenta
+            # solo; quien lo usa repone los tamaños guardados después de acoplar.
+            self._dock_layout.insertWidget(min(self._dock_index, self._dock_layout.count()), self)
+        else:
+            self._dock_layout.insertWidget(self._dock_index, self, self._dock_stretch)
         self.show()
 
     def _enter_overlay(self):
         self._docked = False
         self._overlay_open = False
         self._anim.stop()
-        self._dock_layout.removeWidget(self)
+        if not isinstance(self._dock_layout, QSplitter):
+            self._dock_layout.removeWidget(self)
+        # En un QSplitter no hay removeWidget: cambiar de padre ya lo saca.
         self.setParent(self._overlay_host)
         self.setMinimumWidth(0)
         self.setMaximumWidth(self._overlay_max_width)

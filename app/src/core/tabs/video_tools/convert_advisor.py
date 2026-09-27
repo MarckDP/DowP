@@ -20,7 +20,12 @@ from core.utils.recode_guard import (
     normalize_container,
 )
 from core.tabs.video_tools.size_estimator import source_codec_id
-from core.tabs.video_tools.codec_profiles import build_custom_quality_args, build_custom_audio_bitrate_args
+from core.tabs.video_tools.codec_profiles import (
+    build_custom_quality_args, build_custom_audio_bitrate_args, get_profiles, TWO_PASS_CAPABLE_ENCODERS,
+)
+from core.tabs.video_tools.alpha_policy import (
+    meta_has_alpha, keeps_alpha, quick_alpha_codec, alpha_video_args,
+)
 
 # Orden de preferencia cuando el matrix confirma VARIOS códecs válidos para el mismo
 # contenedor (ej. WAV acepta pcm/aac/mp3/vorbis/...): no hay un "correcto" único, es una
@@ -95,6 +100,18 @@ def plan_conversion(meta: dict, container_id: str) -> dict:
     }
 
 
+def default_video_args(encoder: str, crf: int = DEFAULT_VIDEO_CRF) -> list[str]:
+    """Args de calidad por defecto para `encoder`. Solo los encoders con control CRF/CQ
+    reciben uno (x264/x265/VP8/VP9/AV1 y sus variantes por GPU): a WebP, APNG, GIF,
+    ProRes, etc. se les pasaba "-crf 18", una opción que no tienen -- ffmpeg la ignora
+    en silencio y el ajuste de calidad no servía de nada. Esos usan su primer perfil real
+    de codec_profiles.py."""
+    if encoder in TWO_PASS_CAPABLE_ENCODERS or any(hw in encoder for hw in ("nvenc", "qsv", "amf", "videotoolbox")):
+        return build_custom_quality_args(encoder, crf)
+    profile = next((p for p in get_profiles("video", encoder) if p.get("args")), None)
+    return list(profile["args"]) if profile else ["-c:v", encoder]
+
+
 def _native_audio_args(codec_id: str, encoder: str) -> list[str]:
     if codec_id in _AUDIO_CODECS_WITHOUT_BITRATE:
         if codec_id == "flac":
@@ -103,7 +120,31 @@ def _native_audio_args(codec_id: str, encoder: str) -> list[str]:
     return build_custom_audio_bitrate_args(encoder, DEFAULT_AUDIO_KBPS)
 
 
-def build_settings(meta: dict, container_id: str) -> dict:
+def alpha_plan(meta: dict, container_id: str, keep_alpha: bool) -> dict | None:
+    """Qué pasa con la transparencia de ESTE archivo al convertirlo a este contenedor.
+    None si el archivo no la trae (o su video no va a la salida).
+
+    Returns: {"action": "copy"|"recode"|"lost"|"dropped", "codec": str|None}
+      copy    -> el video se copia tal cual y el contenedor conserva su alfa
+      recode  -> se recodifica a "codec" (de uso común) para conservarla
+      lost    -> se quería conservar pero este contenedor no la guarda con ningún
+                 códec de uso común (ej. MP4)
+      dropped -> el usuario pidió descartarla"""
+    plan = plan_conversion(meta, container_id)
+    if plan["video"] is None or not meta_has_alpha(meta):
+        return None
+    if not keep_alpha:
+        return {"action": "dropped", "codec": None}
+    source = plan["video_codec_source"]
+    if plan["video"] == "copy" and keeps_alpha(source, container_id):
+        return {"action": "copy", "codec": source}
+    codec = quick_alpha_codec(container_id)
+    if codec:
+        return {"action": "recode", "codec": codec}
+    return {"action": "lost", "codec": None}
+
+
+def build_settings(meta: dict, container_id: str, keep_alpha: bool | None = None) -> dict:
     """Arma el dict de settings final para UN archivo, en modo automático (Rápido: copia
     lo que sea compatible; si hay que recodificar, elige el códec preferido de entre los
     que el matrix confirma como válidos para ESTE contenedor - ver
@@ -130,7 +171,18 @@ def build_settings(meta: dict, container_id: str) -> dict:
             encoder = resolve_encoder(video_codec_id) or "libx264"
             settings["video_mode"] = "recode"
             settings["video_codec"] = video_codec_id
-            settings["video_args"] = build_custom_quality_args(encoder, DEFAULT_VIDEO_CRF)
+            settings["video_args"] = default_video_args(encoder)
+
+    # Transparencia: si el archivo la trae y hay que conservarla, el video se recodifica a
+    # un códec que la guarde en este contenedor (aunque el de origen "entrara" por copia:
+    # ej. un VP9 con alfa copiado a MP4 la pierde). Ver alpha_plan.
+    if keep_alpha is not None and meta_has_alpha(meta):
+        settings["keep_alpha"] = bool(keep_alpha)
+        a_plan = alpha_plan(meta, container_id, bool(keep_alpha))
+        if a_plan and a_plan["action"] == "recode":
+            settings["video_mode"] = "recode"
+            settings["video_codec"] = a_plan["codec"]
+            settings["video_args"] = alpha_video_args(a_plan["codec"], DEFAULT_VIDEO_CRF)
 
     if plan["audio"] is not None:
         if plan["audio"] == "copy":

@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "source": "empirico: mux real contra el ffmpeg empaquetado, ver tools/codec_matrix/",
   "ffmpeg_version": "9.0.1-full_build-www.gyan.dev",
   "ffmpeg_version_full": "ffmpeg version 9.0.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
@@ -53,8 +53,9 @@
           "ffmpeg_error": "[out#0/asf @ 000001d8fd9a6ac0] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": false,
@@ -125,6 +126,52 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuv420p",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 000001fb9ac7aa80] Loaded libx265 does not support alpha layer encoding."
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 000002552a867500] Loaded libx265 does not support alpha layer encoding."
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 00000226306896c0] Loaded libx265 does not support alpha layer encoding."
+          },
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_error": "[libx265 @ 0000024c900d9b80] Loaded libx265 does not support alpha layer encoding.",
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 00000208ebd9a280] Loaded libx265 does not support alpha layer encoding."
+          },
+          "ts": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 00000192b3a8d4c0] Loaded libx265 does not support alpha layer encoding."
+          },
+          "flv": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[libx265 @ 00000168bbcdc980] Loaded libx265 does not support alpha layer encoding."
+          }
+        }
       }
     },
     "h264": {
@@ -224,6 +271,63 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "mxf": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null
+          },
+          "ts": {
+            "result": "lost",
+            "error": null
+          },
+          "3gp": {
+            "result": "lost",
+            "error": null
+          },
+          "3g2": {
+            "result": "lost",
+            "error": null
+          },
+          "m4a": {
+            "result": "lost",
+            "error": null
+          },
+          "flv": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "av1": {
@@ -259,12 +363,14 @@
           "ffmpeg_error": "[mxf @ 000001e46d6784c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -323,6 +429,51 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "webm": {
+            "result": "lost",
+            "error": null
+          },
+          "flv": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "vp9": {
@@ -358,12 +509,14 @@
           "ffmpeg_error": "[mxf @ 000001b38a96b180] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -422,6 +575,56 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuva420p",
+          "extra_args": [
+            "-b:v",
+            "0",
+            "-crf",
+            "30"
+          ]
+        },
+        "decoder": "libvpx-vp9",
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "webm": {
+            "result": "full",
+            "error": null
+          },
+          "flv": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "vp8": {
@@ -457,12 +660,14 @@
           "ffmpeg_error": "[mxf @ 0000018d4bb13ec0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -521,6 +726,52 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuva420p",
+          "extra_args": [
+            "-b:v",
+            "1M",
+            "-auto-alt-ref",
+            "0"
+          ]
+        },
+        "decoder": "libvpx",
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "webm": {
+            "result": "full",
+            "error": null
+          },
+          "ogg": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "dirac": {
@@ -556,8 +807,9 @@
           "ffmpeg_error": "[mxf @ 000001d4ca609e00] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
           "supported": true,
@@ -621,6 +873,45 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "mvc": {
@@ -729,6 +1020,43 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null
+          },
+          "ts": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "mpeg2video": {
@@ -828,6 +1156,47 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "mxf": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null
+          },
+          "ts": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "mpeg4": {
@@ -927,6 +1296,55 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null
+          },
+          "ts": {
+            "result": "lost",
+            "error": null
+          },
+          "3gp": {
+            "result": "lost",
+            "error": null
+          },
+          "3g2": {
+            "result": "lost",
+            "error": null
+          },
+          "m4a": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "msmpeg4v2": {
@@ -962,12 +1380,14 @@
           "ffmpeg_error": "[mxf @ 000001cd06ebcc00] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1026,6 +1446,43 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "vc1": {
@@ -1074,8 +1531,9 @@
           "ffmpeg_error": null
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": true,
@@ -1135,6 +1593,49 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "lost",
+            "error": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "3gp": {
+            "result": "lost",
+            "error": null
+          },
+          "3g2": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "theora": {
@@ -1170,12 +1671,14 @@
           "ffmpeg_error": "[mxf @ 0000025abe91f840] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1234,6 +1737,47 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ogg": {
+            "result": "lost",
+            "error": null
+          }
+        }
       }
     },
     "cinepak": {
@@ -1269,12 +1813,14 @@
           "ffmpeg_error": "[mxf @ 0000015318f2cec0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1333,6 +1879,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "svq1": {
@@ -1344,8 +1927,9 @@
       "skip_reason": null,
       "containers": {
         "mkv": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mp4": {
           "supported": false,
@@ -1368,12 +1952,14 @@
           "ffmpeg_error": "[mxf @ 0000024122739a80] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1433,6 +2019,45 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "rv10": {
@@ -1460,20 +2085,23 @@
           "ffmpeg_error": "[out#0/asf @ 000001a70dd06200] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": false,
           "ffmpeg_error": "[mxf @ 000001c82dfc3540] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1533,6 +2161,33 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "vp6": {
@@ -1577,12 +2232,14 @@
           "ffmpeg_error": null
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1642,6 +2299,47 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "mxf": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "mjpeg": {
@@ -1677,12 +2375,14 @@
           "ffmpeg_error": "[mxf @ 000001a7e7a540c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1741,6 +2441,47 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "mp4": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "jpeg2000": {
@@ -1776,12 +2517,14 @@
           "ffmpeg_error": null
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1840,6 +2583,51 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "mp4": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "mxf": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "prores": {
@@ -1863,8 +2651,9 @@
           "ffmpeg_error": null
         },
         "asf": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "avi": {
           "supported": true,
@@ -1875,12 +2664,14 @@
           "ffmpeg_error": null
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -1939,6 +2730,52 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuva444p10le",
+          "extra_args": [
+            "-profile:v",
+            "4"
+          ]
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "mxf": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "huffyuv": {
@@ -1974,12 +2811,14 @@
           "ffmpeg_error": "[mxf @ 000001d3193cc100] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2038,6 +2877,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "bgra",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "rawvideo": {
@@ -2073,12 +2949,14 @@
           "ffmpeg_error": "[mxf @ 0000026c61901a00] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2138,6 +3016,35 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "dnxhd": {
@@ -2165,20 +3072,23 @@
           "ffmpeg_error": "[out#0/asf @ 00000215a3ef58c0] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": true,
           "ffmpeg_error": null
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2238,6 +3148,54 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuv422p",
+          "extra_args": [
+            "-b:v",
+            "36M"
+          ]
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[dnxhd @ 000002aa57e3dac0] pixel format is incompatible with DNxHD profile"
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[dnxhd @ 000002329266a0c0] pixel format is incompatible with DNxHD profile"
+          },
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_error": "[dnxhd @ 000002e94cca9580] pixel format is incompatible with DNxHD profile",
+            "alpha_read": null
+          },
+          "mxf": {
+            "result": "lost",
+            "error": null,
+            "alpha_error": "[dnxhd @ 000002119d4d9940] pixel format is incompatible with DNxHD profile"
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_error": "[dnxhd @ 000001d84d66ac40] pixel format is incompatible with DNxHD profile",
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_error": "[dnxhd @ 00000177bf20ce80] pixel format is incompatible with DNxHD profile",
+            "alpha_read": null
+          }
+        }
       }
     },
     "gif": {
@@ -2265,20 +3223,23 @@
           "ffmpeg_error": "[out#0/asf @ 000001f618816100] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": false,
           "ffmpeg_error": "[mxf @ 0000020d279d9b80] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2337,87 +3298,132 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": [
+            "-vf",
+            "split[s0][s1];[s0]palettegen=stats_mode=full:max_colors=256[p];[s1][p]paletteuse=dither=floyd_steinberg"
+          ]
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "1bit",
+            "error": null
+          },
+          "qtff": {
+            "result": "1bit",
+            "error": null
+          },
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "gif": {
+            "result": "1bit",
+            "error": null
+          }
+        }
       }
     },
     "webp": {
       "kind": "video",
       "display_name": "WebP",
       "wikipedia_name": "WebP",
-      "encoder": "libwebp",
+      "encoder": "libwebp_anim",
       "verified": true,
       "skip_reason": null,
       "containers": {
         "mkv": {
           "supported": false,
-          "ffmpeg_error": "[matroska @ 00000268fee49bc0] No bmp codec tag found for codec webp"
+          "ffmpeg_error": "[matroska @ 00000261e26e8580] No bmp codec tag found for codec webp"
         },
         "mp4": {
           "supported": false,
-          "ffmpeg_error": "[mp4 @ 0000020a8ca10d80] Could not find tag for codec webp in stream #0, codec not currently supported in container"
+          "ffmpeg_error": "[mp4 @ 000001f32e2b6fc0] Could not find tag for codec webp in stream #0, codec not currently supported in container"
         },
         "qtff": {
           "supported": false,
-          "ffmpeg_error": "[mov @ 0000026f9052e6c0] Could not find tag for codec webp in stream #0, codec not currently supported in container"
+          "ffmpeg_error": "[mov @ 0000022c467aa940] Could not find tag for codec webp in stream #0, codec not currently supported in container"
         },
         "asf": {
           "supported": false,
-          "ffmpeg_error": "[out#0/asf @ 0000020a47de7600] Could not write header (incorrect codec parameters ?): Invalid argument"
+          "ffmpeg_error": "[out#0/asf @ 000002117b922b00] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": false,
-          "ffmpeg_error": "[mxf @ 000001d1d4709840] track 0: could not find essence container ul, codec not currently supported in container"
+          "ffmpeg_error": "[mxf @ 000001bc95d5a7c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
-          "ffmpeg_error": "[3gp @ 000001be51d8d240] Could not find tag for codec webp in stream #0, codec not currently supported in container"
+          "ffmpeg_error": "[3gp @ 000002523b848500] Could not find tag for codec webp in stream #0, codec not currently supported in container"
         },
         "3g2": {
           "supported": false,
-          "ffmpeg_error": "[3g2 @ 000001900f0b14c0] Could not find tag for codec webp in stream #0, codec not currently supported in container"
+          "ffmpeg_error": "[3g2 @ 000002384411c7c0] Could not find tag for codec webp in stream #0, codec not currently supported in container"
         },
         "webm": {
           "supported": false,
-          "ffmpeg_error": "[webm @ 000001a66f05df40] Only VP8 or VP9 or AV1 video and Vorbis or Opus audio and WebVTT subtitles are supported for WebM."
+          "ffmpeg_error": "[webm @ 0000020decf38d40] Only VP8 or VP9 or AV1 video and Vorbis or Opus audio and WebVTT subtitles are supported for WebM."
         },
         "mp3": {
           "supported": false,
-          "ffmpeg_error": "[out#0/mp3 @ 00000221a497c4c0] Output file does not contain any stream"
+          "ffmpeg_error": "[out#0/mp3 @ 000001b8973bf540] Output file does not contain any stream"
         },
         "m4a": {
           "supported": false,
-          "ffmpeg_error": "[ipod @ 000002714debe800] Could not find tag for codec webp in stream #0, codec not currently supported in container"
+          "ffmpeg_error": "[ipod @ 000002a63d0ab7c0] Could not find tag for codec webp in stream #0, codec not currently supported in container"
         },
         "ogg": {
           "supported": false,
-          "ffmpeg_error": "[ogg @ 00000203b5525540] Unsupported codec id in stream 0"
+          "ffmpeg_error": "[ogg @ 000001f09ef8b740] Unsupported codec id in stream 0"
         },
         "wav": {
           "supported": false,
-          "ffmpeg_error": "[out#0/wav @ 000002520d42cc80] Output file does not contain any stream"
+          "ffmpeg_error": "[out#0/wav @ 000001d0276b1440] Output file does not contain any stream"
         },
         "flac": {
           "supported": false,
-          "ffmpeg_error": "[flac @ 00000223bf08f7c0] No audio stream present."
+          "ffmpeg_error": "[flac @ 0000021533bb7ec0] No audio stream present."
         },
         "flv": {
           "supported": false,
-          "ffmpeg_error": "[flv @ 0000019f70afe040] Video codec webp not compatible with flv"
+          "ffmpeg_error": "[flv @ 00000173010ae3c0] Video codec webp not compatible with flv"
         },
         "apng": {
           "supported": false,
-          "ffmpeg_error": "[apng @ 000001c4332caf40] apng muxer supports only codec apng for type video"
+          "ffmpeg_error": "[apng @ 000001f787ee2800] apng muxer supports only codec apng for type video"
         },
         "webp": {
           "supported": true,
@@ -2425,17 +3431,48 @@
         },
         "gif": {
           "supported": false,
-          "ffmpeg_error": "[gif @ 000001bca7f6bfc0] gif muxer supports only codec gif for type video"
+          "ffmpeg_error": "[gif @ 000002cc85cdb900] gif muxer supports only codec gif for type video"
         },
         "opus": {
           "supported": false,
-          "ffmpeg_error": "[out#0/opus @ 000001f3af027140] Output file does not contain any stream"
+          "ffmpeg_error": "[out#0/opus @ 000001b782122500] Output file does not contain any stream"
         }
       },
       "channels": {},
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuva420p",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "webp": {
+            "result": "full",
+            "error": null
+          }
+        }
       }
     },
     "apng": {
@@ -2463,20 +3500,23 @@
           "ffmpeg_error": "[out#0/asf @ 000001f3fd112dc0] Could not write header (incorrect codec parameters ?): Invalid argument"
         },
         "avi": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "mxf": {
           "supported": false,
           "ffmpeg_error": "[mxf @ 000001f3d872b8c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2535,6 +3575,37 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "rgba",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "apng": {
+            "result": "full",
+            "error": null
+          }
+        }
       }
     },
     "ffv1": {
@@ -2570,12 +3641,14 @@
           "ffmpeg_error": null
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2634,6 +3707,51 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "yuva420p",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "mp4": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "mxf": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "utvideo": {
@@ -2669,12 +3787,14 @@
           "ffmpeg_error": "[mxf @ 00000283440bbc00] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2733,6 +3853,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "gbrap",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "cfhd": {
@@ -2768,12 +3925,14 @@
           "ffmpeg_error": "[mxf @ 000001e697b7da80] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2832,6 +3991,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "gbrap12le",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "wmv1": {
@@ -2867,12 +4063,14 @@
           "ffmpeg_error": "[mxf @ 00000219795bd180] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -2931,6 +4129,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "wmv2": {
@@ -2966,12 +4201,14 @@
           "ffmpeg_error": "[mxf @ 000001dbfc3cb5c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -3030,6 +4267,43 @@
       "dimension_alignment": {
         "width_even_required": true,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "flv1": {
@@ -3065,12 +4339,14 @@
           "ffmpeg_error": "[mxf @ 000001eedd4911c0] track 0: could not find essence container ul, codec not currently supported in container"
         },
         "ps": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "ts": {
-          "supported": true,
-          "ffmpeg_error": null
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
         },
         "3gp": {
           "supported": false,
@@ -3129,6 +4405,476 @@
       "dimension_alignment": {
         "width_even_required": false,
         "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "lost",
+            "error": null
+          },
+          "qtff": {
+            "result": "lost",
+            "error": null
+          },
+          "asf": {
+            "result": "lost",
+            "error": null
+          },
+          "avi": {
+            "result": "lost",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "flv": {
+            "result": "lost",
+            "error": null
+          }
+        }
+      }
+    },
+    "qtrle": {
+      "kind": "video",
+      "display_name": "QuickTime Animation",
+      "wikipedia_name": null,
+      "encoder": "qtrle",
+      "verified": true,
+      "skip_reason": null,
+      "containers": {
+        "mkv": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "mp4": {
+          "supported": false,
+          "ffmpeg_error": "[mp4 @ 0000018974d90580] Could not find tag for codec qtrle in stream #0, codec not currently supported in container"
+        },
+        "qtff": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "asf": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/asf @ 000002b8b38b2140] Could not write header (incorrect codec parameters ?): Invalid argument"
+        },
+        "avi": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "mxf": {
+          "supported": false,
+          "ffmpeg_error": "[mxf @ 000001a4d8db7200] track 0: could not find essence container ul, codec not currently supported in container"
+        },
+        "ps": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "ts": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "3gp": {
+          "supported": false,
+          "ffmpeg_error": "[3gp @ 0000029e3fe28e80] Could not find tag for codec qtrle in stream #0, codec not currently supported in container"
+        },
+        "3g2": {
+          "supported": false,
+          "ffmpeg_error": "[3g2 @ 00000239d383f400] Could not find tag for codec qtrle in stream #0, codec not currently supported in container"
+        },
+        "webm": {
+          "supported": false,
+          "ffmpeg_error": "[webm @ 000001e94a56c6c0] Only VP8 or VP9 or AV1 video and Vorbis or Opus audio and WebVTT subtitles are supported for WebM."
+        },
+        "mp3": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/mp3 @ 000001c52cd346c0] Output file does not contain any stream"
+        },
+        "m4a": {
+          "supported": false,
+          "ffmpeg_error": "[ipod @ 000001fdbfafc080] Could not find tag for codec qtrle in stream #0, codec not currently supported in container"
+        },
+        "ogg": {
+          "supported": false,
+          "ffmpeg_error": "[ogg @ 0000020311309680] Unsupported codec id in stream 0"
+        },
+        "wav": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/wav @ 0000021d879b4b00] Output file does not contain any stream"
+        },
+        "flac": {
+          "supported": false,
+          "ffmpeg_error": "[flac @ 00000212662ff1c0] No audio stream present."
+        },
+        "flv": {
+          "supported": false,
+          "ffmpeg_error": "[flv @ 000002029b78c840] Video codec qtrle not compatible with flv"
+        },
+        "apng": {
+          "supported": false,
+          "ffmpeg_error": "[apng @ 000002888842aac0] apng muxer supports only codec apng for type video"
+        },
+        "webp": {
+          "supported": false,
+          "ffmpeg_error": "[webp @ 000002a03457d300] webp muxer supports only codec webp for type video"
+        },
+        "gif": {
+          "supported": false,
+          "ffmpeg_error": "[gif @ 0000019fb70fc880] gif muxer supports only codec gif for type video"
+        },
+        "opus": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/opus @ 00000223b0904800] Output file does not contain any stream"
+        }
+      },
+      "channels": {},
+      "note": "Sin perdida (RLE). Clasico de After Effects/Premiere para video con alfa.",
+      "dimension_alignment": {
+        "width_even_required": false,
+        "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "argb",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
+      }
+    },
+    "png": {
+      "kind": "video",
+      "display_name": "PNG (video)",
+      "wikipedia_name": null,
+      "encoder": "png",
+      "verified": true,
+      "skip_reason": null,
+      "containers": {
+        "mkv": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "mp4": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtff": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "asf": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "avi": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "mxf": {
+          "supported": false,
+          "ffmpeg_error": "[mxf @ 000001da905778c0] track 0: could not find essence container ul, codec not currently supported in container"
+        },
+        "ps": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "ts": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "3gp": {
+          "supported": false,
+          "ffmpeg_error": "[3gp @ 000002ab4f6a5080] Could not find tag for codec png in stream #0, codec not currently supported in container"
+        },
+        "3g2": {
+          "supported": false,
+          "ffmpeg_error": "[3g2 @ 00000217a2469c40] Could not find tag for codec png in stream #0, codec not currently supported in container"
+        },
+        "webm": {
+          "supported": false,
+          "ffmpeg_error": "[webm @ 000001f18d7b9f40] Only VP8 or VP9 or AV1 video and Vorbis or Opus audio and WebVTT subtitles are supported for WebM."
+        },
+        "mp3": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/mp3 @ 000001fcbb2082c0] Output file does not contain any stream"
+        },
+        "m4a": {
+          "supported": false,
+          "ffmpeg_error": "[ipod @ 00000189c7cca400] Could not find tag for codec png in stream #0, codec not currently supported in container"
+        },
+        "ogg": {
+          "supported": false,
+          "ffmpeg_error": "[ogg @ 000002771f427880] Unsupported codec id in stream 0"
+        },
+        "wav": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/wav @ 0000025a015015c0] Output file does not contain any stream"
+        },
+        "flac": {
+          "supported": false,
+          "ffmpeg_error": "[flac @ 000001ff25f5d840] No audio stream present."
+        },
+        "flv": {
+          "supported": false,
+          "ffmpeg_error": "[flv @ 000001607cecff80] Video codec png not compatible with flv"
+        },
+        "apng": {
+          "supported": false,
+          "ffmpeg_error": "[apng @ 00000227301a4500] apng muxer supports only codec apng for type video"
+        },
+        "webp": {
+          "supported": false,
+          "ffmpeg_error": "[webp @ 000002e35e36da80] webp muxer supports only codec webp for type video"
+        },
+        "gif": {
+          "supported": false,
+          "ffmpeg_error": "[gif @ 000001ad5879f3c0] gif muxer supports only codec gif for type video"
+        },
+        "opus": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/opus @ 000001f6253c12c0] Output file does not contain any stream"
+        }
+      },
+      "channels": {},
+      "note": "Cada fotograma es un PNG: sin perdida, con alfa, archivos grandes.",
+      "dimension_alignment": {
+        "width_even_required": false,
+        "height_even_required": false
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": "rgba",
+          "extra_args": []
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "mp4": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "full",
+            "error": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
+      }
+    },
+    "hap": {
+      "kind": "video",
+      "display_name": "HAP (Vidvox)",
+      "wikipedia_name": null,
+      "encoder": "hap",
+      "verified": true,
+      "skip_reason": null,
+      "containers": {
+        "mkv": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "mp4": {
+          "supported": false,
+          "ffmpeg_error": "[mp4 @ 00000172373b4240] Could not find tag for codec hap in stream #0, codec not currently supported in container"
+        },
+        "qtff": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "asf": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "avi": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "mxf": {
+          "supported": false,
+          "ffmpeg_error": "[mxf @ 000002680d100f40] track 0: could not find essence container ul, codec not currently supported in container"
+        },
+        "ps": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "ts": {
+          "supported": false,
+          "ffmpeg_error": "Se escribe, pero ffmpeg no puede volver a leer el archivo (verificado releyendo el resultado).",
+          "unreadable": true
+        },
+        "3gp": {
+          "supported": false,
+          "ffmpeg_error": "[3gp @ 0000025471edb240] Could not find tag for codec hap in stream #0, codec not currently supported in container"
+        },
+        "3g2": {
+          "supported": false,
+          "ffmpeg_error": "[3g2 @ 000001fe368f8800] Could not find tag for codec hap in stream #0, codec not currently supported in container"
+        },
+        "webm": {
+          "supported": false,
+          "ffmpeg_error": "[webm @ 000002906a8e0f40] Only VP8 or VP9 or AV1 video and Vorbis or Opus audio and WebVTT subtitles are supported for WebM."
+        },
+        "mp3": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/mp3 @ 000001a5f19a3e40] Output file does not contain any stream"
+        },
+        "m4a": {
+          "supported": false,
+          "ffmpeg_error": "[ipod @ 000001bdaa4e1800] Could not find tag for codec hap in stream #0, codec not currently supported in container"
+        },
+        "ogg": {
+          "supported": false,
+          "ffmpeg_error": "[ogg @ 000001650c1e9bc0] Unsupported codec id in stream 0"
+        },
+        "wav": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/wav @ 0000023a81a31700] Output file does not contain any stream"
+        },
+        "flac": {
+          "supported": false,
+          "ffmpeg_error": "[flac @ 00000277dc53afc0] No audio stream present."
+        },
+        "flv": {
+          "supported": false,
+          "ffmpeg_error": "[flv @ 0000018a6a6192c0] Video codec hap not compatible with flv"
+        },
+        "apng": {
+          "supported": false,
+          "ffmpeg_error": "[apng @ 000001f53cd89180] apng muxer supports only codec apng for type video"
+        },
+        "webp": {
+          "supported": false,
+          "ffmpeg_error": "[webp @ 0000022e6d94fec0] webp muxer supports only codec webp for type video"
+        },
+        "gif": {
+          "supported": false,
+          "ffmpeg_error": "[gif @ 0000020c7f96b680] gif muxer supports only codec gif for type video"
+        },
+        "opus": {
+          "supported": false,
+          "ffmpeg_error": "[out#0/opus @ 0000018788b50500] Output file does not contain any stream"
+        }
+      },
+      "channels": {},
+      "note": "Para reproduccion en tiempo real (VJ, Resolume, TouchDesigner). Ancho y alto multiplos de 4.",
+      "dimension_alignment": {
+        "width_even_required": true,
+        "height_even_required": true
+      },
+      "alpha": {
+        "encode": {
+          "pix_fmt": null,
+          "extra_args": [
+            "-format",
+            "hap_alpha"
+          ]
+        },
+        "decoder": null,
+        "containers": {
+          "mkv": {
+            "result": "full",
+            "error": null
+          },
+          "qtff": {
+            "result": "full",
+            "error": null
+          },
+          "asf": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "avi": {
+            "result": "full",
+            "error": null
+          },
+          "ps": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          },
+          "ts": {
+            "result": "unreadable",
+            "error": null,
+            "opaque_readable": false,
+            "alpha_read": null
+          }
+        }
       }
     },
     "aac": {
@@ -10631,6 +12377,282 @@
         "flv1+amr_wb": {
           "supported": true,
           "ffmpeg_error": null
+        },
+        "qtrle+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
         }
       }
     },
@@ -11307,6 +13329,62 @@
           "ffmpeg_error": null
         },
         "ffv1+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
           "supported": true,
           "ffmpeg_error": null
         }
@@ -13187,6 +15265,222 @@
         "flv1+amr_wb": {
           "supported": true,
           "ffmpeg_error": null
+        },
+        "qtrle+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
         }
       }
     },
@@ -14991,6 +17285,150 @@
           "ffmpeg_error": null
         },
         "flv1+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_wb": {
           "supported": true,
           "ffmpeg_error": null
         }
@@ -17303,6 +19741,222 @@
         "flv1+amr_wb": {
           "supported": true,
           "ffmpeg_error": null
+        },
+        "qtrle+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
         }
       }
     },
@@ -17832,6 +20486,54 @@
           "ffmpeg_error": null
         },
         "flv1+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
           "supported": true,
           "ffmpeg_error": null
         }
@@ -20782,6 +23484,282 @@
           "ffmpeg_error": null
         },
         "flv1+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "qtrle+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "png+amr_wb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+aac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+ac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+eac3": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+dts": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wmav2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+opus": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+vorbis": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mp2": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+flac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+alac": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+truehd": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+mlp": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s24le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_alaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_mulaw": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_f32le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+adpcm_ms": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_nb": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+speex": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+pcm_s16le": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+wavpack": {
+          "supported": true,
+          "ffmpeg_error": null
+        },
+        "hap+amr_wb": {
           "supported": true,
           "ffmpeg_error": null
         }

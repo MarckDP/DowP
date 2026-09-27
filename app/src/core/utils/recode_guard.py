@@ -125,7 +125,8 @@ _CAT_OTROS = QCoreApplication.translate("recode_guard", "Otros")
 VIDEO_CATEGORIES = {
     "h264": _CAT_WEB, "hevc": _CAT_WEB, "av1": _CAT_WEB, "vp9": _CAT_WEB,
     "prores": _CAT_PROFESIONAL, "dnxhd": _CAT_PROFESIONAL, "cfhd": _CAT_PROFESIONAL,
-    "ffv1": _CAT_LOSSLESS, "utvideo": _CAT_LOSSLESS, "huffyuv": _CAT_LOSSLESS,
+    "qtrle": _CAT_PROFESIONAL, "hap": _CAT_PROFESIONAL,
+    "ffv1": _CAT_LOSSLESS, "utvideo": _CAT_LOSSLESS, "huffyuv": _CAT_LOSSLESS, "png": _CAT_LOSSLESS,
     "mpeg4": _CAT_ANTIGUOS_VIDEO, "mpeg2video": _CAT_ANTIGUOS_VIDEO, "msmpeg4v3": _CAT_ANTIGUOS_VIDEO,
     "wmv2": _CAT_ANTIGUOS_VIDEO, "wmv1": _CAT_ANTIGUOS_VIDEO, "theora": _CAT_ANTIGUOS_VIDEO, "vp8": _CAT_ANTIGUOS_VIDEO,
     "gif": _CAT_ANIMACIONES, "apng": _CAT_ANIMACIONES, "webp": _CAT_ANIMACIONES,
@@ -570,6 +571,61 @@ def get_channel_support(codec_id: str | None, container: str | None) -> dict:
             continue
         result[ch] = {"supported": info.get("supported", True), "reason": info.get("ffmpeg_error")}
     return result
+
+
+# Resultados de transparencia que SÍ la conservan (ver tools/codec_matrix/run_matrix.py::
+# probe_alpha): "full" = alfa completo, "1bit" = solo transparente/opaco (GIF).
+ALPHA_KEEPS = ("full", "1bit")
+
+
+def get_alpha_support(codec_id: str | None, container: str | None) -> dict:
+    """
+    ¿Este codec de video conserva transparencia en este contenedor? Sale del eje "alpha"
+    de ffmpeg_codec_matrix.json: verificado codificando un origen con alfa conocido y
+    DECODIFICANDO el resultado, no por lo que declara ffprobe.
+
+    A diferencia de get_channel_support, NO es permisivo ante falta de dato: sin evidencia
+    se responde "unknown" (no conserva), porque prometer transparencia y perderla es peor
+    que no ofrecerla.
+
+    Returns: {"status": "full"|"1bit"|"lost"|"partial"|"write_error"|"unreadable"|"unknown",
+              "keeps_alpha": bool,
+              "pix_fmt": str|None,       # formato de píxel con el que se verificó
+              "extra_args": list[str],   # args obligatorios (ej. VP8: -auto-alt-ref 0)
+              "decoder": str|None,       # decoder para LEERLO con alfa (VP8/VP9: libvpx)
+              "reason": str|None}        # error de ffmpeg si no se pudo (ej. x265 sin capa alfa)
+    """
+    unknown = {"status": "unknown", "keeps_alpha": False, "pix_fmt": None,
+               "extra_args": [], "decoder": None, "reason": None}
+    if not codec_id or not container:
+        return unknown
+    entry = _load_matrix().get("codecs", {}).get(codec_id) or {}
+    alpha = entry.get("alpha")
+    if not alpha:
+        return unknown
+    info = alpha.get("containers", {}).get(normalize_container(container))
+    if not info:
+        return unknown
+    status = info.get("result", "unknown")
+    return {
+        "status": status,
+        "keeps_alpha": status in ALPHA_KEEPS,
+        "pix_fmt": (alpha.get("encode") or {}).get("pix_fmt"),
+        "extra_args": list((alpha.get("encode") or {}).get("extra_args") or []),
+        "decoder": alpha.get("decoder"),
+        "reason": info.get("alpha_error") or info.get("error"),
+    }
+
+
+def get_alpha_capable_codecs(container: str) -> list[str]:
+    """codec_ids de video que conservan transparencia en este contenedor (full o 1bit)."""
+    container_id = normalize_container(container)
+    result = []
+    for codec_id, entry in _load_matrix().get("codecs", {}).items():
+        info = ((entry.get("alpha") or {}).get("containers") or {}).get(container_id) or {}
+        if info.get("result") in ALPHA_KEEPS:
+            result.append(codec_id)
+    return sorted(result)
 
 
 def _check_container_support(codec_id: str) -> dict:

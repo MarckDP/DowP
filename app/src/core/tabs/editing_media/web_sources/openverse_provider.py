@@ -126,9 +126,14 @@ class OpenverseProvider(WebSourceProvider):
             return f"CC0 {version}".strip()
         return f"CC {code.upper()} {version}".strip()
 
+    # Openverse repite el código de formato de la fuente, no una extensión: Jamendo usa
+    # "mp31" (96 kbps) y "mp32" (VBR alta calidad), que son MP3 comunes (verificado: el
+    # servidor los entrega como audio/mpeg). Sin esto se guardaban como ".mp32".
+    _FILETYPE_EXT = {"mp31": "mp3", "mp32": "mp3"}
+
     def _guess_ext(self, filetype: str, url: str) -> str:
         if filetype:
-            return filetype.upper()
+            return self._FILETYPE_EXT.get(filetype.lower(), filetype).upper()
         path = urlparse(url or "").path
         return path.rsplit(".", 1)[-1].upper() if "." in path else "-"
 

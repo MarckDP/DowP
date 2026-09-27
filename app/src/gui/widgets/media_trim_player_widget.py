@@ -21,7 +21,7 @@ from gui.widgets.timeline_ruler import TimelineRulerWidget
 from gui.widgets.audio_meter import MultiChannelMeterWidget
 from gui.widgets.volume_control import VolumeControlWidget
 from core.tabs.editing_media.waveform_cache_manager import WaveformCacheManager
-from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager
+from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager, ALPHA_PREVIEW_DIVISOR
 from core.logger.logger_manager import logger
 
 # Opciones del selector de calidad de previsualización: (etiqueta, modo, divisor).
@@ -1350,9 +1350,16 @@ class MediaTrimPlayerWidget(QWidget):
         self._proxy_divisor = 1      # divisor que se está reproduciendo ahora mismo (1 = original)
         self._pending_proxy_divisor = None  # divisor en curso de generación, si hay uno
         self._manual_divisor = 1     # último divisor elegido manualmente (persiste entre archivos)
+        self._load_quality_preference()
         self._native_size_known = False
         self._native_size = None
         self._proxy_signal_connected = False
+        # True si el archivo tiene transparencia que el reproductor de Qt no muestra (WebM,
+        # ProRes 4444...): en calidad completa se reproduce una copia que sí la conserva
+        # (ver proxy_cache_manager.ALPHA_PREVIEW_DIVISOR). Se decide por archivo, en
+        # segundo plano, en _on_alpha_probe_done.
+        self._alpha_preview = False
+        self._alpha_probe_connected = False
         self._pending_source_restore = None  # (pos_ms, was_playing) pendiente de aplicar tras un swap de fuente
         # Permite ocultar permanentemente el slider de ganancia visual (dB) — ver
         # set_gain_slider_visible() — independiente del ocultamiento automático por ancho
@@ -1888,6 +1895,7 @@ class MediaTrimPlayerWidget(QWidget):
         self._pending_proxy_divisor = None
         self._native_size_known = False
         self._native_size = None
+        self._alpha_preview = False
 
         # El recorte interactivo es por archivo, igual que in_sec/out_sec: no debe
         # sobrevivir al cambiar de archivo previsualizado.
@@ -1927,6 +1935,7 @@ class MediaTrimPlayerWidget(QWidget):
                 # real del video (_on_video_native_size_changed).
                 if self._proxy_mode == "manual" and self._manual_divisor > 1:
                     self._apply_proxy_divisor(self._manual_divisor)
+                self._request_alpha_probe()
 
         self._update_waveform_range()
         self._update_time_label()
@@ -1967,6 +1976,7 @@ class MediaTrimPlayerWidget(QWidget):
         self._pending_proxy_divisor = None
         self._native_size_known = False
         self._native_size = None
+        self._alpha_preview = False
         self.btn_quality.setVisible(False)
 
         self.crop_overlay.hide_and_reset()
@@ -2224,9 +2234,8 @@ class MediaTrimPlayerWidget(QWidget):
         for idx, (label, mode, divisor) in enumerate(_QUALITY_OPTIONS):
             action = self.quality_menu.addAction(self.tr(label))
             action.setCheckable(True)
-            action.setChecked(idx == 0)
             action.triggered.connect(lambda checked=False, i=idx: self._on_quality_option_changed(i))
-        self._update_quality_button_text(0)
+        self._update_quality_button_text()
 
     def _update_quality_button_text(self, index: int = None, status_text: str = ""):
         """Actualiza el texto del botón chip de calidad y marca la acción activa en el menú."""
@@ -2278,6 +2287,29 @@ class MediaTrimPlayerWidget(QWidget):
             return 2
         return 1                # 1080p o menos: no hace falta proxy
 
+    # La calidad elegida (Auto, Completa, 1/2...) se recuerda entre sesiones, compartida por
+    # todos los reproductores (Herramientas Multimedia, fragmentos, subclips).
+    _QUALITY_CONFIG_KEY = "preview_quality"
+
+    def _load_quality_preference(self):
+        try:
+            from core.utils.config_manager import get_config
+            value = get_config().get(self._QUALITY_CONFIG_KEY, "auto")
+        except Exception:
+            return
+        if isinstance(value, int) and any(m == "manual" and d == value for _l, m, d in _QUALITY_OPTIONS):
+            self._proxy_mode = "manual"
+            self._manual_divisor = value
+
+    def _save_quality_preference(self):
+        try:
+            from core.utils.config_manager import get_config, save_config
+            config = get_config()
+            config[self._QUALITY_CONFIG_KEY] = self._manual_divisor if self._proxy_mode == "manual" else "auto"
+            save_config(config)
+        except Exception as e:
+            logger.warning(f"MediaTrimPlayerWidget: No se pudo guardar la calidad de vista previa: {e}")
+
     def _on_quality_option_changed(self, index: int):
         if index < 0 or index >= len(_QUALITY_OPTIONS):
             return
@@ -2286,19 +2318,47 @@ class MediaTrimPlayerWidget(QWidget):
         self._update_quality_button_text(index)
         if mode == "manual":
             self._manual_divisor = divisor
+        self._save_quality_preference()
+        if mode == "manual":
             self._apply_proxy_divisor(divisor)
         elif self._native_size_known:
             w, h = self._native_size
             self._apply_proxy_divisor(self._compute_auto_divisor(w, h))
 
+    def _request_alpha_probe(self):
+        mgr = ProxyCacheManager.get_instance()
+        if not self._alpha_probe_connected:
+            mgr.alpha_probe_done.connect(self._on_alpha_probe_done)
+            self._alpha_probe_connected = True
+        mgr.request_alpha_probe(self.media_path)
+
+    def _on_alpha_probe_done(self, file_path: str, result):
+        """El archivo tiene transparencia que Qt no muestra: la calidad completa pasa a
+        reproducir la copia con transparencia (los proxies 1/2, 1/4... no cambian)."""
+        if file_path != self.media_path or not result or self._alpha_preview:
+            return
+        self._alpha_preview = True
+        # Se fija la resolución real desde el sondeo: si no, el primer tamaño que viera
+        # _on_video_native_size_changed podría ser el de la copia (acotada a 1080p) y Auto
+        # decidiría distinto según qué llegue antes.
+        if not self._native_size_known and result.get("width") and result.get("height"):
+            self._native_size_known = True
+            self._native_size = (result["width"], result["height"])
+        if self._proxy_mode == "manual":
+            self._apply_proxy_divisor(self._manual_divisor)
+        elif self._native_size_known:
+            self._apply_proxy_divisor(self._compute_auto_divisor(*self._native_size))
+
     def _apply_proxy_divisor(self, divisor: int):
         """Cambia (o solicita) la resolución de previsualización activa. No reemplaza nunca el
         archivo original: solo afecta qué decodifica el reproductor mientras se previsualiza."""
         divisor = divisor or 1
+        if divisor == 1 and self._alpha_preview:
+            divisor = ALPHA_PREVIEW_DIVISOR
         if not self.media_path or divisor == self._proxy_divisor:
             return
 
-        if divisor <= 1:
+        if divisor == 1:
             self._proxy_divisor = 1
             self._pending_proxy_divisor = None
             self._update_quality_button_text()
@@ -2336,7 +2396,10 @@ class MediaTrimPlayerWidget(QWidget):
         if (file_path == self.media_path and audio_track == self._active_audio_track
                 and divisor == self._pending_proxy_divisor):
             self._pending_proxy_divisor = None
-            self._update_quality_button_text(status_text=self.tr("no disp."))
+            # Si falla la copia con transparencia se sigue viendo el original (sin alfa),
+            # que es lo de siempre: no es una calidad "no disponible".
+            self._update_quality_button_text(
+                status_text="" if divisor == ALPHA_PREVIEW_DIVISOR else self.tr("no disp."))
 
     def _swap_playback_source(self, path: str):
         """Cambia la fuente del reproductor manteniendo posición y estado de reproducción.

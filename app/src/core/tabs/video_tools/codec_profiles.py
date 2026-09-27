@@ -192,6 +192,32 @@ VIDEO_ENCODER_PROFILES = {
         {"label": QCoreApplication.translate("codec_profiles", "Calidad Rápida"), "args": ["-vf", "fps=12,scale=480:-1:flags=lanczos", "-c:v", "gif", "-loop", "0"]},
         {"label": QCoreApplication.translate("codec_profiles", "Personalizado (GIF)"), "custom": "gif"},
     ],
+    # WebP ANIMADO: alternativa moderna al GIF (color completo y transparencia real, mucho
+    # menos peso). -quality 0-100; -lossless 1 = sin pérdida. -loop 0 = repetir siempre.
+    "libwebp_anim": [
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Alta (90)"), "args": ["-c:v", "libwebp_anim", "-quality", "90", "-loop", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Calidad Media (75)"), "args": ["-c:v", "libwebp_anim", "-quality", "75", "-loop", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Liviano (60, 15 FPS, 480 px)"), "args": ["-vf", "fps=15,scale=480:-2:flags=lanczos", "-c:v", "libwebp_anim", "-quality", "60", "-loop", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Sin pérdida"), "args": ["-c:v", "libwebp_anim", "-lossless", "1", "-loop", "0"]},
+    ],
+    "apng": [
+        {"label": QCoreApplication.translate("codec_profiles", "Sin pérdida (original)"), "args": ["-c:v", "apng", "-plays", "0"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Liviano (15 FPS, 480 px)"), "args": ["-vf", "fps=15,scale=480:-2:flags=lanczos", "-c:v", "apng", "-plays", "0"]},
+    ],
+    "qtrle": [
+        {"label": QCoreApplication.translate("codec_profiles", "Sin pérdida"), "args": ["-c:v", "qtrle"]},
+    ],
+    "png": [
+        {"label": QCoreApplication.translate("codec_profiles", "Sin pérdida"), "args": ["-c:v", "png"]},
+        {"label": QCoreApplication.translate("codec_profiles", "Sin pérdida, máxima compresión (más lento)"), "args": ["-c:v", "png", "-compression_level", "9"]},
+    ],
+    # HAP exige ancho y alto múltiplos de 4 (el encoder rechaza otra medida): el scale
+    # ajusta al múltiplo de 4 más cercano hacia abajo (a lo sumo 3 px menos por lado).
+    "hap": [
+        {"label": QCoreApplication.translate("codec_profiles", "HAP (estándar)"), "args": ["-vf", "scale=trunc(iw/4)*4:trunc(ih/4)*4", "-c:v", "hap", "-format", "hap"]},
+        {"label": QCoreApplication.translate("codec_profiles", "HAP Alpha (con transparencia)"), "args": ["-vf", "scale=trunc(iw/4)*4:trunc(ih/4)*4", "-c:v", "hap", "-format", "hap_alpha"]},
+        {"label": QCoreApplication.translate("codec_profiles", "HAP Q (más calidad)"), "args": ["-vf", "scale=trunc(iw/4)*4:trunc(ih/4)*4", "-c:v", "hap", "-format", "hap_q"]},
+    ],
 }
 
 AUDIO_ENCODER_PROFILES = {

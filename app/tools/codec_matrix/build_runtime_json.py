@@ -81,6 +81,36 @@ def build(run_path, out_path):
             if kind_short == "video" and entry.get("dimension_alignment"):
                 codecs[codec_id]["dimension_alignment"] = entry["dimension_alignment"]
 
+            # Transparencia (ver run_matrix.py::probe_alpha). "encode" es exactamente lo que
+            # se uso para verificarlo (pix_fmt + args extra) y "decoder" con que hay que
+            # LEER el archivo para que el alfa aparezca (VP8/VP9) -- la app debe repetir
+            # ambos tal cual. Por contenedor: full | 1bit | lost | partial | write_error |
+            # unreadable; solo "full" y "1bit" conservan transparencia.
+            # Combinaciones que se ESCRIBEN pero ffmpeg no puede volver a leer, ni siquiera
+            # sin alfa (detectado por la prueba de alfa, ver run_matrix.py::_opaque_readable):
+            # el mux base las daba por buenas porque solo mira que el archivo se escriba.
+            # Se marcan no soportadas, asi la app deja de ofrecer un archivo inservible.
+            if kind_short == "video" and entry.get("alpha"):
+                for cont_id, r in (entry["alpha"].get("containers") or {}).items():
+                    if r.get("result") == "unreadable" and r.get("opaque_readable") is False                             and cont_id in containers and containers[cont_id]["supported"]:
+                        containers[cont_id]["supported"] = False
+                        containers[cont_id]["ffmpeg_error"] = (
+                            "Se escribe, pero ffmpeg no puede volver a leer el archivo "
+                            "(verificado releyendo el resultado).")
+                        containers[cont_id]["unreadable"] = True
+
+            if kind_short == "video" and entry.get("alpha"):
+                a = entry["alpha"]
+                codecs[codec_id]["alpha"] = {
+                    "encode": {"pix_fmt": a.get("pix_fmt"), "extra_args": a.get("extra") or []},
+                    "decoder": a.get("decoder"),
+                    "containers": {
+                        cont_id: {k: v for k, v in r.items()
+                                  if k in ("result", "error", "alpha_error", "alpha_read", "opaque_readable")}
+                        for cont_id, r in a.get("containers", {}).items()
+                    },
+                }
+
     container_streams = {}
     for cont_id, entry in run.get("container_streams", {}).items():
         container_streams[cont_id] = {
@@ -95,7 +125,8 @@ def build(run_path, out_path):
         }
 
     output = {
-        "schema_version": "2.0",
+        # 2.1: + "alpha" por codec de video (transparencia por contenedor).
+        "schema_version": "2.1",
         "source": "empirico: mux real contra el ffmpeg empaquetado, ver tools/codec_matrix/",
         "ffmpeg_version": run["meta"]["ffmpeg_version"],
         "ffmpeg_version_full": run["meta"]["ffmpeg_version_full"],

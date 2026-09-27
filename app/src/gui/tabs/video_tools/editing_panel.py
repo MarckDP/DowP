@@ -23,6 +23,8 @@ from core.tabs.video_tools.codec_profiles import (
     ENCODER_VARIANTS, ordered_encoder_variants, preferred_encoder,
 )
 from core.tabs.video_tools.size_estimator import source_codec_id
+from core.tabs.video_tools.alpha_policy import meta_has_alpha, alpha_video_args, profile_keeps_alpha
+from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
 
@@ -118,6 +120,11 @@ class EditingPanel(QWidget):
         super().__init__(parent)
         self._source_meta = None
         self._source_filepath = None
+        # Transparencia en la cola (ver set_queue_alpha_counts) y el códec que había antes
+        # de que "Conservar transparencia" cambiara solo DNxHR (sin alfa) por ProRes.
+        self._queue_alpha = (0, 0)
+        self._quick_codec_before_alpha = None
+        self._manual_codec_before_alpha = None
         self._init_ui()
 
     # ─── UI ──────────────────────────────────────────────────────
@@ -150,12 +157,19 @@ class EditingPanel(QWidget):
         self.mode_selector.mode_changed.connect(self._on_top_mode_changed)
         layout.addWidget(self.mode_selector)
 
+        # Transparencia (solo visible si hay transparencia en juego): vale para Rápido y
+        # Manual y filtra los códecs de ambos, por eso va arriba. Debajo del QStackedWidget
+        # quedaba un hueco grande en Rápido: el stack mide lo que su página más alta.
+        self.alpha_option = KeepAlphaOption(content)
+        layout.addWidget(self.alpha_option)
+
         self.stack = QStackedWidget(content)
         self.page_quick = self._build_quick_page(self.stack)
         self.page_manual = self._build_manual_page(self.stack)
         self.stack.addWidget(self.page_quick)
         self.stack.addWidget(self.page_manual)
         layout.addWidget(self.stack)
+        self.alpha_option.toggled.connect(lambda _c: self._apply_alpha_filters())
 
         layout.addStretch(1)
         scroll.setWidget(content)
@@ -203,6 +217,7 @@ class EditingPanel(QWidget):
         border_color = get_theme_token('borde_sutil', '#2d2d2d')
         fondo = get_theme_token('fondo_secundario', '#121212')
         texto = get_theme_token('texto_principal', '#ffffff')
+        muted = get_theme_token('texto_secundario', '#888888')
         for key, label in items.items():
             btn = QPushButton(label, parent)
             btn.setCheckable(True)
@@ -220,6 +235,10 @@ class EditingPanel(QWidget):
                 QPushButton:checked {{
                     border: 2px solid {accent};
                     color: {accent};
+                }}
+                QPushButton:disabled {{
+                    color: {muted};
+                    border: 1px dashed {border_color};
                 }}
             """)
             btn.clicked.connect(on_changed)
@@ -275,7 +294,11 @@ class EditingPanel(QWidget):
         return self._checked_key(self._quick_codec_buttons, "prores")
 
     def _on_quick_changed(self, *_args):
+        # El usuario eligió otro códec: ya no hay nada que restaurar al desmarcar.
+        if self._current_quick_codec_id() != "prores":
+            self._quick_codec_before_alpha = None
         self._refresh_quick_hint()
+        self._refresh_alpha_status()
 
     def _refresh_quick_hint(self):
         if not hasattr(self, "lbl_quick_hint"):
@@ -288,10 +311,14 @@ class EditingPanel(QWidget):
             "mitad": self.tr("mitad de resolución"),
             "cuarto": self.tr("un cuarto de resolución"),
         }[res_key]
+        label = profile["label"]
+        if codec_id == "prores" and hasattr(self, "alpha_option") and self.alpha_option.is_active():
+            # Con transparencia ProRes usa 4444 (ver get_settings), no el perfil Proxy.
+            label = "4444"
         self.lbl_quick_hint.setText(
             self.tr("Se generará como {0} en un archivo .mov, a {1}. El audio se copia tal "
                      "cual si el original entra en .mov, o se pasa a PCM sin comprimir si no.")
-            .format(profile["label"], res_text)
+            .format(label, res_text)
         )
 
     # ─── Página Manual ───────────────────────────────────────────
@@ -327,6 +354,7 @@ class EditingPanel(QWidget):
         cv.addWidget(lbl_quality)
         self.combo_manual_quality = AutoPopupComboBox(frame_codec)
         self._setup_fixed_combo(self.combo_manual_quality)
+        self.combo_manual_quality.currentIndexChanged.connect(self._on_manual_changed)
         cv.addWidget(self.combo_manual_quality)
         v.addWidget(frame_codec)
 
@@ -381,26 +409,127 @@ class EditingPanel(QWidget):
         current = self.combo_manual_quality.currentIndex()
         self.combo_manual_quality.blockSignals(True)
         self.combo_manual_quality.clear()
-        for profile in get_profiles("video", encoder):
-            self.combo_manual_quality.addItem(profile["label"])
+        alpha = self.alpha_option.is_active() if hasattr(self, "alpha_option") else False
+        for i, profile in enumerate(get_profiles("video", encoder)):
+            # Con "Conservar transparencia" solo los perfiles que la admiten (ProRes 4444/XQ).
+            if alpha and not profile_keeps_alpha(codec_id, profile):
+                continue
+            self.combo_manual_quality.addItem(profile["label"], i)
         self.combo_manual_quality.blockSignals(False)
         restore = current if 0 <= current < self.combo_manual_quality.count() else 0
         self.combo_manual_quality.setCurrentIndex(restore)
 
     def _on_manual_codec_changed(self, *_args):
+        # El usuario eligió otro códec: ya no hay nada que restaurar al desmarcar.
+        if self._current_manual_codec_id() != "prores":
+            self._manual_codec_before_alpha = None
         self._reload_manual_variant()
         self._reload_manual_qualities()
+        self._refresh_alpha_status()
 
     def _on_manual_variant_changed(self, *_args):
         self._reload_manual_qualities()
+        self._refresh_alpha_status()
 
     def _on_manual_changed(self, *_args):
-        pass
+        self._refresh_alpha_status()
+
+    # ─── Transparencia ───────────────────────────────────────────
+
+    def _apply_alpha_filters(self):
+        """Con "Conservar transparencia" activa: DNxHR (el encoder de ffmpeg no tiene alfa)
+        se desactiva en Rápido y sale de la lista en Manual, cambiando solo a ProRes si
+        estaba elegido; en Manual la calidad ofrece solo perfiles que la admiten. Al
+        desmarcar se restaura lo anterior."""
+        self.alpha_option.set_availability(meta_has_alpha(self._source_meta), self._queue_alpha[0])
+        active = self.alpha_option.is_active()
+        # Rápido
+        btn = self._quick_codec_buttons["dnxhd"]
+        btn.setEnabled(not active)
+        btn.setToolTip(self.tr("DNxHR no admite transparencia.") if active else "")
+        if active and self._current_quick_codec_id() == "dnxhd":
+            self._quick_codec_before_alpha = "dnxhd"
+            self._quick_codec_buttons["prores"].setChecked(True)
+        elif not active and self._quick_codec_before_alpha:
+            self._quick_codec_buttons[self._quick_codec_before_alpha].setChecked(True)
+            self._quick_codec_before_alpha = None
+        # Manual
+        current = self._current_manual_codec_id()
+        self.combo_manual_codec.blockSignals(True)
+        self.combo_manual_codec.clear()
+        for codec_id in _EDIT_CODEC_IDS:
+            if active and codec_id == "dnxhd":
+                continue
+            self.combo_manual_codec.addItem(_EDIT_CODEC_LABELS[codec_id], codec_id)
+        if active and current == "dnxhd":
+            self._manual_codec_before_alpha = "dnxhd"
+            wanted = "prores"
+        elif not active and self._manual_codec_before_alpha:
+            wanted = self._manual_codec_before_alpha
+            self._manual_codec_before_alpha = None
+        else:
+            wanted = current
+        self.combo_manual_codec.setCurrentIndex(max(self.combo_manual_codec.findData(wanted), 0))
+        self.combo_manual_codec.blockSignals(False)
+        self._reload_manual_variant()
+        self._reload_manual_qualities()
+        self._refresh_quick_hint()
+        self._refresh_alpha_status()
+
+    @staticmethod
+    def _args_keep_alpha(codec_id: str, video_args: list[str]) -> bool:
+        """¿Estos args de Edición pueden conservar el alfa? CineForm sí (elige solo su
+        formato con alfa); ProRes solo en sus perfiles 4444 (formato 4:4:4 -- el motor lo
+        pasa a su variante con alfa); DNxHR nunca (el encoder de ffmpeg no tiene alfa)."""
+        if codec_id == "cfhd":
+            return True
+        if codec_id == "prores":
+            return any(a.startswith(("yuv444", "yuva444")) for a in video_args)
+        return False
+
+    def _refresh_alpha_status(self):
+        if not hasattr(self, "alpha_option"):
+            return
+        self.alpha_option.set_availability(meta_has_alpha(self._source_meta), self._queue_alpha[0])
+        is_quick = self.mode_selector.current_mode() == self.tr("Rápido")
+        codec_id = self._current_quick_codec_id() if is_quick else self._current_manual_codec_id()
+        self.alpha_option.set_queue_mix(*self._queue_alpha, per_file_text=self.tr(
+            "La cola mezcla archivos con transparencia ({0}) y sin ella ({1}): los primeros "
+            "usan ProRes 4444; el resto, el perfil Proxy.") if is_quick and codec_id == "prores" else None)
+        if not self.alpha_option.is_checked():
+            self.alpha_option.set_status(self.tr("Se descarta la transparencia."), "muted")
+            return
+        switched = self._quick_codec_before_alpha if is_quick else self._manual_codec_before_alpha
+        if switched:
+            self.alpha_option.set_status(self.tr(
+                "Cambiado a ProRes para conservar la transparencia (DNxHR no la admite)."), "ok")
+            return
+        if codec_id == "dnxhd":
+            self.alpha_option.set_status(self.tr(
+                "DNxHR no admite transparencia: se perderá. Para conservarla usa ProRes o CineForm."), "warning")
+        elif is_quick and codec_id == "prores":
+            self.alpha_option.set_status(self.tr(
+                "Se conserva la transparencia: se usa ProRes 4444 en vez del perfil Proxy "
+                "(el Proxy no admite transparencia; el archivo será más pesado)."), "ok")
+        elif not is_quick and not self._args_keep_alpha(codec_id, self._manual_video_args(codec_id)):
+            self.alpha_option.set_status(self.tr(
+                "Este perfil de ProRes no admite transparencia: se perderá. Para conservarla "
+                "elige 4444 o 4444 XQ."), "warning")
+        else:
+            self.alpha_option.set_status(self.tr("Se conserva la transparencia."), "ok")
+
+    def _manual_video_args(self, codec_id: str) -> list[str]:
+        encoder = self._effective_manual_encoder(codec_id)
+        profiles = get_profiles("video", encoder)
+        q_idx = self.combo_manual_quality.currentData()
+        q_idx = q_idx if profiles and isinstance(q_idx, int) and 0 <= q_idx < len(profiles) else 0
+        return list(profiles[q_idx]["args"]) if profiles else ["-c:v", encoder]
 
     # ─── Modo superior (Rápido/Manual) ──────────────────────────
 
     def _on_top_mode_changed(self, mode_text: str):
         self.stack.setCurrentIndex(0 if mode_text == self.tr("Rápido") else 1)
+        self._refresh_alpha_status()
 
     # ─── API pública ─────────────────────────────────────────────
 
@@ -410,6 +539,12 @@ class EditingPanel(QWidget):
     def set_source_media(self, meta: dict, filepath: str):
         self._source_meta = meta or None
         self._source_filepath = filepath
+        self._apply_alpha_filters()
+
+    def set_queue_alpha_counts(self, with_alpha: int, without_alpha: int):
+        self._queue_alpha = (with_alpha, without_alpha)
+        self._refresh_alpha_status()  # actualiza la disponibilidad de la casilla
+        self._apply_alpha_filters()
 
     def _build_audio_settings(self, source_audio_codec_id: str | None, video_codec_id: str) -> dict:
         """Copia el audio tal cual si el matrix confirma que el codec de origen entra en
@@ -428,17 +563,19 @@ class EditingPanel(QWidget):
         meta = meta_override if meta_override is not None else (self._source_meta or {})
         is_quick = self.mode_selector.current_mode() == self.tr("Rápido")
 
+        keep_alpha = self.alpha_option.is_checked()
+        file_has_alpha = meta_has_alpha(meta)
         if is_quick:
             codec_id = self._current_quick_codec_id()
             video_args = list(_quick_proxy_profile(codec_id, _encoder_for(codec_id))["args"])
+            if codec_id == "prores" and keep_alpha and file_has_alpha:
+                # El perfil Proxy (4:2:2) no admite transparencia: a ESTE archivo le toca
+                # ProRes 4444 para conservarla (los opacos del lote siguen en Proxy).
+                video_args = alpha_video_args("prores")
             res_key = self._checked_key(self._quick_res_buttons, "completa")
         else:
             codec_id = self._current_manual_codec_id()
-            encoder = self._effective_manual_encoder(codec_id)
-            profiles = get_profiles("video", encoder)
-            q_idx = self.combo_manual_quality.currentIndex()
-            q_idx = q_idx if profiles and 0 <= q_idx < len(profiles) else 0
-            video_args = list(profiles[q_idx]["args"]) if profiles else ["-c:v", encoder]
+            video_args = self._manual_video_args(codec_id)
             res_key = self._checked_key(self._manual_res_buttons, "completa")
 
         video_args += _scale_filter_args(res_key)
@@ -450,5 +587,6 @@ class EditingPanel(QWidget):
             "video_codec": codec_id,
             "video_args": video_args,
             "container": _CONTAINER,
+            "keep_alpha": keep_alpha,
             **audio_settings,
         }

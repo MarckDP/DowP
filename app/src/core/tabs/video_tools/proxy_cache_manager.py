@@ -10,6 +10,53 @@ from core.utils.paths import get_proxy_cache_dir
 
 DEFAULT_MAX_CACHE_BYTES = 5 * 1024 * 1024 * 1024  # 5 GB
 
+# "Divisor" especial: copia de previsualización a calidad completa que CONSERVA la
+# transparencia. El reproductor de Qt no muestra el alfa de varios formatos aunque el
+# archivo lo tenga (verificado con QVideoSink): VP8/VP9 (usa el decodificador nativo de
+# ffmpeg, que descarta la capa alfa aparte de WebM), ProRes 4444 y FFV1 (los convierte a
+# un formato sin alfa), CineForm; y el WebP animado ni siquiera lo abre. Para esos se
+# reproduce una copia en HAP Alpha (.mov), que Qt sí muestra transparente.
+ALPHA_PREVIEW_DIVISOR = -1
+
+# Lado largo máximo de esa copia: el panel de vista previa casi nunca ocupa más de 1080p
+# en pantalla, y a 4K la copia pesaría ~4 veces más sin que se note la diferencia.
+_ALPHA_PREVIEW_MAX_SIDE = 1920
+
+# Códecs cuyo alfa el reproductor de Qt SÍ muestra tal cual (verificado): con ellos no
+# hace falta copia. Cualquier otro con transparencia la necesita.
+_QT_SHOWS_ALPHA = {"qtrle", "apng", "hap", "png", "gif", "utvideo", "huffyuv"}
+
+
+def probe_alpha_preview(file_path: str) -> dict | None:
+    """Si `file_path` necesita la copia con transparencia para verse bien en la vista
+    previa, devuelve {"width", "height", "decoder_args"}; si no, None."""
+    from core.tabs.video_tools.ia_video_common import probe_video_source
+    info = probe_video_source(file_path)
+    codec = info.get("codec") or ""
+    if codec in _QT_SHOWS_ALPHA or not (info.get("has_alpha") or codec == "webp"):
+        return None
+    return {"width": info.get("width") or 0, "height": info.get("height") or 0,
+            "decoder_args": list(info.get("decoder_args") or [])}
+
+
+class _AlphaProbeSignals(QObject):
+    done = Signal(str, object)   # (file_path, resultado de probe_alpha_preview)
+
+
+class _AlphaProbeRunnable(QRunnable):
+    def __init__(self, file_path: str):
+        super().__init__()
+        self.file_path = file_path
+        self.signals = _AlphaProbeSignals()
+
+    def run(self):
+        try:
+            result = probe_alpha_preview(self.file_path)
+        except Exception as e:
+            logger.warning(f"ProxyCacheManager: No se pudo sondear la transparencia de {self.file_path}: {e}")
+            result = None
+        self.signals.done.emit(self.file_path, result)
+
 
 class ProxyWorkerSignals(QObject):
     finished = Signal(str, int, int, str)  # (file_path, divisor, audio_track, proxy_path)
@@ -24,8 +71,10 @@ class ProxyRunnable(QRunnable):
     `audio_track` (0-based) preserva en el proxy la misma pista de audio que el usuario tenga
     seleccionada en medios multipista, en vez de tomar siempre la primera por defecto."""
 
-    def __init__(self, file_path: str, divisor: int, target_path: str, manager: "ProxyCacheManager", audio_track: int = 0):
+    def __init__(self, file_path: str, divisor: int, target_path: str, manager: "ProxyCacheManager", audio_track: int = 0,
+                 decoder_args: list | None = None):
         super().__init__()
+        self.decoder_args = decoder_args or []
         self.file_path = file_path
         self.divisor = divisor
         self.target_path = target_path
@@ -60,23 +109,36 @@ class ProxyRunnable(QRunnable):
         # nunca puede toparse con un archivo a medio escribir bajo el nombre final.
         tmp_target = self.target_path + ".tmp"
 
-        cmd = [ffmpeg_exe, "-y", "-i", self.file_path]
+        alpha = self.divisor == ALPHA_PREVIEW_DIVISOR
+        if alpha:
+            # Lado largo acotado a _ALPHA_PREVIEW_MAX_SIDE (nunca se agranda) y medidas
+            # múltiplos de 4, que HAP exige.
+            # (comas escapadas: dentro de -vf una coma sin escapar separa filtros)
+            f = f"min(1\\,{_ALPHA_PREVIEW_MAX_SIDE}/max(iw\\,ih))"
+            scale_filter = f"scale=trunc(iw*{f}/4)*4:trunc(ih*{f}/4)*4"
+
+        # decoder_args (libvpx) va ANTES del -i: sin él, el alfa de WebM se pierde al leer.
+        cmd = [ffmpeg_exe, "-y", *(self.decoder_args if alpha else []), "-i", self.file_path]
         if self.audio_track:
             # Al usar -map explícito hay que mapear también el video, porque ffmpeg deja de
             # autoseleccionar streams en cuanto se especifica cualquier -map.
             cmd += ["-map", "0:v:0", "-map", f"0:a:{self.audio_track}"]
-        cmd += [
-            "-vf", scale_filter,
-            # ultrafast + CRF alto: prioriza velocidad de generación y de decodificado en la
-            # reproducción posterior por encima de la calidad de imagen (es solo una previa).
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
-            # Forzar el contenedor explícitamente: el archivo temporal termina en ".mp4.tmp",
-            # una extensión que ffmpeg no reconoce para adivinar el formato de salida.
-            "-f", "mp4",
-            tmp_target
-        ]
+        if alpha:
+            cmd += ["-vf", scale_filter, "-c:v", "hap", "-format", "hap_alpha",
+                    "-c:a", "aac", "-b:a", "128k", "-f", "mov", tmp_target]
+        else:
+            cmd += [
+                "-vf", scale_filter,
+                # ultrafast + CRF alto: prioriza velocidad de generación y de decodificado en la
+                # reproducción posterior por encima de la calidad de imagen (es solo una previa).
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "128k",
+                "-movflags", "+faststart",
+                # Forzar el contenedor explícitamente: el archivo temporal termina en ".mp4.tmp",
+                # una extensión que ffmpeg no reconoce para adivinar el formato de salida.
+                "-f", "mp4",
+                tmp_target
+            ]
 
         startupinfo = None
         if os.name == 'nt':
@@ -142,6 +204,38 @@ class ProxyCacheManager(QObject):
         self._pending = set()   # {(file_path, divisor, audio_track)}
         self._failed = set()    # {(file_path, divisor, audio_track)}
         self._hash_cache = {}   # {(file_path, divisor, audio_track): hash}
+        self._alpha_probe = {}  # {(file_path, mtime, size): resultado de probe_alpha_preview}
+        self._alpha_probe_pending = set()
+
+    # Resultado del sondeo de transparencia: (file_path, dict|None). Ver probe_alpha_preview.
+    alpha_probe_done = Signal(str, object)
+
+    def _alpha_probe_key(self, file_path: str):
+        try:
+            st = os.stat(file_path)
+            return (os.path.abspath(file_path), st.st_mtime, st.st_size)
+        except Exception:
+            return (os.path.abspath(file_path), 0, 0)
+
+    def request_alpha_probe(self, file_path: str):
+        """¿Necesita `file_path` la copia con transparencia? Responde por alpha_probe_done
+        (en segundo plano: es un ffprobe; memorizado por archivo)."""
+        key = self._alpha_probe_key(file_path)
+        if key in self._alpha_probe:
+            self.alpha_probe_done.emit(file_path, self._alpha_probe[key])
+            return
+        if key in self._alpha_probe_pending:
+            return
+        self._alpha_probe_pending.add(key)
+        worker = _AlphaProbeRunnable(file_path)
+        worker.signals.done.connect(self._on_alpha_probe_done)
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_alpha_probe_done(self, file_path: str, result):
+        key = self._alpha_probe_key(file_path)
+        self._alpha_probe_pending.discard(key)
+        self._alpha_probe[key] = result
+        self.alpha_probe_done.emit(file_path, result)
 
     def set_max_cache_bytes(self, max_bytes: int):
         self.max_cache_bytes = max(0, int(max_bytes))
@@ -164,12 +258,13 @@ class ProxyCacheManager(QObject):
 
     def _target_path(self, file_path: str, divisor: int, audio_track: int = 0) -> str:
         hash_key = self._get_hash_key(file_path, divisor, audio_track)
-        return os.path.join(get_proxy_cache_dir(), f"{hash_key}.mp4")
+        ext = ".mov" if divisor == ALPHA_PREVIEW_DIVISOR else ".mp4"
+        return os.path.join(get_proxy_cache_dir(), f"{hash_key}{ext}")
 
     def get_cached_proxy_path(self, file_path: str, divisor: int, audio_track: int = 0) -> str | None:
         """Devuelve la ruta del proxy si ya existe en caché, o None si hay que generarlo.
         Si existe, se marca como usado recientemente para el criterio de purga LRU."""
-        if divisor <= 1:
+        if divisor <= 1 and divisor != ALPHA_PREVIEW_DIVISOR:
             return None
         target = self._target_path(file_path, divisor, audio_track)
         if os.path.exists(target) and os.path.getsize(target) > 0:
@@ -190,7 +285,7 @@ class ProxyCacheManager(QObject):
 
     def request_proxy(self, file_path: str, divisor: int, audio_track: int = 0):
         """Encola la generación del proxy en segundo plano si no está ya en caché o en curso."""
-        if divisor <= 1:
+        if divisor <= 1 and divisor != ALPHA_PREVIEW_DIVISOR:
             return
         key = (file_path, divisor, audio_track)
         with QMutexLocker(self.mutex):
@@ -200,7 +295,10 @@ class ProxyCacheManager(QObject):
             self._failed.discard(key)
 
         target = self._target_path(file_path, divisor, audio_track)
-        worker = ProxyRunnable(file_path, divisor, target, self, audio_track)
+        decoder_args = []
+        if divisor == ALPHA_PREVIEW_DIVISOR:
+            decoder_args = (self._alpha_probe.get(self._alpha_probe_key(file_path)) or {}).get("decoder_args") or []
+        worker = ProxyRunnable(file_path, divisor, target, self, audio_track, decoder_args)
         worker.signals.finished.connect(self._on_worker_finished)
         worker.signals.failed.connect(self._on_worker_failed)
         self.thread_pool.start(worker)
@@ -226,7 +324,7 @@ class ProxyCacheManager(QObject):
             entries = []
             total = 0
             for name in os.listdir(cache_dir):
-                if not name.endswith(".mp4"):
+                if not name.endswith((".mp4", ".mov")):
                     continue
                 path = os.path.join(cache_dir, name)
                 try:

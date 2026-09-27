@@ -98,8 +98,10 @@ def _accent_rgba(alpha: int) -> str:
     color = QColor(get_theme_token('acento_primario', '#B9E640'))
     return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})"
 
-VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".wmv", ".m4v", ".dv"}
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus", ".wma", ".adts", ".dts", ".thd", ".mlp", ".mpc", ".w64", ".shn"}
+from core.utils.media_extensions import (
+    VIDEO_EXTS as VIDEO_EXTENSIONS, AUDIO_EXTS as AUDIO_EXTENSIONS, is_accepted_media, file_dialog_patterns,
+)
+# Sin ".webp": solo entra si es animado (ver media_extensions.is_accepted_media).
 SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 
 # Mismos colores que usa el Gestor de Medios (media_model.py) para estos íconos.
@@ -319,12 +321,11 @@ class _PathScanThread(QThread):
             if os.path.isdir(p):
                 for root, _, files in os.walk(p):
                     for f in files:
-                        ext = os.path.splitext(f)[1].lower()
-                        if ext in SUPPORTED_EXTENSIONS:
-                            valid_paths.append(os.path.join(root, f))
+                        full = os.path.join(root, f)
+                        if is_accepted_media(full):
+                            valid_paths.append(full)
             else:
-                ext = os.path.splitext(p)[1].lower()
-                if ext in SUPPORTED_EXTENSIONS:
+                if is_accepted_media(p):
                     valid_paths.append(p)
         self.finished_scan.emit(valid_paths)
 
@@ -546,7 +547,10 @@ class MediaQueueWidget(QFrame):
 
     def _on_add_files_clicked(self):
         from PySide6.QtWidgets import QFileDialog
-        filter_str = self.tr("Archivos Multimedia (*.mp4 *.mkv *.mov *.avi *.webm *.dv *.mp3 *.wav *.aac *.flac *.ogg *.adts *.dts *.thd *.mlp *.mpc *.w64 *.shn);;Todos los archivos (*.*)")
+        # tr() fuera del f-string: pyside6-lupdate no extrae textos de dentro de uno.
+        media_label = self.tr("Archivos Multimedia")
+        all_label = self.tr("Todos los archivos")
+        filter_str = f"{media_label} ({file_dialog_patterns()});;{all_label} (*.*)"
         files, _ = QFileDialog.getOpenFileNames(self, self.tr("Seleccionar Archivos Multimedia"), "", filter_str)
         if files:
             self.add_files(files)

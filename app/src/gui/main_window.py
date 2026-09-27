@@ -762,16 +762,18 @@ class MainWindow(QMainWindow):
         Herramientas Multimedia (con su recorte, si el clip venia cortado en la linea de
         tiempo) e imagenes al Editor de Imagen. Se salta a la pestana que mas elementos
         recibio y se trae la ventana al frente, porque el gesto arranco en OTRA app."""
-        from gui.tabs.video_tools.media_queue_widget import SUPPORTED_EXTENSIONS as MEDIA_EXTS
+        from core.utils.media_extensions import is_accepted_media
         from gui.tabs.image_tools.image_queue_widget import SUPPORTED_EXTENSIONS as IMAGE_EXTS
 
         media_items, image_items, unsupported = [], [], []
         for item in items or []:
             ext = os.path.splitext(item.get("path", ""))[1].lower()
-            if ext in MEDIA_EXTS:
-                media_items.append(item)
-            elif ext in IMAGE_EXTS:
+            # Imagen primero: GIF/APNG/WebP son válidos en ambas pestañas y desde el editor
+            # siempre fueron al Editor de Imagen.
+            if ext in IMAGE_EXTS:
                 image_items.append(item)
+            elif is_accepted_media(item.get("path", "")):
+                media_items.append(item)
             else:
                 unsupported.append(item.get("path", ""))
 
