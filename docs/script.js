@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mainBtn = document.getElementById('main-download-btn');
 
     // Configura la versión actual de la app aquí
-    const VERSION = "1.9.0";
+    const VERSION = "1.9.1";
     const REPO_URL = "https://github.com/MarckDP/DowP/releases/download/v" + VERSION;
 
     const urlWindows = `${REPO_URL}/DowP_Setup_${VERSION}.exe`;
