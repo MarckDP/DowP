@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Configura la versión actual de la app aquí
     const VERSION = "1.9.1";
     const REPO_URL = "https://github.com/MarckDP/DowP/releases/download/v" + VERSION;
+    // Sin build Intel por ahora: todo Mac recibe el .dmg de Apple Silicon.
+    // Al volver a publicarlo, poner true y quitar el "hidden" de index.html.
+    const MAC_INTEL_AVAILABLE = false;
 
     const urlWindows = `${REPO_URL}/DowP_Setup_${VERSION}.exe`;
     const urlMacSilicon = `${REPO_URL}/DowP-${VERSION}-arm64.dmg`;
@@ -66,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnText.textContent = 'Descargar para Windows';
         mainBtn.href = urlWindows;
     } else if (osName === 'Mac') {
-        if (isAppleSilicon) {
+        if (isAppleSilicon || !MAC_INTEL_AVAILABLE) {
             btnText.textContent = 'Descargar para macOS (Apple Silicon)';
             mainBtn.href = urlMacSilicon;
         } else {

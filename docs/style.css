@@ -74,6 +74,11 @@ p {
     transition: background-color 0.2s;
 }
 
+/* Sin esto, el display: flex de .card anula el atributo hidden */
+.card[hidden] {
+    display: none;
+}
+
 .card strong {
     font-size: 0.75rem;
     color: #ffffff;
