@@ -1,22 +1,29 @@
+// ── Últimos datos de GitHub (una sola consulta para toda la página) ───────
+// De la lista de releases salen: la última versión publicada (no borrador ni
+// pre-release, igual que /releases/latest), sus instaladores reales y el total de
+// descargas. Así no hay que tocar este archivo al publicar una versión nueva.
+// Sin API (sin red o cupo de 60 consultas/hora agotado): los botones llevan a la
+// página de Releases, donde siempre está todo.
+const RELEASES_PAGE = "https://github.com/MarckDP/DowP/releases";
+const releasesPromise = fetch("https://api.github.com/repos/MarckDP/DowP/releases?per_page=100")
+    .then((res) => (res.ok ? res.json() : null))
+    .catch(() => null);
+
+function findAsset(release, pattern) {
+    const asset = (release && release.assets || []).find((a) => pattern.test(a.name));
+    return asset ? asset.browser_download_url : null;
+}
+
+// ── Botones de descarga ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     const btnText = document.getElementById('btn-text');
     const mainBtn = document.getElementById('main-download-btn');
+    const linkWin = document.getElementById('link-win');
+    const linkSilicon = document.getElementById('link-mac-silicon');
+    const linkIntel = document.getElementById('link-mac-intel');
 
-    // Configura la versión actual de la app aquí
-    const VERSION = "1.9.1";
-    const REPO_URL = "https://github.com/MarckDP/DowP/releases/download/v" + VERSION;
-    // Sin build Intel por ahora: todo Mac recibe el .dmg de Apple Silicon.
-    // Al volver a publicarlo, poner true y quitar el "hidden" de index.html.
-    const MAC_INTEL_AVAILABLE = false;
-
-    const urlWindows = `${REPO_URL}/DowP_Setup_${VERSION}.exe`;
-    const urlMacSilicon = `${REPO_URL}/DowP-${VERSION}-arm64.dmg`;
-    const urlMacIntel = `${REPO_URL}/DowP-${VERSION}-x64.dmg`;
-
-    // Asignar URLs a las tarjetas
-    document.getElementById('link-win').href = urlWindows;
-    document.getElementById('link-mac-silicon').href = urlMacSilicon;
-    document.getElementById('link-mac-intel').href = urlMacIntel;
+    // Mientras llega la respuesta (o si falla), todo lleva a Releases.
+    for (const el of [mainBtn, linkWin, linkSilicon, linkIntel]) el.href = RELEASES_PAGE;
 
     // Detección de OS
     let osName = "Unknown";
@@ -64,50 +71,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    btnText.textContent = 'Buscando la última versión...';
+    const releases = await releasesPromise;
+    const latest = Array.isArray(releases) ? releases.find((r) => !r.draft && !r.prerelease) : null;
+
+    const urlWindows = findAsset(latest, /\.exe$/i);
+    const urlMacSilicon = findAsset(latest, /arm64\.dmg$/i);
+    const urlMacIntel = findAsset(latest, /x64\.dmg$/i);
+
+    if (latest) {
+        // Número de versión en todos los textos marcados (hero, marquesina...).
+        const version = String(latest.tag_name || "").replace(/^v/i, "");
+        if (version) document.querySelectorAll('.js-version').forEach((el) => { el.textContent = version; });
+    }
+    if (urlWindows) linkWin.href = urlWindows;
+    if (urlMacSilicon) linkSilicon.href = urlMacSilicon;
+    // La tarjeta de Mac Intel solo aparece si esa versión trae su .dmg.
+    if (urlMacIntel) {
+        linkIntel.href = urlMacIntel;
+        linkIntel.hidden = false;
+    }
+
     // Configurar botón principal
-    if (osName === 'Windows') {
-        btnText.textContent = 'Descargar para Windows';
-        mainBtn.href = urlWindows;
-    } else if (osName === 'Mac') {
-        if (isAppleSilicon || !MAC_INTEL_AVAILABLE) {
+    if (osName === 'Mac') {
+        // Sin .dmg de Intel, todo Mac recibe el de Apple Silicon (Safari no deja
+        // distinguir bien el chip, y un Intel sin versión propia no tiene otra opción).
+        if (isAppleSilicon || !urlMacIntel) {
             btnText.textContent = 'Descargar para macOS (Apple Silicon)';
-            mainBtn.href = urlMacSilicon;
+            mainBtn.href = urlMacSilicon || RELEASES_PAGE;
         } else {
             btnText.textContent = 'Descargar para macOS (Intel)';
             mainBtn.href = urlMacIntel;
         }
+    } else if (osName === 'Windows') {
+        btnText.textContent = 'Descargar para Windows';
+        mainBtn.href = urlWindows || RELEASES_PAGE;
     } else {
         // Fallback genérico para Linux o desconocidos
         btnText.textContent = 'Descargar DowP (Windows)';
-        mainBtn.href = urlWindows;
+        mainBtn.href = urlWindows || RELEASES_PAGE;
     }
 });
 
-// ── Contador de descargas (datos reales de la API de GitHub) ──────────────
+// ── Contador de descargas (misma respuesta de GitHub) ─────────────────────
 // Suma las descargas de los instaladores (.exe/.dmg) de todos los releases.
 // Si la API falla o se agota el cupo, el contador se queda en "------".
 document.addEventListener('DOMContentLoaded', async () => {
     const counter = document.getElementById('download-counter');
     if (!counter) return;
-    try {
-        const res = await fetch('https://api.github.com/repos/MarckDP/DowP/releases?per_page=100');
-        if (!res.ok) return;
-        const releases = await res.json();
-        let total = 0;
-        for (const rel of releases) {
-            for (const asset of rel.assets || []) {
-                if (/\.(exe|dmg)$/i.test(asset.name)) total += asset.download_count;
-            }
+    const releases = await releasesPromise;
+    if (!Array.isArray(releases)) return;
+    let total = 0;
+    for (const rel of releases) {
+        for (const asset of rel.assets || []) {
+            if (/\.(exe|dmg)$/i.test(asset.name)) total += asset.download_count;
         }
-        const digits = String(total).padStart(6, '0').split('');
-        counter.textContent = '';
-        for (const d of digits) {
-            const span = document.createElement('span');
-            span.textContent = d;
-            counter.appendChild(span);
-        }
-        counter.setAttribute('aria-label', `${total} descargas`);
-    } catch (e) { }
+    }
+    const digits = String(total).padStart(6, '0').split('');
+    counter.textContent = '';
+    for (const d of digits) {
+        const span = document.createElement('span');
+        span.textContent = d;
+        counter.appendChild(span);
+    }
+    counter.setAttribute('aria-label', `${total} descargas`);
 });
 
 // ── Visor de capturas ─────────────────────────────────────────────────────

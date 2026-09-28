@@ -35,6 +35,7 @@ class ImageConvertWorker(QThread):
     busy_indeterminate = Signal(str, bool, str)
     file_status_changed = Signal(str, str)    # filepath, texto de estado
     file_completed = Signal(str, str)         # input_path, output_path -- solo en éxito
+    file_failed = Signal(str)                 # input_path -- error real (no cancelación ni "omitido")
     # input_path, ancho, alto -- resolución a la que se calculó el Mapa de
     # Profundidad de ese archivo. Se emite ANTES de file_completed, así quien la
     # use ya la tiene al mostrar el resultado (ver ImageToolsTab._depth_process_sizes).
@@ -140,6 +141,7 @@ class ImageConvertWorker(QThread):
             except Exception as e:
                 logger.error(f"ImageConvertWorker: fallo resolviendo destino de {filepath}: {e}")
                 self.file_status_changed.emit(filepath, self.tr("Error: {0}").format(e))
+                self.file_failed.emit(filepath)
                 continue
 
             if output_path is None:
@@ -192,5 +194,7 @@ class ImageConvertWorker(QThread):
             else:
                 rollback_backup(backup_path)
                 self.file_status_changed.emit(filepath, self.tr("Error: {0}").format(message))
+                if not self.cancellation_event.is_set():
+                    self.file_failed.emit(filepath)
 
         self.finished_signal.emit(completed, total)

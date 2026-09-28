@@ -137,6 +137,27 @@ las versiones compiladas.
 [ONNX Runtime](https://onnxruntime.ai/) ·
 [Pillow](https://python-pillow.org/)
 
+La lista completa, con la licencia de cada proyecto, está en la
+[página de créditos](https://marckdp.github.io/DowP/creditos.html) y en la app
+(*Ajustes → Acerca de → Créditos y licencias*).
+
+## Apoya DowP
+
+DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes apoyarlo:
+
+- ☕ [Invítame un café en Ko-fi](https://ko-fi.com/marckdbm)
+- **Binance Pay** — Binance ID (UID): `345789454` (solo desde la app de Binance)
+
+Sígueme en [X (@MarcklaX)](https://x.com/MarcklaX).
+
+## Licencia
+
+DowP es software libre: puedes usarlo, estudiarlo, modificarlo y compartirlo bajo los términos de
+la [GNU General Public License v3.0 o posterior](LICENSE). Cualquier versión modificada que se
+distribuya debe seguir siendo libre, con su código disponible y bajo la misma licencia.
+
+El nombre **DowP** y su logo son de MarckDP: las versiones modificadas deben usar otro nombre.
+
 ---
 
 <details>
@@ -154,6 +175,9 @@ playlists), built-in YouTube/SoundCloud search, an image editor with AI backgrou
 depth and normal maps for images and video, AI video upscaling, a media manager with free
 sources (Freesound, Wikimedia, Openverse, Pixabay, Pexels), download history and automatic,
 signed updates.
+
+DowP is free software released under the [GPL-3.0-or-later](LICENSE) license. You can support it on
+[Ko-fi](https://ko-fi.com/marckdbm).
 
 The interface is available in Spanish, English and Brazilian Portuguese.
 [Download it here](https://marckdp.github.io/DowP/). Windows 10/11 and Apple Silicon Macs (beta)

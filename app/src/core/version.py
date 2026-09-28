@@ -18,7 +18,7 @@ Los dos últimos son archivos generados en cuanto al número: no los edites a ma
 el build los reescribe desde aquí y falla si no puede.
 """
 
-APP_VERSION = "1.9.1"
+APP_VERSION = "1.9.2"
 
 # Fase beta previa a la 2.0.0 oficial: se reparte a un grupo reducido mientras se
 # termina el resto de la app, subiendo APP_VERSION en cada push (1.9.0, 1.9.1, ...).

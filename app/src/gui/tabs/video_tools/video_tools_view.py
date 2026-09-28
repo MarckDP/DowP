@@ -14,13 +14,13 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QProgressDialog,
 )
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QThread, Signal
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QThread, Signal, QCoreApplication
 from PySide6.QtGui import QIcon, QDesktopServices
 
 from gui.widgets.animated_button import AnimatedButton
 from gui.widgets.bouncing_progress_bar import BouncingProgressBar
 from gui.widgets.combo_box import AutoPopupComboBox
-from gui.widgets.collapsible_panel import CollapsiblePanel
+from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
 from gui.widgets.resettable_splitter import ResettableSplitter
 from gui.styles import apply_folder_browse_button_style, apply_folder_open_button_style, create_colored_circle_icon, update_label_combobox_style
 from gui.widgets.media_trim_player_widget import MediaTrimPlayerWidget
@@ -29,7 +29,8 @@ from gui.tabs.video_tools.encoding_options_widget import EncodingOptionsWidget
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
 from core.tabs.editing_media.ffprobe_metadata_manager import FFprobeMetadataManager
-from core.utils.queue_manager import get_queue_manager, JobStatus
+from core.utils.queue_manager import get_queue_manager, JobStatus, ORIGIN_VIDEO_TOOLS
+from core.utils.sound_notifier import get_sound_notifier, SOURCE_VIDEO_TOOLS
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup, find_available_rename
 from core.utils.recode_guard import container_supports_multi_audio, CONTAINER_TO_EXTENSION
 from core.tabs.video_tools.ia_video_common import trimmed_duration
@@ -66,6 +67,14 @@ class _QueueMetadataThread(QThread):
             entries.append(meta)
             entries_with_paths.append((filepath, meta))
         self.finished_computing.emit(entries, entries_with_paths)
+
+
+class OptionsEdgeTab(TextEdgeTabButton):
+    """Pestaña del borde del panel de Opciones plegado: "OPCIONES" en vertical en vez de
+    la flecha, como "HISTORIAL" en las pestañas de descarga (se perdía de vista)."""
+
+    def label_text(self) -> str:
+        return QCoreApplication.translate("OptionsEdgeTab", "OPCIONES")
 
 
 class VideoToolsTab(QWidget):
@@ -322,6 +331,12 @@ class VideoToolsTab(QWidget):
         # filtro global de cursor (HandCursorInstaller, main.py) nunca se dispare (ver
         # advanced_recode_panel.py::_setup_fixed_combo) — se fija a mano aquí.
         self.combo_tags.setCursor(Qt.PointingHandCursor)
+        # Ancho fijo, mismo criterio que en Modo Rápido (quick_mode_view.py): sin esto
+        # tomaba el ancho de la etiqueta más larga creada y le quitaba sitio a la ruta.
+        self.combo_tags.setFixedWidth(130)
+        # Con el nombre recortado, el tooltip muestra la etiqueta elegida completa.
+        self.combo_tags.currentIndexChanged.connect(
+            lambda i: self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else ""))
         self.combo_tags.currentIndexChanged.connect(self._on_label_changed)
 
         # Botón para examinar carpeta
@@ -416,7 +431,12 @@ class VideoToolsTab(QWidget):
             self.options_widget, edge="right",
             docked_size=self.OPTIONS_DOCKED_WIDTH,
             overlay_max_width=self.OPTIONS_OVERLAY_MAX_WIDTH,
+            edge_tab_class=OptionsEdgeTab,
         )
+        # Mismo tamaño que la pestaña "HISTORIAL" (history_panel.EDGE_TAB_SIZE): el texto
+        # vertical no cabe en la de la flecha (20x90).
+        self.right_panel.edge_tab.setFixedSize(28, 120)
+        self.right_panel.edge_tab.setToolTip(self.tr("Mostrar u ocultar las opciones"))
 
         self.preview_center_wrapper = QWidget()
         center_layout = QHBoxLayout(self.preview_center_wrapper)
@@ -863,6 +883,9 @@ class VideoToolsTab(QWidget):
             self.combo_tags.setCurrentIndex(0)
 
         self.combo_tags.blockSignals(False)
+        # La selección pudo cambiar en silencio (etiqueta borrada): refrescar el tooltip.
+        i = self.combo_tags.currentIndex()
+        self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else "")
         self._update_combo_style()
 
     def _update_combo_style(self):
@@ -1173,7 +1196,7 @@ class VideoToolsTab(QWidget):
                 # archivo con recortes distintos, y el estado debe ir a la fila correcta.
                 "queue_entry_key": entry_key,
             }
-            job_id = qm.add_job(config, "RECODE")
+            job_id = qm.add_job(config, "RECODE", origin=ORIGIN_VIDEO_TOOLS)
             self._recode_jobs.add(job_id)
             self._recode_backups[job_id] = backup_path
             if job_note:
@@ -1186,7 +1209,7 @@ class VideoToolsTab(QWidget):
         self.progress_bar.setProperty("status", "downloading")
         self.progress_bar.style().unpolish(self.progress_bar)
         self.progress_bar.style().polish(self.progress_bar)
-        qm.start_queue()
+        qm.start_queue(ORIGIN_VIDEO_TOOLS)
 
     def _ia_job_spec(self, settings: dict, base_name: str):
         """(job_type, clave de opciones en job.config, título) del job de Herramientas
@@ -1319,7 +1342,7 @@ class VideoToolsTab(QWidget):
                 "title": title,
                 "queue_entry_key": entry_key,
             }
-            job_id = qm.add_job(config, job_type)
+            job_id = qm.add_job(config, job_type, origin=ORIGIN_VIDEO_TOOLS)
             self._recode_jobs.add(job_id)
             self._recode_backups[job_id] = backup_path
             queued_any = True
@@ -1332,7 +1355,7 @@ class VideoToolsTab(QWidget):
         self.progress_bar.setProperty("status", "downloading")
         self.progress_bar.style().unpolish(self.progress_bar)
         self.progress_bar.style().polish(self.progress_bar)
-        qm.start_queue()
+        qm.start_queue(ORIGIN_VIDEO_TOOLS)
 
     def _start_chained_jobs(self, files, upscale_settings, recode_settings, out_dir, same_path):
         """Arma, por archivo, un job UPSCALE_VIDEO seguido de un job RECODE
@@ -1430,7 +1453,7 @@ class VideoToolsTab(QWidget):
                 "title": title,
                 "queue_entry_key": entry_key,
             }
-            job_id = qm.add_job(config, job_type)
+            job_id = qm.add_job(config, job_type, origin=ORIGIN_VIDEO_TOOLS)
             self._recode_jobs.add(job_id)
             self._chain_pending[job_id] = {
                 "recode_settings": recode_settings,
@@ -1449,7 +1472,7 @@ class VideoToolsTab(QWidget):
         self.progress_bar.setProperty("status", "downloading")
         self.progress_bar.style().unpolish(self.progress_bar)
         self.progress_bar.style().polish(self.progress_bar)
-        qm.start_queue()
+        qm.start_queue(ORIGIN_VIDEO_TOOLS)
 
     def _confirm_upscale_engine_if_needed(self, engine: str | None) -> bool:
         """Reescalado IA puede tardar minutos/horas -- a diferencia del popover
@@ -1522,6 +1545,7 @@ class VideoToolsTab(QWidget):
         return result["success"]
 
     def _on_cancel_recoding_clicked(self):
+        get_sound_notifier().discard(SOURCE_VIDEO_TOOLS)
         qm = get_queue_manager()
         for job_id in list(self._recode_jobs):
             job = qm.get_job(job_id)
@@ -1565,7 +1589,7 @@ class VideoToolsTab(QWidget):
                 "title": f"Recode (tras IA): {os.path.basename(chain['final_output'])}",
                 "queue_entry_key": chain["entry_key"],
             }
-            new_job_id = qm.add_job(new_config, "RECODE")
+            new_job_id = qm.add_job(new_config, "RECODE", origin=ORIGIN_VIDEO_TOOLS)
             self._recode_jobs.add(new_job_id)
             self._recode_backups[new_job_id] = chain["backup_path"]
             self._chain_cleanup[new_job_id] = job.config.get("output_path")
@@ -1588,6 +1612,7 @@ class VideoToolsTab(QWidget):
                     editor_mgr.process_raw_download(output_path, job.request_data if job else {})
 
             self._cleanup_chain_intermediate(job_id)
+            get_sound_notifier().item_finished(SOURCE_VIDEO_TOOLS, True)
             self._check_all_finished()
         elif status == JobStatus.FAILED:
             rollback_backup(self._recode_backups.pop(job_id, None))
@@ -1595,6 +1620,7 @@ class VideoToolsTab(QWidget):
             self._chain_pending.pop(job_id, None)
             self.queue_widget.update_file_status(file_path, self.tr("Error"))
             self._cleanup_chain_intermediate(job_id)
+            get_sound_notifier().item_finished(SOURCE_VIDEO_TOOLS, False)
             self._check_all_finished()
         elif status == JobStatus.CANCELLED:
             rollback_backup(self._recode_backups.pop(job_id, None))
@@ -1628,6 +1654,7 @@ class VideoToolsTab(QWidget):
                 break
                 
         if all_done:
+            get_sound_notifier().group_finished(SOURCE_VIDEO_TOOLS)
             self._recode_jobs.clear()
             if self._chain_temp_dir is not None:
                 import shutil

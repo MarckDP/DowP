@@ -111,7 +111,13 @@ class VideoDetailsWidget(QFrame):
         self.combo_tags = AutoPopupComboBox()
         self.combo_tags.setObjectName("tagsComboBox")
         self.combo_tags.setPlaceholderText(self.tr("Etiqueta"))
-        
+        # Ancho fijo, mismo criterio que el combo de etiquetas del Modo Rápido
+        # (quick_mode_view.py): sin esto ocupaba el ancho de la etiqueta más larga creada.
+        self.combo_tags.setFixedWidth(130)
+        # Con el nombre recortado, el tooltip muestra la etiqueta elegida completa.
+        self.combo_tags.currentIndexChanged.connect(
+            lambda i: self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else ""))
+
         title_layout.addWidget(self.title_input, 1)
         title_layout.addWidget(self.combo_tags)
         
@@ -778,6 +784,9 @@ class VideoDetailsWidget(QFrame):
             self.combo_tags.setCurrentIndex(0)
             
         self.combo_tags.blockSignals(False)
+        # La selección pudo cambiar en silencio (etiqueta borrada): refrescar el tooltip.
+        i = self.combo_tags.currentIndex()
+        self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else "")
         self.update_combo_style()
 
     def update_combo_style(self):

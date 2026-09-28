@@ -204,6 +204,18 @@ def source_has_real_video(input_file: str) -> bool:
 _HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
 
 
+# Carriles de la cola: un solo motor (mismos límites de concurrencia para toda la
+# app, ver QueueWorker.run), pero cada pestaña inicia, pausa y termina SOLO lo suyo.
+# Antes había un único interruptor de pausa global: si el Modo Rápido encolaba un
+# posprocesado (y con eso encendía la cola), los trabajos ya analizados del Proceso
+# Avanzado -- que quedan en PENDING esperando a que el usuario pulse "Iniciar" --
+# empezaban a descargarse solos. Mismo efecto con Herramientas Multimedia, y al
+# revés: "Pausar cola" o "Limpiar" del Proceso Avanzado alcanzaban a las otras.
+ORIGIN_ADVANCED = "advanced"
+ORIGIN_QUICK = "quick"
+ORIGIN_VIDEO_TOOLS = "video_tools"
+
+
 class JobStatus:
     PENDING = "PENDING"
     ANALYZING = "ANALYZING"
@@ -218,9 +230,10 @@ class Job:
     """
     Representa una tarea de descarga o procesamiento en la cola.
     """
-    def __init__(self, config: dict, job_type: str = "DOWNLOAD"):
+    def __init__(self, config: dict, job_type: str = "DOWNLOAD", origin: str = ORIGIN_ADVANCED):
         self.job_id = str(uuid4())
         self.job_type = job_type
+        self.origin = origin  # carril (ORIGIN_*): qué pestaña lo inicia/pausa
         self.config = config  # Contiene url, output_path, etc. (Opciones iniciales por defecto)
         self.video_data = None    # Datos en crudo de la extracción de yt-dlp (formatos disponibles, miniatura, etc.)
         self.request_data = None  # Opciones específicas seleccionadas por el usuario para esta descarga
@@ -304,7 +317,7 @@ class QueueWorker(QThread):
     """
     job_status_changed = Signal(str, str)             # job_id, status
     job_progress_changed = Signal(str, float, str, str) # job_id, progress%, speed, eta
-    finished_all = Signal()
+    finished_all = Signal(str)                        # origin: ese carril se quedó sin nada que hacer
 
     def __init__(self, manager):
         super().__init__()
@@ -327,10 +340,13 @@ class QueueWorker(QThread):
         logger.info("QueueWorker: Hilo despachador de cola iniciado.")
         from core.utils.config_manager import get_config
         while self._is_running:
-            if self.manager.is_paused():
+            running_origins = self.manager.running_origins()
+            if not running_origins:
                 time.sleep(0.3)
                 continue
 
+            # Límites COMUNES a todos los carriles: descargas simultáneas y un solo
+            # trabajo pesado de GPU/CPU a la vez, sin importar de qué pestaña venga.
             max_concurrent = get_config().get("max_concurrent_downloads", 3)
             
             with QMutexLocker(self._workers_mutex):
@@ -349,11 +365,16 @@ class QueueWorker(QThread):
                         self._active_workers[job.job_id] = worker
                     worker.start()
                     continue
-                else:
-                    with QMutexLocker(self._workers_mutex):
-                        if len(self._active_workers) == 0:
-                            self.manager.pause_queue()
-                            self.finished_all.emit()
+
+            # Un carril encendido "terminó" cuando no le queda nada corriendo ni
+            # pendiente: se apaga solo él y se avisa con su origen, para que cada
+            # pestaña reaccione únicamente a lo suyo.
+            with QMutexLocker(self._workers_mutex):
+                busy_origins = {w.job.origin for w in self._active_workers.values()}
+            for origin in running_origins:
+                if origin not in busy_origins and not self.manager._has_pending(origin):
+                    self.manager.pause_queue(origin)
+                    self.finished_all.emit(origin)
             time.sleep(0.3)
 
     def _on_single_job_finished(self, job_id, status):
@@ -1510,13 +1531,15 @@ class QueueManager(QObject):
     job_status_changed = Signal(str, str)            # job_id, status
     job_progress_changed = Signal(str, float, str, str) # job_id, percent, speed, eta
     queue_reordered = Signal()                       # Emitido cuando la cola cambia de orden
-    queue_finished = Signal()
+    queue_finished = Signal(str)                     # origin (ver QueueWorker.finished_all)
 
     def __init__(self):
         super().__init__()
         self._jobs = []
         self._mutex = QRecursiveMutex()
-        self._is_paused = True # Por defecto nace pausado hasta que el usuario inicie la cola
+        # Carriles encendidos (ORIGIN_*). Todos nacen apagados hasta que su pestaña
+        # inicia la cola.
+        self._running_origins = set()
 
         # Inicializar y arrancar el hilo de trabajo
         self._worker = QueueWorker(self)
@@ -1534,37 +1557,41 @@ class QueueManager(QObject):
             if hasattr(self, '_worker') and self._worker and self._worker.isRunning():
                 self._worker.stop()
 
-    def is_paused(self) -> bool:
+    def is_paused(self, origin: str) -> bool:
         with QMutexLocker(self._mutex):
-            return self._is_paused
+            return origin not in self._running_origins
 
-    def start_queue(self):
-        """Inicia o reanuda el procesamiento de la cola."""
+    def running_origins(self) -> set:
         with QMutexLocker(self._mutex):
-            cambio = self._is_paused
-            self._is_paused = False
+            return set(self._running_origins)
+
+    def start_queue(self, origin: str):
+        """Inicia o reanuda el carril `origin` (solo sus trabajos)."""
+        with QMutexLocker(self._mutex):
+            cambio = origin not in self._running_origins
+            self._running_origins.add(origin)
         if cambio:
-            logger.info("QueueManager: Cola iniciada/reanudada.")
+            logger.info(f"QueueManager: Cola iniciada/reanudada ({origin}).")
 
-    def pause_queue(self):
-        """Pausa el procesamiento de la cola (las descargas activas continúan, pero no empezará ninguna nueva).
+    def pause_queue(self, origin: str):
+        """Pausa el carril `origin` (sus trabajos activos continúan, pero no empezará ninguno nuevo de ese carril).
 
         Solo se registra el CAMBIO de estado: al vaciarse la cola, pausan tanto el hilo
         despachador (al quedarse sin trabajos activos) como el controlador de Proceso
         Avanzado al recibir finished_all -- las dos llamadas son correctas, pero en el
         log se leían como una pausa duplicada."""
         with QMutexLocker(self._mutex):
-            cambio = not self._is_paused
-            self._is_paused = True
+            cambio = origin in self._running_origins
+            self._running_origins.discard(origin)
         if cambio:
-            logger.info("QueueManager: Cola pausada.")
+            logger.info(f"QueueManager: Cola pausada ({origin}).")
 
-    def add_job(self, config: dict, job_type: str = "DOWNLOAD") -> str:
-        """Añade un nuevo trabajo a la cola."""
-        job = Job(config, job_type)
+    def add_job(self, config: dict, job_type: str = "DOWNLOAD", *, origin: str) -> str:
+        """Añade un nuevo trabajo al carril `origin` (ORIGIN_*)."""
+        job = Job(config, job_type, origin)
         with QMutexLocker(self._mutex):
             self._jobs.append(job)
-        logger.info(f"QueueManager: Trabajo añadido ({job.job_id}): {job.title}")
+        logger.info(f"QueueManager: Trabajo añadido ({job.job_id}, {origin}): {job.title}")
         self.job_added.emit(job.job_id)
         return job.job_id
 
@@ -1598,38 +1625,38 @@ class QueueManager(QObject):
             if job and job.status == JobStatus.RUNNING:
                 self._worker.pause_job(job_id)
 
-    def clear_queue(self):
-        """Limpia todos los trabajos. Cancela el actual si está corriendo."""
-        self.pause_queue()
+    def clear_queue(self, origin: str):
+        """Limpia todos los trabajos del carril `origin`, cancelando los que corren."""
+        self.pause_queue(origin)
         jobs_to_remove = []
         with QMutexLocker(self._mutex):
-            jobs_to_remove = list(self._jobs)
-            running_job = next((j for j in self._jobs if j.status == JobStatus.RUNNING), None)
-            if running_job:
-                self._worker.cancel_current_job()
-            self._jobs = []
-        logger.info("QueueManager: Cola vaciada.")
+            jobs_to_remove = [j for j in self._jobs if j.origin == origin]
+            for j in jobs_to_remove:
+                if j.status == JobStatus.RUNNING:
+                    self._worker.cancel_job(j.job_id)
+            self._jobs = [j for j in self._jobs if j.origin != origin]
+        logger.info(f"QueueManager: Cola vaciada ({origin}).")
         for j in jobs_to_remove:
             self.job_removed.emit(j.job_id)
         self.queue_reordered.emit()
 
-    def clear_inactive_jobs(self):
-        """Limpia absolutamente todos los trabajos de la cola, cancelando el actual si está corriendo o analizando."""
-        self.pause_queue()
+    def clear_inactive_jobs(self, origin: str):
+        """Limpia absolutamente todos los trabajos del carril `origin`, cancelando los que estén corriendo."""
+        self.pause_queue(origin)
         jobs_to_remove = []
         with QMutexLocker(self._mutex):
-            all_statuses = [f"{j.title} ({j.job_id}): {j.status}" for j in self._jobs]
-            logger.info(f"QueueManager: clear_inactive_jobs llamada. Trabajos actuales en cola: {all_statuses}")
-            
-            jobs_to_remove = list(self._jobs)
-            
-            # Cancelar el trabajo activo si está corriendo
-            running_job = next((j for j in self._jobs if j.status == JobStatus.RUNNING), None)
-            if running_job:
-                logger.info(f"QueueManager: Cancelando trabajo activo {running_job.job_id} al limpiar toda la lista.")
-                self._worker.cancel_current_job()
-                
-            self._jobs = []
+            jobs_to_remove = [j for j in self._jobs if j.origin == origin]
+            all_statuses = [f"{j.title} ({j.job_id}): {j.status}" for j in jobs_to_remove]
+            logger.info(f"QueueManager: clear_inactive_jobs llamada ({origin}). Trabajos del carril: {all_statuses}")
+
+            # Cancelar solo lo activo de este carril (no cancel_current_job(), que
+            # también se llevaría los trabajos de las otras pestañas).
+            for j in jobs_to_remove:
+                if j.status == JobStatus.RUNNING:
+                    logger.info(f"QueueManager: Cancelando trabajo activo {j.job_id} al limpiar la lista.")
+                    self._worker.cancel_job(j.job_id)
+
+            self._jobs = [j for j in self._jobs if j.origin != origin]
             
         logger.info(f"QueueManager: Eliminando {len(jobs_to_remove)} trabajos de la cola.")
         for j in jobs_to_remove:
@@ -1654,12 +1681,12 @@ class QueueManager(QObject):
         self.job_status_changed.emit(job_id, JobStatus.PENDING)
         logger.info(f"QueueManager: Trabajo {job_id} reseteado a PENDING.")
 
-    def reset_all_terminal_jobs(self):
-        """Restaura todos los trabajos terminados a PENDING."""
-        self.pause_queue()
+    def reset_all_terminal_jobs(self, origin: str):
+        """Restaura a PENDING todos los trabajos terminados del carril `origin`."""
+        self.pause_queue(origin)
         inactive_statuses = (JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED, JobStatus.SKIPPED, JobStatus.NO_AUDIO)
         with QMutexLocker(self._mutex):
-            jobs_to_reset = [j.job_id for j in self._jobs if j.status in inactive_statuses]
+            jobs_to_reset = [j.job_id for j in self._jobs if j.origin == origin and j.status in inactive_statuses]
             
         for j_id in jobs_to_reset:
             self.reset_job(j_id)
@@ -1726,15 +1753,19 @@ class QueueManager(QObject):
             return list(self._jobs)
 
     def _get_next_runnable_job(self, active_heavy: int) -> Job | None:
-        """Obtiene la siguiente tarea PENDING saltando los job types pesados de
-        GPU/CPU (ver _HEAVY_JOB_TYPES) si ya hay uno corriendo."""
+        """Obtiene la siguiente tarea PENDING de un carril encendido, saltando los
+        job types pesados de GPU/CPU (ver _HEAVY_JOB_TYPES) si ya hay uno corriendo."""
         with QMutexLocker(self._mutex):
             for j in self._jobs:
-                if j.status == JobStatus.PENDING:
+                if j.status == JobStatus.PENDING and j.origin in self._running_origins:
                     if j.job_type in _HEAVY_JOB_TYPES and active_heavy > 0:
                         continue
                     return j
             return None
+
+    def _has_pending(self, origin: str) -> bool:
+        with QMutexLocker(self._mutex):
+            return any(j.origin == origin and j.status == JobStatus.PENDING for j in self._jobs)
 
     def _on_worker_status_changed(self, job_id: str, status: str):
         self.job_status_changed.emit(job_id, status)

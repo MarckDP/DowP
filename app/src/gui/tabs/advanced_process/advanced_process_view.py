@@ -7,6 +7,7 @@ import time
 import threading
 from core.utils.config_manager import get_config, save_config
 from core.utils.download_history import download_history
+from core.utils.queue_manager import ORIGIN_ADVANCED
 from core.ytdlp_logic.analyzer import strip_ansi_codes
 
 
@@ -1049,7 +1050,8 @@ class AdvancedProcessTab(QWidget):
 
         # --- MODO COLA ACTIVO ---
         self.url_bar.url_input.clear()
-        job_id = self.queue_mgr.add_job({"url": url, "title": "Analizando URL..."}, "DOWNLOAD")
+        job_id = self.queue_mgr.add_job({"url": url, "title": "Analizando URL..."}, "DOWNLOAD",
+                                        origin=ORIGIN_ADVANCED)
         job = self.queue_mgr.get_job(job_id)
         if job:
             self.queue_mgr.update_job_status(job_id, "ANALYZING")

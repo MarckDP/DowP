@@ -20,9 +20,11 @@ from PySide6.QtGui import (
 from core.logger.logger_manager import logger
 from core.setup.ghostscript_setup import check_ghostscript, download_ghostscript
 from core.setup.vtracer_setup import check_vtracer, download_vtracer
+from core.utils.sound_notifier import get_sound_notifier, SOURCE_IMAGE_TOOLS
 from core.utils.config_manager import get_config, save_config
 from gui.styles import (
     get_theme_token, apply_folder_browse_button_style, apply_folder_open_button_style,
+    create_colored_circle_icon, update_label_combobox_style,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.animated_button import AnimatedButton
@@ -2040,13 +2042,12 @@ class ImageToolsTab(QWidget):
         ))
         controls_row.addWidget(self.combo_conflict_policy)
 
-        # 2. Ruta de destino + Examinar + Abrir
-        lbl_path = QLabel(self.tr("Ruta:"))
-        lbl_path.setObjectName("menuLabel")
-        controls_row.addWidget(lbl_path)
-
+        # 2. Ruta de destino + Examinar + Abrir + Etiqueta. Sin texto "Ruta:" delante: los
+        # íconos de carpeta ya lo dejan claro; el tooltip cubre el caso de campo lleno (el
+        # placeholder deja de verse en cuanto hay una ruta escrita).
         self.entry_output_folder = QLineEdit()
         self.entry_output_folder.setPlaceholderText(self.tr("Ruta de destino"))
+        self.entry_output_folder.setToolTip(self.tr("Carpeta de destino"))
         self.entry_output_folder.setFixedHeight(32)
         
         # Cargar ruta desde config, o usar Imágenes por defecto
@@ -2073,6 +2074,19 @@ class ImageToolsTab(QWidget):
         self.btn_open_output_folder.clicked.connect(self._on_open_output_folder)
         controls_row.addWidget(self.btn_open_output_folder)
 
+        # Etiqueta: mismo comportamiento que en Herramientas Multimedia
+        # (video_tools_view.py::_on_label_changed) y mismo ancho fijo que en Modo Rápido.
+        self.combo_tags = AutoPopupComboBox()
+        self.combo_tags.setObjectName("tagsComboBox")
+        self.combo_tags.setPlaceholderText(self.tr("Etiqueta"))
+        self.combo_tags.setFixedHeight(32)
+        self.combo_tags.setFixedWidth(130)
+        self.combo_tags.currentIndexChanged.connect(
+            lambda i: self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else ""))
+        self.combo_tags.currentIndexChanged.connect(self._on_label_changed)
+        controls_row.addWidget(self.combo_tags)
+        self.load_labels()
+
         # 3. Botón de acción: Iniciar Proceso (cambia dinámicamente a Cancelar en ejecución)
         self._convert_running = False
         self.btn_convert = AnimatedButton(self.tr("Iniciar Proceso"))
@@ -2096,11 +2110,67 @@ class ImageToolsTab(QWidget):
 
         return card
 
+    # ── Etiquetas (mismo patrón que VideoToolsTab: load_labels/_on_label_changed) ──
+    def load_labels(self):
+        """Carga las etiquetas configuradas, con su círculo de color. La llama MainWindow
+        al entrar en la pestaña y al cambiar las etiquetas en Ajustes."""
+        if not hasattr(self, "combo_tags"):
+            return
+        from PySide6.QtGui import QColor
+
+        self.combo_tags.blockSignals(True)
+        current_text = self.combo_tags.currentText()
+        previous_index = self.combo_tags.currentIndex()
+        self.combo_tags.clear()
+        self.combo_tags.addItem(self.tr("Etiqueta"), "")
+
+        for label in get_config().get("labels", []):
+            name = label.get("name", "")
+            path = label.get("path", "")
+            color = label.get("color", "#B9E640")
+            idx = self.combo_tags.count()
+            self.combo_tags.addItem(create_colored_circle_icon(color, size=12), name, path)
+            self.combo_tags.setItemData(idx, color, Qt.UserRole + 1)
+            self.combo_tags.setItemData(idx, QColor(color), Qt.ForegroundRole)
+
+        idx = self.combo_tags.findText(current_text)
+        self.combo_tags.setCurrentIndex(idx if idx >= 0 else 0)
+        self.combo_tags.blockSignals(False)
+        i = self.combo_tags.currentIndex()
+        self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else "")
+        if previous_index > 0 and idx < 0:
+            # La etiqueta elegida se borró en Ajustes: sin esto la ruta quedaba bloqueada
+            # con la de una etiqueta que ya no existe.
+            self._on_label_changed(0)
+        else:
+            update_label_combobox_style(self.combo_tags)
+
+    def _on_label_changed(self, index):
+        """Con etiqueta: la ruta pasa a ser la suya y no se puede editar. Sin etiqueta:
+        vuelve la ruta guardada del Editor de Imagen. La ruta de una etiqueta nunca se
+        guarda como ruta habitual (setText no dispara editingFinished)."""
+        update_label_combobox_style(self.combo_tags)
+        if index <= 0:
+            saved_path = get_config().get("image_tools_output_path", "")
+            if not saved_path or not os.path.isdir(saved_path):
+                saved_path = QStandardPaths.writableLocation(QStandardPaths.PicturesLocation)
+            self.entry_output_folder.setText(saved_path)
+            self.entry_output_folder.setEnabled(True)
+            self.btn_browse_output_folder.setEnabled(True)
+        else:
+            path = self.combo_tags.currentData()
+            if path:
+                self.entry_output_folder.setText(path)
+            self.entry_output_folder.setEnabled(False)
+            self.btn_browse_output_folder.setEnabled(False)
+
     def _on_browse_output_folder(self):
         current = self.entry_output_folder.text().strip()
         start = current if os.path.isdir(current) else QStandardPaths.writableLocation(QStandardPaths.PicturesLocation)
         selected = QFileDialog.getExistingDirectory(self, self.tr("Elegir carpeta de destino"), start)
         if selected:
+            if hasattr(self, "combo_tags"):
+                self.combo_tags.setCurrentIndex(0)
             self.entry_output_folder.setText(selected)
             self._save_output_path()
             
@@ -2358,6 +2428,10 @@ class ImageToolsTab(QWidget):
         self._convert_worker.file_depth_info.connect(self._on_convert_file_depth_info)
         self._convert_worker.file_normal_info.connect(self._on_convert_file_normal_info)
         self._convert_worker.file_completed.connect(self._on_convert_file_completed)
+        self._convert_worker.file_completed.connect(
+            lambda _i, _o: get_sound_notifier().item_finished(SOURCE_IMAGE_TOOLS, True))
+        self._convert_worker.file_failed.connect(
+            lambda _i: get_sound_notifier().item_finished(SOURCE_IMAGE_TOOLS, False))
         self._convert_worker.finished_signal.connect(self._on_convert_finished)
 
         self._convert_running = True
@@ -2505,6 +2579,11 @@ class ImageToolsTab(QWidget):
             self._show_compare_view(input_path)
 
     def _on_convert_finished(self, completed: int, total: int):
+        worker = self._convert_worker
+        if worker is not None and worker.cancellation_event.is_set():
+            get_sound_notifier().discard(SOURCE_IMAGE_TOOLS)
+        else:
+            get_sound_notifier().group_finished(SOURCE_IMAGE_TOOLS)
         if self._flatten_temp_dir is not None:
             shutil.rmtree(self._flatten_temp_dir, ignore_errors=True)
             self._flatten_temp_dir = None

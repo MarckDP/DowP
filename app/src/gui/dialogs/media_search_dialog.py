@@ -823,6 +823,12 @@ class _ResultsView(QListView):
             self._hover_timer.stop()
             if hover_row >= 0:
                 self._hover_timer.start()
+        if event.buttons() & Qt.LeftButton:
+            # Sin selección por arrastre: con el botón pulsado, QListView (MultiSelection)
+            # marcaba/desmarcaba cada tarjeta por la que pasaba el mouse, y un temblor de un
+            # par de píxeles al hacer clic ya contaba como arrastre (la tarjeta se desmarcaba
+            # sola o se marcaba la de al lado). Solo se marca con clics, uno por tarjeta.
+            return
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event):

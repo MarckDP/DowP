@@ -736,6 +736,10 @@ class MainWindow(QMainWindow):
             logger.info("MainWindow: Recargando etiquetas en Herramientas Multimedia")
             self.tab_video.load_labels()
 
+        if self.tabs.widget(index) == self.tab_image and hasattr(self.tab_image, "load_labels"):
+            logger.info("MainWindow: Recargando etiquetas en Editor de Imagen")
+            self.tab_image.load_labels()
+
         from core.utils.clipboard_monitor import ClipboardURLMonitor
         ClipboardURLMonitor.instance().check_clipboard(force=True)
 
@@ -807,6 +811,27 @@ class MainWindow(QMainWindow):
         theme_name = config.get("theme", "dark")
         self.setStyleSheet(load_stylesheet(theme_name))
 
+    def open_preset_creator(self, kind: str):
+        """Desde "+ Crear preajuste..." de Posprocesar (Modo Rápido / Proceso Avanzado):
+        abre Herramientas Multimedia en la pestaña donde se crea ese tipo de preajuste --
+        "recode" -> Avanzado (Recodificación), "ia" -> Herramientas IA."""
+        if not hasattr(self, "tab_video") or self.tab_video is None:
+            return
+        self.tabs.setCurrentWidget(self.tab_video)
+        options = getattr(self.tab_video, "options_widget", None)
+        if options is None:
+            return
+        target = options.tab_upscale_ia if kind == "ia" else options.tab_advanced
+        options.tabs.setCurrentWidget(target)
+        # En ventanas no muy anchas el panel de Opciones vive plegado como overlay (ver
+        # VideoToolsTab.right_panel): sin abrirlo, el usuario veía la pestaña pero no las
+        # opciones. Diferido para que la pestaña ya tenga su tamaño definitivo al abrirlo;
+        # open_overlay() no hace nada si el panel está acoplado o ya abierto.
+        panel = getattr(self.tab_video, "right_panel", None)
+        if panel is not None:
+            QTimer.singleShot(0, panel.open_overlay)
+        logger.info(f"MainWindow: abriendo Herramientas Multimedia para crear un preajuste ({kind}).")
+
     def refresh_labels(self):
         """Fuerza la recarga de las etiquetas en todas las pestañas relevantes."""
         logger.info("MainWindow: Recargando etiquetas globalmente por cambio en Ajustes")
@@ -816,6 +841,8 @@ class MainWindow(QMainWindow):
             self.tab_quick.load_labels()
         if hasattr(self, "tab_video") and self.tab_video and hasattr(self.tab_video, "load_labels"):
             self.tab_video.load_labels()
+        if hasattr(self, "tab_image") and self.tab_image and hasattr(self.tab_image, "load_labels"):
+            self.tab_image.load_labels()
 
     def _handle_nccalcsize(self, msg):
         """WM_NCCALCSIZE: el área de cliente pasa a ocupar toda la ventana (si no,

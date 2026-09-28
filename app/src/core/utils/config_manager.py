@@ -71,6 +71,14 @@ def get_config():
         # la integrada para dejar libre la dedicada). Acepta el nombre de la tarjeta o
         # un trozo -- ej. "nvidia". Ver core/utils/gpu_adapters.GPU_OVERRIDE_CONFIG_KEY.
         "ai_gpu_adapter": "",
+        # Sonido al terminar un proceso (Ajustes > General, ver core/utils/sound_notifier.py).
+        "notify_sound_enabled": True,
+        "notify_sound_when": "group",   # "group" | "item" | "both"
+        "notify_sound_volume": 70,      # 0-100
+        "notify_sound_success": "",     # vacío = predeterminado; si no, WAV convertido en %APPDATA%/DowP2/sounds
+        "notify_sound_success_name": "",  # nombre del archivo original elegido (solo para mostrarlo)
+        "notify_sound_error": "",
+        "notify_sound_error_name": "",
         "analyze_playlist": True,       # Estado de casilla de análisis de playlist
         "fast_mode": True,              # Estado de casilla de modo rápido
     }

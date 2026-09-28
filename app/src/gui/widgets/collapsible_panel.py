@@ -12,7 +12,7 @@ permanecen siempre visibles.
 """
 from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea, QSplitter
 from PySide6.QtCore import Qt, QRect, QPoint, QSize, QEasingCurve, QPropertyAnimation, Signal
-from PySide6.QtGui import QPainter, QColor, QPolygon
+from PySide6.QtGui import QPainter, QColor, QPolygon, QFont
 
 
 class EdgeTabButton(QWidget):
@@ -80,6 +80,45 @@ class EdgeTabButton(QWidget):
         else:
             triangle = QPolygon([QPoint(cx + 4, h // 2 - 8), QPoint(cx + 4, h // 2 + 8), QPoint(cx - 4, h // 2)])
         p.drawPolygon(triangle)
+
+
+class TextEdgeTabButton(EdgeTabButton):
+    """Pestaña del borde con un nombre en vertical en vez de la flecha (ej. "HISTORIAL",
+    "OPCIONES"): mismo fondo y hover que EdgeTabButton; fuente, tamaño y sentido de
+    lectura (de abajo hacia arriba) copiados del tirador "PROCESO POR LOTES" de la cola
+    (queue_trigger_bar.py). Las subclases solo definen label_text(); quien la use le da
+    un tamaño más grande que el de la flecha (ver EDGE_TAB_SIZE en history_panel.py)."""
+
+    def label_text(self) -> str:
+        return ""
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#2a2a2a" if self._hovered else "#1a1a1a"))
+        if self.edge == "left":
+            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
+        else:
+            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
+        if self._hovered:
+            p.setBrush(QColor("#1DC038"))
+            if self.edge == "left":
+                p.drawRect(0, 0, 3, h)
+            else:
+                p.drawRect(w - 3, 0, 3, h)
+
+        from core.utils.font_manager import get_active_font_family
+        font = QFont(get_active_font_family(), 9)
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(QColor("#B9E640") if (self._hovered or self._is_open) else QColor("#888888"))
+        p.translate(w / 2, h / 2)
+        p.rotate(-90.0)
+        # Rect rotado: su ancho es el alto de la pestaña y su alto, el ancho.
+        p.drawText(QRect(-h // 2, -w // 2, h, w), Qt.AlignCenter, self.label_text())
 
 
 class CollapsiblePanel(QFrame):

@@ -208,6 +208,11 @@ class AsyncIndexerThread(QThread):
         # la de carpetas físicas.
         for col_name in self.collections.keys():
             for path in self.collections[col_name]:
+                # Un medio web guardado como favorito sin descargar es un dict (URL +
+                # metadatos, ver add_to_collection): no hay archivo que escanear, y
+                # tratarlo como ruta tumbaba este hilo antes de emitir finished_indexing.
+                if not isinstance(path, str):
+                    continue
                 norm_path = path.replace("\\", "/")
                 if os.path.exists(norm_path) and os.path.isfile(norm_path):
                     if norm_path not in seen_collection_paths:

@@ -52,7 +52,7 @@ def probe_fps_and_duration(filepath: str, fallback_duration_sec: float = 0.0) ->
 
 def start_upscale_stage(qm, input_path: str, upscale_settings: dict, temp_dir: str,
                          fps: float, duration_sec: float, title: str | None = None,
-                         extra_config: dict | None = None) -> tuple[str, str]:
+                         extra_config: dict | None = None, *, origin: str) -> tuple[str, str]:
     """Arma y encola SOLO la etapa de Reescalado IA, con salida hacia un
     archivo dentro de `temp_dir` (el llamador lo crea con tempfile.mkdtemp()
     y lo barre cuando ya no queda nada corriendo -- ver
@@ -78,5 +78,6 @@ def start_upscale_stage(qm, input_path: str, upscale_settings: dict, temp_dir: s
     if extra_config:
         config.update(extra_config)
 
-    job_id = qm.add_job(config, "UPSCALE_VIDEO")
+    # origin: el carril de la cola de quien encadena (ver ORIGIN_* en queue_manager.py).
+    job_id = qm.add_job(config, "UPSCALE_VIDEO", origin=origin)
     return job_id, intermediate_path

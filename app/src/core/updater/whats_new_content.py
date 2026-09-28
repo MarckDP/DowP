@@ -30,6 +30,39 @@ def get_whats_new_items(version: str) -> list:
     que cambia es el aviso de beta, agregado arriba segun IS_BETA. Cuando
     salgan mas betas (1.9.2, 1.9.3...) van a necesitar contenido propio, no
     reusar esto sin mas (ver ACTUALIZACIONES.md, "Lo que falta")."""
+    if version == "1.9.2":
+        # Quien la ve viene de la 1.9.1 (se actualiza sola): solo lo nuevo de esta versión.
+        return [
+            (
+                QCoreApplication.translate("WhatsNewContent", "Sonido al terminar"),
+                QCoreApplication.translate("WhatsNewContent", "Un sonido avisa cuando termina una descarga o un proceso, y otro distinto si algo falla. Puedes elegir tus propios sonidos en Ajustes > General."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Colas independientes"),
+                QCoreApplication.translate("WhatsNewContent", "Cada pestaña maneja su propia cola: analizar en Proceso Avanzado ya no empieza a descargar mientras el Modo Rápido procesa otra cosa."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Crear preajustes desde Posprocesar"),
+                QCoreApplication.translate("WhatsNewContent", "Nueva opción \"+ Crear preajuste...\" en los menús de Posprocesar, que te lleva directo a crearlo en Herramientas Multimedia."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Etiquetas más compactas"),
+                QCoreApplication.translate("WhatsNewContent", "Los menús de etiquetas ocupan menos espacio, y el Editor de Imagen ahora también tiene etiquetas."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Búsqueda más precisa"),
+                QCoreApplication.translate("WhatsNewContent", "En la ventana de búsqueda ya no se marcan resultados por accidente al mover el ratón mientras haces clic."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Créditos y apoyo"),
+                QCoreApplication.translate("WhatsNewContent", "Nueva sección en Ajustes > Acerca de con agradecimientos, créditos y licencias, y formas de apoyar DowP."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Correcciones"),
+                QCoreApplication.translate("WhatsNewContent", "DowP ya no termina con un error al cerrarse (en Mac aparecía el aviso de cierre inesperado), y se corrigió un fallo del Gestor de Medios con los favoritos web."),
+            ),
+        ]
+
     if version not in ("1.9.0", "1.9.1", "2.0.0"):
         return []
 

@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
                                  QSpacerItem, QSizePolicy, QStyledItemDelegate, QScrollArea,
                                  QPushButton, QMessageBox, QToolButton, QRadioButton, QButtonGroup)
@@ -251,6 +252,8 @@ class GeneralPage(QWidget):
         self.tutorials_row.addWidget(self.btn_reset_tutorials)
         self.content_layout.addLayout(self.tutorials_row)
 
+        self._build_sounds_section()
+
         # Finalizar setup del scroll area
         self.scroll_area.setWidget(self.scroll_content)
         self.main_layout.addWidget(self.scroll_area)
@@ -266,6 +269,196 @@ class GeneralPage(QWidget):
         self.paste_switch.toggled.connect(self.on_auto_paste_toggled)
         self.adobe_switch.toggled.connect(self.on_adobe_compat_toggled)
 
+
+    # ── SECCIÓN: SONIDOS (ver core/utils/sound_notifier.py) ──────────────────
+    def _build_sounds_section(self):
+        from core.utils import sound_notifier as sn
+
+        self.sounds_label = QLabel(self.tr("Sonidos"))
+        self.sounds_label.setObjectName("settingsSectionTitle")
+        self.content_layout.addWidget(self.sounds_label)
+
+        # Activar / desactivar
+        enable_row = QHBoxLayout()
+        enable_vbox = QVBoxLayout()
+        enable_label = QLabel(self.tr("Sonido al terminar un proceso"))
+        enable_label.setObjectName("settingsLabel")
+        enable_desc = QLabel(self.tr(
+            "Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia "
+            "y Editor de Imagen. Un sonido para cuando todo sale bien y otro si algo falla."))
+        enable_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        enable_desc.setWordWrap(True)
+        enable_vbox.addWidget(enable_label)
+        enable_vbox.addWidget(enable_desc)
+        self.sound_switch = ToggleSwitch()
+        enable_row.addLayout(enable_vbox, 1)
+        enable_row.addWidget(self.sound_switch)
+        self.content_layout.addLayout(enable_row)
+
+        # Cuándo sonar
+        when_row = QHBoxLayout()
+        self.sound_when_label = QLabel(self.tr("Cuándo sonar"))
+        self.sound_when_label.setObjectName("settingsLabel")
+        self.sound_when_combo = AutoPopupComboBox()
+        self.sound_when_combo.setFixedWidth(220)
+        self.sound_when_combo.addItem(self.tr("Al terminar todo"), sn.WHEN_GROUP)
+        self.sound_when_combo.addItem(self.tr("Al terminar cada elemento"), sn.WHEN_ITEM)
+        self.sound_when_combo.addItem(self.tr("Ambos"), sn.WHEN_BOTH)
+        self.sound_when_combo.setToolTip(self.tr(
+            "Al terminar todo: un solo sonido cuando acaba toda la tanda (de error si algo falló).\n"
+            "Al terminar cada elemento: un sonido por cada descarga, archivo o imagen.\n"
+            "Ambos: por cada elemento y también al final."))
+        when_row.addWidget(self.sound_when_label)
+        when_row.addStretch()
+        when_row.addWidget(self.sound_when_combo)
+        self.content_layout.addLayout(when_row)
+
+        # Sonido de éxito / de error
+        self._sound_name_labels = {}
+        self._sound_reset_buttons = {}
+        self._sound_rows_widgets = [self.sound_when_label, self.sound_when_combo]
+        for kind, title in ((sn.KIND_SUCCESS, self.tr("Sonido de éxito")),
+                            (sn.KIND_ERROR, self.tr("Sonido de error"))):
+            row = QHBoxLayout()
+            vbox = QVBoxLayout()
+            label = QLabel(title)
+            label.setObjectName("settingsLabel")
+            name_label = QLabel()
+            name_label.setStyleSheet("color: #888888; font-size: 11px;")
+            vbox.addWidget(label)
+            vbox.addWidget(name_label)
+
+            btn_test = QPushButton(self.tr("Probar"))
+            btn_test.setProperty("variant", "secondary")
+            btn_test.setCursor(Qt.PointingHandCursor)
+            btn_test.setFixedWidth(80)
+            btn_test.clicked.connect(lambda _=False, k=kind: sn.get_sound_notifier().play(k, force=True))
+
+            btn_choose = QPushButton(self.tr("Elegir..."))
+            btn_choose.setProperty("variant", "secondary")
+            btn_choose.setCursor(Qt.PointingHandCursor)
+            btn_choose.setFixedWidth(90)
+            btn_choose.setToolTip(self.tr("WAV, MP3 u OGG, de hasta 10 segundos y 2 MB."))
+            btn_choose.clicked.connect(lambda _=False, k=kind: self._on_choose_sound(k))
+
+            btn_reset = QPushButton(self.tr("Restablecer"))
+            btn_reset.setProperty("variant", "secondary")
+            btn_reset.setCursor(Qt.PointingHandCursor)
+            btn_reset.setFixedWidth(120)
+            btn_reset.setToolTip(self.tr("Volver al sonido predeterminado de DowP"))
+            btn_reset.clicked.connect(lambda _=False, k=kind: self._on_reset_sound(k))
+
+            row.addLayout(vbox, 1)
+            row.addWidget(btn_test)
+            row.addWidget(btn_choose)
+            row.addWidget(btn_reset)
+            self.content_layout.addLayout(row)
+
+            self._sound_name_labels[kind] = name_label
+            self._sound_reset_buttons[kind] = btn_reset
+            self._sound_rows_widgets += [label, name_label, btn_test, btn_choose, btn_reset]
+
+        # Volumen
+        from PySide6.QtWidgets import QSlider
+        volume_row = QHBoxLayout()
+        self.sound_volume_label = QLabel(self.tr("Volumen"))
+        self.sound_volume_label.setObjectName("settingsLabel")
+        self.sound_volume_slider = QSlider(Qt.Horizontal)
+        self.sound_volume_slider.setRange(0, 100)
+        self.sound_volume_slider.setFixedWidth(180)
+        self.sound_volume_value = QLabel()
+        self.sound_volume_value.setFixedWidth(40)
+        volume_row.addWidget(self.sound_volume_label)
+        volume_row.addStretch()
+        volume_row.addWidget(self.sound_volume_slider)
+        volume_row.addWidget(self.sound_volume_value)
+        self.content_layout.addLayout(volume_row)
+        self._sound_rows_widgets += [self.sound_volume_label, self.sound_volume_slider, self.sound_volume_value]
+
+        self.sound_switch.toggled.connect(self._on_sound_enabled_toggled)
+        self.sound_when_combo.currentIndexChanged.connect(self._on_sound_when_changed)
+        self.sound_volume_slider.valueChanged.connect(self._on_sound_volume_changed)
+        # Se guarda al soltar el control, no en cada paso (cada guardado escribe config.json).
+        self.sound_volume_slider.sliderReleased.connect(lambda: save_config(get_config()))
+
+    def _load_sound_settings(self):
+        from core.utils import sound_notifier as sn
+        config = get_config()
+        self.sound_switch.setChecked(bool(config.get(sn.CFG_ENABLED, True)))
+        index = self.sound_when_combo.findData(config.get(sn.CFG_WHEN, sn.WHEN_GROUP))
+        self.sound_when_combo.setCurrentIndex(index if index >= 0 else 0)
+        volume = int(config.get(sn.CFG_VOLUME, 70))
+        self.sound_volume_slider.setValue(volume)
+        self.sound_volume_value.setText(f"{volume}%")
+        self._refresh_sound_names()
+        self._update_sound_rows_enabled()
+
+    def _refresh_sound_names(self):
+        from core.utils import sound_notifier as sn
+        config = get_config()
+        for kind, label in self._sound_name_labels.items():
+            custom = config.get(sn.CFG_CUSTOM[kind], "")
+            has_custom = bool(custom) and os.path.isfile(custom)
+            name = config.get(sn.CFG_CUSTOM_NAME[kind], "") if has_custom else ""
+            label.setText(name or (self.tr("Personalizado") if has_custom else self.tr("Predeterminado")))
+            self._sound_reset_buttons[kind].setEnabled(has_custom and self.sound_switch.isChecked())
+
+    def _update_sound_rows_enabled(self):
+        enabled = self.sound_switch.isChecked()
+        for widget in self._sound_rows_widgets:
+            widget.setEnabled(enabled)
+        if enabled:
+            self._refresh_sound_names()
+
+    def _on_sound_enabled_toggled(self, checked):
+        self._update_sound_rows_enabled()
+        if self._is_loading: return
+        from core.utils import sound_notifier as sn
+        config = get_config()
+        config[sn.CFG_ENABLED] = checked
+        save_config(config)
+        logger.info(f"GeneralPage: Sonido al terminar procesos: {checked}")
+
+    def _on_sound_when_changed(self, index):
+        if self._is_loading: return
+        from core.utils import sound_notifier as sn
+        config = get_config()
+        config[sn.CFG_WHEN] = self.sound_when_combo.itemData(index)
+        save_config(config)
+        logger.info(f"GeneralPage: Cuándo sonar: {config[sn.CFG_WHEN]}")
+
+    def _on_sound_volume_changed(self, value):
+        self.sound_volume_value.setText(f"{value}%")
+        if self._is_loading: return
+        from core.utils import sound_notifier as sn
+        get_config()[sn.CFG_VOLUME] = int(value)
+
+    def _on_choose_sound(self, kind):
+        from PySide6.QtWidgets import QFileDialog
+        from core.utils import sound_notifier as sn
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Elegir sonido"), "", self.tr("Audio (*.wav *.mp3 *.ogg)"))
+        if not path:
+            return
+        ok, reason = sn.import_custom_sound(path, kind)
+        if not ok:
+            messages = {
+                "ext": self.tr("Formato no admitido. Usa un archivo WAV, MP3 u OGG."),
+                "size": self.tr("El archivo pesa más de 2 MB."),
+                "duration": self.tr("El sonido dura más de 10 segundos."),
+                "ffmpeg": self.tr("Hace falta FFmpeg para preparar el sonido. Instálalo desde Ajustes > Dependencias."),
+                "convert": self.tr("No se pudo leer el archivo de audio. Prueba con otro."),
+            }
+            QMessageBox.warning(self, self.tr("No se pudo usar ese sonido"),
+                                messages.get(reason, messages["convert"]))
+            return
+        self._refresh_sound_names()
+        sn.get_sound_notifier().play(kind, force=True)
+
+    def _on_reset_sound(self, kind):
+        from core.utils import sound_notifier as sn
+        sn.reset_custom_sound(kind)
+        self._refresh_sound_names()
 
     def _open_user_themes_dir(self):
         """Abre la carpeta de temas personalizados del usuario en el explorador de archivos."""
@@ -305,6 +498,8 @@ class GeneralPage(QWidget):
         self.auto_switch.setTrackColors("#333333", accent)
         self.paste_switch.setTrackColors("#333333", accent)
         self.adobe_switch.setTrackColors("#333333", accent)
+        if hasattr(self, "sound_switch"):
+            self.sound_switch.setTrackColors("#333333", accent)
 
     def load_current_settings(self):
         config = get_config()
@@ -342,6 +537,7 @@ class GeneralPage(QWidget):
         self.auto_switch.setChecked(config.get("auto_analyze", True))
         self.paste_switch.setChecked(config.get("auto_paste_url", True))
         self.adobe_switch.setChecked(config.get("adobe_compat_default", True))
+        self._load_sound_settings()
 
     def _make_radio(self, text, code):
         rb = QRadioButton(text)

@@ -38,7 +38,7 @@ from core.utils.download_history import (
     KIND_PLAYLIST, STATUS_DOWNLOADED, download_history, resolve_disk_files,
 )
 from gui.styles import get_theme_token, set_button_variant
-from gui.widgets.collapsible_panel import CollapsiblePanel, EdgeTabButton
+from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
 
 PANEL_WIDTH = 390
 # Más grande que la pestaña por defecto de CollapsiblePanel (20x90): es el único acceso al
@@ -586,40 +586,12 @@ class HistoryPanelContent(QFrame):
             self._history.clear()
 
 
-class HistoryEdgeTab(EdgeTabButton):
-    """Pestaña del borde del historial: el mismo fondo y hover que la de los paneles de
-    Editor de Imagen y Herramientas Multimedia, pero con "HISTORIAL" en vertical en vez de
-    la flecha -- como el tirador "PROCESO POR LOTES" de la cola (queue_trigger_bar.py), del
-    que copia fuente, tamaño y sentido de lectura (de abajo hacia arriba)."""
+class HistoryEdgeTab(TextEdgeTabButton):
+    """Pestaña del borde del historial: "HISTORIAL" en vertical (ver TextEdgeTabButton,
+    compartida con la de Opciones de Herramientas Multimedia)."""
 
-    def paintEvent(self, event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        w, h = self.width(), self.height()
-
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#2a2a2a" if self._hovered else "#1a1a1a"))
-        if self.edge == "left":
-            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
-        else:
-            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
-        if self._hovered:
-            p.setBrush(QColor("#1DC038"))
-            if self.edge == "left":
-                p.drawRect(0, 0, 3, h)
-            else:
-                p.drawRect(w - 3, 0, 3, h)
-
-        from core.utils.font_manager import get_active_font_family
-        font = QFont(get_active_font_family(), 9)
-        font.setBold(True)
-        p.setFont(font)
-        p.setPen(QColor("#B9E640") if (self._hovered or self._is_open) else QColor("#888888"))
-        p.translate(w / 2, h / 2)
-        p.rotate(-90.0)
-        # Rect rotado: su ancho es el alto de la pestaña y su alto, el ancho.
-        p.drawText(QRect(-h // 2, -w // 2, h, w), Qt.AlignCenter,
-                   QCoreApplication.translate("HistoryEdgeTab", "HISTORIAL"))
+    def label_text(self) -> str:
+        return QCoreApplication.translate("HistoryEdgeTab", "HISTORIAL")
 
 
 class HistoryDrawer(QObject):

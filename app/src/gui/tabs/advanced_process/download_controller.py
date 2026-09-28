@@ -15,6 +15,9 @@ from core.utils.preset_manager import (
 from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file
 from core.utils.file_conflict_manager import quarantine_for_recode, commit_backup, rollback_backup, predict_final_extension
 from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
+from core.utils.queue_manager import ORIGIN_ADVANCED
+from core.utils.sound_notifier import (get_sound_notifier, SOURCE_ADVANCED,
+                                       SOURCE_ADVANCED_SOLO)
 from gui.tabs.advanced_process.workers import DownloadWorker
 
 # Clave sentinel para self._recode_by_download en modo SOLO: ahí no hay job_id de cola
@@ -119,7 +122,7 @@ class DownloadController(QObject):
                     job.request_data = self.tab._build_default_request_data(job.video_data, job.title)
         self.tab._apply_global_output_path()
 
-        self.queue_mgr.start_queue()
+        self.queue_mgr.start_queue(ORIGIN_ADVANCED)
         
         self.tab.output_options.btn_start_download.setEnabled(True)
         self.tab.output_options.set_download_state("pause_queue", QCoreApplication.translate("AdvancedProcessTab", "Pausar cola"))
@@ -251,6 +254,7 @@ class DownloadController(QObject):
                         )
                 else:
                     self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Descarga completada con éxito"), "done")
+                    get_sound_notifier().single_finished(SOURCE_ADVANCED_SOLO, True)
                     actual_path = self._resolve_final_download_path(resolved_request_data, self.last_downloaded_filepath)
                     # Sin recodificación pedida, el proceso terminó aquí: ya se puede
                     # arrastrar el resultado. Con recodificación, el botón se habilita
@@ -265,6 +269,8 @@ class DownloadController(QObject):
             else:
                 self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error: {0}").format(message), "wait")
                 logger.error(f"AdvancedProcessTab: Error en descarga directa SOLO: {message}")
+                if not self.cancellation_event.is_set():
+                    get_sound_notifier().single_finished(SOURCE_ADVANCED_SOLO, False)
                 
             self.solo_worker = None
 
@@ -286,9 +292,11 @@ class DownloadController(QObject):
         """Pausa la cola sin cancelar los trabajos pendientes."""
         if self.is_downloading:
             logger.info("AdvancedProcessTab: Pausando cola de descargas...")
-            self.queue_mgr.pause_queue()
-            
-            jobs = self.queue_mgr.get_all_jobs()
+            self.queue_mgr.pause_queue(ORIGIN_ADVANCED)
+
+            # Solo lo de esta pestaña: un reescalado del Modo Rápido o una
+            # recodificación de Herramientas Multimedia no se tocan.
+            jobs = self._own_jobs()
             running_jobs = [j for j in jobs if j.status == "RUNNING"]
             if running_jobs:
                 for job in running_jobs:
@@ -309,9 +317,10 @@ class DownloadController(QObject):
         progreso agregado de aquí. Ahora se incluyen los jobs RECODE propios
         (los que están en _recode_by_download) para que el modo lotes espere
         su finalización antes de marcar todo como "Completado"."""
-        return [j for j in self.queue_mgr.get_all_jobs() 
-                if j.job_type in ("DOWNLOAD", "PLAYLIST") or 
-                   (j.job_type == "RECODE" and j.job_id in self._recode_by_download)]
+        return [j for j in self.queue_mgr.get_all_jobs()
+                if j.origin == ORIGIN_ADVANCED and (
+                    j.job_type in ("DOWNLOAD", "PLAYLIST") or
+                    (j.job_type == "RECODE" and j.job_id in self._recode_by_download))]
 
     def update_queue_main_progress(self):
         """
@@ -408,8 +417,13 @@ class DownloadController(QObject):
         self.last_progress_update = current_time
         self.update_queue_main_progress()
 
-    def _on_queue_finished_all(self):
-        self.queue_mgr.pause_queue()
+    def _on_queue_finished_all(self, origin):
+        # La cola avisa por carril: el fin de un posprocesado del Modo Rápido o de
+        # Herramientas Multimedia no es el fin de las descargas de esta pestaña.
+        if origin != ORIGIN_ADVANCED:
+            return
+        self.queue_mgr.pause_queue(ORIGIN_ADVANCED)
+        get_sound_notifier().group_finished(SOURCE_ADVANCED)
         self.is_downloading = False
         jobs = self._own_jobs()
         has_pending = any(j.status == "PENDING" for j in jobs)
@@ -464,6 +478,14 @@ class DownloadController(QObject):
             # PLAYLIST no tienen request_data y también cuentan como descargados.
             download_history().mark_job_downloaded(job_id)
             self._history_sync(job_id)
+            # Sonido: sin posprocesado, el elemento terminó aquí (incluidas las
+            # PLAYLIST, que no tienen request_data). Con posprocesado, avisa
+            # _notify_sound_after_recode cuando se resuelve la recodificación.
+            has_post = bool(
+                job and job.job_type == "DOWNLOAD" and job.request_data
+                and (job.request_data.get("recode_enabled") or job.request_data.get("upscale_enabled")))
+            if not has_post:
+                get_sound_notifier().item_finished(SOURCE_ADVANCED, True)
             if job and job.request_data:
                 # Rutas reales del resultado, para poder arrastrar la tarjeta terminada
                 # a otra aplicación (ver queue_panel.py::_on_card_file_drag). Los
@@ -515,12 +537,13 @@ class DownloadController(QObject):
             err_msg = job.error_message if job else ""
             if status == "FAILED":
                 logger.error(f"AdvancedProcessTab: Fallo en descarga de {job_id}: {err_msg}")
+                get_sound_notifier().item_finished(SOURCE_ADVANCED, False)
             
             if status == "CANCELLED" and job_id in self.paused_job_ids:
                 self.paused_job_ids.discard(job_id)
                 self.queue_mgr.reset_job(job_id)
         
-        if self.is_downloading and self.queue_mgr.is_paused():
+        if self.is_downloading and self.queue_mgr.is_paused(ORIGIN_ADVANCED):
             jobs = self._own_jobs()
             if not any(j.status == "RUNNING" for j in jobs):
                 self.is_downloading = False
@@ -577,6 +600,8 @@ class DownloadController(QObject):
         results = self._group_results.pop(download_key, {"all_ok": True, "final_paths": []})
         self._group_pending.pop(download_key, None)
         self._mark_recode_pending(download_key, False)
+        if not results.get("cancelled"):
+            self._notify_sound_after_recode(download_key, results["all_ok"])
         if download_key == _SOLO_RECODE_KEY:
             final_path = results["final_paths"][-1] if results["final_paths"] else None
             if final_path:
@@ -590,6 +615,14 @@ class DownloadController(QObject):
             if card:
                 text = QCoreApplication.translate("AdvancedProcessTab", "Completado") if results["all_ok"] else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")
                 card.update_progress(100, speed_text="", status_text=text)
+
+    def _notify_sound_after_recode(self, download_key, ok):
+        """Sonido al terminar el posprocesado de una descarga: en SOLO es el final del
+        proceso; en LOTES es un elemento más (el grupo suena con finished_all)."""
+        if download_key == _SOLO_RECODE_KEY:
+            get_sound_notifier().single_finished(SOURCE_ADVANCED_SOLO, ok)
+        else:
+            get_sound_notifier().item_finished(SOURCE_ADVANCED, ok)
 
     def _register_recode_outputs(self, download_key, paths, succeeded=True):
         """Suma al arrastre lo que dejó la recodificación. La salida recodificada NO
@@ -773,6 +806,7 @@ class DownloadController(QObject):
                 job_id, _intermediate_path = start_upscale_stage(
                     self.queue_mgr, backup_path, upscale_settings, chain_temp_dir,
                     fps, duration_sec, title=f"Reescalado IA: {title}",
+                    origin=ORIGIN_ADVANCED,
                 )
                 chain_next = {
                     "original_path": actual_path,
@@ -792,7 +826,7 @@ class DownloadController(QObject):
                     "fps": fps,
                     "duration_sec": real_duration,
                     "title": f"Reescalado IA: {title}",
-                }, "UPSCALE_VIDEO")
+                }, "UPSCALE_VIDEO", origin=ORIGIN_ADVANCED)
                 stage_label = self.tr("Reescalando con IA...")
             else:
                 job_id = self.queue_mgr.add_job({
@@ -801,7 +835,7 @@ class DownloadController(QObject):
                     "settings": settings,
                     "duration_sec": duration_sec,
                     "title": f"Recode: {title}",
-                }, "RECODE")
+                }, "RECODE", origin=ORIGIN_ADVANCED)
 
         self._recode_by_download[job_id] = download_key
         self._recode_state[job_id] = {
@@ -826,7 +860,7 @@ class DownloadController(QObject):
             # cuarentena ".dbak" para siempre, sin recodificar). No se llama para LOTES:
             # ahí la cola ya está corriendo por definición, y reanudarla de nuevo aquí
             # podría reactivar otros jobs que el usuario haya pausado a propósito.
-            self.queue_mgr.start_queue()
+            self.queue_mgr.start_queue(ORIGIN_ADVANCED)
         else:
             card = self.tab.queue_panel.cards.get(download_key)
             if card:
@@ -900,7 +934,7 @@ class DownloadController(QObject):
             "settings": settings,
             "duration_sec": duration_sec,
             "title": f"Recode: {title}",
-        }, "RECODE")
+        }, "RECODE", origin=ORIGIN_ADVANCED)
 
         self._recode_by_download[new_job_id] = target
         self._recode_state[new_job_id] = {**state, "chain_next": None}
@@ -996,6 +1030,8 @@ class DownloadController(QObject):
             # (ver _on_recode_job_progress).
             results = self._group_results.setdefault(target, {"all_ok": True, "final_paths": []})
             results["all_ok"] = results["all_ok"] and ok
+            if status == "CANCELLED":
+                results["cancelled"] = True
             if final_path:
                 results["final_paths"].append(final_path)
                 self._register_recode_outputs(target, [final_path], succeeded=ok)
@@ -1008,6 +1044,8 @@ class DownloadController(QObject):
             return
 
         # Camino normal: una sola recodificación (sin fragmentos, o un fragmento único).
+        if status != "CANCELLED":
+            self._notify_sound_after_recode(target, status == "COMPLETED")
         self._register_recode_outputs(target, [final_path], succeeded=(status == "COMPLETED"))
         self._mark_recode_pending(target, False)
         if target == _SOLO_RECODE_KEY:

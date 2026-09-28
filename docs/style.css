@@ -61,14 +61,18 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
     max-width: 1060px;
     margin: 0 auto;
     padding: 28px 0 14px;
+    /* Tamaño del título, compartido con el logo: el logo mide lo mismo que el bloque
+       título + subtítulo (arriba a ras de "DowP", abajo a ras del subtítulo). */
+    --title-size: clamp(34px, 7.5vw, 68px);
     display: flex;
-    align-items: center;
-    gap: 22px;
+    align-items: flex-start;
+    gap: 18px;
 }
 
 .masthead-logo {
-    width: 96px;
-    height: 96px;
+    /* título (line-height 1) + margen del subtítulo (4px) + una línea de subtítulo (~28px) */
+    width: calc(var(--title-size) + 32px);
+    height: calc(var(--title-size) + 32px);
     flex-shrink: 0;
     filter: drop-shadow(4px 4px 0 var(--deep));
     animation: bob 2.4s steps(2) infinite;
@@ -76,11 +80,12 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
 
 @keyframes bob { 50% { transform: translateY(-4px); } }
 
+/* Press Start 2P y no Silkscreen: en Silkscreen gruesa la "W" es un bloque sin hueco. */
 .masthead-title {
-    font-family: "Silkscreen", monospace;
-    font-weight: 700;
-    font-size: clamp(56px, 11vw, 104px);
-    line-height: .9;
+    font-family: "Press Start 2P", "Silkscreen", monospace;
+    font-weight: 400;
+    font-size: var(--title-size);
+    line-height: 1;
     margin: 0;
     color: var(--lime);
     letter-spacing: 2px;
@@ -91,11 +96,14 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
 }
 
 .masthead-sub {
-    margin: 10px 0 0;
-    font-size: 26px;
+    margin: 4px 0 0;
+    font-size: 22px;
+    line-height: 28px;
     color: var(--text);
     letter-spacing: 1px;
 }
+
+.nowrap { white-space: nowrap; }
 
 .blink { animation: blink 1s steps(1) infinite; color: var(--lime); }
 @keyframes blink { 50% { opacity: 0; } }
@@ -386,14 +394,37 @@ pre {
 }
 .win-close:hover { background: var(--off); color: #fff; }
 
+
+.support-text { margin: 0 0 10px; }
+.support-btn { display: inline-block; font-size: 22px; padding: 4px 18px; }
+
+/* ── Página de créditos ───────────────────────────── */
+.content.single { max-width: 860px; margin: 0 auto; }
+.plain-list { list-style: none; padding: 0; margin: 0; }
+.plain-list li + li { margin-top: 6px; }
+.muted { color: var(--muted); }
+.prose h3 {
+    font-family: "Silkscreen", monospace;
+    font-size: 15px;
+    color: var(--lime);
+    margin: 18px 0 6px;
+    border-bottom: 1px dashed #3a4a2c;
+    padding-bottom: 4px;
+}
+.credits-table { width: 100%; border-collapse: collapse; font-size: 19px; }
+.credits-table td { padding: 4px 0; vertical-align: top; }
+.credits-table td.lic { text-align: right; color: var(--muted); padding-left: 12px; width: 34%; }
+.credits-table .muted { font-size: 17px; }
+
 /* ── Móvil ────────────────────────────────────────── */
 @media (max-width: 820px) {
     body { font-size: 20px; }
     .layout { grid-template-columns: minmax(0, 1fr); }
     .sidebar { position: static; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); order: 2; }
     .masthead { gap: 14px; padding-top: 20px; }
-    .masthead-logo { width: 64px; height: 64px; }
-    .masthead-sub { font-size: 21px; }
+    /* En móvil el subtítulo ocupa dos líneas: el logo se alinea solo con el título. */
+    .masthead-logo { width: var(--title-size); height: var(--title-size); }
+    .masthead-sub { font-size: 19px; line-height: 22px; }
     .big-btn { padding: 12px 16px; }
 }
 

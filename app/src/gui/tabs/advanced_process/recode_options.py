@@ -142,8 +142,9 @@ class RecodeOptionsWidget(QFrame):
 
         self.preset_bar = PresetBar(
             _PRESET_NAMESPACE, get_settings=None, parent=self.body_container,
-            show_picker=True, show_save_button=False,
+            show_picker=True, show_save_button=False, create_shortcut=True,
         )
+        self.preset_bar.create_requested.connect(lambda: self._open_preset_creator("recode"))
         self.preset_bar.setEnabled(False)
         self.preset_bar.preset_applied.connect(self._update_header_highlight)
         body_layout.addWidget(self.preset_bar)
@@ -208,8 +209,9 @@ class RecodeOptionsWidget(QFrame):
         self.preset_bar_upscale = PresetBar(
             _UPSCALE_PRESET_NAMESPACE, get_settings=None, parent=self.body_container,
             show_picker=True, show_save_button=False,
-            function_choices=IA_POST_DOWNLOAD_FUNCTIONS,
+            function_choices=IA_POST_DOWNLOAD_FUNCTIONS, create_shortcut=True,
         )
+        self.preset_bar_upscale.create_requested.connect(lambda: self._open_preset_creator("ia"))
         self.preset_bar_upscale.setEnabled(False)
         self.preset_bar_upscale.preset_applied.connect(self._update_header_highlight)
         body_layout.addWidget(self.preset_bar_upscale)
@@ -280,6 +282,14 @@ class RecodeOptionsWidget(QFrame):
         self.txt_prefix.setEnabled(checked)
         self.txt_suffix.setEnabled(checked)
         self._update_keep_original_enabled()
+
+    def _open_preset_creator(self, kind: str):
+        """Atajo "+ Crear preajuste..." de los pickers: lleva a Herramientas Multimedia,
+        a la pestaña donde se arma y guarda ese tipo de preajuste (ver
+        MainWindow.open_preset_creator). "recode" -> Avanzado, "ia" -> Herramientas IA."""
+        window = self.window()
+        if hasattr(window, "open_preset_creator"):
+            window.open_preset_creator(kind)
 
     def _on_switch_upscale_toggled(self, checked: bool):
         self.preset_bar_upscale.setEnabled(checked)

@@ -17,6 +17,8 @@ from core.utils.preset_manager import get_preset_manager, PRESET_FUNCTIONS, UNSP
 from core.utils.watermark_builder import check_watermark_file
 
 _NO_PRESET_DATA = None  # dato del item "Sin preset" (siempre el primero del combo)
+# Dato del item "+ Crear preajuste..." (ver create_shortcut): no es un preset, es un atajo.
+_CREATE_PRESET_DATA = "__dowp_create_preset__"
 
 
 class PresetBar(QWidget):
@@ -46,12 +48,19 @@ class PresetBar(QWidget):
     namespace (ej. "video_tools/avanzado").
     """
     preset_applied = Signal(str)  # nombre del preset activo, o "" si se deseleccionó
+    # Se eligió "+ Crear preajuste..." (solo con create_shortcut=True): quien use la barra
+    # decide adónde llevar al usuario. La selección vuelve sola a la que había.
+    create_requested = Signal()
 
     def __init__(self, namespace: str, get_settings=None, parent=None,
                  show_picker: bool = True, show_save_button: bool = True,
                  default_function: str | None = None, job_type: str = "RECODE",
-                 function_choices: dict | None = None):
+                 function_choices: dict | None = None, create_shortcut: bool = False):
         super().__init__(parent)
+        # Atajo "+ Crear preajuste..." como segunda opción del picker (tras "Sin preset"),
+        # para las barras que solo ELIGEN presets lejos de donde se crean (los menús de
+        # "Posprocesar" de Modo Rápido y Proceso Avanzado). Apagado por defecto.
+        self._create_shortcut = create_shortcut
         self.namespace = namespace
         self._get_settings = get_settings
         # Metadata de categorización para lo que esta barra GUARDE (ver
@@ -190,6 +199,8 @@ class PresetBar(QWidget):
         self.combo.blockSignals(True)
         self.combo.clear()
         self.combo.addItem(self.tr("Sin preset"), _NO_PRESET_DATA)
+        if self._create_shortcut:
+            self.combo.addItem(self.tr("+ Crear preajuste..."), _CREATE_PRESET_DATA)
 
         presets = get_preset_manager().list_presets(self.namespace)
         if self._filter is not None:
@@ -224,6 +235,14 @@ class PresetBar(QWidget):
             self.refresh()
 
     def _on_combo_changed(self, index: int):
+        if self.combo.itemData(index) == _CREATE_PRESET_DATA:
+            # No es una selección: se devuelve el combo a lo que había y se avisa.
+            previous = self.combo.findData(self._active_name) if self._active_name else 0
+            self.combo.blockSignals(True)
+            self.combo.setCurrentIndex(previous if previous >= 0 else 0)
+            self.combo.blockSignals(False)
+            self.create_requested.emit()
+            return
         self._active_name = self.combo.itemData(index)
         if self._active_name:
             logger.info(f"PresetBar [{self.namespace}]: Preset '{self._active_name}' seleccionado.")

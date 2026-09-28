@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor, QIcon, QPixmap, QPainter, QCursor
 from gui.styles import get_theme_token
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
+from core.utils.queue_manager import ORIGIN_ADVANCED
 
 ICONS_DIR = os.path.join(get_src_dir(), "assets", "icons", "svg")
 
@@ -801,12 +802,13 @@ class QueuePanel(QWidget):
 
     def _on_clear_list_click(self):
         """Limpia trabajos inactivos y notifica al padre."""
-        self.queue_mgr.clear_inactive_jobs()
+        # El panel de cola es el del Proceso Avanzado: solo limpia/reinicia ese carril.
+        self.queue_mgr.clear_inactive_jobs(ORIGIN_ADVANCED)
         self.queue_action_signal.emit("cleared")
 
     def _on_reset_all_click(self):
         """Resetea todos los trabajos terminados y notifica al padre."""
-        self.queue_mgr.reset_all_terminal_jobs()
+        self.queue_mgr.reset_all_terminal_jobs(ORIGIN_ADVANCED)
         self.queue_action_signal.emit("reset")
 
     def _on_queue_reordered(self):

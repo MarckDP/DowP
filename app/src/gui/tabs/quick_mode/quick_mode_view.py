@@ -222,6 +222,15 @@ class QuickModeTab(QWidget):
         self.combo_tags.setObjectName("tagsComboBox")
         self.combo_tags.setPlaceholderText(self.tr("Etiqueta"))
         self.combo_tags.setToolTip(self.tr("Aplica rutas y configuraciones predefinidas según la etiqueta elegida"))
+        # Ancho fijo: con AdjustToContents la caja cerrada tomaba el ancho de la etiqueta
+        # MÁS LARGA creada (aunque mostrara "Etiqueta") y le quitaba sitio a la URL. Un
+        # nombre largo se elide con "…" (paintEvent de AutoPopupComboBox); el desplegable
+        # sigue a su propio ancho (showPopup) y muestra los nombres completos.
+        self.combo_tags.setFixedWidth(130)
+        # Con el nombre recortado, el tooltip muestra la etiqueta elegida completa.
+        _tags_tip = self.combo_tags.toolTip()
+        self.combo_tags.currentIndexChanged.connect(
+            lambda i: self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else _tags_tip))
         self.combo_tags.currentIndexChanged.connect(self._on_label_changed)
 
         # ComboBox de Modo (a la derecha de etiqueta)
@@ -609,6 +618,10 @@ class QuickModeTab(QWidget):
             self.combo_tags.setCurrentIndex(0)
 
         self.combo_tags.blockSignals(False)
+        # La selección pudo cambiar en silencio (etiqueta borrada): refrescar el tooltip.
+        i = self.combo_tags.currentIndex()
+        self.combo_tags.setToolTip(self.combo_tags.itemText(i) if i > 0 else
+                                   self.tr("Aplica rutas y configuraciones predefinidas según la etiqueta elegida"))
         self._update_combo_style()
 
     def _update_combo_style(self):

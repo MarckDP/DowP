@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="img/logo32.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,14 +18,14 @@
         <img src="img/logo128.png" alt="" class="masthead-logo" width="96" height="96">
         <div>
             <h1 class="masthead-title">DowP</h1>
-            <p class="masthead-sub">descarga · convierte · organiza · <span class="blink">_</span></p>
+            <p class="masthead-sub">descarga · convierte · <span class="nowrap">organiza · <span class="blink">_</span></span></p>
         </div>
     </header>
 
     <div class="ticker" aria-label="Novedades">
         <div class="ticker-track">
-            <span>★ ¡DowP 1.9.1 YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
-            <span aria-hidden="true">★ ¡DowP 1.9.1 YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
+            <span>★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
+            <span aria-hidden="true">★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
         </div>
     </div>
 
@@ -41,6 +41,7 @@
                     <li><a href="#capturas">» Capturas</a></li>
                     <li><a href="#funciones">» Funciones</a></li>
                     <li><a href="#preguntas">» Preguntas</a></li>
+                    <li><a href="creditos.html">» Créditos</a></li>
                     <li><a href="https://github.com/MarckDP/DowP" target="_blank" rel="noopener">» GitHub ↗</a></li>
                 </ul>
             </nav>
@@ -51,6 +52,15 @@
                     <p class="small">descargas totales</p>
                     <div class="odometer" id="download-counter" aria-live="polite">------</div>
                     <p class="tiny">datos reales de GitHub</p>
+                </div>
+            </section>
+
+            <section class="win">
+                <div class="win-bar"><span>Apoya DowP</span></div>
+                <div class="win-body center">
+                    <p class="tiny support-text">DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café.</p>
+                    <a class="card support-btn" href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener">☕ Ko-fi</a>
+                    <p class="tiny"><a href="creditos.html">Otras formas (Binance Pay)</a></p>
                 </div>
             </section>
 
@@ -79,7 +89,7 @@
             <section id="descargar" class="win win-hero">
                 <div class="win-bar"><span>Descargar</span></div>
                 <div class="win-body center">
-                    <p class="hero-line">Versión <strong>1.9.1</strong> <span class="new">¡NUEVO!</span></p>
+                    <p class="hero-line">Versión <strong class="js-version">1.9.1</strong> <span class="new">¡NUEVO!</span></p>
 
                     <a href="#" id="main-download-btn" class="big-btn">
                         <span class="big-btn-arrow" aria-hidden="true">▼</span>
@@ -90,7 +100,7 @@
                     <div class="cards">
                         <a href="#" id="link-win" class="card">Windows <span>.exe</span></a>
                         <a href="#" id="link-mac-silicon" class="card">macOS Apple Silicon <span>.dmg</span></a>
-                        <!-- Oculta hasta volver a tener build Intel: quitar "hidden" y poner MAC_INTEL_AVAILABLE = true en script.js -->
+                        <!-- Oculta por defecto: script.js la muestra sola si la última versión trae el .dmg x64. -->
                         <a href="#" id="link-mac-intel" class="card" hidden>macOS Intel <span>.dmg</span></a>
                     </div>
 
@@ -209,6 +219,7 @@
         </p>
         <p class="tiny">
             <a href="https://github.com/MarckDP" target="_blank" rel="noopener">MarckDP</a>
+            · <a href="creditos.html">créditos y licencias</a>
             · se ve mejor en cualquier navegador a 800×600 o más
             · <span class="under-construction">🚧 siempre en construcción 🚧</span>
         </p>

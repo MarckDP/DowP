@@ -3,13 +3,14 @@ import os
 import tempfile
 import requests
 import threading
-from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtCore import QObject, Signal, Qt, QTimer
 from PySide6.QtWidgets import QDialog
 
 from core.logger.logger_manager import logger
 from core.utils.download_history import download_history
 from core.utils.config_manager import get_config
-from core.utils.queue_manager import get_queue_manager
+from core.utils.queue_manager import get_queue_manager, ORIGIN_QUICK
+from core.utils.sound_notifier import get_sound_notifier, SOURCE_QUICK
 from core.utils.output_artifacts import find_actual_downloaded_file
 from core.utils.preset_manager import (
     build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
@@ -422,6 +423,11 @@ class QuickDownloadController(QObject):
         from core.utils.config_manager import get_config
         max_concurrent = get_config().get("max_concurrent_downloads", 3)
 
+        for row in item_rows:
+            if not getattr(row, "_sound_hooked", False):
+                row._sound_hooked = True
+                row.state_changed.connect(self._on_row_state_for_sound)
+
         canc_event = threading.Event()
         task_data = {
             "request_data": request_data.copy(),
@@ -571,8 +577,40 @@ class QuickDownloadController(QObject):
         self._emit_batch_progress()
         worker.start()
 
+    def _on_row_state_for_sound(self, row):
+        """Sonido al terminar: una vez por fila, cuando queda Completada o con Error.
+        Las filas canceladas por el usuario no suenan (terminan como error, pero no
+        es un fallo que haya que avisar)."""
+        if getattr(row, "_sound_notified", False):
+            return
+        if row.is_error():
+            ok = False
+        elif getattr(row, "_is_completed", False):
+            ok = True
+        else:
+            return
+        row._sound_notified = True
+        if getattr(row, "_sound_muted", False):
+            return
+        get_sound_notifier().item_finished(SOURCE_QUICK, ok)
+        # Diferido: quien marca la fila todavía está actualizando sus listas
+        # (active_workers, pending_tasks, _recode_by_download) en ese momento.
+        QTimer.singleShot(0, self._check_sound_group_done)
+
+    def _check_sound_group_done(self):
+        if not self.active_workers and not self.pending_tasks and not self._recode_by_download:
+            get_sound_notifier().group_finished(SOURCE_QUICK)
+
+    def _mute_rows_for_sound(self, rows):
+        for row in rows:
+            row._sound_muted = True
+
     def cancel_download(self):
         """Cancela todas las descargas activas y limpia las pendientes."""
+        for task in list(self.active_workers) + list(self.pending_tasks):
+            self._mute_rows_for_sound(task.get("item_rows", []))
+        self._mute_rows_for_sound(list(self._recode_by_download.values()))
+        get_sound_notifier().discard(SOURCE_QUICK)
         self.pending_tasks.clear()
         for task in list(self.active_workers):
             task["cancellation_event"].set()
@@ -590,6 +628,7 @@ class QuickDownloadController(QObject):
 
     def cancel_row(self, row):
         """Cancela las descargas y recodificaciones asociadas a una fila específica."""
+        self._mute_rows_for_sound([row])
         # Cancelar descargas
         for task in list(self.active_workers):
             if row in task.get("item_rows", []):
@@ -1050,6 +1089,7 @@ class QuickDownloadController(QObject):
                 job_id, _intermediate_path = start_upscale_stage(
                     self.queue_mgr, backup_path, upscale_settings, chain_temp_dir,
                     fps, duration_sec, title=f"Reescalado IA: {title}",
+                    origin=ORIGIN_QUICK,
                 )
                 chain_next = {
                     "original_path": actual_path,
@@ -1069,7 +1109,7 @@ class QuickDownloadController(QObject):
                     "fps": fps,
                     "duration_sec": duration_sec,
                     "title": f"Reescalado IA: {title}",
-                }, "UPSCALE_VIDEO")
+                }, "UPSCALE_VIDEO", origin=ORIGIN_QUICK)
                 stage_label = self.tr("Reescalando con IA...")
             else:
                 job_id = self.queue_mgr.add_job({
@@ -1078,7 +1118,7 @@ class QuickDownloadController(QObject):
                     "settings": settings,
                     "duration_sec": duration_sec,
                     "title": f"Recode: {title}",
-                }, "RECODE")
+                }, "RECODE", origin=ORIGIN_QUICK)
 
         self._recode_by_download[job_id] = row
         self._recode_state[job_id] = {
@@ -1102,7 +1142,7 @@ class QuickDownloadController(QObject):
         # LOTES) o Herramientas Multimedia (ver video_tools_view.py) - sin esto, un job
         # encolado desde Modo Rápido se queda esperando indefinidamente si el
         # usuario nunca tocó esas otras pestañas.
-        self.queue_mgr.start_queue()
+        self.queue_mgr.start_queue(ORIGIN_QUICK)
         return True
 
     def _on_recode_job_progress(self, job_id, percent, speed, eta):
@@ -1161,7 +1201,7 @@ class QuickDownloadController(QObject):
             "settings": settings,
             "duration_sec": duration_sec,
             "title": f"Recode: {title}",
-        }, "RECODE")
+        }, "RECODE", origin=ORIGIN_QUICK)
 
         self._recode_by_download[new_job_id] = row
         self._recode_state[new_job_id] = {**state, "chain_next": None}

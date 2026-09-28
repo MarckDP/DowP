@@ -38,6 +38,104 @@ class SystemPage(QWidget):
         self.init_ui()
         self.load_hardware_info()
 
+    # ── Apoyo, enlaces y agradecimientos (datos en core/credits.py) ──────────
+    @staticmethod
+    def _make_divider():
+        divider = QFrame()
+        divider.setObjectName("settingsDivider")
+        divider.setFrameShape(QFrame.HLine)
+        divider.setFrameShadow(QFrame.Sunken)
+        return divider
+
+    def _section_title(self, text):
+        label = QLabel(text)
+        label.setStyleSheet("font-weight: bold; font-size: 13px; color: #ffffff; "
+                            "border: none; background: transparent; margin-bottom: 4px;")
+        return label
+
+    def _build_support_card(self):
+        from core import credits
+        from gui.dialogs.about_dialogs import make_link_label
+
+        card = QFrame()
+        card.setObjectName("supportCard")
+        card.setProperty("variant", "card")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(8)
+
+        title = QLabel(self.tr("Apoya DowP"))
+        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE; border: none; background: transparent;")
+        layout.addWidget(title)
+
+        desc = QLabel(self.tr(
+            "DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café "
+            "para ayudar a mantenerlo."))
+        desc.setWordWrap(True)
+        desc.setStyleSheet("color: #888888; font-size: 11px; border: none; background: transparent;")
+        layout.addWidget(desc)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(8)
+        btn_kofi = QPushButton(self.tr("Invítame un café en Ko-fi"))
+        btn_kofi.setProperty("variant", "primary")
+        btn_kofi.setCursor(Qt.PointingHandCursor)
+        btn_kofi.setToolTip(credits.KOFI_URL)
+        btn_kofi.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(credits.KOFI_URL)))
+        btn_other = QPushButton(self.tr("Otras formas de apoyar"))
+        btn_other.setProperty("variant", "secondary")
+        btn_other.setCursor(Qt.PointingHandCursor)
+        btn_other.clicked.connect(self._open_support_dialog)
+        buttons.addWidget(btn_kofi)
+        buttons.addWidget(btn_other)
+        buttons.addStretch()
+        layout.addLayout(buttons)
+
+        links = QHBoxLayout()
+        links.setSpacing(16)
+        for text, url in ((self.tr("X (@MarcklaX)"), credits.AUTHOR_X_URL),
+                          (self.tr("GitHub de DowP"), credits.PROJECT_GITHUB_URL),
+                          (self.tr("Página web"), credits.PROJECT_WEBSITE_URL)):
+            links.addWidget(make_link_label(text, url, "font-size: 12px;"))
+        links.addStretch()
+        layout.addLayout(links)
+        return card
+
+    def _build_acknowledgements(self):
+        from PySide6.QtCore import QCoreApplication
+        from core import credits
+        from gui.dialogs.about_dialogs import make_link_label
+
+        self.content_layout.addWidget(self._section_title(self.tr("Agradecimientos")))
+        for name, contribution, url in credits.ACKNOWLEDGEMENTS:
+            row = QHBoxLayout()
+            row.setSpacing(8)
+            name_lbl = make_link_label(QCoreApplication.translate("Credits", name), url,
+                                       "font-size: 12px; font-weight: bold; color: #EEEEEE;")
+            row.addWidget(name_lbl)
+            what = QLabel("— " + QCoreApplication.translate("Credits", contribution))
+            what.setWordWrap(True)
+            what.setStyleSheet("color: #aaaaaa; font-size: 12px; border: none; background: transparent;")
+            row.addWidget(what, 1)
+            self.content_layout.addLayout(row)
+
+        btn_row = QHBoxLayout()
+        btn_credits = QPushButton(self.tr("Créditos y licencias"))
+        btn_credits.setProperty("variant", "secondary")
+        btn_credits.setCursor(Qt.PointingHandCursor)
+        btn_credits.clicked.connect(self._open_credits_dialog)
+        btn_row.addWidget(btn_credits)
+        btn_row.addStretch()
+        self.content_layout.addLayout(btn_row)
+
+    def _open_support_dialog(self):
+        from gui.dialogs.about_dialogs import SupportDialog
+        SupportDialog(self.window()).exec()
+
+    def _open_credits_dialog(self):
+        from gui.dialogs.about_dialogs import CreditsDialog
+        CreditsDialog(self.window()).exec()
+
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -75,7 +173,15 @@ class SystemPage(QWidget):
         # implementación, aquí se puede volver a consultar cuando se quiera.
         from core.version import APP_VERSION
         from gui.dialogs.whats_new_dialog import build_whats_new_content
+
+        # --- APOYO Y ENLACES (arriba de todo) ---
+        self.content_layout.addWidget(self._build_support_card())
+
         self.content_layout.addWidget(build_whats_new_content(APP_VERSION, self))
+
+        # --- AGRADECIMIENTOS + CRÉDITOS Y LICENCIAS ---
+        self.content_layout.addWidget(self._make_divider())
+        self._build_acknowledgements()
 
         version_divider = QFrame()
         version_divider.setObjectName("settingsDivider")

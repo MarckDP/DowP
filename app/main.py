@@ -202,7 +202,34 @@ def main():
     app.aboutToQuit.connect(on_app_exit)
 
     logger.info("Application event loop started")
-    sys.exit(app.exec())
+    exit_code = app.exec()
+
+    # Salida directa, sin la limpieza final del interprete. En el build congelado,
+    # al finalizar Python PySide6 destruye los widgets que siguen vivos y Qt todavia
+    # llama a los eventFilter de Python instalados sobre QApplication (HandCursorInstaller,
+    # quick_mode_view, image_tools_view, history_panel) con el interprete a medio
+    # apagar: crash en cada cierre (0xC0000005 en Windows, SIGSEGV y el aviso de
+    # "se cerro inesperadamente" en macOS). Para este punto on_app_exit (aboutToQuit)
+    # ya detuvo los servicios; solo queda volcar logs y salidas.
+    #
+    # os._exit no espera a los hilos no-daemon como si hace la salida normal de
+    # Python (p. ej. un guardado a disco a medias): se les da ese margen aqui, con
+    # tope, para no cortar escrituras sin arriesgarse a colgar el cierre.
+    import logging
+    import threading
+    import time
+    deadline = time.monotonic() + 10
+    for t in threading.enumerate():
+        if t is threading.main_thread() or t.daemon:
+            continue
+        t.join(max(0.0, deadline - time.monotonic()))
+    logging.shutdown()
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    os._exit(exit_code)
 
 if __name__ == "__main__":
     try:
