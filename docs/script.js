@@ -160,3 +160,62 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clic fuera de la ventana: cerrar
     viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.close(); });
 });
+
+// ── Radio DowP ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const audio = document.getElementById('radio-audio');
+    const toggleBtn = document.getElementById('radio-toggle');
+    const playIcon = document.getElementById('radio-icon');
+    const playText = document.getElementById('radio-text');
+    const led = document.getElementById('radio-led');
+    const viz = document.getElementById('radio-viz');
+    const volumeSlider = document.getElementById('radio-volume');
+
+    if (!audio || !toggleBtn) return;
+
+    if (volumeSlider) {
+        audio.volume = parseFloat(volumeSlider.value) || 0.5;
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = parseFloat(e.target.value);
+        });
+    }
+
+    let isPlaying = false;
+
+    toggleBtn.addEventListener('click', async () => {
+        if (!isPlaying) {
+            try {
+                if (playText) playText.textContent = 'Conectando...';
+                await audio.play();
+                isPlaying = true;
+                if (playIcon) playIcon.textContent = '⏸';
+                if (playText) playText.textContent = 'Pausar';
+                if (led) {
+                    led.classList.add('on');
+                    led.title = 'Emisión en vivo';
+                }
+                if (viz) viz.classList.add('playing');
+            } catch (err) {
+                if (playText) playText.textContent = 'Reintentar';
+            }
+        } else {
+            audio.pause();
+            isPlaying = false;
+            if (playIcon) playIcon.textContent = '▶';
+            if (playText) playText.textContent = 'Play Radio';
+            if (led) {
+                led.classList.remove('on');
+                led.title = 'Emisión detenida';
+            }
+            if (viz) viz.classList.remove('playing');
+        }
+    });
+
+    audio.addEventListener('error', () => {
+        isPlaying = false;
+        if (playIcon) playIcon.textContent = '▶';
+        if (playText) playText.textContent = 'Error stream';
+        if (led) led.classList.remove('on');
+        if (viz) viz.classList.remove('playing');
+    });
+});

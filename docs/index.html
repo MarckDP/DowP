@@ -31,14 +31,14 @@
 
     <div class="layout">
 
-        <!-- ═══════════ BARRA LATERAL ═══════════ -->
-        <aside class="sidebar">
+        <!-- ═══════════ BARRA LATERAL IZQUIERDA ═══════════ -->
+        <aside class="sidebar sidebar-left">
             <nav class="win">
                 <div class="win-bar"><span>Menú</span></div>
                 <ul class="win-body nav-list">
                     <li><a href="#descargar">» Descargar</a></li>
-                    <li><a href="#que-es">» ¿Qué es DowP?</a></li>
                     <li><a href="#capturas">» Capturas</a></li>
+                    <li><a href="#que-es">» ¿Qué es DowP?</a></li>
                     <li><a href="#funciones">» Funciones</a></li>
                     <li><a href="#preguntas">» Preguntas</a></li>
                     <li><a href="creditos.html">» Créditos</a></li>
@@ -73,17 +73,9 @@
                     <li><span class="led wait"></span> Linux <em class="tag">algún día</em></li>
                 </ul>
             </section>
-
-            <section class="win">
-                <div class="win-bar"><span>Enlázame</span></div>
-                <div class="win-body center">
-                    <a href="https://marckdp.github.io/DowP/"><img src="img/dowp-88x31.gif" width="88" height="31" alt="Botón de DowP" class="pixel"></a>
-                    <p class="tiny">¿Tienes web? Copia el botón y enlázanos, como en los viejos tiempos.</p>
-                </div>
-            </section>
         </aside>
 
-        <!-- ═══════════ CONTENIDO ═══════════ -->
+        <!-- ═══════════ CONTENIDO CENTRAL ═══════════ -->
         <main class="content">
 
             <section id="descargar" class="win win-hero">
@@ -108,26 +100,6 @@
                         Instálalo una vez: después DowP se actualiza solo.
                         Todas las versiones en <a href="https://github.com/MarckDP/DowP/releases" target="_blank" rel="noopener">GitHub Releases</a>.
                     </p>
-                </div>
-            </section>
-
-            <section id="que-es" class="win">
-                <div class="win-bar"><span>¿Qué es DowP?</span></div>
-                <div class="win-body prose">
-                    <p>
-                        <strong>DowP</strong> empezó como un descargador de videos y creció hasta
-                        convertirse en una navaja suiza para quien edita: <mark>descarga</mark> videos y
-                        audio de YouTube y de cientos de sitios más, <mark>convierte y edita</mark> imágenes,
-                        <mark>recodifica y recorta</mark> video y audio, y <mark>organiza</mark> toda tu
-                        biblioteca de medios.
-                    </p>
-                    <p>
-                        Lo mejor: todo termina donde lo necesitas. DowP se conecta con
-                        <strong>Premiere Pro</strong>, <strong>After Effects</strong>, <strong>Photoshop</strong>
-                        y <strong>DaVinci Resolve</strong> para mandarles lo que descargas o procesas, o
-                        puedes arrastrarlo directamente a cualquier editor.
-                    </p>
-                    <p class="sign">— hecho por MarckDP, con ayuda de IA</p>
                 </div>
             </section>
 
@@ -157,6 +129,40 @@
                         </button>
                     </div>
                     <p class="tiny center">(haz clic para verlas en grande)</p>
+                </div>
+            </section>
+
+            <section id="que-es" class="win">
+                <div class="win-bar"><span>¿Qué es DowP?</span></div>
+                <div class="win-body prose">
+                    <p>
+                        <strong>DowP</strong> es una interfaz gráfica pensada para exprimir al máximo herramientas de código abierto como <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a> y <a href="https://ffmpeg.org/" target="_blank" rel="noopener">FFmpeg</a>, combinadas con modelos <strong>ONNX</strong> para eliminación de fondos, generación de mapas de profundidad y mapas de normales (para foto y video), junto con modelos <strong>NCNN Vulkan</strong> para reescalado con IA. Todo procesado <strong>100% en local</strong>: sin telemetría, sin registros, sin cuentas ni suscripciones.
+                    </p>
+                    <p>
+                        Diseñado para el día a día de edición, te permite <strong>indexar tus carpetas de recursos favoritos</strong> para tenerlos a mano al instante, o bien buscar material libre directamente desde la app en las bibliotecas más conocidas: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://freesound.org/" target="_blank" rel="noopener">Freesound</a>, <a href="https://openverse.org/" target="_blank" rel="noopener">Openverse</a>, <a href="https://pixabay.com/" target="_blank" rel="noopener">Pixabay</a> y <a href="https://pexels.com/" target="_blank" rel="noopener">Pexels</a>.
+                    </p>
+                    <p>
+                        Y lo más importante: <strong>se conecta directamente con tu flujo de trabajo</strong>. Envía medios a <strong>Premiere Pro</strong>, <strong>After Effects</strong>, <strong>Photoshop</strong> y <strong>DaVinci Resolve</strong>, mandando lo que necesites al proyecto o directo a la línea de tiempo gracias al <a href="#preguntas-importer"><strong>DowP Importer</strong></a>.
+                    </p>
+                    <p>
+                        ¿No usas esos programas o prefieres tu propio método? Todo dentro de DowP es <strong>arrastrable</strong>: tomas el archivo desde la app y lo sueltas directo en tu editor favorito, sin tener que abrir el Explorador de archivos ni Finder.
+                    </p>
+
+                    <details class="story-details">
+                        <summary class="story-summary">Un poco de historia (o cómo terminé aquí)</summary>
+                        <div class="story-body">
+                            <p>
+                                DowP nació originalmente como un simple script de yt-dlp para resolver un dolor de cabeza personal: descargar medios que de verdad fueran compatibles con Premiere Pro y After Effects, recodificándolos al vuelo cuando Adobe se ponía pesado con ciertos contenedores y códecs.
+                            </p>
+                            <p>
+                                Poco a poco fue escalando, agregando funciones y más capacidades (algunas tal vez innecesarias, pero divertidas). Tras varios tropiezos y pelearme mil veces con la IA para sacar adelante el código, logré una primera versión... <strong>que después borré a propósito a lo idiota en un momento de rabia.</strong>
+                            </p>
+                            <p>
+                                Luego de empezar de cero y rehacerlo con la cabeza más fría, por fin hay algo mucho más estable y funcional. Siempre gratis y de código abierto. Ojalá te sea útil.
+                            </p>
+                            <p class="sign">— MarckDP</p>
+                        </div>
+                    </details>
                 </div>
             </section>
 
@@ -195,7 +201,7 @@
                         <summary>¿Y mi Mac con Intel?</summary>
                         <p>Todavía no hay versión para Intel. Vuelve pronto: aparecerá aquí mismo.</p>
                     </details>
-                    <details>
+                    <details id="preguntas-importer">
                         <summary>¿Cómo conecto DowP con Premiere, After Effects o Photoshop?</summary>
                         <p>En DowP, ve a <em>Ajustes → Integraciones</em> e instala el panel <strong>DowP Importer</strong>. Reinicia el programa de Adobe y búscalo en <em>Ventana → Extensiones</em>.</p>
                     </details>
@@ -207,6 +213,49 @@
             </section>
 
         </main>
+
+        <!-- ═══════════ BARRA LATERAL DERECHA (Radio, Chat, Enlázame) ═══════════ -->
+        <aside class="sidebar sidebar-right">
+            <section class="win win-radio" id="radio-widget">
+                <div class="win-bar">
+                    <span>Radio</span>
+                    <span class="radio-led" id="radio-led" title="Emisión detenida"></span>
+                </div>
+                <div class="win-body center">
+                    <p class="tiny radio-station" id="radio-station">SomaFM: Groove Salad</p>
+                    <div class="radio-visualizer" id="radio-viz" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="radio-controls">
+                        <button type="button" class="card mini-btn radio-btn" id="radio-toggle" aria-label="Reproducir o pausar radio">
+                            <span id="radio-icon">▶</span> <span id="radio-text">Play Radio</span>
+                        </button>
+                        <div class="radio-vol-box">
+                            <label for="radio-volume" class="tiny">Vol</label>
+                            <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.5" class="retro-slider" aria-label="Volumen de radio">
+                        </div>
+                    </div>
+                    <p class="tiny muted">música chill/ambient para editar</p>
+                    <audio id="radio-audio" preload="none" src="https://ice2.somafm.com/groovesalad-128-mp3"></audio>
+                </div>
+            </section>
+
+            <section class="win win-chat">
+                <div class="win-bar"><span>Chat en vivo</span></div>
+                <div class="win-body chat-win-body">
+                    <iframe src="https://www3.cbox.ws/box/?boxid=3560963&boxtag=Gg4vQH" width="100%" height="420" allowtransparency="yes" allow="autoplay" frameborder="0" marginheight="0" marginwidth="0" scrolling="auto" class="cbox-iframe" title="Chat en vivo de DowP"></iframe>
+                </div>
+            </section>
+
+            <section class="win">
+                <div class="win-bar"><span>Enlázame</span></div>
+                <div class="win-body center">
+                    <a href="https://marckdp.github.io/DowP/"><img src="img/dowp-88x31.gif" width="88" height="31" alt="Botón de DowP" class="pixel"></a>
+                    <p class="tiny">¿Tienes web? Copia el botón y enlázanos, como en los viejos tiempos.</p>
+                </div>
+            </section>
+        </aside>
+
     </div>
 
     <footer class="footer">
