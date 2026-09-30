@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="lang.js"></script>
 </head>
 <body>
     <!-- Generada a partir de app/src/core/credits.py: si cambias los datos allí, cámbialos aquí también. -->
@@ -18,49 +19,52 @@
     <header class="masthead masthead-center">
         <div>
             <h1 class="masthead-title"><a href="index.html" style="text-decoration:none;color:inherit">DowP</a></h1>
-            <p class="masthead-sub">créditos · agradecimientos · <span class="nowrap">licencias · <span class="blink">_</span></span></p>
+            <p class="masthead-sub" data-i18n="cred_sub">créditos · agradecimientos · <span class="nowrap">licencias · <span class="blink">_</span></span></p>
+        </div>
+        <div class="lang-selector">
+            <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
         </div>
     </header>
 
     <main class="content single">
-        <p class="small"><a href="index.html">« Volver al inicio</a></p>
+        <p class="small"><a href="index.html" data-i18n="cred_back">« Volver al inicio</a></p>
 
         <section class="win">
             <div class="win-bar"><span>MarckDP</span></div>
             <div class="win-body prose">
-                <p>DowP lo hace <strong>MarckDP</strong>, con ayuda de IA. Puedes seguirme o apoyar el proyecto aquí:</p>
+                <p data-i18n="cred_me_title">DowP lo hace <strong>MarckDP</strong>, con ayuda de IA. Puedes seguirme o apoyar el proyecto aquí:</p>
                 <ul class="plain-list">
                     <li>» <a href="https://x.com/MarcklaX" target="_blank" rel="noopener">X: @MarcklaX</a></li>
                     <li>» <a href="https://github.com/MarckDP/DowP" target="_blank" rel="noopener">GitHub de DowP</a></li>
-                    <li>» <a href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener">Invítame un café en Ko-fi</a></li>
-                    <li>» Binance Pay — Binance ID (UID): <strong>345789454</strong> <span class="muted">(solo desde la app de Binance)</span></li>
+                    <li>» <a href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener" data-i18n="cred_coffee">Invítame un café en Ko-fi</a></li>
+                    <li>» <span data-i18n="cred_binance">Binance Pay — Binance ID (UID): <strong>345789454</strong> <span class="muted">(solo desde la app de Binance)</span></span></li>
                 </ul>
             </div>
         </section>
 
         <section class="win">
-            <div class="win-bar"><span>Agradecimientos</span></div>
+            <div class="win-bar"><span data-i18n="cred_thx_title">Agradecimientos</span></div>
             <div class="win-body prose">
-                <p>DowP no sería lo mismo sin estas personas:</p>
+                <p data-i18n="cred_thx_sub">DowP no sería lo mismo sin estas personas:</p>
                 <ul class="plain-list">
-                        <li><strong><a href="https://discord.gg/enZFNbj5T8" target="_blank" rel="noopener">Servidor de Buisco Editor</a></strong> <span class="muted">— La comunidad: sujetos de prueba en cada versión</span></li>
-                        <li><strong><a href="https://www.instagram.com/jhoncart0o" target="_blank" rel="noopener">Cry</a></strong> <span class="muted">— Por un apoyo enorme al proyecto</span></li>
-                        <li><strong><a href="https://x.com/JhonV__" target="_blank" rel="noopener">JhonV</a></strong> <span class="muted">— Ideas y reporte de errores</span></li>
-                        <li><strong><a href="https://www.instagram.com/soy_lozada" target="_blank" rel="noopener">Lozada</a></strong> <span class="muted">— Pruebas y comentarios</span></li>
-                        <li><strong><a href="https://equinox-editor.equinox-dgrafico.chatgpt.site/" target="_blank" rel="noopener">Equinox</a></strong> <span class="muted">— Hizo posible DowP en Mac</span></li>
-                        <li><strong><a href="https://blackbulldesigner.carrd.co/" target="_blank" rel="noopener">BlackBull</a></strong> <span class="muted">— Ideas y apoyo moral</span></li>
-                        <li><strong><a href="https://x.com/SoyNuan" target="_blank" rel="noopener">Nuan</a></strong> <span class="muted">— Ideas y pruebas</span></li>
+                        <li><strong><a href="https://discord.gg/enZFNbj5T8" target="_blank" rel="noopener">Servidor de Buisco Editor</a></strong> <span data-i18n="cred_thx_1"><span class="muted">— La comunidad: sujetos de prueba en cada versión</span></span></li>
+                        <li><strong><a href="https://www.instagram.com/jhoncart0o" target="_blank" rel="noopener">Cry</a></strong> <span data-i18n="cred_thx_2"><span class="muted">— Por un apoyo enorme al proyecto</span></span></li>
+                        <li><strong><a href="https://x.com/JhonV__" target="_blank" rel="noopener">JhonV</a></strong> <span data-i18n="cred_thx_3"><span class="muted">— Ideas y reporte de errores</span></span></li>
+                        <li><strong><a href="https://www.instagram.com/soy_lozada" target="_blank" rel="noopener">Lozada</a></strong> <span data-i18n="cred_thx_4"><span class="muted">— Pruebas y comentarios</span></span></li>
+                        <li><strong><a href="https://equinox-editor.equinox-dgrafico.chatgpt.site/" target="_blank" rel="noopener">Equinox</a></strong> <span data-i18n="cred_thx_5"><span class="muted">— Hizo posible DowP en Mac</span></span></li>
+                        <li><strong><a href="https://blackbulldesigner.carrd.co/" target="_blank" rel="noopener">BlackBull</a></strong> <span data-i18n="cred_thx_6"><span class="muted">— Ideas y apoyo moral</span></span></li>
+                        <li><strong><a href="https://x.com/SoyNuan" target="_blank" rel="noopener">Nuan</a></strong> <span data-i18n="cred_thx_7"><span class="muted">— Ideas y pruebas</span></span></li>
                 </ul>
             </div>
         </section>
 
         <section class="win">
-            <div class="win-bar"><span>Créditos y licencias</span></div>
+            <div class="win-bar"><span data-i18n="cred_lic_title">Créditos y licencias</span></div>
             <div class="win-body prose">
-                <p>DowP es software libre bajo la licencia
+                <p data-i18n="cred_lic_p">DowP es software libre bajo la licencia
                     <a href="https://github.com/MarckDP/DowP/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a>,
                     y existe gracias a estos proyectos de código abierto. Gracias a todas las personas que los hacen posibles.</p>
-                    <h3>Descargas</h3>
+                    <h3 data-i18n="cred_dl">Descargas</h3>
                     <table class="credits-table">
                         <tr><td><strong><a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a></strong><br><span class="muted">Motor de descargas</span></td><td class="lic">Unlicense</td></tr>
                         <tr><td><strong><a href="https://github.com/denoland/deno" target="_blank" rel="noopener">Deno</a></strong><br><span class="muted">Resuelve los retos de JavaScript de YouTube</span></td><td class="lic">MIT</td></tr>
@@ -132,10 +136,11 @@
 
     <footer class="footer">
         <p class="tiny">
-            <a href="index.html">Inicio</a>
+            <a href="index.html" data-i18n="cred_back">Inicio</a>
             · <a href="https://github.com/MarckDP" target="_blank" rel="noopener">MarckDP</a>
-            · <span class="under-construction">🚧 siempre en construcción 🚧</span>
+            · <span class="under-construction" data-i18n="foot_const">🚧 siempre en construcción 🚧</span>
         </p>
     </footer>
+    <script src="script.js"></script>
 </body>
 </html>

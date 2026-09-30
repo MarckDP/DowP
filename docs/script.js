@@ -1,3 +1,65 @@
+// ── Internacionalización (i18n) ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    let lang = localStorage.getItem('dowp_lang');
+    if (!lang) {
+        const navLang = navigator.language.slice(0, 2);
+        lang = (navLang === 'es' || navLang === 'pt') ? navLang : 'en'; // Default a inglés
+        localStorage.setItem('dowp_lang', lang);
+    }
+    setLanguage(lang);
+
+    document.querySelectorAll('[data-lang]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const selectedLang = btn.getAttribute('data-lang');
+            localStorage.setItem('dowp_lang', selectedLang);
+            setLanguage(selectedLang);
+        });
+    });
+});
+
+function setLanguage(lang) {
+    document.documentElement.lang = lang;
+    
+    document.querySelectorAll('[data-lang]').forEach(btn => {
+        if (btn.getAttribute('data-lang') === lang) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    if (lang === 'es' || typeof translations === 'undefined' || !translations[lang]) {
+        if (lang === 'es' && document.body.dataset.currentLang !== 'es') {
+            if (document.body.dataset.currentLang) window.location.reload();
+            document.body.dataset.currentLang = 'es';
+        }
+        return;
+    }
+
+    document.body.dataset.currentLang = lang;
+    const dict = translations[lang];
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+            el.innerHTML = dict[key];
+        }
+    });
+
+    document.querySelectorAll('[data-i18n-caption]').forEach(el => {
+        const key = el.getAttribute('data-i18n-caption');
+        if (dict[key]) {
+            el.setAttribute('data-caption', dict[key]);
+        }
+    });
+
+    // Reaplicar el número de versión dinámico si ya fue obtenido
+    if (window.dowpLatestVersion) {
+        document.querySelectorAll('.js-version').forEach((el) => { el.textContent = window.dowpLatestVersion; });
+    }
+}
+
 // ── Últimos datos de GitHub (una sola consulta para toda la página) ───────
 // De la lista de releases salen: la última versión publicada (no borrador ni
 // pre-release, igual que /releases/latest), sus instaladores reales y el total de
@@ -71,7 +133,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    btnText.textContent = 'Buscando la última versión...';
+    function setDynamicBtn(key) {
+        btnText.setAttribute('data-i18n', key);
+        const currentLang = document.documentElement.lang || 'es';
+        if (translations[currentLang] && translations[currentLang][key]) {
+            btnText.innerHTML = translations[currentLang][key];
+        }
+    }
+
+    setDynamicBtn('dl_search');
     const releases = await releasesPromise;
     const latest = Array.isArray(releases) ? releases.find((r) => !r.draft && !r.prerelease) : null;
 
@@ -82,7 +152,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (latest) {
         // Número de versión en todos los textos marcados (hero, marquesina...).
         const version = String(latest.tag_name || "").replace(/^v/i, "");
-        if (version) document.querySelectorAll('.js-version').forEach((el) => { el.textContent = version; });
+        if (version) {
+            window.dowpLatestVersion = version;
+            document.querySelectorAll('.js-version').forEach((el) => { el.textContent = version; });
+        }
     }
     if (urlWindows) linkWin.href = urlWindows;
     if (urlMacSilicon) linkSilicon.href = urlMacSilicon;
@@ -97,18 +170,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Sin .dmg de Intel, todo Mac recibe el de Apple Silicon (Safari no deja
         // distinguir bien el chip, y un Intel sin versión propia no tiene otra opción).
         if (isAppleSilicon || !urlMacIntel) {
-            btnText.textContent = 'Descargar para macOS (Apple Silicon)';
+            setDynamicBtn('dl_mac_silicon_btn');
             mainBtn.href = urlMacSilicon || RELEASES_PAGE;
         } else {
-            btnText.textContent = 'Descargar para macOS (Intel)';
+            setDynamicBtn('dl_mac_intel_btn');
             mainBtn.href = urlMacIntel;
         }
     } else if (osName === 'Windows') {
-        btnText.textContent = 'Descargar para Windows';
+        setDynamicBtn('dl_win_btn');
         mainBtn.href = urlWindows || RELEASES_PAGE;
     } else {
         // Fallback genérico para Linux o desconocidos
-        btnText.textContent = 'Descargar DowP (Windows)';
+        setDynamicBtn('dl_win_btn');
         mainBtn.href = urlWindows || RELEASES_PAGE;
     }
 });
@@ -161,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.close(); });
 });
 
-// ── Radio DowP ────────────────────────────────────────────────────────────
+// ── Radio DowP (con fallback entre emisoras) ─────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const audio = document.getElementById('radio-audio');
     const toggleBtn = document.getElementById('radio-toggle');
@@ -170,8 +243,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const led = document.getElementById('radio-led');
     const viz = document.getElementById('radio-viz');
     const volumeSlider = document.getElementById('radio-volume');
+    const stationLabel = document.getElementById('radio-station');
+
+    const prevBtn = document.getElementById('radio-prev');
+    const nextBtn = document.getElementById('radio-next');
 
     if (!audio || !toggleBtn) return;
+
+    // Lista de emisoras: si una falla, salta a la siguiente.
+    const stations = [
+        { name: 'SomaFM: Groove Salad',   url: 'https://ice2.somafm.com/groovesalad-128-mp3' },
+        { name: 'SomaFM: Drone Zone',     url: 'https://ice2.somafm.com/dronezone-128-mp3' },
+        { name: 'SomaFM: DEF CON Radio',  url: 'https://ice2.somafm.com/defcon-128-mp3' },
+        { name: 'SomaFM: Space Station',   url: 'https://ice2.somafm.com/spacestation-128-mp3' },
+    ];
+
+    let currentIndex = 0;
+    let isPlaying = false;
+    let retryCount = 0;
+    const maxRetries = stations.length;
+
+    function setStation(index) {
+        currentIndex = (index + stations.length) % stations.length;
+        const st = stations[currentIndex];
+        audio.src = st.url;
+        if (stationLabel) stationLabel.textContent = st.name;
+    }
+
+    function setPlayingUI() {
+        isPlaying = true;
+        if (playIcon) playIcon.textContent = '⏸';
+        if (playText) playText.textContent = 'Pausar';
+        if (led) { led.classList.add('on'); led.title = 'Emisión en vivo'; }
+        if (viz) viz.classList.add('playing');
+    }
+
+    function setStoppedUI(label) {
+        isPlaying = false;
+        if (playIcon) playIcon.textContent = '▶';
+        if (playText) playText.textContent = label || 'Play Radio';
+        if (led) { led.classList.remove('on'); led.title = 'Emisión detenida'; }
+        if (viz) viz.classList.remove('playing');
+    }
+
+    // Inicializar con la primera emisora
+    setStation(0);
 
     if (volumeSlider) {
         audio.volume = parseFloat(volumeSlider.value) || 0.5;
@@ -180,42 +296,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let isPlaying = false;
+    async function playCurrentStation() {
+        if (playText) playText.textContent = 'Conectando...';
+        try {
+            audio.load();
+            await audio.play();
+            setPlayingUI();
+        } catch (err) {
+            tryNextStation();
+        }
+    }
 
-    toggleBtn.addEventListener('click', async () => {
+    toggleBtn.addEventListener('click', () => {
         if (!isPlaying) {
-            try {
-                if (playText) playText.textContent = 'Conectando...';
-                await audio.play();
-                isPlaying = true;
-                if (playIcon) playIcon.textContent = '⏸';
-                if (playText) playText.textContent = 'Pausar';
-                if (led) {
-                    led.classList.add('on');
-                    led.title = 'Emisión en vivo';
-                }
-                if (viz) viz.classList.add('playing');
-            } catch (err) {
-                if (playText) playText.textContent = 'Reintentar';
-            }
+            retryCount = 0;
+            playCurrentStation();
         } else {
             audio.pause();
-            isPlaying = false;
-            if (playIcon) playIcon.textContent = '▶';
-            if (playText) playText.textContent = 'Play Radio';
-            if (led) {
-                led.classList.remove('on');
-                led.title = 'Emisión detenida';
-            }
-            if (viz) viz.classList.remove('playing');
+            setStoppedUI('Play Radio');
         }
     });
 
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            setStation(currentIndex - 1);
+            if (isPlaying) {
+                retryCount = 0;
+                playCurrentStation();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            setStation(currentIndex + 1);
+            if (isPlaying) {
+                retryCount = 0;
+                playCurrentStation();
+            }
+        });
+    }
+
+    async function tryNextStation() {
+        retryCount++;
+        if (retryCount > maxRetries) {
+            setStoppedUI('Sin señal');
+            return;
+        }
+        setStation(currentIndex + 1);
+        if (playText) playText.textContent = 'Probando...';
+        try {
+            audio.load();
+            await audio.play();
+            retryCount = 0;
+            setPlayingUI();
+        } catch (err) {
+            tryNextStation();
+        }
+    }
+
+    // Si el stream se corta mientras suena, intentar la siguiente
     audio.addEventListener('error', () => {
-        isPlaying = false;
-        if (playIcon) playIcon.textContent = '▶';
-        if (playText) playText.textContent = 'Error stream';
-        if (led) led.classList.remove('on');
-        if (viz) viz.classList.remove('playing');
+        if (isPlaying) {
+            tryNextStation();
+        } else {
+            setStoppedUI('Error stream');
+        }
+    });
+
+    // Si el stream se para (stall prolongado), intentar la siguiente
+    let stallTimer = null;
+    audio.addEventListener('stalled', () => {
+        if (!isPlaying) return;
+        stallTimer = setTimeout(() => {
+            if (isPlaying) tryNextStation();
+        }, 8000);
+    });
+    audio.addEventListener('playing', () => {
+        if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
     });
 });

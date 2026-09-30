@@ -109,6 +109,21 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
     height: 48px !important;
 }
 
+.lang-selector {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 16px;
+    color: var(--deep);
+}
+.lang-selector a {
+    color: var(--warn);
+    text-decoration: none;
+    padding: 4px 6px;
+}
+.lang-selector a:hover { color: var(--lime); }
+.lang-selector a.active { color: var(--lime); border-bottom: 2px solid var(--lime); }
+
 .nowrap { white-space: nowrap; }
 
 .blink { animation: blink 1s steps(1) infinite; color: var(--lime); }
@@ -453,10 +468,33 @@ pre {
     background: var(--lime);
     box-shadow: 0 0 6px var(--lime);
 }
+.radio-station-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0 6px;
+    gap: 5px;
+}
 .radio-station {
     color: var(--warn);
-    margin: 4px 0 6px;
     font-size: 16px;
+    margin: 0;
+    flex-grow: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.radio-nav {
+    background: transparent;
+    border: none;
+    color: var(--green);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 5px;
+}
+.radio-nav:hover {
+    color: var(--lime);
 }
 .radio-visualizer {
     display: flex;

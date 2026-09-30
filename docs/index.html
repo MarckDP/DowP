@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="lang.js"></script>
 </head>
 <body>
     <div class="crt" aria-hidden="true"></div>
@@ -18,14 +19,17 @@
         <img src="img/logo128.png" alt="" class="masthead-logo" width="96" height="96">
         <div>
             <h1 class="masthead-title">DowP</h1>
-            <p class="masthead-sub">descarga · convierte · <span class="nowrap">organiza · <span class="blink">_</span></span></p>
+            <p class="masthead-sub" data-i18n="masthead_sub">descarga · convierte · <span class="nowrap">organiza · <span class="blink">_</span></span></p>
+        </div>
+        <div class="lang-selector">
+            <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
         </div>
     </header>
 
     <div class="ticker" aria-label="Novedades">
         <div class="ticker-track">
-            <span>★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
-            <span aria-hidden="true">★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
+            <span data-i18n="ticker_text">★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
+            <span aria-hidden="true" data-i18n="ticker_text">★ ¡DowP <span class="js-version">1.9.1</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
         </div>
     </div>
 
@@ -36,41 +40,41 @@
             <nav class="win">
                 <div class="win-bar"><span>Menú</span></div>
                 <ul class="win-body nav-list">
-                    <li><a href="#descargar">» Descargar</a></li>
-                    <li><a href="#capturas">» Capturas</a></li>
-                    <li><a href="#que-es">» ¿Qué es DowP?</a></li>
-                    <li><a href="#funciones">» Funciones</a></li>
-                    <li><a href="#preguntas">» Preguntas</a></li>
-                    <li><a href="creditos.html">» Créditos</a></li>
+                    <li><a href="#descargar" data-i18n="nav_download">» Descargar</a></li>
+                    <li><a href="#capturas" data-i18n="nav_screenshots">» Capturas</a></li>
+                    <li><a href="#que-es" data-i18n="nav_whatis">» ¿Qué es DowP?</a></li>
+                    <li><a href="#funciones" data-i18n="nav_features">» Funciones</a></li>
+                    <li><a href="#preguntas" data-i18n="nav_faq">» Preguntas</a></li>
+                    <li><a href="creditos.html" data-i18n="nav_credits">» Créditos</a></li>
                     <li><a href="https://github.com/MarckDP/DowP" target="_blank" rel="noopener">» GitHub ↗</a></li>
                 </ul>
             </nav>
 
             <section class="win">
-                <div class="win-bar"><span>Contador</span></div>
+                <div class="win-bar"><span data-i18n="counter_title">Contador</span></div>
                 <div class="win-body center">
-                    <p class="small">descargas totales</p>
+                    <p class="small" data-i18n="counter_desc">descargas totales</p>
                     <div class="odometer" id="download-counter" aria-live="polite">------</div>
-                    <p class="tiny">datos reales de GitHub</p>
+                    <p class="tiny" data-i18n="counter_note">datos reales de GitHub</p>
                 </div>
             </section>
 
             <section class="win">
-                <div class="win-bar"><span>Apoya DowP</span></div>
+                <div class="win-bar"><span data-i18n="support_title">Apoya DowP</span></div>
                 <div class="win-body center">
-                    <p class="tiny support-text">DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café.</p>
-                    <a class="card support-btn" href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener">☕ Ko-fi</a>
-                    <p class="tiny"><a href="creditos.html">Otras formas (Binance Pay)</a></p>
+                    <p class="tiny support-text" data-i18n="support_text">DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café.</p>
+                    <a class="card support-btn" href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener" data-i18n="support_kofi">☕ Ko-fi</a>
+                    <p class="tiny"><a href="creditos.html" data-i18n="support_other">Otras formas (Binance Pay)</a></p>
                 </div>
             </section>
 
             <section class="win">
-                <div class="win-bar"><span>Estado</span></div>
+                <div class="win-bar"><span data-i18n="status_title">Estado</span></div>
                 <ul class="win-body status-list">
                     <li><span class="led on"></span> Windows 10/11</li>
-                    <li><span class="led on"></span> macOS Apple Silicon <em class="tag">beta</em></li>
-                    <li><span class="led off"></span> macOS Intel <em class="tag">pronto</em></li>
-                    <li><span class="led wait"></span> Linux <em class="tag">algún día</em></li>
+                    <li><span class="led on"></span> macOS Apple Silicon <span data-i18n="status_mac_beta"><em class="tag">beta</em></span></li>
+                    <li><span class="led off"></span> macOS Intel <span data-i18n="status_mac_soon"><em class="tag">pronto</em></span></li>
+                    <li><span class="led wait"></span> Linux <span data-i18n="status_linux"><em class="tag">algún día</em></span></li>
                 </ul>
             </section>
         </aside>
@@ -79,24 +83,23 @@
         <main class="content">
 
             <section id="descargar" class="win win-hero">
-                <div class="win-bar"><span>Descargar</span></div>
+                <div class="win-bar"><span data-i18n="dl_title">Descargar</span></div>
                 <div class="win-body center">
-                    <p class="hero-line">Versión <strong class="js-version">1.9.1</strong> <span class="new">¡NUEVO!</span></p>
+                    <p class="hero-line" data-i18n="dl_hero">Versión <strong class="js-version">1.9.1</strong> <span class="new">¡NUEVO!</span></p>
 
                     <a href="#" id="main-download-btn" class="big-btn">
                         <span class="big-btn-arrow" aria-hidden="true">▼</span>
-                        <span id="btn-text">Detectando tu sistema...</span>
+                        <span id="btn-text" data-i18n="dl_detecting">Detectando tu sistema...</span>
                     </a>
 
-                    <p class="small">Otras versiones:</p>
+                    <p class="small" data-i18n="dl_other">Otras versiones:</p>
                     <div class="cards">
-                        <a href="#" id="link-win" class="card">Windows <span>.exe</span></a>
-                        <a href="#" id="link-mac-silicon" class="card">macOS Apple Silicon <span>.dmg</span></a>
-                        <!-- Oculta por defecto: script.js la muestra sola si la última versión trae el .dmg x64. -->
-                        <a href="#" id="link-mac-intel" class="card" hidden>macOS Intel <span>.dmg</span></a>
+                        <a href="#" id="link-win" class="card" data-i18n="dl_win">Windows <span>.exe</span></a>
+                        <a href="#" id="link-mac-silicon" class="card" data-i18n="dl_mac_silicon">macOS Apple Silicon <span>.dmg</span></a>
+                        <a href="#" id="link-mac-intel" class="card" hidden data-i18n="dl_mac_intel">macOS Intel <span>.dmg</span></a>
                     </div>
 
-                    <p class="tiny">
+                    <p class="tiny" data-i18n="dl_note">
                         Instálalo una vez: después DowP se actualiza solo.
                         Todas las versiones en <a href="https://github.com/MarckDP/DowP/releases" target="_blank" rel="noopener">GitHub Releases</a>.
                     </p>
@@ -104,60 +107,60 @@
             </section>
 
             <section id="capturas" class="win">
-                <div class="win-bar"><span>Capturas</span></div>
+                <div class="win-bar"><span data-i18n="shot_title">Capturas</span></div>
                 <div class="win-body">
                     <div class="gallery">
-                        <button class="shot" data-src="img/rapido.png" data-caption="Modo Rápido: pega el enlace y listo.">
+                        <button class="shot" data-src="img/rapido.png" data-caption="Modo Rápido: pega el enlace y listo." data-i18n-caption="shot_1_cap">
                             <img src="img/rapido.png" alt="Modo Rápido de DowP" loading="lazy">
-                            <span>Modo Rápido</span>
+                            <span data-i18n="shot_1_text">Modo Rápido</span>
                         </button>
-                        <button class="shot" data-src="img/avanzado.png" data-caption="Proceso Avanzado: calidad, subtítulos, miniaturas y lotes.">
+                        <button class="shot" data-src="img/avanzado.png" data-caption="Proceso Avanzado: calidad, subtítulos, miniaturas y lotes." data-i18n-caption="shot_2_cap">
                             <img src="img/avanzado.png" alt="Proceso Avanzado de DowP" loading="lazy">
-                            <span>Proceso Avanzado</span>
+                            <span data-i18n="shot_2_text">Proceso Avanzado</span>
                         </button>
-                        <button class="shot" data-src="img/imagen.png" data-caption="Editor de Imagen: convierte, recorta, dibuja y quita fondos con IA.">
+                        <button class="shot" data-src="img/imagen.png" data-caption="Editor de Imagen: convierte, recorta, dibuja y quita fondos con IA." data-i18n-caption="shot_3_cap">
                             <img src="img/imagen.png" alt="Editor de Imagen de DowP" loading="lazy">
-                            <span>Editor de Imagen</span>
+                            <span data-i18n="shot_3_text">Editor de Imagen</span>
                         </button>
-                        <button class="shot" data-src="img/multimedia.png" data-caption="Herramientas Multimedia: recodifica y recorta con forma de onda.">
+                        <button class="shot" data-src="img/multimedia.png" data-caption="Herramientas Multimedia: recodifica y recorta con precisión sobre la forma de onda." data-i18n-caption="shot_4_cap">
                             <img src="img/multimedia.png" alt="Herramientas Multimedia de DowP" loading="lazy">
-                            <span>Herramientas Multimedia</span>
+                            <span data-i18n="shot_4_text">Herramientas Multimedia</span>
                         </button>
-                        <button class="shot" data-src="img/gestor.png" data-caption="Gestor de Medios: tu biblioteca, más Freesound, Wikimedia, Openverse, Pixabay y Pexels.">
+                        <button class="shot" data-src="img/gestor.png" data-caption="Gestor de Medios: tu biblioteca, más Freesound, Wikimedia, Openverse, Pixabay y Pexels." data-i18n-caption="shot_5_cap">
                             <img src="img/gestor.png" alt="Gestor de Medios de DowP" loading="lazy">
-                            <span>Gestor de Medios</span>
+                            <span data-i18n="shot_5_text">Gestor de Medios</span>
                         </button>
                     </div>
-                    <p class="tiny center">(haz clic para verlas en grande)</p>
+                    <p class="tiny center" data-i18n="shot_note">(haz clic para verlas en grande)</p>
                 </div>
             </section>
 
             <section id="que-es" class="win">
-                <div class="win-bar"><span>¿Qué es DowP?</span></div>
+                <div class="win-bar"><span data-i18n="what_title">¿Qué es DowP?</span></div>
                 <div class="win-body prose">
-                    <p>
+                    <p data-i18n="what_p1">
                         <strong>DowP</strong> es una interfaz gráfica pensada para exprimir al máximo herramientas de código abierto como <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a> y <a href="https://ffmpeg.org/" target="_blank" rel="noopener">FFmpeg</a>, combinadas con modelos <strong>ONNX</strong> para eliminación de fondos, generación de mapas de profundidad y mapas de normales (para foto y video), junto con modelos <strong>NCNN Vulkan</strong> para reescalado con IA. Todo procesado <strong>100% en local</strong>: sin telemetría, sin registros, sin cuentas ni suscripciones.
                     </p>
-                    <p>
+                    <p data-i18n="what_p2">
                         Diseñado para el día a día de edición, te permite <strong>indexar tus carpetas de recursos favoritos</strong> para tenerlos a mano al instante, o bien buscar material libre directamente desde la app en las bibliotecas más conocidas: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://freesound.org/" target="_blank" rel="noopener">Freesound</a>, <a href="https://openverse.org/" target="_blank" rel="noopener">Openverse</a>, <a href="https://pixabay.com/" target="_blank" rel="noopener">Pixabay</a> y <a href="https://pexels.com/" target="_blank" rel="noopener">Pexels</a>.
                     </p>
-                    <p>
+                    <p data-i18n="what_p3">
                         Y lo más importante: <strong>se conecta directamente con tu flujo de trabajo</strong>. Envía medios a <strong>Premiere Pro</strong>, <strong>After Effects</strong>, <strong>Photoshop</strong> y <strong>DaVinci Resolve</strong>, mandando lo que necesites al proyecto o directo a la línea de tiempo gracias al <a href="#preguntas-importer"><strong>DowP Importer</strong></a>.
                     </p>
-                    <p>
+                    <p data-i18n="what_p4">
                         ¿No usas esos programas o prefieres tu propio método? Todo dentro de DowP es <strong>arrastrable</strong>: tomas el archivo desde la app y lo sueltas directo en tu editor favorito, sin tener que abrir el Explorador de archivos ni Finder.
                     </p>
 
                     <details class="story-details">
-                        <summary class="story-summary">Un poco de historia (o cómo terminé aquí)</summary>
+                        <summary class="story-summary" data-i18n="story_sum">Un poco de historia (o cómo terminé aquí)</summary>
                         <div class="story-body">
-                            <p>
+                            <p data-i18n="story_p1">
                                 DowP nació originalmente como un simple script de yt-dlp para resolver un dolor de cabeza personal: descargar medios que de verdad fueran compatibles con Premiere Pro y After Effects, recodificándolos al vuelo cuando Adobe se ponía pesado con ciertos contenedores y códecs.
                             </p>
-                            <p>
+                            <p data-i18n="story_p2">
                                 Poco a poco fue escalando, agregando funciones y más capacidades (algunas tal vez innecesarias, pero divertidas). Tras varios tropiezos y pelearme mil veces con la IA para sacar adelante el código, logré una primera versión... <strong>que después borré a propósito a lo idiota en un momento de rabia.</strong>
                             </p>
-                            <p>
+                            <p data-i18n="story_p3">
                                 Luego de empezar de cero y rehacerlo con la cabeza más fría, por fin hay algo mucho más estable y funcional. Siempre gratis y de código abierto. Ojalá te sea útil.
                             </p>
                             <p class="sign">— MarckDP</p>
@@ -167,47 +170,47 @@
             </section>
 
             <section id="funciones" class="win">
-                <div class="win-bar"><span>Funciones</span></div>
+                <div class="win-bar"><span data-i18n="feat_title">Funciones</span></div>
                 <div class="win-body">
                     <dl class="features">
-                        <div><dt>[01] Modo Rápido</dt><dd>Pega un enlace, elige video o audio y descarga. Sin vueltas.</dd></div>
-                        <div><dt>[02] Proceso Avanzado</dt><dd>Elige calidad de video y audio, subtítulos y miniaturas; recorta fragmentos y descarga playlists enteras por lotes.</dd></div>
-                        <div><dt>[03] Buscador integrado <span class="new">¡NUEVO!</span></dt><dd>Busca videos, canales y listas de YouTube y SoundCloud sin salir de DowP.</dd></div>
-                        <div><dt>[04] Editor de Imagen</dt><dd>Convierte entre formatos (incluidos HEIC, AVIF, PSD y RAW), pasa PDF a imágenes, vectoriza a SVG y quita fondos con IA.</dd></div>
-                        <div><dt>[05] IA para imagen y video <span class="new">¡NUEVO!</span></dt><dd>Mapas de profundidad y de normales para imágenes y videos, con varios modelos a elegir, y reescalado de video con IA.</dd></div>
-                        <div><dt>[06] Herramientas Multimedia</dt><dd>Recodifica video y audio con preajustes y recorta con precisión sobre la forma de onda.</dd></div>
-                        <div><dt>[07] Gestor de Medios</dt><dd>Indexa tus carpetas, crea colecciones y subclips, y busca material libre en Freesound, Wikimedia, Openverse, Pixabay y Pexels.</dd></div>
-                        <div><dt>[08] Directo a tu editor</dt><dd>Envía medios a Premiere Pro, After Effects, Photoshop o DaVinci Resolve, o arrástralos a cualquier editor como si vinieran de una carpeta.</dd></div>
-                        <div><dt>[09] Historial <span class="new">¡NUEVO!</span></dt><dd>Todo lo que descargaste, en un solo lugar.</dd></div>
-                        <div><dt>[10] Se actualiza solo</dt><dd>Solo baja lo que cambió, y si algo sale mal, vuelve a la versión anterior.</dd></div>
-                        <div><dt>[11] Tres idiomas</dt><dd>Español, inglés y portugués (Brasil).</dd></div>
+                        <div><dt data-i18n="f_1">[01] Modo Rápido</dt><dd data-i18n="f_1_d">Pega un enlace, elige video o audio y descarga. Sin vueltas.</dd></div>
+                        <div><dt data-i18n="f_2">[02] Proceso Avanzado</dt><dd data-i18n="f_2_d">Elige calidad de video y audio, subtítulos y miniaturas; recorta fragmentos y descarga playlists enteras por lotes.</dd></div>
+                        <div><dt><span data-i18n="f_3">[03] Buscador integrado</span> <span class="new">¡NUEVO!</span></dt><dd data-i18n="f_3_d">Busca videos, canales y listas de YouTube y SoundCloud sin salir de DowP.</dd></div>
+                        <div><dt data-i18n="f_4">[04] Editor de Imagen</dt><dd data-i18n="f_4_d">Convierte entre formatos (incluidos HEIC, AVIF, PSD y RAW), pasa PDF a imágenes, vectoriza a SVG y quita fondos con IA.</dd></div>
+                        <div><dt><span data-i18n="f_5">[05] IA para imagen y video</span> <span class="new">¡NUEVO!</span></dt><dd data-i18n="f_5_d">Mapas de profundidad y de normales para imágenes y videos, con varios modelos a elegir, y reescalado de video con IA.</dd></div>
+                        <div><dt data-i18n="f_6">[06] Herramientas Multimedia</dt><dd data-i18n="f_6_d">Recodifica video y audio con preajustes y recorta con precisión sobre la forma de onda.</dd></div>
+                        <div><dt data-i18n="f_7">[07] Gestor de Medios</dt><dd data-i18n="f_7_d">Indexa tus carpetas, crea colecciones y subclips, y busca material libre en Freesound, Wikimedia, Openverse, Pixabay y Pexels.</dd></div>
+                        <div><dt data-i18n="f_8">[08] Directo a tu editor</dt><dd data-i18n="f_8_d">Envía medios a Premiere Pro, After Effects, Photoshop o DaVinci Resolve, o arrástralos a cualquier editor como si vinieran de una carpeta.</dd></div>
+                        <div><dt><span data-i18n="f_9">[09] Historial</span> <span class="new">¡NUEVO!</span></dt><dd data-i18n="f_9_d">Todo lo que descargaste, en un solo lugar.</dd></div>
+                        <div><dt data-i18n="f_10">[10] Se actualiza solo</dt><dd data-i18n="f_10_d">Solo baja lo que cambió, y si algo sale mal, vuelve a la versión anterior.</dd></div>
+                        <div><dt data-i18n="f_11">[11] Tres idiomas</dt><dd data-i18n="f_11_d">Español, inglés y portugués (Brasil).</dd></div>
                     </dl>
                 </div>
             </section>
 
             <section id="preguntas" class="win">
-                <div class="win-bar"><span>Preguntas</span></div>
+                <div class="win-bar"><span data-i18n="faq_title">Preguntas</span></div>
                 <div class="win-body prose">
                     <details>
-                        <summary>¿Por qué dice "Beta"?</summary>
-                        <p>Porque la 1.9 es la antesala de DowP 2.0. Ya se puede usar a diario, pero puede tener algún error sin descubrir. Las correcciones llegan solas, sin reinstalar.</p>
+                        <summary data-i18n="q_1">¿Por qué dice "Beta"?</summary>
+                        <p data-i18n="a_1">Porque la 1.9 es la antesala de DowP 2.0. Ya se puede usar a diario, pero puede tener algún error sin descubrir. Las correcciones llegan solas, sin reinstalar.</p>
                     </details>
                     <details>
-                        <summary>Mi Mac dice que no puede verificar al desarrollador</summary>
-                        <p>Es normal: DowP no pasa por la notarización de Apple. Abre <em>Ajustes del Sistema → Privacidad y seguridad</em> y pulsa <em>Abrir igualmente</em>. O en la Terminal:</p>
+                        <summary data-i18n="q_2">Mi Mac dice que no puede verificar al desarrollador</summary>
+                        <p data-i18n="a_2">Es normal: DowP no pasa por la notarización de Apple. Abre <em>Ajustes del Sistema → Privacidad y seguridad</em> y pulsa <em>Abrir igualmente</em>. O en la Terminal:</p>
                         <pre>xattr -dr com.apple.quarantine /Applications/DowP.app</pre>
                     </details>
                     <details>
-                        <summary>¿Y mi Mac con Intel?</summary>
-                        <p>Todavía no hay versión para Intel. Vuelve pronto: aparecerá aquí mismo.</p>
+                        <summary data-i18n="q_3">¿Y mi Mac con Intel?</summary>
+                        <p data-i18n="a_3">Todavía no hay versión para Intel. Vuelve pronto: aparecerá aquí mismo.</p>
                     </details>
                     <details id="preguntas-importer">
-                        <summary>¿Cómo conecto DowP con Premiere, After Effects o Photoshop?</summary>
-                        <p>En DowP, ve a <em>Ajustes → Integraciones</em> e instala el panel <strong>DowP Importer</strong>. Reinicia el programa de Adobe y búscalo en <em>Ventana → Extensiones</em>.</p>
+                        <summary data-i18n="q_4">¿Cómo conecto DowP con Premiere, After Effects o Photoshop?</summary>
+                        <p data-i18n="a_4">En DowP, ve a <em>Ajustes → Integraciones</em> e instala el panel <strong>DowP Importer</strong>. Reinicia el programa de Adobe y búscalo en <em>Ventana → Extensiones</em>.</p>
                     </details>
                     <details>
-                        <summary>Encontré un error / tengo una idea</summary>
-                        <p>Cuéntalo en el <a href="https://github.com/MarckDP/DowP/issues" target="_blank" rel="noopener">libro de visitas (issues de GitHub)</a>. Se leen todos.</p>
+                        <summary data-i18n="q_5">Encontré un error / tengo una idea</summary>
+                        <p data-i18n="a_5">Cuéntalo en el <a href="https://github.com/MarckDP/DowP/issues" target="_blank" rel="noopener">libro de visitas (issues de GitHub)</a>. Se leen todos.</p>
                     </details>
                 </div>
             </section>
@@ -218,40 +221,44 @@
         <aside class="sidebar sidebar-right">
             <section class="win win-radio" id="radio-widget">
                 <div class="win-bar">
-                    <span>Radio</span>
+                    <span data-i18n="radio_title">Radio</span>
                     <span class="radio-led" id="radio-led" title="Emisión detenida"></span>
                 </div>
                 <div class="win-body center">
-                    <p class="tiny radio-station" id="radio-station">SomaFM: Groove Salad</p>
+                    <div class="radio-station-row">
+                        <button type="button" class="radio-nav" id="radio-prev" aria-label="Emisora anterior">◀</button>
+                        <p class="tiny radio-station" id="radio-station">SomaFM: Groove Salad</p>
+                        <button type="button" class="radio-nav" id="radio-next" aria-label="Emisora siguiente">▶</button>
+                    </div>
                     <div class="radio-visualizer" id="radio-viz" aria-hidden="true">
                         <span></span><span></span><span></span><span></span><span></span><span></span>
                     </div>
                     <div class="radio-controls">
                         <button type="button" class="card mini-btn radio-btn" id="radio-toggle" aria-label="Reproducir o pausar radio">
-                            <span id="radio-icon">▶</span> <span id="radio-text">Play Radio</span>
+                            <span id="radio-icon">▶</span> <span id="radio-text" data-i18n="radio_play">Play Radio</span>
                         </button>
                         <div class="radio-vol-box">
                             <label for="radio-volume" class="tiny">Vol</label>
                             <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.5" class="retro-slider" aria-label="Volumen de radio">
                         </div>
                     </div>
-                    <p class="tiny muted">música chill/ambient para editar</p>
+                    <p class="tiny muted" data-i18n="radio_desc">música chill/ambient para editar</p>
                     <audio id="radio-audio" preload="none" src="https://ice2.somafm.com/groovesalad-128-mp3"></audio>
                 </div>
             </section>
 
             <section class="win win-chat">
-                <div class="win-bar"><span>Chat en vivo</span></div>
+                <div class="win-bar"><span data-i18n="chat_title">Chat en vivo</span></div>
                 <div class="win-body chat-win-body">
                     <iframe src="https://www3.cbox.ws/box/?boxid=3560963&boxtag=Gg4vQH" width="100%" height="420" allowtransparency="yes" allow="autoplay" frameborder="0" marginheight="0" marginwidth="0" scrolling="auto" class="cbox-iframe" title="Chat en vivo de DowP"></iframe>
                 </div>
             </section>
 
             <section class="win">
-                <div class="win-bar"><span>Enlázame</span></div>
+                <div class="win-bar"><span data-i18n="link_title">Enlázame</span></div>
                 <div class="win-body center">
                     <a href="https://marckdp.github.io/DowP/"><img src="img/dowp-88x31.gif" width="88" height="31" alt="Botón de DowP" class="pixel"></a>
-                    <p class="tiny">¿Tienes web? Copia el botón y enlázanos, como en los viejos tiempos.</p>
+                    <p class="tiny" data-i18n="link_desc">¿Tienes web? Copia el botón y enlázanos, como en los viejos tiempos.</p>
                 </div>
             </section>
         </aside>
@@ -260,7 +267,7 @@
 
     <footer class="footer">
         <p class="credits">
-            <span class="tiny">hecho con</span>
+            <span class="tiny" data-i18n="foot_made">hecho con</span>
             <a class="mini-btn" href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a>
             <a class="mini-btn" href="https://ffmpeg.org/" target="_blank" rel="noopener">FFmpeg</a>
             <a class="mini-btn" href="https://doc.qt.io/qtforpython-6/" target="_blank" rel="noopener">PySide6</a>
@@ -268,9 +275,9 @@
         </p>
         <p class="tiny">
             <a href="https://github.com/MarckDP" target="_blank" rel="noopener">MarckDP</a>
-            · <a href="creditos.html">créditos y licencias</a>
-            · se ve mejor en cualquier navegador a 800×600 o más
-            · <span class="under-construction">🚧 siempre en construcción 🚧</span>
+            · <a href="creditos.html" data-i18n="foot_credits">créditos y licencias</a>
+            · <span data-i18n="foot_best">se ve mejor en cualquier navegador a 800×600 o más</span>
+            · <span class="under-construction" data-i18n="foot_const">🚧 siempre en construcción 🚧</span>
         </p>
     </footer>
 
