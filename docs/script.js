@@ -252,10 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Lista de emisoras: si una falla, salta a la siguiente.
     const stations = [
-        { name: 'SomaFM: Groove Salad',   url: 'https://ice2.somafm.com/groovesalad-128-mp3' },
-        { name: 'SomaFM: Drone Zone',     url: 'https://ice2.somafm.com/dronezone-128-mp3' },
-        { name: 'SomaFM: DEF CON Radio',  url: 'https://ice2.somafm.com/defcon-128-mp3' },
-        { name: 'SomaFM: Space Station',   url: 'https://ice2.somafm.com/spacestation-128-mp3' },
+        { name: 'SomaFM: Groove Salad',   url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+        { name: 'SomaFM: Drone Zone',     url: 'https://ice1.somafm.com/dronezone-128-mp3' },
+        { name: 'SomaFM: DEF CON Radio',  url: 'https://ice1.somafm.com/defcon-128-mp3' },
+        { name: 'SomaFM: Space Station',  url: 'https://ice1.somafm.com/spacestation-128-mp3' },
     ];
 
     let currentIndex = 0;
@@ -273,15 +273,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function setPlayingUI() {
         isPlaying = true;
         if (playIcon) playIcon.textContent = '⏸';
-        if (playText) playText.textContent = 'Pausar';
+        if (playText) {
+            playText.setAttribute('data-i18n', 'radio_pause');
+            const currentLang = document.documentElement.lang || 'es';
+            if (translations[currentLang] && translations[currentLang]['radio_pause']) {
+                playText.textContent = translations[currentLang]['radio_pause'];
+            } else {
+                playText.textContent = 'Pausar';
+            }
+        }
         if (led) { led.classList.add('on'); led.title = 'Emisión en vivo'; }
         if (viz) viz.classList.add('playing');
     }
 
-    function setStoppedUI(label) {
+    function setStoppedUI(labelKey) {
         isPlaying = false;
         if (playIcon) playIcon.textContent = '▶';
-        if (playText) playText.textContent = label || 'Play Radio';
+        if (playText) {
+            const key = labelKey || 'radio_play';
+            playText.setAttribute('data-i18n', key);
+            const currentLang = document.documentElement.lang || 'es';
+            if (translations[currentLang] && translations[currentLang][key]) {
+                playText.textContent = translations[currentLang][key];
+            } else {
+                playText.textContent = key === 'radio_err' ? 'Error de stream' : (key === 'radio_conn' ? 'Conectando...' : 'Play Radio');
+            }
+        }
         if (led) { led.classList.remove('on'); led.title = 'Emisión detenida'; }
         if (viz) viz.classList.remove('playing');
     }
@@ -297,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function playCurrentStation() {
-        if (playText) playText.textContent = 'Conectando...';
+        setStoppedUI('radio_conn');
         try {
             audio.load();
             await audio.play();
@@ -313,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playCurrentStation();
         } else {
             audio.pause();
-            setStoppedUI('Play Radio');
+            setStoppedUI('radio_play');
         }
     });
 
@@ -340,11 +357,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function tryNextStation() {
         retryCount++;
         if (retryCount > maxRetries) {
-            setStoppedUI('Sin señal');
+            setStoppedUI('radio_err');
             return;
         }
         setStation(currentIndex + 1);
-        if (playText) playText.textContent = 'Probando...';
+        setStoppedUI('radio_conn');
         try {
             audio.load();
             await audio.play();
@@ -360,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isPlaying) {
             tryNextStation();
         } else {
-            setStoppedUI('Error stream');
+            setStoppedUI('radio_err');
         }
     });
 
