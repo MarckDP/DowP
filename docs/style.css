@@ -485,6 +485,13 @@ pre {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.radio-station a {
+    color: inherit;
+    text-decoration: none;
+}
+.radio-station a:hover {
+    text-decoration: underline;
+}
 .radio-nav {
     background: transparent;
     border: none;

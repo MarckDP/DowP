@@ -60,15 +60,6 @@
             </section>
 
             <section class="win">
-                <div class="win-bar"><span data-i18n="support_title">Apoya DowP</span></div>
-                <div class="win-body center">
-                    <p class="tiny support-text" data-i18n="support_text">DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café.</p>
-                    <a class="card support-btn" href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener" data-i18n="support_kofi">☕ Ko-fi</a>
-                    <p class="tiny"><a href="creditos.html" data-i18n="support_other">Otras formas (Binance Pay)</a></p>
-                </div>
-            </section>
-
-            <section class="win">
                 <div class="win-bar"><span data-i18n="status_title">Estado</span></div>
                 <ul class="win-body status-list">
                     <li><span class="led on"></span> Windows 10/11</li>
@@ -217,9 +208,19 @@
 
         </main>
 
-        <!-- ═══════════ BARRA LATERAL DERECHA (Radio, Chat, Enlázame) ═══════════ -->
+        <!-- ═══════════ BARRA LATERAL DERECHA (Apoya DowP, Chat, Enlázame; la radio está oculta) ═══════════ -->
         <aside class="sidebar sidebar-right">
-            <section class="win win-radio" id="radio-widget">
+            <section class="win">
+                <div class="win-bar"><span data-i18n="support_title">Apoya DowP</span></div>
+                <div class="win-body center">
+                    <p class="tiny support-text" data-i18n="support_text">DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café.</p>
+                    <a class="card support-btn" href="https://ko-fi.com/marckdbm" target="_blank" rel="noopener" data-i18n="support_kofi">☕ Ko-fi</a>
+                    <p class="tiny"><a href="creditos.html" data-i18n="support_other">Otras formas (Binance Pay)</a></p>
+                </div>
+            </section>
+
+            <!-- Radio oculta por ahora: volverá con una lista propia de canciones sin copyright -->
+            <section class="win win-radio" id="radio-widget" hidden>
                 <div class="win-bar">
                     <span data-i18n="radio_title">Radio</span>
                     <span class="radio-led" id="radio-led" title="Emisión detenida"></span>
@@ -227,7 +228,7 @@
                 <div class="win-body center">
                     <div class="radio-station-row">
                         <button type="button" class="radio-nav" id="radio-prev" aria-label="Emisora anterior">◀</button>
-                        <p class="tiny radio-station" id="radio-station">SomaFM: Groove Salad</p>
+                        <p class="tiny radio-station" id="radio-station">Nightride FM</p>
                         <button type="button" class="radio-nav" id="radio-next" aria-label="Emisora siguiente">▶</button>
                     </div>
                     <div class="radio-visualizer" id="radio-viz" aria-hidden="true">
@@ -242,8 +243,8 @@
                             <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.5" class="retro-slider" aria-label="Volumen de radio">
                         </div>
                     </div>
-                    <p class="tiny muted" data-i18n="radio_desc">música chill/ambient para editar</p>
-                    <audio id="radio-audio" preload="none" src="https://ice1.somafm.com/groovesalad-128-mp3"></audio>
+                    <p class="tiny muted" data-i18n="radio_desc">radios independientes en vivo</p>
+                    <audio id="radio-audio" preload="none"></audio>
                 </div>
             </section>
 
