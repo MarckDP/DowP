@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.close(); });
 });
 
-// ── Radio DowP (con fallback entre emisoras) ─────────────────────────────
+// ── Radio DowP (varias emisoras, navegables con ◀ ▶) ─────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const audio = document.getElementById('radio-audio');
     const toggleBtn = document.getElementById('radio-toggle');
@@ -250,61 +250,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!audio || !toggleBtn) return;
 
-    // Lista de emisoras: si una falla, salta a la siguiente.
+    // Emisoras (todas en MP3 para que funcionen en cualquier navegador).
+    // Si una falla, se salta a la siguiente.
     const stations = [
-        { name: 'SomaFM: Groove Salad',   url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
-        { name: 'SomaFM: Drone Zone',     url: 'https://ice1.somafm.com/dronezone-128-mp3' },
-        { name: 'SomaFM: DEF CON Radio',  url: 'https://ice1.somafm.com/defcon-128-mp3' },
-        { name: 'SomaFM: Space Station',  url: 'https://ice1.somafm.com/spacestation-128-mp3' },
+        { name: 'Nightride FM',          url: 'https://stream.nightride.fm/nightride.mp3',       site: 'https://nightride.fm/' },
+        { name: 'Nightwave Plaza',       url: 'https://radio.plaza.one/mp3',                     site: 'https://plaza.one/' },
+        { name: 'Radio Paradise: Mellow', url: 'https://stream.radioparadise.com/mellow-192',    site: 'https://radioparadise.com/' },
+        { name: 'LISTEN.moe',            url: 'https://listen.moe/fallback',                     site: 'https://listen.moe/' },
     ];
 
     let currentIndex = 0;
-    let isPlaying = false;
+    let state = 'idle';      // 'idle' | 'connecting' | 'playing'
+    let attempt = 0;         // cada intento nuevo invalida los anteriores
     let retryCount = 0;
-    const maxRetries = stations.length;
+    let stallTimer = null;
 
-    function setStation(index) {
-        currentIndex = (index + stations.length) % stations.length;
+    function t(key, fallback) {
+        const lang = document.documentElement.lang || 'es';
+        return (typeof translations !== 'undefined' && translations[lang] && translations[lang][key]) || fallback;
+    }
+
+    function setLabel(key, fallback) {
+        if (!playText) return;
+        playText.setAttribute('data-i18n', key);
+        playText.textContent = t(key, fallback);
+    }
+
+    const FALLBACKS = { radio_play: 'Play Radio', radio_pause: 'Pausar', radio_conn: 'Conectando...', radio_err: 'Error de stream' };
+
+    function setUI(newState, labelKey) {
+        state = newState;
+        const on = newState === 'playing';
+        if (playIcon) playIcon.textContent = newState === 'idle' ? '▶' : '⏸';
+        const key = labelKey || (on ? 'radio_pause' : newState === 'connecting' ? 'radio_conn' : 'radio_play');
+        setLabel(key, FALLBACKS[key]);
+        if (led) { led.classList.toggle('on', on); led.title = on ? 'Emisión en vivo' : 'Emisión detenida'; }
+        if (viz) viz.classList.toggle('playing', on);
+    }
+
+    function showStation() {
+        if (!stationLabel) return;
         const st = stations[currentIndex];
-        audio.src = st.url;
-        if (stationLabel) stationLabel.textContent = st.name;
+        const link = document.createElement('a');
+        link.href = st.site;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = st.name;
+        link.title = st.name + ' (' + (currentIndex + 1) + '/' + stations.length + ')';
+        stationLabel.replaceChildren(link);
     }
 
-    function setPlayingUI() {
-        isPlaying = true;
-        if (playIcon) playIcon.textContent = '⏸';
-        if (playText) {
-            playText.setAttribute('data-i18n', 'radio_pause');
-            const currentLang = document.documentElement.lang || 'es';
-            if (translations[currentLang] && translations[currentLang]['radio_pause']) {
-                playText.textContent = translations[currentLang]['radio_pause'];
-            } else {
-                playText.textContent = 'Pausar';
-            }
+    function clearStall() {
+        if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+    }
+
+    // Corta la conexión del stream (pausar un directo lo dejaría descargando).
+    function stopAudio() {
+        attempt++;
+        clearStall();
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+    }
+
+    async function playStation() {
+        const my = ++attempt;
+        clearStall();
+        setUI('connecting');
+        audio.src = stations[currentIndex].url;
+        try {
+            await audio.play();
+            if (my !== attempt) return;
+            retryCount = 0;
+            setUI('playing');
+        } catch (err) {
+            failover(my);
         }
-        if (led) { led.classList.add('on'); led.title = 'Emisión en vivo'; }
-        if (viz) viz.classList.add('playing');
     }
 
-    function setStoppedUI(labelKey) {
-        isPlaying = false;
-        if (playIcon) playIcon.textContent = '▶';
-        if (playText) {
-            const key = labelKey || 'radio_play';
-            playText.setAttribute('data-i18n', key);
-            const currentLang = document.documentElement.lang || 'es';
-            if (translations[currentLang] && translations[currentLang][key]) {
-                playText.textContent = translations[currentLang][key];
-            } else {
-                playText.textContent = key === 'radio_err' ? 'Error de stream' : (key === 'radio_conn' ? 'Conectando...' : 'Play Radio');
-            }
+    // Pasa a la siguiente emisora; ignora avisos de intentos ya reemplazados
+    // (play() rechazado y el evento 'error' llegan por el mismo fallo).
+    function failover(my) {
+        if (my !== attempt || state === 'idle') return;
+        retryCount++;
+        if (retryCount >= stations.length) {
+            stopAudio();
+            setUI('idle', 'radio_err');
+            return;
         }
-        if (led) { led.classList.remove('on'); led.title = 'Emisión detenida'; }
-        if (viz) viz.classList.remove('playing');
+        currentIndex = (currentIndex + 1) % stations.length;
+        showStation();
+        playStation();
     }
 
-    // Inicializar con la primera emisora
-    setStation(0);
+    function changeStation(step) {
+        currentIndex = (currentIndex + step + stations.length) % stations.length;
+        showStation();
+        if (state !== 'idle') {
+            retryCount = 0;
+            playStation();
+        }
+    }
+
+    showStation();
 
     if (volumeSlider) {
         audio.volume = parseFloat(volumeSlider.value) || 0.5;
@@ -313,83 +361,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function playCurrentStation() {
-        setStoppedUI('radio_conn');
-        try {
-            audio.load();
-            await audio.play();
-            setPlayingUI();
-        } catch (err) {
-            tryNextStation();
-        }
-    }
-
     toggleBtn.addEventListener('click', () => {
-        if (!isPlaying) {
+        if (state === 'idle') {
             retryCount = 0;
-            playCurrentStation();
+            playStation();
         } else {
-            audio.pause();
-            setStoppedUI('radio_play');
+            stopAudio();
+            setUI('idle');
         }
     });
 
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            setStation(currentIndex - 1);
-            if (isPlaying) {
-                retryCount = 0;
-                playCurrentStation();
-            }
-        });
-    }
+    if (prevBtn) prevBtn.addEventListener('click', () => changeStation(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => changeStation(1));
 
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            setStation(currentIndex + 1);
-            if (isPlaying) {
-                retryCount = 0;
-                playCurrentStation();
-            }
-        });
-    }
-
-    async function tryNextStation() {
-        retryCount++;
-        if (retryCount > maxRetries) {
-            setStoppedUI('radio_err');
-            return;
-        }
-        setStation(currentIndex + 1);
-        setStoppedUI('radio_conn');
-        try {
-            audio.load();
-            await audio.play();
-            retryCount = 0;
-            setPlayingUI();
-        } catch (err) {
-            tryNextStation();
-        }
-    }
-
-    // Si el stream se corta mientras suena, intentar la siguiente
+    // Si el stream falla o se corta, intentar la siguiente
     audio.addEventListener('error', () => {
-        if (isPlaying) {
-            tryNextStation();
-        } else {
-            setStoppedUI('radio_err');
-        }
+        if (state !== 'idle' && audio.getAttribute('src')) failover(attempt);
     });
 
-    // Si el stream se para (stall prolongado), intentar la siguiente
-    let stallTimer = null;
+    // Si el stream se queda parado mucho rato, intentar la siguiente
     audio.addEventListener('stalled', () => {
-        if (!isPlaying) return;
-        stallTimer = setTimeout(() => {
-            if (isPlaying) tryNextStation();
-        }, 8000);
+        if (state === 'idle') return;
+        clearStall();
+        const my = attempt;
+        stallTimer = setTimeout(() => failover(my), 8000);
     });
     audio.addEventListener('playing', () => {
-        if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+        clearStall();
+        if (state === 'connecting') { retryCount = 0; setUI('playing'); }
     });
 });
