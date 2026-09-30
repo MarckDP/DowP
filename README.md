@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Descarga, convierte y organiza tus medios, y mándalos directo a tu editor.</strong><br>
-  <sub>Versión 1.9.1 · Beta previa a DowP 2.0</sub>
+  <sub>Versión 1.9.2 · Beta previa a DowP 2.0</sub>
 </p>
 
 <p align="center">
