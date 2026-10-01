@@ -17,10 +17,13 @@ Opciones propias:
     transparencia -- y tenerla también en este popover chocaba con el formato elegido.
 
 La resolución a la que calcula cada modelo es fija a propósito (ver la nota de
-DEPTH_MODEL_FAMILIES en core/constants.py) -- aquí solo se informa."""
+DEPTH_MODEL_FAMILIES en core/constants.py) -- aquí solo se informa. La excepción es
+MoGe-2 (el modelo de Mapa de Normales, que también da profundidad; ver
+models_setup.get_depth_families): trabaja con su propio "Detalle", igual que en normales,
+y solo se ofrece en el Editor de Imagen."""
 import platform
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QMessageBox
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QMessageBox, QWidget
 from PySide6.QtCore import QCoreApplication, Signal, Qt, QTimer
 from PySide6.QtGui import QFontMetrics
 
@@ -53,6 +56,38 @@ _GPU_TOOLTIP = QCoreApplication.translate(
     "Si está activo, usa la tarjeta gráfica (GPU).\n"
     "Si se desactiva, usará el procesador (CPU) a máxima potencia.\n"
     "Desactívalo si tienes problemas de drivers o cuelgues."
+)
+_DETAIL_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Cuánto detalle calcula el modelo. Más detalle tarda más y usa más memoria."
+)
+_RELIEF_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Además del mapa, guarda una malla 3D con la imagen como textura (.obj + .mtl + "
+    "textura), para Blender o After Effects."
+)
+_RELIEF_MODE_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Relieve: una lámina empujada hacia adelante según la profundidad, para efectos de "
+    "parallax. Sirve con cualquier modelo.\n"
+    "Escena 3D: cada punto en su posición real, en metros, vista desde la cámara. Solo "
+    "con MoGe-2. El cielo no se incluye."
+)
+_RELIEF_STRENGTH_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Cuánto sale hacia adelante lo más cercano. El modelo no sabe las distancias reales, "
+    "así que se elige a ojo."
+)
+_RELIEF_DENSITY_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Cuántos vértices tiene la malla. Más densidad sigue mejor los detalles, pero el archivo "
+    "pesa más. La textura siempre va a resolución completa."
+)
+_RELIEF_SPLIT_TOOLTIP = QCoreApplication.translate(
+    "DepthPopoverContent",
+    "Corta la malla donde la profundidad salta de golpe (por ejemplo, entre una persona y la "
+    "pared de atrás). Así el sujeto queda despegado del fondo en vez de estirado, pero "
+    "quedan huecos al mover la cámara."
 )
 _INVERT_TOOLTIP = QCoreApplication.translate(
     "DepthPopoverContent",
@@ -112,6 +147,8 @@ class DepthPopoverContent(QFrame):
         self.combo_family = AutoPopupComboBox(fit_contents=True)
         self.combo_family.addItem(AI_ENGINE_HOLDER, None)
         for family_name, models in get_depth_families().items():
+            if video_mode and any(m.get("engine") == "moge" for m in models.values()):
+                continue    # MoGe-2 todavía no calcula profundidad en video
             label = family_name
             if video_mode and any(m.get("input_layout") == "5d" for m in models.values()):
                 label = self.tr("{0} (recomendado para video)").format(family_name)
@@ -163,9 +200,75 @@ class DepthPopoverContent(QFrame):
         sep.setStyleSheet(f"background-color: {border}; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
+        # Solo con MoGe-2: los demás modelos calculan a una resolución fija.
+        self.row_detail = QWidget()
+        detail_layout = QHBoxLayout(self.row_detail)
+        detail_layout.setContentsMargins(0, 0, 0, 0)
+        detail_layout.addWidget(self._label(self.tr("Detalle:")))
+        self.combo_detail = AutoPopupComboBox(fit_contents=True)
+        self.combo_detail.setToolTip(_DETAIL_TOOLTIP)
+        self.combo_detail.addItem(self.tr("Bajo (rápido)"), "low")
+        self.combo_detail.addItem(self.tr("Medio"), "medium")
+        self.combo_detail.addItem(self.tr("Alto (más detalle)"), "high")
+        self.combo_detail.setCurrentIndex(1)
+        detail_layout.addWidget(self.combo_detail, 1)
+        self.row_detail.setVisible(False)
+        layout.addWidget(self.row_detail)
+
         self.check_invert = QCheckBox(self.tr("Invertir (cerca = negro)"))
         self.check_invert.setToolTip(_INVERT_TOOLTIP)
         layout.addWidget(self.check_invert)
+
+        # Malla 3D (.obj) -- solo en el Editor de Imagen (ver relief_mesh.py).
+        self.check_relief = QCheckBox(self.tr("Exportar malla 3D (.obj)"))
+        self.check_relief.setToolTip(_RELIEF_TOOLTIP)
+        self.check_relief.setVisible(not video_mode)
+        layout.addWidget(self.check_relief)
+
+        self.relief_options = QWidget()
+        relief_layout = QVBoxLayout(self.relief_options)
+        relief_layout.setContentsMargins(0, 0, 0, 0)
+        relief_layout.setSpacing(8)
+        # Tipo de malla: solo con MoGe-2, el único modelo que da la escena en 3D.
+        self.row_relief_mode = QWidget()
+        mode_row = QHBoxLayout(self.row_relief_mode)
+        mode_row.setContentsMargins(0, 0, 0, 0)
+        mode_row.addWidget(self._label(self.tr("Tipo:")))
+        self.combo_relief_mode = AutoPopupComboBox(fit_contents=True)
+        self.combo_relief_mode.setToolTip(_RELIEF_MODE_TOOLTIP)
+        self.combo_relief_mode.addItem(self.tr("Relieve"), "relief")
+        self.combo_relief_mode.addItem(self.tr("Escena 3D"), "scene")
+        self.combo_relief_mode.currentIndexChanged.connect(lambda _i: self._update_relief_rows())
+        mode_row.addWidget(self.combo_relief_mode, 1)
+        relief_layout.addWidget(self.row_relief_mode)
+        self.row_relief_strength = QWidget()
+        strength_row = QHBoxLayout(self.row_relief_strength)
+        strength_row.setContentsMargins(0, 0, 0, 0)
+        strength_row.addWidget(self._label(self.tr("Intensidad:")))
+        self.combo_relief_strength = AutoPopupComboBox(fit_contents=True)
+        self.combo_relief_strength.setToolTip(_RELIEF_STRENGTH_TOOLTIP)
+        self.combo_relief_strength.addItem(self.tr("Suave"), "soft")
+        self.combo_relief_strength.addItem(self.tr("Media"), "medium")
+        self.combo_relief_strength.addItem(self.tr("Fuerte"), "strong")
+        self.combo_relief_strength.setCurrentIndex(1)
+        strength_row.addWidget(self.combo_relief_strength, 1)
+        relief_layout.addWidget(self.row_relief_strength)
+        density_row = QHBoxLayout()
+        density_row.addWidget(self._label(self.tr("Densidad:")))
+        self.combo_relief_density = AutoPopupComboBox(fit_contents=True)
+        self.combo_relief_density.setToolTip(_RELIEF_DENSITY_TOOLTIP)
+        self.combo_relief_density.addItem(self.tr("Baja (archivo liviano)"), "low")
+        self.combo_relief_density.addItem(self.tr("Media"), "medium")
+        self.combo_relief_density.addItem(self.tr("Alta (archivo pesado)"), "high")
+        self.combo_relief_density.setCurrentIndex(1)
+        density_row.addWidget(self.combo_relief_density, 1)
+        relief_layout.addLayout(density_row)
+        self.check_relief_split = QCheckBox(self.tr("Separar en los bordes"))
+        self.check_relief_split.setToolTip(_RELIEF_SPLIT_TOOLTIP)
+        relief_layout.addWidget(self.check_relief_split)
+        self.relief_options.setVisible(False)
+        self.check_relief.toggled.connect(self._on_relief_toggled)
+        layout.addWidget(self.relief_options)
 
         lbl_bits = QLabel(self.tr(
             "El ancho de bits (8 o 16) se elige en las opciones de PNG y TIFF, "
@@ -194,6 +297,24 @@ class DepthPopoverContent(QFrame):
         width = max(fm.horizontalAdvance(w.text()) for w in self._label_widgets) + 6
         for w in self._label_widgets:
             w.setFixedWidth(width)
+
+    def _on_relief_toggled(self, checked: bool):
+        self.relief_options.setVisible(checked)
+        self._update_relief_rows()
+
+    def _relief_mode(self) -> str:
+        """"scene" solo si está elegido Y el modelo es MoGe-2; si no, siempre "relief"."""
+        model_info = self._current_model_info()
+        if model_info and model_info.get("engine") == "moge":
+            return self.combo_relief_mode.currentData()
+        return "relief"
+
+    def _update_relief_rows(self):
+        """"Tipo" solo con MoGe-2; "Intensidad" solo en Relieve (la escena ya viene a
+        escala real)."""
+        model_info = self._current_model_info()
+        self.row_relief_mode.setVisible(bool(model_info) and model_info.get("engine") == "moge")
+        self.row_relief_strength.setVisible(self._relief_mode() == "relief")
 
     def _on_gpu_toggled(self, checked: bool):
         """No impedimos, avisamos -- ver RembgPopoverContent._on_gpu_toggled."""
@@ -248,8 +369,16 @@ class DepthPopoverContent(QFrame):
         return f"{model_info.get('folder', '')}/{model_info.get('file', '')}"
 
     def _update_process_label(self, model_info):
+        self.row_detail.setVisible(bool(model_info) and model_info.get("engine") == "moge")
+        self._update_relief_rows()
         if not model_info:
             self.lbl_process.setVisible(False)
+            return
+        if model_info.get("engine") == "moge":
+            self.lbl_process.setText(self.tr(
+                "Calcula la forma 3D de la escena y la amplía al tamaño original. Lo que no "
+                "es superficie (el cielo) sale negro."))
+            self.lbl_process.setVisible(True)
             return
         size = int(model_info.get("process_size") or 518)
         if model_info.get("process_mode") == "square":
@@ -413,4 +542,10 @@ class DepthPopoverContent(QFrame):
             "depth_model": self.combo_model.currentData(),
             "depth_gpu": self.gpu_enabled(),
             "depth_invert": self.check_invert.isChecked(),
+            "depth_detail": self.combo_detail.currentData(),
+            "depth_relief": self.check_relief.isChecked() and not self._video_mode,
+            "depth_relief_mode": self._relief_mode(),
+            "depth_relief_strength": self.combo_relief_strength.currentData(),
+            "depth_relief_density": self.combo_relief_density.currentData(),
+            "depth_relief_split": self.check_relief_split.isChecked(),
         }

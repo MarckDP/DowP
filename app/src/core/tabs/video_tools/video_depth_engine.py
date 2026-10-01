@@ -196,6 +196,9 @@ def run_depth_video(input_path: str, output_path: str, options: dict, fps: float
     model_info = _model_info(options)
     if not model_info:
         return False, QCoreApplication.translate("video_depth_engine", "No hay un modelo de profundidad seleccionado.")
+    if model_info.get("engine") == "moge":
+        # El popover en modo video no lo ofrece (ver DepthPopoverContent); esto es por si acaso.
+        return False, QCoreApplication.translate("video_depth_engine", "MoGe-2 todavía no calcula profundidad en video: úsalo en el Editor de Imagen.")
     if not is_depth_model_installed(model_info):
         return False, QCoreApplication.translate("video_depth_engine", "El modelo '{0}' no está instalado -- ve a Ajustes > Modelos para "
                           "descargarlo.").format(options.get("depth_model"))

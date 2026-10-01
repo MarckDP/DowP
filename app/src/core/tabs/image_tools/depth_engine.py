@@ -108,10 +108,51 @@ def _to_near_bright(raw, output_kind: str):
     return (depth - lo) / (hi - lo + 1e-8)
 
 
-def estimate_depth(img: Image.Image, options: dict, progress_callback=None) -> tuple[Image.Image, tuple[int, int]]:
+def _moge_near_bright(session, rgb: Image.Image, detail: str, near_out: dict | None = None) -> np.ndarray:
+    """Mapa 2D en 0..1 con cerca = 1 a partir de MoGe-2 (familia de NORMAL_MODEL_FAMILIES,
+    ver models_setup.get_depth_families), al tamaño de trabajo de MoGe (lado mayor hasta
+    1024 px). Usa la z de "points" (distancia a lo largo del eje de la cámara).
+
+    A diferencia de los demás modelos no se pasa a 1/z: la profundidad de MoGe es real, y en
+    una calle con alguien cerca 1/z deja a esa persona en blanco y toda la ciudad casi negra.
+    Se usa -log(z), con el rango de los percentiles 1-99 (lo que queda fuera se satura), que
+    reparte el gris entre lo cercano y lo lejano (comparado con fotos reales, 2026-09-30).
+    Lo que no es superficie según su máscara (el cielo) queda en 0, lo más lejano.
+
+    near_out, si se pasa, recibe además "points" (HxWx3 en metros, ejes de cámara OpenCV) y
+    "mask" (HxW bool), al tamaño de trabajo -- los usa la Escena 3D (ver relief_mesh.py)."""
+    from core.tabs.image_tools.normal_engine import MOGE_TOKENS, moge_outputs, moge_work_size
+
+    work_size = moge_work_size(rgb.width, rgb.height)
+    work = rgb if work_size == rgb.size else rgb.resize(work_size, Image.Resampling.LANCZOS)
+    outputs = moge_outputs(session, np.asarray(work), MOGE_TOKENS.get(detail, MOGE_TOKENS["medium"]))
+    z = outputs["points"][0][..., 2].astype(np.float32)
+    valid = (outputs["mask"][0] > 0.5) & np.isfinite(z) & (z > 1e-6)
+    if near_out is not None:
+        # El ONNX de Large la llama "metric_scale" y el de Small "scale" (comprobado el
+        # 2026-09-30); si faltara, la escena sale sin escala real pero con la forma bien.
+        scale_out = outputs.get("metric_scale", outputs.get("scale"))
+        scale = float(np.asarray(scale_out).ravel()[0]) if scale_out is not None else 1.0
+        near_out["points"] = outputs["points"][0].astype(np.float32) * scale
+        near_out["mask"] = valid
+    depth = np.zeros_like(z)
+    if not valid.any():
+        return depth
+    nearness = -np.log(z[valid])
+    lo, hi = (float(v) for v in np.percentile(nearness, (1, 99)))
+    depth[valid] = np.clip((nearness - lo) / (hi - lo + 1e-8), 0.0, 1.0)
+    return depth
+
+
+def estimate_depth(img: Image.Image, options: dict, progress_callback=None,
+                   near_out: dict | None = None) -> tuple[Image.Image, tuple[int, int]]:
     """Calcula el mapa de profundidad de `img` según options (depth_family/
-    depth_model/depth_gpu/depth_invert -- ver DepthPopoverContent.get_settings(); y
+    depth_model/depth_gpu/depth_invert, y depth_detail solo con MoGe-2 -- ver
+    DepthPopoverContent.get_settings(); y
     depth_16bit, que viene de las opciones de PNG/TIFF, ver ConvertPanel.get_settings()).
+    near_out, si se pasa, recibe en "near" el mapa en coma flotante (0..1, cerca = 1, sin
+    invertir, al tamaño de proceso) -- lo usa el relieve 3D (ver relief_mesh.py), que así no
+    parte de la versión ya cuantizada a 8 bits.
     Devuelve (mapa, (ancho, alto) de
     proceso). El mapa sale en modo "I;16" con depth_16bit y sin alfa, "LA" si
     `img` traía alfa (PNG no admite gris de 16 bits con alfa) y "L" si no."""
@@ -132,20 +173,32 @@ def estimate_depth(img: Image.Image, options: dict, progress_callback=None) -> t
 
     alpha = img.getchannel("A") if img.mode in ("RGBA", "LA", "PA") else None
     width, height = img.size
-    process_size = get_process_size(model_info, width, height)
+    is_moge = model_info.get("engine") == "moge"
+    detail = options.get("depth_detail", "medium")
+    if is_moge:
+        from core.tabs.image_tools.normal_engine import get_process_size as moge_process_size
+        process_size = moge_process_size(model_info, width, height, detail)
+    else:
+        process_size = get_process_size(model_info, width, height)
 
     try:
         session = onnx_sessions.get_session(get_depth_model_path(model_info), use_gpu, label="Mapa de Profundidad")
-        feed = {session.get_inputs()[0].name: _preprocess(img.convert("RGB"), process_size,
-                                                          model_info.get("input_layout", "4d"))}
-        raw = session.run([session.get_outputs()[0].name], feed)[0]
+        if is_moge:
+            depth = _moge_near_bright(session, img.convert("RGB"), detail, near_out)
+        else:
+            feed = {session.get_inputs()[0].name: _preprocess(img.convert("RGB"), process_size,
+                                                              model_info.get("input_layout", "4d"))}
+            raw = session.run([session.get_outputs()[0].name], feed)[0]
     except Exception as e:
         if use_gpu and is_gpu_failure(e):
             logger.warning(f"Mapa de Profundidad: la GPU falló o se colgó ({e!r}) -- reintentando por CPU.")
-            return estimate_depth(img, {**options, "depth_gpu": False}, progress_callback)
+            return estimate_depth(img, {**options, "depth_gpu": False}, progress_callback, near_out)
         raise
 
-    depth = _to_near_bright(raw, model_info.get("output_kind", "disparity"))
+    if not is_moge:
+        depth = _to_near_bright(raw, model_info.get("output_kind", "disparity"))
+    if near_out is not None:
+        near_out["near"] = depth
     if options.get("depth_invert", False):
         depth = 1.0 - depth
 

@@ -3133,7 +3133,7 @@ que o YouTube aplica dinamicamente às suas transmissões.</translation>
 <context>
     <name>DepthPopoverContent</name>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="41"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="44"/>
         <source>En macOS, la aceleración por GPU (CoreML) no es confiable con todos los modelos de IA -- con los de Eliminar Fondo hay bugs conocidos de Apple (macOS 26.x) que pueden cerrar la app de golpe, y los de profundidad todavía no se han probado en Mac. La CPU sola ya rinde bien para esto.
 
 Puedes dejarla activada igual si quieres probar, pero si la app se cierra sola o se cuelga, vuelve a desmarcar esta opción.</source>
@@ -3142,7 +3142,7 @@ Puedes dejarla activada igual si quieres probar, pero si la app se cierra sola o
 Você pode deixá-la ativada mesmo assim se quiser testar, mas se o app fechar sozinho ou travar, desmarque esta opção de novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="51"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="54"/>
         <source>Si está activo, usa la tarjeta gráfica (GPU).
 Si se desactiva, usará el procesador (CPU) a máxima potencia.
 Desactívalo si tienes problemas de drivers o cuelgues.</source>
@@ -3151,100 +3151,218 @@ Se for desativado, usará o processador (CPU) na potência máxima.
 Desative se tiver problemas de drivers ou travamentos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="57"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="60"/>
+        <source>Cuánto detalle calcula el modelo. Más detalle tarda más y usa más memoria.</source>
+        <translation>Quanto detalhe o modelo calcula. Mais detalhe demora mais e usa mais memória.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="76"/>
+        <source>Cuánto sale hacia adelante lo más cercano. El modelo no sabe las distancias reales, así que se elige a ojo.</source>
+        <translation>O quanto as partes mais próximas saem para frente. O modelo não sabe as distâncias reais, então se escolhe a olho.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="81"/>
+        <source>Cuántos vértices tiene la malla. Más densidad sigue mejor los detalles, pero el archivo pesa más. La textura siempre va a resolución completa.</source>
+        <translation>Quantos vértices a malha tem. Mais densidade acompanha melhor os detalhes, mas o arquivo fica maior. A textura sempre fica em resolução completa.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="86"/>
+        <source>Corta la malla donde la profundidad salta de golpe (por ejemplo, entre una persona y la pared de atrás). Así el sujeto queda despegado del fondo en vez de estirado, pero quedan huecos al mover la cámara.</source>
+        <translation>Corta a malha onde a profundidade muda de repente (por exemplo, entre uma pessoa e a parede atrás). Assim o sujeito fica separado do fundo em vez de esticado, mas aparecem buracos ao mover a câmera.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="92"/>
         <source>Por defecto lo cercano sale blanco y lo lejano negro.
 Marca esta opción si tu programa espera lo contrario.</source>
         <translation>Por padrão, o que está perto sai branco e o que está longe, preto.
 Marque esta opção se o seu programa espera o contrário.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="96"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="131"/>
         <source>Mapa de Profundidad con IA</source>
         <translation>Mapa de Profundidade com IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="102"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="137"/>
         <source>Aceleración de Hardware (GPU)</source>
         <translation>Aceleração de Hardware (GPU)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="111"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="146"/>
         <source>Motor:</source>
         <translation>Motor:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="117"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="154"/>
         <source>{0} (recomendado para video)</source>
         <translation>{0} (recomendado para vídeo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="124"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="161"/>
         <source>Modelo:</source>
         <translation>Modelo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="152"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="189"/>
         <source>Borrar del disco el modelo seleccionado</source>
         <translation>Apagar do disco o modelo selecionado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="166"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="207"/>
+        <source>Detalle:</source>
+        <translation>Detalhe:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="210"/>
+        <source>Bajo (rápido)</source>
+        <translation>Baixo (rápido)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="211"/>
+        <source>Medio</source>
+        <translation>Médio</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="212"/>
+        <source>Alto (más detalle)</source>
+        <translation>Alto (mais detalhe)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="218"/>
         <source>Invertir (cerca = negro)</source>
         <translation>Inverter (perto = preto)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="171"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="64"/>
+        <source>Además del mapa, guarda una malla 3D con la imagen como textura (.obj + .mtl + textura), para Blender o After Effects.</source>
+        <translation>Além do mapa, salva uma malha 3D com a imagem como textura (.obj + .mtl + textura), para o Blender ou o After Effects.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="69"/>
+        <source>Relieve: una lámina empujada hacia adelante según la profundidad, para efectos de parallax. Sirve con cualquier modelo.
+Escena 3D: cada punto en su posición real, en metros, vista desde la cámara. Solo con MoGe-2. El cielo no se incluye.</source>
+        <translation>Relevo: uma lâmina empurrada para frente de acordo com a profundidade, para efeitos de parallax. Funciona com qualquer modelo.
+Cena 3D: cada ponto na sua posição real, em metros, vista a partir da câmera. Somente com o MoGe-2. O céu não é incluído.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="223"/>
+        <source>Exportar malla 3D (.obj)</source>
+        <translation>Exportar malha 3D (.obj)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="236"/>
+        <source>Tipo:</source>
+        <translation>Tipo:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="239"/>
+        <source>Relieve</source>
+        <translation>Relevo</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="240"/>
+        <source>Escena 3D</source>
+        <translation>Cena 3D</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="247"/>
+        <source>Intensidad:</source>
+        <translation>Intensidade:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="250"/>
+        <source>Suave</source>
+        <translation>Suave</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="251"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="261"/>
+        <source>Media</source>
+        <translation>Média</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="252"/>
+        <source>Fuerte</source>
+        <translation>Forte</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="257"/>
+        <source>Densidad:</source>
+        <translation>Densidade:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="260"/>
+        <source>Baja (archivo liviano)</source>
+        <translation>Baixa (arquivo leve)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="262"/>
+        <source>Alta (archivo pesado)</source>
+        <translation>Alta (arquivo pesado)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="266"/>
+        <source>Separar en los bordes</source>
+        <translation>Separar nas bordas</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="274"/>
         <source>El ancho de bits (8 o 16) se elige en las opciones de PNG y TIFF, en Formato de salida.</source>
         <translation>A profundidade de bits (8 ou 16) é escolhida nas opções de PNG e TIFF, em Formato de saída.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="201"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="322"/>
         <source>Aceleración por GPU en macOS</source>
         <translation>Aceleração por GPU no macOS</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="225"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="346"/>
         <source>Instalado</source>
         <translation>Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="229"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="350"/>
         <source>No descargado</source>
         <translation>Não baixado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="230"/>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="277"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="351"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="406"/>
         <source>Licencia: {0}</source>
         <translation>Licença: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="256"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="379"/>
+        <source>Calcula la forma 3D de la escena y la amplía al tamaño original. Lo que no es superficie (el cielo) sale negro.</source>
+        <translation>Calcula a forma 3D da cena e a amplia para o tamanho original. O que não é superfície (o céu) sai preto.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="385"/>
         <source>Calcula la profundidad a {0}×{0} px (en cuadrado) y la amplía al tamaño original.</source>
         <translation>Calcula a profundidade em {0}×{0} px (em quadrado) e a amplia para o tamanho original.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="259"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="388"/>
         <source>Calcula la profundidad con el lado corto a {0} px y la amplía al tamaño original.</source>
         <translation>Calcula a profundidade com o lado menor em {0} px e a amplia para o tamanho original.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="274"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="403"/>
         <source>Licencia: {0} · solo uso no comercial</source>
         <translation>Licença: {0} · somente uso não comercial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="300"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="429"/>
         <source>Modelo listo para usar.</source>
         <translation>Modelo pronto para usar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="303"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="432"/>
         <source>No descargado — vuelve a elegirlo en la lista para descargarlo.</source>
         <translation>Não baixado — escolha-o de novo na lista para baixá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="316"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="445"/>
         <source>¿Eliminar &apos;{0}&apos; del disco?
 
 Puedes volver a descargarlo cuando quieras.</source>
@@ -3253,32 +3371,32 @@ Puedes volver a descargarlo cuando quieras.</source>
 Você pode baixá-lo de novo quando quiser.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="318"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="447"/>
         <source>Eliminar modelo</source>
         <translation>Excluir modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="321"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="450"/>
         <source>No se pudo eliminar el modelo.</source>
         <translation>Não foi possível excluir o modelo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="348"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="477"/>
         <source>Licencia {0}: solo permite uso no comercial.</source>
         <translation>Licença {0}: permite apenas uso não comercial.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="351"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="480"/>
         <source>modelo</source>
         <translation>modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="383"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="512"/>
         <source>No se pudo descargar: {0}</source>
         <translation>Não foi possível baixar: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="385"/>
+        <location filename="../../gui/tabs/image_tools/depth_popover.py" line="514"/>
         <source>Error de descarga</source>
         <translation>Erro de download</translation>
     </message>
@@ -5426,49 +5544,49 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
         <location filename="../../core/tabs/image_tools/image_converter.py" line="105"/>
         <location filename="../../core/tabs/image_tools/image_converter.py" line="115"/>
         <location filename="../../core/tabs/image_tools/image_converter.py" line="126"/>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="149"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="156"/>
         <source>Cancelado por el usuario.</source>
         <translation>Cancelado pelo usuário.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="288"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="299"/>
         <source>instálalo desde Ajustes &gt; Dependencias, o acepta la descarga que te ofrece Convertir.</source>
         <translation>instale em Configurações &gt; Dependências, ou aceite o download que o Converter oferece.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="484"/>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="503"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="515"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="534"/>
         <source>Añadir Margen Externo</source>
         <translation>Adicionar Margem Externa</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="487"/>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="504"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="518"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="535"/>
         <source>Añadir Margen Interno</source>
         <translation>Adicionar Margem Interna</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="517"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="548"/>
         <source>Reducir hasta que quepa</source>
         <translation>Reduzir até caber</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="525"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="556"/>
         <source>Recortar al canvas</source>
         <translation>Recortar no canvas</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="638"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="669"/>
         <source>No se puede guardar como AVIF -- falta instalar &apos;pillow-avif-plugin&apos;.</source>
         <translation>Não é possível salvar como AVIF -- falta instalar o &apos;pillow-avif-plugin&apos;.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="669"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="700"/>
         <source>SVG necesita vtracer -- instálalo desde Ajustes &gt; Dependencias, o acepta la descarga que te ofrece Convertir.</source>
         <translation>SVG precisa do vtracer -- instale-o em Configurações &gt; Dependências, ou aceite o download oferecido pelo Converter.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="723"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="754"/>
         <source>vtracer no pudo vectorizar: {0}</source>
         <translation>O vtracer não conseguiu vetorizar: {0}</translation>
     </message>
@@ -15257,12 +15375,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>depth_engine</name>
     <message>
-        <location filename="../../core/tabs/image_tools/depth_engine.py" line="120"/>
+        <location filename="../../core/tabs/image_tools/depth_engine.py" line="158"/>
         <source>Mapa de Profundidad: no hay un modelo de IA seleccionado.</source>
         <translation>Mapa de Profundidade: nenhum modelo de IA selecionado.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/depth_engine.py" line="123"/>
+        <location filename="../../core/tabs/image_tools/depth_engine.py" line="161"/>
         <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
         <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>
@@ -15357,32 +15475,32 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>image_converter</name>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="175"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="186"/>
         <source>Conversión completada.</source>
         <translation>Conversão concluída.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="254"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="265"/>
         <source>No se pudo abrir como PDF ({0}): {1}. Los .ai muy antiguos (pre-PDF, PostScript puro) no están soportados.</source>
         <translation>Não foi possível abrir como PDF ({0}): {1}. Arquivos .ai muito antigos (pré-PDF, PostScript puro) não são suportados.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="291"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="302"/>
         <source>instálalo desde tu terminal vía {0}: {1}</source>
         <translation>instale pelo seu terminal via {0}: {1}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="312"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="323"/>
         <source>Ghostscript no pudo convertir {0}: {1}</source>
         <translation>O Ghostscript não conseguiu converter {0}: {1}</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="510"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="541"/>
         <source>La imagen ({0}×{1}) excede el canvas ({2}×{3}).</source>
         <translation>A imagem ({0}×{1}) ultrapassa o canvas ({2}×{3}).</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/image_converter.py" line="578"/>
+        <location filename="../../core/tabs/image_tools/image_converter.py" line="609"/>
         <source>Formato de salida no soportado: {0}</source>
         <translation>Formato de saída não suportado: {0}</translation>
     </message>
@@ -15535,13 +15653,13 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
     <name>models_setup</name>
     <message>
         <location filename="../../core/setup/models_setup.py" line="110"/>
-        <location filename="../../core/setup/models_setup.py" line="382"/>
+        <location filename="../../core/setup/models_setup.py" line="392"/>
         <source>El archivo descargado quedó vacío o incompleto.</source>
         <translation>O arquivo baixado ficou vazio ou incompleto.</translation>
     </message>
     <message>
         <location filename="../../core/setup/models_setup.py" line="112"/>
-        <location filename="../../core/setup/models_setup.py" line="384"/>
+        <location filename="../../core/setup/models_setup.py" line="394"/>
         <source>Modelo descargado correctamente.</source>
         <translation>Modelo baixado corretamente.</translation>
     </message>
@@ -15571,17 +15689,17 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Modelo importado corretamente.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="581"/>
+        <location filename="../../core/setup/models_setup.py" line="591"/>
         <source>&apos;{0}&apos; no tiene una build disponible para este sistema operativo.</source>
         <translation>&apos;{0}&apos; não tem uma build disponível para este sistema operacional.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="601"/>
+        <location filename="../../core/setup/models_setup.py" line="611"/>
         <source>No se encontró {0} tras la instalación.</source>
         <translation>{0} não foi encontrado após a instalação.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="611"/>
+        <location filename="../../core/setup/models_setup.py" line="621"/>
         <source>Motor instalado correctamente.</source>
         <translation>Motor instalado corretamente.</translation>
     </message>
@@ -15589,12 +15707,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>normal_engine</name>
     <message>
-        <location filename="../../core/tabs/image_tools/normal_engine.py" line="199"/>
+        <location filename="../../core/tabs/image_tools/normal_engine.py" line="211"/>
         <source>Mapa de Normales: no hay un modelo de IA seleccionado.</source>
         <translation>Mapa de Normais: nenhum modelo de IA selecionado.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/image_tools/normal_engine.py" line="202"/>
+        <location filename="../../core/tabs/image_tools/normal_engine.py" line="214"/>
         <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
         <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>
@@ -15906,7 +16024,12 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Nenhum modelo de profundidade selecionado.</translation>
     </message>
     <message>
-        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="200"/>
+        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="201"/>
+        <source>MoGe-2 todavía no calcula profundidad en video: úsalo en el Editor de Imagen.</source>
+        <translation>O MoGe-2 ainda não calcula profundidade em vídeo: use-o no Editor de Imagem.</translation>
+    </message>
+    <message>
+        <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="203"/>
         <source>El modelo &apos;{0}&apos; no está instalado -- ve a Ajustes &gt; Modelos para descargarlo.</source>
         <translation>O modelo &apos;{0}&apos; não está instalado -- vá em Configurações &gt; Modelos para baixá-lo.</translation>
     </message>

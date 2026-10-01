@@ -130,9 +130,16 @@ class ImageConverter:
                 # escena completa y el mapa hereda ese alfa (solo la profundidad
                 # del sujeto). Antes de Reescalar/Canvas, que trabajan sobre lo
                 # que salga de aquí.
+                relief = None
                 if options.get("depth_enabled", False):
                     report(70, "depth")
-                    img, process_size = self._apply_depth(img, options, report)
+                    near_out = {} if options.get("depth_relief", False) else None
+                    source = img
+                    img, process_size = self._apply_depth(img, options, report, near_out)
+                    if near_out and "near" in near_out:
+                        # El relieve 3D lleva como textura la imagen que vio el modelo
+                        # (ya recortada por Eliminar Fondo si corrió), no el mapa.
+                        relief = (near_out, source)
                     if info is not None:
                         info["depth_process_size"] = process_size
                     report(72, "depth")
@@ -169,6 +176,10 @@ class ImageConverter:
                     self._save_passthrough(img, input_ext, output_path, options)
                 else:
                     self._save_as(img, output_format, output_path, options)
+
+                if relief is not None:
+                    report(96, "saving")
+                    self._export_relief(relief, output_path, options)
 
                 report(100, "saving")
                 logger.info(f"Convertir: {input_path} -> OK ({output_path})")
@@ -425,7 +436,7 @@ class ImageConverter:
         expand = int(options.get("rembg_expand", 0) or 0)
         return apply_alpha_postprocess(img, smooth, expand)
 
-    def _apply_depth(self, img, options: dict, progress_callback=None):
+    def _apply_depth(self, img, options: dict, progress_callback=None, near_out=None):
         """Corre Mapa de Profundidad (ver core/tabs/image_tools/depth_engine.py)
         sobre `img`. Devuelve (mapa, (ancho, alto) de proceso)."""
         from core.tabs.image_tools.depth_engine import estimate_depth
@@ -439,7 +450,27 @@ class ImageConverter:
 
         # Una fuente de 16 bits (PNG/TIFF en gris) se baja a 8 bits antes: el
         # convert("RGB") del motor recortaría sus valores en vez de escalarlos.
-        return estimate_depth(self._downconvert_16bit(img), options, progress_callback=depth_cb)
+        return estimate_depth(self._downconvert_16bit(img), options, progress_callback=depth_cb,
+                              near_out=near_out)
+
+    def _export_relief(self, relief, output_path: str, options: dict):
+        """Malla 3D (.obj) junto a la imagen ya guardada (ver relief_mesh.py): Escena 3D si se
+        pidió y el modelo dio puntos 3D (solo MoGe-2), si no, Relieve. Si falla no tumba la
+        conversión: el mapa ya está guardado y es lo principal; queda en el log."""
+        from core.tabs.image_tools.relief_mesh import export_relief, export_scene
+        near_out, source = relief
+        try:
+            texture = self._downconvert_16bit(source)
+            if texture.mode not in ("RGB", "RGBA"):
+                has_alpha = "A" in texture.getbands() or "transparency" in texture.info
+                texture = texture.convert("RGBA" if has_alpha else "RGB")
+            if options.get("depth_relief_mode") == "scene" and "points" in near_out:
+                obj_path = export_scene(near_out["points"], near_out["mask"], texture, output_path, options)
+            else:
+                obj_path = export_relief(near_out["near"], texture, output_path, options)
+            logger.info(f"Relieve 3D: {obj_path}")
+        except Exception as e:
+            logger.error(f"Relieve 3D: no se pudo crear para {output_path}: {e}")
 
     def _apply_normals(self, img, options: dict, progress_callback=None):
         """Corre Mapa de Normales (ver core/tabs/image_tools/normal_engine.py) sobre `img`.

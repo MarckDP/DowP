@@ -280,8 +280,18 @@ def delete_custom_rembg_model(display_name: str) -> bool:
 
 def get_depth_families() -> dict:
     """Catálogo de modelos de profundidad -- fuente única para la UI y el motor
-    (mismo papel que get_all_rembg_families(), sin modelos importados)."""
-    return dict(DEPTH_MODEL_FAMILIES)
+    (mismo papel que get_all_rembg_families(), sin modelos importados).
+
+    Suma las familias MoGe-2 de NORMAL_MODEL_FAMILIES: el mismo modelo da normales y
+    profundidad, así que se reutilizan tal cual sus entradas (misma carpeta, una sola
+    descarga para las dos herramientas). Se agregan aquí y no en DEPTH_MODEL_FAMILIES
+    para que Ajustes > Modelos no las liste dos veces. Solo sirven en el Editor de
+    Imagen: el popover en modo video las oculta."""
+    families = dict(DEPTH_MODEL_FAMILIES)
+    for family_name, models in NORMAL_MODEL_FAMILIES.items():
+        if any(m.get("engine") == "moge" for m in models.values()):
+            families[family_name] = models
+    return families
 
 
 def get_depth_model_dir(model_info: dict) -> str:

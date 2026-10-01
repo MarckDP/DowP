@@ -105,14 +105,26 @@ def moge_tokens(options: dict) -> int:
     return MOGE_TOKENS.get(options.get("normals_detail", "medium"), MOGE_TOKENS["medium"])
 
 
+def moge_outputs(session, rgb: np.ndarray, tokens: int) -> dict:
+    """Corre MoGe-2 sobre un RGB uint8 HxWx3 ya al tamaño de trabajo (ver moge_work_size) y
+    devuelve sus cuatro salidas por nombre, al tamaño de entrada:
+      - "points": 1xHxWx3, posición 3D de cada píxel en ejes de cámara (x derecha, y abajo,
+        z > 0 hacia dentro de la escena), sin escala;
+      - "normal": 1xHxWx3; "mask": 1xHxW, probabilidad de que haya superficie;
+      - "metric_scale" ("scale" en el ONNX de Small): (1,), factor que lleva "points" a metros.
+    Las normales usan "normal"; el Mapa de Profundidad, "points" (ver
+    depth_engine._moge_near_bright)."""
+    tensor = (np.asarray(rgb, dtype=np.float32) / 255.0).transpose(2, 0, 1)[None]
+    outputs = session.run(None, {"image": np.ascontiguousarray(tensor, dtype=np.float32),
+                                 "num_tokens": np.array(tokens, dtype=np.int64)})
+    return dict(zip((o.name for o in session.get_outputs()), outputs))
+
+
 def moge_vectors(session, rgb: np.ndarray, tokens: int) -> np.ndarray:
     """Normales (HxWx3 float32 unitarios, convención OpenGL) de un RGB uint8 HxWx3 ya al
     tamaño de trabajo (ver moge_work_size). Las usan el Editor de Imagen y el Mapa de
     Normales de video (core/tabs/video_tools/video_normal_engine.py)."""
-    tensor = (np.asarray(rgb, dtype=np.float32) / 255.0).transpose(2, 0, 1)[None]
-    outputs = session.run(None, {"image": np.ascontiguousarray(tensor, dtype=np.float32),
-                                 "num_tokens": np.array(tokens, dtype=np.int64)})
-    by_name = dict(zip((o.name for o in session.get_outputs()), outputs))
+    by_name = moge_outputs(session, rgb, tokens)
     normal, mask = by_name["normal"][0], by_name["mask"][0]     # HxWx3 y HxW, al tamaño de entrada
 
     # cámara (x derecha, y abajo, z hacia dentro) -> OpenGL (x derecha, y arriba, z hacia ti)
