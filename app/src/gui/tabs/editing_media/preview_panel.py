@@ -106,7 +106,9 @@ class PreviewContainerWidget(QFrame):
         super().__init__(parent)
         self.setObjectName("previewContainer")
         
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        # Expanding en vertical: toma el alto que le deje el layout, con tope en ancho x 0.6
+        # (ver resizeEvent).
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMinimumHeight(140)
         # Por defecto mantiene el alto tipo "reproductor" (ancho x 0.6) que usa el
         # Gestor de Medios -- ver set_fill_available_space() para el modo usado por el
@@ -169,6 +171,9 @@ class PreviewContainerWidget(QFrame):
         self.placeholder_label = QLabel()
         self.placeholder_label.setAlignment(Qt.AlignCenter)
         self.placeholder_label.setWordWrap(True)
+        # Ignored: el pixmap se escala al cuadro, no al revés. Por defecto un QLabel pide
+        # como mínimo el tamaño de su pixmap, y eso frenaba el achicado del cuadro.
+        self.placeholder_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.placeholder_label.setVisible(False)
         self.layout.addWidget(self.placeholder_label, 1)
 
@@ -311,7 +316,7 @@ class PreviewContainerWidget(QFrame):
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         else:
             self.setMinimumHeight(140)
-            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def set_zoomable(self, enabled: bool):
         """Activa el visor con zoom (rueda del mouse) y paneo (arrastrar) para
@@ -325,11 +330,16 @@ class PreviewContainerWidget(QFrame):
         super().resizeEvent(event)
         w = self.width()
         if w > 0:
-            if self._fill_available_space:
-                avail_h = self.height()
-            else:
-                avail_h = int(w * 0.6)
-                self.setFixedHeight(avail_h)
+            if not self._fill_available_space:
+                # Tope, no alto fijo: con setFixedHeight(w * 0.6) el cuadro crecía sin
+                # límite al ensanchar la columna y, como el layout no puede achicar un
+                # alto fijo, se montaba por detrás de la forma de onda y la información
+                # técnica. Con un máximo, el layout le da lo que haya libre hasta ese tope.
+                max_h = max(self.minimumHeight(), int(w * 0.6))
+                if self.maximumHeight() != max_h:
+                    self.setMaximumHeight(max_h)
+            # Escalar siempre al alto REAL que dio el layout, no al teórico.
+            avail_h = self.height()
             if hasattr(self, "volume_control") and self.volume_control:
                 self.volume_control.set_slider_visible(w >= 280)
             if hasattr(self, "lbl_video_time") and self.lbl_video_time:

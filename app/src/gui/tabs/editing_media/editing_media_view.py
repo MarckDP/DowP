@@ -879,7 +879,9 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.preview_box = PreviewContainerWidget()
         if hasattr(self.preview_box, "btn_edit_subclip"):
             self.preview_box.btn_edit_subclip.clicked.connect(self._on_open_subclip_dialog)
-        layout.addWidget(self.preview_box)
+        # Stretch alto frente al de info_box (1): el espacio libre va primero a la vista
+        # previa, que igual tiene tope en ancho x 0.6 (ver PreviewContainerWidget.resizeEvent).
+        layout.addWidget(self.preview_box, 3)
 
         # El panel de audio/forma de onda
         layout.addWidget(self.audio_panel)
