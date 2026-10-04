@@ -867,8 +867,31 @@ class FragmentDialog(QDialog):
         super().reject()
 
     def accept(self):
+        if not self._commit_pending_range():
+            return
         self.cleanup_media_player()
         super().accept()
+
+    def _commit_pending_range(self):
+        """Si la lista está vacía pero hay un rango marcado en la línea de tiempo,
+        aceptar lo agrega como único fragmento: para cortar UN fragmento no hace falta
+        pasar por el "+" (antes el rango se perdía en silencio y se bajaba el video
+        completo). Con fragmentos ya en la lista no se toca nada: ahí el rango marcado
+        es ambiguo. Tampoco si la lista quedó vacía porque el usuario borró fragmentos
+        (is_modified): ahí vaciarla fue intencional. Retorna False si el rango es
+        inválido y el diálogo debe seguir abierto."""
+        if self.fragments or self.is_modified:
+            return True
+        in_sec, out_sec = self.trim_player.get_in_out()
+        # Tolerancia de 1 s: la duración del reproductor y la de los metadatos no
+        # siempre coinciden al milisegundo, y sin tocar las asas el rango es el video
+        # completo, que no es un corte.
+        duration_sec = self.duration_ms / 1000.0
+        if in_sec <= 1.0 and out_sec >= duration_sec - 1.0:
+            return True
+        # add_fragment valida el rango y, si es inválido, avisa el motivo y no agrega.
+        self.add_fragment()
+        return bool(self.fragments)
 
     def closeEvent(self, event):
         self.cleanup_media_player()

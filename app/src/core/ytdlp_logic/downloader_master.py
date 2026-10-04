@@ -155,20 +155,42 @@ class DownloaderMaster:
                     try:
                         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                             ydl.download([url])
+                    except DownloadCancelledError:
+                        raise
                     except Exception as frag_err:
                         if is_youtube_access_error(url, frag_err):
                             logger.warning(
                                 f"DownloaderMaster: YouTube/FFmpeg bloqueó el fragmento ({frag_err}). "
-                                f"Reintentando fragmento con cliente alternativo (web_embedded)..."
+                                f"Reintentando fragmento con cliente alternativo (web_embedded)"
+                                f"{f' [encoder: {gpu_encoder_used}]' if gpu_encoder_used else ''}..."
                             )
                             fallback_opts = make_fallback_ydl_opts(ydl_opts)
-                            with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
-                                ydl_fallback.download([url])
+                            try:
+                                with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
+                                    ydl_fallback.download([url])
+                            except DownloadCancelledError:
+                                raise
+                            except Exception as fallback_err:
+                                # "ffmpeg exited with code" cuenta como bloqueo de YouTube
+                                # (ver resilient_downloader), así que un fallo real del
+                                # encoder de GPU entra siempre por esta rama y nunca llegaba
+                                # al reintento con CPU de abajo. Último intento: mismo
+                                # cliente alternativo, pero con libx264.
+                                if not gpu_encoder_used:
+                                    raise
+                                logger.warning(
+                                    f"DownloaderMaster: El cliente alternativo también falló con GPU "
+                                    f"({gpu_encoder_used}) en el fragmento {i+1} ({fallback_err}). "
+                                    f"Reintentando con CPU (libx264)..."
+                                )
+                                cpu_opts = make_fallback_ydl_opts(
+                                    self._prepare_opts(frag_data, progress_callback, force_cpu_encoder=True))
+                                with yt_dlp.YoutubeDL(cpu_opts) as ydl_cpu:
+                                    ydl_cpu.download([url])
                         elif gpu_encoder_used:
                             # El encoder de GPU (NVENC/QSV) puede fallar en ciertos casos -
                             # resoluciones muy bajas, drivers desactualizados, límite de
-                            # sesiones NVENC concurrentes, etc. (reproducido con un video de
-                            # ~240p: "Preprocessing: Conversion failed!") - en vez de perder
+                            # sesiones NVENC concurrentes, etc. - en vez de perder
                             # todo el corte, reintentar UNA vez forzando CPU (libx264) para
                             # ESTE fragmento puntual. No desactiva la aceleración por GPU en
                             # general: el resto de fragmentos/descargas la siguen intentando
@@ -554,21 +576,19 @@ class DownloaderMaster:
                                     elif pref_enc == "h264_qsv":
                                         gpu_args.extend(["-preset", "veryfast"])
 
-                                    # 1. Inyectar en descargador external (FFmpegFD usado por download_ranges)
+                                    # Solo en el descargador externo (FFmpegFD usado por
+                                    # download_ranges): es quien re-codifica el corte y ya
+                                    # fusiona video+audio. NO en postprocessor_args: la clave
+                                    # "ffmpeg" ahí aplica a TODOS los postprocesadores
+                                    # (ThumbnailsConvertor, EmbedThumbnail, Metadata...) y la
+                                    # conversión de la miniatura a jpg fallaba con
+                                    # "-c:v h264_nvenc" ("Preprocessing: Conversion failed!").
                                     ext_args = ydl_opts.get("external_downloader_args", {})
                                     if isinstance(ext_args, dict):
                                         ext_args["ffmpeg"] = list(gpu_args)
                                     else:
                                         ext_args = {"ffmpeg": list(gpu_args)}
                                     ydl_opts["external_downloader_args"] = ext_args
-
-                                    # 2. Inyectar en post-procesadores
-                                    post_args = ydl_opts.get("postprocessor_args", {})
-                                    if isinstance(post_args, dict):
-                                        post_args["ffmpeg"] = list(gpu_args)
-                                    else:
-                                        post_args = {"ffmpeg": list(gpu_args)}
-                                    ydl_opts["postprocessor_args"] = post_args
 
                                     self._last_gpu_encoder_used = pref_enc
                                     logger.info(f"DownloaderMaster: Corte Preciso acelerado por GPU ({pref_enc}): {gpu_args}")
@@ -599,8 +619,8 @@ class DownloaderMaster:
                             pref_enc = hw_info.get("preferred_encoder")
                         if pref_enc and pref_enc != "libx264":
                             gpu_args = ["-c:v", pref_enc]
+                            # Solo el descargador externo: ver el caso de fragmento único.
                             ydl_opts["external_downloader_args"] = {"ffmpeg": list(gpu_args)}
-                            ydl_opts["postprocessor_args"] = {"ffmpeg": list(gpu_args)}
                             self._last_gpu_encoder_used = pref_enc
                     except Exception:
                         pass
@@ -768,12 +788,14 @@ class DownloaderMaster:
                     final_ext = data.get("video_ext")
 
                 if final_ext is None or final_ext.lower() in supported_exts:
-                    # 1. Convertir a JPG primero para que sea universalmente aceptado (especialmente por m4a/mp3)
-                    ydl_opts['postprocessors'].append({
-                        'key': 'FFmpegThumbnailsConvertor',
-                        'format': 'jpg',
-                        'when': 'before_dl'
-                    })
+                    # 1. Convertir a JPG primero para que sea universalmente aceptado (especialmente por m4a/mp3).
+                    # Si ya se pidió el archivo de miniatura, el convertidor ya está en la lista.
+                    if not data.get("download_thumbnail_file"):
+                        ydl_opts['postprocessors'].append({
+                            'key': 'FFmpegThumbnailsConvertor',
+                            'format': 'jpg',
+                            'when': 'before_dl'
+                        })
                     # 2. Incrustar la imagen convertida
                     ydl_opts['postprocessors'].append({
                         'key': 'EmbedThumbnail',

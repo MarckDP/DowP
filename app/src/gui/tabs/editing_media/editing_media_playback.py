@@ -1435,6 +1435,24 @@ class PlaybackMixin:
             except Exception:
                 pass
 
+    def _reset_media_panels(self):
+        """Deja la columna derecha sin medio: detiene la reproducción, vacía los detalles y
+        muestra el estado vacío de la vista previa. Con un audio seleccionado,
+        _on_media_clicked oculta preview_box y muestra audio_panel (carátula, nombre, forma
+        de onda), así que hay que revertir las dos cosas, no solo preview_box."""
+        self._stop_audio_playback()
+        self._clear_metadata()
+        # Sin esto, una previsualización de Freesound que termine de bajarse después del
+        # cambio arrancaría a sonar sola (ver _on_freesound_preview_ready).
+        self.active_remote_audio_url = None
+        if hasattr(self, "audio_panel"):
+            self.audio_panel.setVisible(False)
+        if hasattr(self, "waveform_widget"):
+            self.waveform_widget.set_audio_path("")
+        if hasattr(self, "preview_box"):
+            self.preview_box.show_default_state()
+            self.preview_box.setVisible(True)
+
     def _clear_metadata(self):
         for lbl in self.metadata_labels.values():
             lbl.setText("-")

@@ -258,6 +258,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         # Conectar señales del controlador
         self.controller.disk_changed.connect(self._on_disk_changed)
         self.controller.collections_changed.connect(self._on_collections_changed)
+        self.controller.collection_items_changed.connect(self._on_collection_items_changed)
         
         self.controller.indexing_started.connect(self._on_indexing_started)
         self.controller.indexing_progress.connect(self._on_indexing_progress)

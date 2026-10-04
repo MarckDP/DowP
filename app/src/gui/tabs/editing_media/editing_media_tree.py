@@ -344,8 +344,7 @@ class TreeListMixin:
             # el detener/limpiar que se suprimió mientras el modelo estaba en reset transitorio.
             self._refreshing_media_list = False
             if not restored:
-                self._clear_metadata()
-                self._stop_audio_playback()
+                self._reset_media_panels()
 
             # Restaurar la posición de scroll previa al refresco (p.ej. "Cargar más" o el scroll
             # infinito de Freesound), en vez de dejar que Qt salte a donde quedó reubicado el
@@ -392,6 +391,11 @@ class TreeListMixin:
                 media_items = []
             elif tipo == "web_source":
                 # Renderizar resultados del origen web seleccionado (Freesound, Wikimedia, ...)
+                # Esta rama carga el modelo por su cuenta y sale con return en todos sus
+                # caminos, sin pasar por _applied_display_paths: anularlo aquí obliga a que la
+                # próxima vista local recargue desde cero en vez de tomar el atajo de "Cargar
+                # más" y añadir sus medios DEBAJO de los resultados web.
+                self._applied_display_paths = None
                 source_id = data.get("source_id")
                 provider = getattr(self, "web_providers", {}).get(source_id)
                 if provider is None:
@@ -613,7 +617,9 @@ class TreeListMixin:
             new_paths = [it["ruta"] for it in display_items if "ruta" in it]
             applied = getattr(self, "_applied_display_paths", None)
             can_append = (
-                applied is not None
+                # Con una lista aplicada vacía no hay nada que continuar: cualquier lista
+                # "empieza igual" que [], y el atajo se activaba siempre.
+                bool(applied)
                 and len(new_paths) > len(applied)
                 and new_paths[:len(applied)] == applied
             )
@@ -668,10 +674,30 @@ class TreeListMixin:
         self.controller.trigger_async_indexing()
 
     def _on_collections_changed(self):
-        """Callback cuando se modifican las colecciones virtuales."""
+        """Callback cuando cambia la ESTRUCTURA de las colecciones (crear, renombrar,
+        borrar, vaciar). Añadir/quitar medios va por _on_collection_items_changed."""
         self._update_tree_view()
         self._update_media_list()
         self.controller.trigger_async_indexing()
+
+    def _on_collection_items_changed(self, collection_name):
+        """Se añadieron o quitaron medios de una colección. El árbol no cambia, así que no
+        se reconstruye (eso hacía perder la subcarpeta abierta y mandaba la vista a
+        "Directorios"). La lista solo se refresca si está mostrando esa colección o la
+        raíz "Colecciones", conservando el scroll."""
+        tree_item = self.tree_folders.currentItem()
+        data = tree_item.data(0, Qt.UserRole) if tree_item else None
+        if not data:
+            return
+        tipo = data.get("tipo")
+        showing_it = (tipo == "collection" and data.get("nombre") == collection_name) or tipo == "root_virtual"
+        if not showing_it:
+            return
+
+        scroll_widget = self.media_table if getattr(self, "view_mode", "grid") == "list" and hasattr(self, "media_table") else getattr(self, "media_list", None)
+        if scroll_widget:
+            self._pending_scroll_restore = scroll_widget.verticalScrollBar().value()
+        self._update_media_list()
 
     def _on_add_folder_clicked(self):
         """Abre un selector de carpetas e indexa la seleccionada."""
@@ -709,8 +735,7 @@ class TreeListMixin:
             )
             if reply == QMessageBox.Yes:
                 self.controller.remove_folder(ruta)
-                self.preview_box.show_default_state()
-                self._clear_metadata()
+                self._reset_media_panels()
 
     def _on_add_collection_clicked(self):
         """Crea una nueva colección virtual solicitando el nombre al usuario."""
@@ -743,8 +768,7 @@ class TreeListMixin:
             )
             if reply == QMessageBox.Yes:
                 self.controller.remove_collection(name)
-                self.preview_box.show_default_state()
-                self._clear_metadata()
+                self._reset_media_panels()
 
     def _on_tree_current_item_changed(self, current, previous):
         if current and current != previous:
@@ -792,7 +816,12 @@ class TreeListMixin:
 
         # Limpiar selección previa del reproductor al cambiar de carpeta en el árbol
         self.current_playing_path = None
-        
+        # ...y vaciar ya la vista previa y los detalles, sin esperar al refresco de la
+        # lista: la rama de medios web sale antes de tiempo mientras busca (o pide sesión)
+        # y nunca llegaba a limpiar, así que seguía mostrando el medio local anterior. Si
+        # el medio también está en el destino, restore_selection lo vuelve a cargar.
+        self._reset_media_panels()
+
         if data:
             self.controller.last_selected_tree_node = data
             self.controller.save_data()
@@ -1108,7 +1137,7 @@ class TreeListMixin:
                 if is_viewing_collection:
                     remove_label = QCoreApplication.translate("TreeListMixin", "Quitar de esta Colección ({0})").format(len(file_paths)) if len(file_paths) > 1 else QCoreApplication.translate("TreeListMixin", "Quitar de esta Colección")
                     act_remove = menu.addAction(remove_label)
-                    act_remove.triggered.connect(lambda: [self._remove_file_from_collection(current_col_name, fp) for fp in file_paths])
+                    act_remove.triggered.connect(lambda: self.controller.remove_items_from_collection(current_col_name, file_paths))
                 else:
                     add_label = QCoreApplication.translate("TreeListMixin", "Añadir a Colección ({0})").format(len(file_paths)) if len(file_paths) > 1 else QCoreApplication.translate("TreeListMixin", "Añadir a Colección")
                     submenu = menu.addMenu(add_label)
@@ -1116,7 +1145,7 @@ class TreeListMixin:
                     if collections_list:
                         for col_name in collections_list:
                             act_col = submenu.addAction(self._format_collection_title(col_name))
-                            act_col.triggered.connect(lambda checked=False, cn=col_name, items=item_datas: [self._add_media_to_collection(cn, it) for it in items])
+                            act_col.triggered.connect(lambda checked=False, cn=col_name, items=item_datas: self._add_media_items_to_collection(cn, items))
                     else:
                         act_none = submenu.addAction(QCoreApplication.translate("TreeListMixin", "(Sin colecciones)"))
                         act_none.setEnabled(False)
@@ -1245,28 +1274,28 @@ class TreeListMixin:
         else:
             logger.info(f"EditingMediaTab: El archivo ya se encuentra en la colección {col_name}")
 
-    def _add_media_to_collection(self, col_name, item_data):
-        """Añade un medio a una colección virtual, conservando el título web y la licencia si es remoto."""
-        if not item_data:
+    def _add_media_items_to_collection(self, col_name, item_datas):
+        """Añade los medios seleccionados a una colección virtual de una sola vez (un
+        guardado y un refresco, no uno por medio), conservando el título web y la licencia
+        de los remotos."""
+        entries = []
+        for item_data in item_datas:
+            if not item_data:
+                continue
+            dest = item_data.get("dest_path")
+            has_real_file = bool(dest and os.path.exists(dest))
+            path = dest if has_real_file else item_data.get("ruta", "")
+            if not path:
+                continue
+            is_remote = item_data.get("es_remoto") or (isinstance(path, str) and (path.startswith("http://") or path.startswith("https://")))
+            entries.append(item_data if is_remote and not has_real_file else path)
+
+        if not entries:
             return
-
-        dest = item_data.get("dest_path")
-        has_real_file = bool(dest and os.path.exists(dest))
-        path = dest if has_real_file else item_data.get("ruta", "")
-        if not path:
-            return
-
-        is_remote = item_data.get("es_remoto") or (isinstance(path, str) and (path.startswith("http://") or path.startswith("https://")))
-        if is_remote and not has_real_file:
-            success = self.controller.add_to_collection(col_name, item_data)
-        else:
-            success = self.controller.add_to_collection(col_name, path)
-
-        display_name = item_data.get("nombre") or os.path.basename(path)
-        if success:
-            logger.info(f"EditingMediaTab: Archivo '{display_name}' añadido a colección '{col_name}'")
-        else:
-            logger.info(f"EditingMediaTab: El archivo ya se encuentra en la colección '{col_name}'")
+        added = self.controller.add_items_to_collection(col_name, entries)
+        skipped = len(entries) - added
+        logger.info(f"EditingMediaTab: {added} medio(s) añadido(s) a la colección '{col_name}'"
+                    + (f" ({skipped} ya estaban)" if skipped else ""))
 
     def _upgrade_web_collection_entry(self, col_name, placeholder_url, item_data):
         """Descarga en segundo plano el archivo original de un medio de Freesound recién
@@ -1282,18 +1311,14 @@ class TreeListMixin:
 
         def _on_success(resolved_path):
             self.controller.remove_from_collection(col_name, placeholder_url)
+            # La señal collection_items_changed refresca la lista si se está viendo esta
+            # colección; refrescar siempre aquí movía la vista aunque se estuviera en otra.
             self._add_file_to_collection(col_name, resolved_path)
-            if hasattr(self, "_update_media_list"):
-                self._update_media_list()
 
         def _on_error(err):
             logger.info(f"EditingMediaTab: No se pudo descargar el original de '{item_data.get('nombre')}' para la colección '{col_name}': {err}")
 
         self._start_high_quality_download(item_data, on_success=_on_success, on_error=_on_error)
-
-    def _remove_file_from_collection(self, col_name, file_path):
-        self.controller.remove_from_collection(col_name, file_path)
-        self._update_media_list()
 
     def _on_sort_option_selected(self, key: str, label: str):
         self.sort_by = key
@@ -1381,11 +1406,14 @@ class TreeListMixin:
                         self._update_media_list()
                         break
         elif has_new_files:
-            self._update_tree_view()
-            for i in range(self.virtual_root.childCount()):
-                child = self.virtual_root.child(i)
+            # Los archivos sueltos van a "Default", que se dibuja dentro de Directorios
+            # (physical_root), no en Colecciones. No hace falta reconstruir el árbol: si
+            # "Default" no existía, add_collection ya lo hizo. Seleccionar el nodo dispara
+            # el refresco de la lista; si ya estaba seleccionado, lo refrescó
+            # collection_items_changed.
+            for i in range(self.physical_root.childCount()):
+                child = self.physical_root.child(i)
                 child_data = child.data(0, Qt.UserRole)
-                if child_data and child_data.get("nombre") == "Favoritos":
+                if child_data and child_data.get("tipo") == "collection" and child_data.get("nombre") == "Default":
                     self.tree_folders.setCurrentItem(child)
-                    self._update_media_list()
                     break

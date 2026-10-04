@@ -168,6 +168,29 @@ else:
         pass
 
 
+def scan_collection_files(collections, build_entry_func):
+    """Archivos locales de todas las colecciones (Descargados, Subclips, Default,
+    Favoritos, SFX, Música y las creadas por el usuario), deduplicados. Es la vista de la
+    raíz "Colecciones"; solo revisa las rutas guardadas, sin escanear carpetas."""
+    files = []
+    seen = set()
+    for col_name in list(collections.keys()):
+        for path in list(collections[col_name]):
+            # Un medio web guardado como favorito sin descargar es un dict (URL +
+            # metadatos, ver add_items_to_collection): no hay archivo que revisar, y
+            # tratarlo como ruta tumbaba el hilo de indexación antes de emitir
+            # finished_indexing.
+            if not isinstance(path, str):
+                continue
+            norm_path = path.replace("\\", "/")
+            if norm_path not in seen and os.path.isfile(norm_path):
+                seen.add(norm_path)
+                name = os.path.basename(norm_path)
+                ext = os.path.splitext(name)[1].lower()
+                files.append(build_entry_func(norm_path, name, ext))
+    return files
+
+
 class AsyncIndexerThread(QThread):
     progress = Signal(int)
     # (archivos de carpetas físicas indexadas, archivos de colecciones) -- separados a
@@ -187,8 +210,6 @@ class AsyncIndexerThread(QThread):
     def run(self):
         folder_files = []
         seen_folder_paths = set()
-        collection_files = []
-        seen_collection_paths = set()
         count = 0
 
         # Escanear carpetas físicas indexadas
@@ -203,26 +224,9 @@ class AsyncIndexerThread(QThread):
                     if count % 10 == 0:
                         self.progress.emit(count)
 
-        # Escanear colecciones (Descargados, Subclips, Default, Favoritos, SFX, Música,
-        # y cualquier colección creada por el usuario) -- lista aparte, no se mezcla con
-        # la de carpetas físicas.
-        for col_name in self.collections.keys():
-            for path in self.collections[col_name]:
-                # Un medio web guardado como favorito sin descargar es un dict (URL +
-                # metadatos, ver add_to_collection): no hay archivo que escanear, y
-                # tratarlo como ruta tumbaba este hilo antes de emitir finished_indexing.
-                if not isinstance(path, str):
-                    continue
-                norm_path = path.replace("\\", "/")
-                if os.path.exists(norm_path) and os.path.isfile(norm_path):
-                    if norm_path not in seen_collection_paths:
-                        seen_collection_paths.add(norm_path)
-                        name = os.path.basename(norm_path)
-                        ext = os.path.splitext(name)[1].lower()
-                        collection_files.append(self._build_file_entry(norm_path, name, ext))
-                        count += 1
-                        if count % 10 == 0:
-                            self.progress.emit(count)
+        # Escanear colecciones -- lista aparte, no se mezcla con la de carpetas físicas.
+        collection_files = scan_collection_files(self.collections, self._build_file_entry)
+        count += len(collection_files)
 
         self.progress.emit(count)
         self.finished_indexing.emit(folder_files, collection_files)
@@ -235,6 +239,9 @@ class EditingMediaController(QObject):
 
     disk_changed = Signal()
     collections_changed = Signal()
+    # Solo cambió el CONTENIDO de una colección (añadir/quitar medios), no la estructura:
+    # la UI no reconstruye el árbol ni reindexa, así no pierde la carpeta/scroll actuales.
+    collection_items_changed = Signal(str)
 
     indexing_started = Signal()
     indexing_progress = Signal(int)
@@ -507,64 +514,87 @@ class EditingMediaController(QObject):
 
     def add_to_collection(self, collection_name: str, file_or_item) -> bool:
         """Asocia un archivo o diccionario de medio web a una colección virtual."""
-        if collection_name not in self.collections:
-            return False
+        return self.add_items_to_collection(collection_name, [file_or_item]) > 0
 
-        if isinstance(file_or_item, dict):
-            item_data = dict(file_or_item)
-            path = item_data.get("ruta", "")
-            if not path:
-                return False
-            for existing in self.collections[collection_name]:
-                ex_path = existing.get("ruta") if isinstance(existing, dict) else str(existing)
-                if ex_path == path:
-                    return False
-            self.collections[collection_name].append(item_data)
-            self.save_data()
-            self._invalidate_media_cache()
-            self.collections_changed.emit()
-            return True
-        else:
-            file_path = str(file_or_item)
-            is_remote = file_path.startswith("http://") or file_path.startswith("https://")
-            norm_path = file_path if is_remote else os.path.normpath(file_path).replace("\\", "/")
-            for existing in self.collections[collection_name]:
-                ex_path = existing.get("ruta") if isinstance(existing, dict) else str(existing)
-                if ex_path == norm_path:
-                    return False
-            self.collections[collection_name].append(norm_path)
-            self.save_data()
-            self._invalidate_media_cache()
-            self.collections_changed.emit()
-            return True
+    def add_items_to_collection(self, collection_name: str, files_or_items) -> int:
+        """Añade varios medios (rutas o diccionarios de medio web) de una vez: un solo
+        guardado y una sola señal al final, en vez de una por medio. Devuelve cuántos se
+        añadieron (los que ya estaban se saltan)."""
+        if collection_name not in self.collections:
+            return 0
+
+        entries = self.collections[collection_name]
+        existing_paths = {
+            (e.get("ruta") if isinstance(e, dict) else str(e)) for e in entries
+        }
+        added = 0
+        for file_or_item in files_or_items:
+            if isinstance(file_or_item, dict):
+                item_data = dict(file_or_item)
+                path = item_data.get("ruta", "")
+                if not path or path in existing_paths:
+                    continue
+                entries.append(item_data)
+            else:
+                file_path = str(file_or_item)
+                is_remote = file_path.startswith("http://") or file_path.startswith("https://")
+                path = file_path if is_remote else os.path.normpath(file_path).replace("\\", "/")
+                if path in existing_paths:
+                    continue
+                entries.append(path)
+            existing_paths.add(path)
+            added += 1
+
+        if added:
+            self._on_collection_items_changed(collection_name)
+        return added
 
     def remove_from_collection(self, collection_name: str, file_path_or_item) -> bool:
         """Quita un archivo o medio web de una colección virtual."""
+        return self.remove_items_from_collection(collection_name, [file_path_or_item]) > 0
+
+    def remove_items_from_collection(self, collection_name: str, file_paths_or_items) -> int:
+        """Quita varios medios de una vez (un solo guardado y una sola señal). Devuelve
+        cuántas entradas se quitaron."""
         if collection_name not in self.collections:
-            return False
+            return 0
 
-        target_path = file_path_or_item.get("ruta") if isinstance(file_path_or_item, dict) else str(file_path_or_item)
-        is_remote = target_path.startswith("http://") or target_path.startswith("https://")
-        norm_target = target_path if is_remote else os.path.normpath(target_path).replace("\\", "/")
+        def _norm(path):
+            is_remote = path.startswith("http://") or path.startswith("https://")
+            return path if is_remote else os.path.normpath(path).replace("\\", "/")
 
-        removed = False
+        targets = {
+            _norm(t.get("ruta") if isinstance(t, dict) else str(t))
+            for t in file_paths_or_items
+        }
+
         new_items = []
+        removed = 0
         for entry in self.collections[collection_name]:
             item_path = entry.get("ruta") if isinstance(entry, dict) else str(entry)
-            item_remote = item_path.startswith("http://") or item_path.startswith("https://")
-            norm_item = item_path if item_remote else os.path.normpath(item_path).replace("\\", "/")
-            if norm_item == norm_target:
-                removed = True
+            if _norm(item_path) in targets:
+                removed += 1
             else:
                 new_items.append(entry)
 
         if removed:
             self.collections[collection_name] = new_items
-            self.save_data()
-            self._invalidate_media_cache()
-            self.collections_changed.emit()
-            return True
-        return False
+            self._on_collection_items_changed(collection_name)
+        return removed
+
+    def _on_collection_items_changed(self, collection_name: str):
+        """Guarda y avisa que cambió el contenido de UNA colección. Solo invalida la caché
+        de esa colección y la de "todas las colecciones": las carpetas indexadas no
+        cambian, así que no hace falta reindexarlas."""
+        self.save_data()
+        if hasattr(self, "_media_cache"):
+            self._media_cache.pop(f"collection:{collection_name}", None)
+            # Recalcular al momento en vez de borrarla: sin esta caché, la raíz
+            # "Colecciones" dispara una reindexación completa y se ve vacía mientras dura.
+            if "__all_collections__" in self._media_cache:
+                self._media_cache["__all_collections__"] = scan_collection_files(
+                    self.collections, self._build_file_entry)
+        self.collection_items_changed.emit(collection_name)
 
     # ── Lectura de Archivos (Físicos y Virtuales) ────────────────────────────
     # Cache interna de resultados de escaneo para evitar I/O repetitivo.
