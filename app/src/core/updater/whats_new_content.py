@@ -30,6 +30,16 @@ def get_whats_new_items(version: str) -> list:
     que cambia es el aviso de beta, agregado arriba segun IS_BETA. Cuando
     salgan mas betas (1.9.2, 1.9.3...) van a necesitar contenido propio, no
     reusar esto sin mas (ver ACTUALIZACIONES.md, "Lo que falta")."""
+    if version == "1.9.3":
+        # Quien la ve viene de la 1.9.2. Las novedades de esta versión se agregan arriba
+        # del problema conocido, que conviene dejar al final.
+        return [
+            (
+                QCoreApplication.translate("WhatsNewContent", "Problema conocido: subtítulos de YouTube"),
+                QCoreApplication.translate("WhatsNewContent", "Sin cookies, YouTube a veces limita la descarga de subtítulos (error 429) y eso cancela toda la descarga, no solo los subtítulos. Mientras lo solucionamos: espera unos minutos antes de reintentar, usa las cookies de tu navegador (Ajustes > Cookies), o descarga el video sin subtítulos y bájalos después con el botón \"Descargar subtítulos\"."),
+            ),
+        ]
+
     if version == "1.9.2":
         # Quien la ve viene de la 1.9.1 (se actualiza sola): solo lo nuevo de esta versión.
         return [

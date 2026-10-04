@@ -77,20 +77,22 @@ class YTDLLogger:
             if current_time - self._last_download_log < 0.33:
                 return
             self._last_download_log = current_time
-            
-        logger.debug(f"[yt-dlp] {msg}")
+
+        # strip_ansi_codes: red de seguridad por si algún YoutubeDL se crea sin las
+        # opciones base (que ya apagan el color, ver get_base_ydl_opts).
+        logger.debug(f"[yt-dlp] {strip_ansi_codes(msg)}")
 
     def info(self, msg):
         self._check_cancelled()
         self._notify(msg)
         self._process_message(msg)
-        logger.info(f"[yt-dlp] {msg}")
+        logger.info(f"[yt-dlp] {strip_ansi_codes(msg)}")
 
     def warning(self, msg):
-        logger.warning(f"[yt-dlp] {msg}")
+        logger.warning(f"[yt-dlp] {strip_ansi_codes(msg)}")
 
     def error(self, msg):
-        logger.error(f"[yt-dlp] {msg}")
+        logger.error(f"[yt-dlp] {strip_ansi_codes(msg)}")
         self.errors.append(msg)
 
 def get_base_ydl_opts(extra_opts=None):
@@ -109,6 +111,10 @@ def get_base_ydl_opts(extra_opts=None):
         'timeout': 30,
         'logger': YTDLLogger(),
         'ffmpeg_location': ffmpeg_dir,
+        # Sin códigos ANSI de color: yt-dlp colorea si stderr es una terminal (DowP
+        # lanzado desde una consola) y los mete también en el texto de sus excepciones,
+        # que DowP registra tal cual -- en el log quedaban como "[0;31mERROR:[0m".
+        'color': {'stdout': 'no_color', 'stderr': 'no_color'},
     }
 
     if extra_opts:

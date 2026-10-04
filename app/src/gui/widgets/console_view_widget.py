@@ -111,16 +111,42 @@ class ConsoleViewWidget(QWidget):
     def _on_line_appended(self, entry: dict):
         self._pending_entries.append(entry)
 
+    # Margen (en líneas) para considerar que el usuario está "abajo del todo".
+    _BOTTOM_TOLERANCE = 2
+
     def _flush_pending(self):
         if not self._pending_entries:
             return
         entries, self._pending_entries = self._pending_entries, []
-        cursor = self.text_view.textCursor()
+
+        # Seguir al final solo si el usuario ya estaba abajo. Antes se movía el cursor
+        # VISIBLE al final con setTextCursor, y QPlainTextEdit desplaza la vista hasta el
+        # cursor: arrastraba al final varias veces por segundo y deshacía la selección.
+        tv = self.text_view
+        bar = tv.verticalScrollBar()
+        follow = bar.value() >= bar.maximum() - self._BOTTOM_TOLERANCE
+
+        # Anclar la vista al bloque que está arriba del todo (y a cuántas líneas de él
+        # empieza): la barra cuenta líneas VISUALES con el ajuste de línea activo, así que
+        # restar los bloques recortados no alcanzaba y el texto saltaba igual.
+        top_block = tv.cursorForPosition(tv.viewport().rect().topLeft()).block()
+        top_number = top_block.blockNumber()
+        line_offset = bar.value() - top_block.firstLineNumber()
+
+        # Cursor propio sobre el documento: no toca el cursor ni la selección del usuario.
+        cursor = QTextCursor(tv.document())
         cursor.movePosition(QTextCursor.End)
         for entry in entries:
             self._insert_entry(cursor, entry)
-        self.text_view.setTextCursor(cursor)
-        self._trim_to_max_lines()
+        removed = self._trim_to_max_lines()
+
+        if follow:
+            bar.setValue(bar.maximum())
+            # Tras un volcado grande el máximo se recalcula con retraso.
+            QTimer.singleShot(0, lambda: bar.setValue(bar.maximum()))
+        else:
+            block = tv.document().findBlockByNumber(max(0, top_number - removed))
+            bar.setValue(block.firstLineNumber() + max(0, line_offset))
 
     def _insert_entry(self, cursor, entry: dict):
         """Inserta una línea completa con el color de su nivel; CRITICAL además resalta en
@@ -143,13 +169,17 @@ class ConsoleViewWidget(QWidget):
             cursor.setCharFormat(fmt)
             cursor.insertText(entry["line"] + "\n")
 
-    def _trim_to_max_lines(self):
+    def _trim_to_max_lines(self) -> int:
+        """Recorta las líneas más viejas por encima del máximo. Devuelve cuántas quitó."""
         max_lines = self._handler.MAX_LINES
         doc = self.text_view.document()
         excess = doc.blockCount() - max_lines
         if excess <= 0:
-            return
+            return 0
         cursor = QTextCursor(doc)
         cursor.movePosition(QTextCursor.Start)
-        cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor, excess)
+        # NextBlock (bloques del documento), no Down (líneas visuales): con el ajuste de
+        # línea activo, Down contaba líneas envueltas y recortaba menos de lo debido.
+        cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor, excess)
         cursor.removeSelectedText()
+        return excess

@@ -404,9 +404,68 @@ class QueueWorker(QThread):
         if worker:
             worker.pause()
 
-    def _download_best_thumb(self, entry, output_dir, title, force_png=False, media_path=None):
+    @staticmethod
+    def _pick_thumb_url(entry):
+        """URL de la mejor miniatura, prefiriendo su variante JPG nativa.
+
+        yt-dlp lista las miniaturas de peor a mejor (campo 'preference') y sus anchos son
+        estimados: en YouTube 'vi_webp/.../maxresdefault.webp' figura como 1920x1080 y
+        'vi/.../maxresdefault.jpg' como 1280x720, pero las dos son la misma imagen de
+        1280x720. Ordenar por ancho elegía siempre la .webp. Si la mejor no es JPG y hay
+        una JPG con el mismo nombre (maxresdefault, hq720, ...), se usa esa: misma
+        resolución, sin recomprimir."""
+        thumbs = [t for t in (entry.get('thumbnails') or []) if t.get('url')]
+        if not thumbs:
+            return entry.get('thumbnail')
+
+        def rank(pair):
+            i, t = pair
+            pref = t.get('preference')
+            # Sin 'preference' (otros extractores): manda el ancho. A igualdad, el
+            # índice -- yt-dlp deja la mejor al final.
+            return (pref if pref is not None else 0, t.get('width') or 0, i)
+
+        ranked = sorted(enumerate(thumbs), key=rank)
+        best_url = ranked[-1][1]['url']
+
+        from urllib.parse import urlparse
+        def stem_ext(url):
+            name = os.path.basename(urlparse(url).path)
+            stem, ext = os.path.splitext(name)
+            return stem.lower(), ext.lower()
+
+        best_stem, best_ext = stem_ext(best_url)
+        if best_ext in ('.jpg', '.jpeg'):
+            return best_url
+        for _, t in reversed(ranked):
+            stem, ext = stem_ext(t['url'])
+            if stem == best_stem and ext in ('.jpg', '.jpeg'):
+                return t['url']
+        return best_url
+
+    @staticmethod
+    def _remove_stale_thumb_siblings(output_path, newer_than):
+        """Borra otras miniaturas sueltas con el mismo nombre base ('Título.webp' junto
+        al 'Título.jpg' recién guardado): pasa cuando el contenedor no admite carátula y
+        yt-dlp deja su miniatura sin convertir. Solo las escritas durante esta descarga
+        (mtime >= newer_than), para no tocar una imagen previa del usuario."""
+        if newer_than is None:
+            return
+        base = os.path.splitext(output_path)[0]
+        for ext in ('.webp', '.png', '.jpeg', '.gif'):
+            sibling = base + ext
+            if os.path.normcase(sibling) == os.path.normcase(output_path):
+                continue
+            try:
+                if os.path.isfile(sibling) and os.path.getmtime(sibling) >= newer_than:
+                    os.remove(sibling)
+                    logger.debug(f"QueueWorker: Miniatura duplicada eliminada: {sibling}")
+            except OSError as e:
+                logger.debug(f"QueueWorker: No se pudo eliminar {sibling}: {e}")
+
+    def _download_best_thumb(self, entry, output_dir, title, media_path=None, newer_than=None):
         """
-        Descarga la mejor miniatura disponible (Forzando MaxRes) y la guarda sin usar PIL.
+        Descarga la mejor miniatura disponible (Forzando MaxRes) y la guarda como JPG.
 
         media_path: ruta del medio ya descargado. Si se pasa, la miniatura toma su MISMO
         nombre base. Sin esto se re-sanitizaba el título con _sanitize_filename, que
@@ -415,19 +474,13 @@ class QueueWorker(QThread):
         con lo que el envío al editor -- que deduce la miniatura del nombre del medio --
         nunca la encontraba y mandaba el paquete sin ella (ver
         editor_integration_manager.process_raw_download).
+
+        newer_than: hora de inicio de la descarga del medio; ver
+        _remove_stale_thumb_siblings.
         """
         try:
             # 1. Buscar la URL base
-            thumb_url = None
-            thumbs = entry.get('thumbnails')
-            
-            if thumbs:
-                sorted_thumbs = sorted(thumbs, key=lambda x: x.get('width', 0) or 0, reverse=True)
-                thumb_url = sorted_thumbs[0].get('url')
-            
-            if not thumb_url:
-                thumb_url = entry.get('thumbnail')
-            
+            thumb_url = self._pick_thumb_url(entry)
             if not thumb_url:
                 return None
 
@@ -451,27 +504,55 @@ class QueueWorker(QThread):
             response.raise_for_status()
             image_data = response.content
             
-            # 4. Procesar y guardar sin usar PIL
+            # 4. Guardar como JPG: tal cual si ya lo es (sin recomprimir); si no, se
+            # convierte con QImage (no QPixmap: esto corre en el hilo de la cola).
             content_type = response.headers.get("Content-Type", "").lower()
             if "png" in content_type or image_data.startswith(b'\x89PNG\r\n\x1a\n'):
-                smart_ext = ".png"
+                source_fmt = "PNG"
             elif "webp" in content_type or (image_data.startswith(b'RIFF') and image_data[8:12] == b'WEBP'):
-                smart_ext = ".webp"
+                source_fmt = "WEBP"
             elif "gif" in content_type or image_data.startswith(b'GIF8'):
-                smart_ext = ".gif"
+                source_fmt = "GIF"
             else:
-                smart_ext = ".jpg"
-            
+                source_fmt = "JPG"
+
             if media_path:
                 base_name = os.path.splitext(os.path.basename(media_path))[0]
             else:
                 base_name = self._sanitize_filename(title)
-            output_path = os.path.join(output_dir, f"{base_name}{smart_ext}")
-            
-            with open(output_path, "wb") as f:
-                f.write(image_data)
-                
-            logger.info(f"QueueWorker: Miniatura guardada ({'MAXRES' if final_url != thumb_url else 'ORIG'}): {output_path}")
+            output_path = os.path.join(output_dir, f"{base_name}.jpg")
+
+            saved_as = None
+            if source_fmt == "JPG":
+                with open(output_path, "wb") as f:
+                    f.write(image_data)
+                saved_as = "JPG nativo"
+            else:
+                from PySide6.QtGui import QImage, QPainter, QColor
+                img = QImage.fromData(image_data)
+                if not img.isNull():
+                    if img.hasAlphaChannel():
+                        # JPG no tiene transparencia: aplanar sobre blanco.
+                        flat = QImage(img.size(), QImage.Format.Format_RGB32)
+                        flat.fill(QColor("white"))
+                        painter = QPainter(flat)
+                        painter.drawImage(0, 0, img)
+                        painter.end()
+                        img = flat
+                    if img.save(output_path, "JPG", 95):
+                        saved_as = f"convertida desde {source_fmt}"
+                if not saved_as:
+                    # Qt no pudo decodificar/guardar: conservar el archivo original
+                    # antes que perder la miniatura.
+                    output_path = os.path.join(output_dir, f"{base_name}.{source_fmt.lower()}")
+                    with open(output_path, "wb") as f:
+                        f.write(image_data)
+                    saved_as = f"{source_fmt} sin convertir"
+
+            self._remove_stale_thumb_siblings(output_path, newer_than)
+
+            res = "MAXRES" if (final_url != thumb_url or "maxres" in final_url) else "ORIG"
+            logger.info(f"QueueWorker: Miniatura guardada ({res}, {saved_as}): {output_path}")
             return output_path
             
         except Exception as e:
@@ -592,6 +673,8 @@ class QueueWorker(QThread):
                 except Exception:
                     pass
 
+        # -1 s de margen por la resolución del mtime en algunos sistemas de archivos.
+        download_started_at = time.time() - 1
         success, message = downloader.download(
             config_to_use,
             progress_callback=progress_callback,
@@ -642,7 +725,8 @@ class QueueWorker(QThread):
                     data_source = job.video_data if job.video_data else job.analysis_data
                     if data_source:
                         thumb_path = self._download_best_thumb(data_source, output_dir, title,
-                                                               force_png=True, media_path=job.final_filepath)
+                                                               media_path=job.final_filepath,
+                                                               newer_than=download_started_at)
                         if thumb_path:
                             job.add_output_files([thumb_path], is_stem_source=False)
                 except Exception as e:
@@ -794,6 +878,7 @@ class QueueWorker(QThread):
                     job.progress = total_percent
                     self.job_progress_changed.emit(job.job_id, total_percent, f"[{item_pos}/{total}] Procesando", "")
 
+            item_started_at = time.time() - 1
             success, message = master.download(
                 child_data,
                 progress_callback=progress_callback,
@@ -837,7 +922,8 @@ class QueueWorker(QThread):
                 if should_download_thumb_file:
                     try:
                         thumb_path = self._download_best_thumb(entry, playlist_output, f"{prefix}{item_title}",
-                                                               force_png=True, media_path=child_media_path)
+                                                               media_path=child_media_path,
+                                                               newer_than=item_started_at)
                         if thumb_path:
                             job.add_output_files([thumb_path], is_stem_source=False)
                     except Exception as e:
