@@ -25,10 +25,18 @@ def get_config():
     if _cached_config is None:
         _cached_config = {}
 
+    # Antes de los valores por defecto: 'theme': 'dark'/'light' (formato 1) se lee como
+    # el tema 'dowp' en ese modo (theme_id + theme_mode). Si los defaults fueran primero,
+    # un 'light' heredaría theme_mode='dark' y se perdería. Ver normalize_config_theme.
+    from core.utils.theme_loader import normalize_config_theme
+    normalize_config_theme(_cached_config)
+
     # Rellenar con valores por defecto si no existen
     defaults = {
         "language": "es",
-        "theme": "dark",
+        "theme": "dark",                # solo para versiones <= 1.9.2 (ver theme_loader.sync_legacy_theme_key)
+        "theme_id": "dowp",             # tema elegido (ver core/utils/theme_loader.py)
+        "theme_mode": "dark",           # "light" | "dark" | "system"
         "last_seen_version": "",  # ultima version cuyas novedades ya se mostraron (gui/dialogs/whats_new_dialog.py)
         "auto_analyze": False,
         "use_impersonate": False,

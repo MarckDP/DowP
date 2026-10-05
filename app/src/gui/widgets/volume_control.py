@@ -3,6 +3,8 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QFrame, QPushBu
 from PySide6.QtCore import Qt, Signal, QSize, QPoint, QEvent, QTimer
 from gui.styles import apply_volume_control_style
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class ClickJumpSlider(QSlider):
@@ -120,12 +122,12 @@ class VolumeControlWidget(QWidget):
         self._popup.setObjectName("volumePopup")
         self._popup.setAttribute(Qt.WA_TranslucentBackground)
         self._popup.installEventFilter(self)
-        self._popup.setStyleSheet("""
-            QFrame#volumePopup {
-                background-color: #181818;
-                border: 1px solid #333333;
+        set_themed_style(self._popup, lambda: f"""
+            QFrame#volumePopup {{
+                background-color: {get_theme_token('panel_fondo', '#181818')};
+                border: 1px solid {get_theme_token('borde_sutil', '#333333')};
                 border-radius: 10px;
-            }
+            }}
         """)
         popup_layout = QVBoxLayout(self._popup)
         popup_layout.setContentsMargins(4, 10, 4, 10)
@@ -231,13 +233,13 @@ class VolumeControlWidget(QWidget):
 
         if self._is_muted or val == 0:
             icon_name = "volume_off.svg" if self._is_muted else "volume_mute.svg"
-            icon_color = "#6c7086"
+            icon_color = get_theme_token('icono_tenue', '#6c7086')
         elif val < 50:
             icon_name = "volume_down.svg"
-            icon_color = "#cdd6f4"
+            icon_color = get_theme_token('texto_valor', '#cdd6f4')
         else:
             icon_name = "volume_up.svg"
-            icon_color = "#cdd6f4"
+            icon_color = get_theme_token('texto_valor', '#cdd6f4')
 
         self.btn_mute.setIcon(get_colored_svg_icon(icon_name, icon_color, size=16))
         self.btn_mute.setIconSize(QSize(16, 16))

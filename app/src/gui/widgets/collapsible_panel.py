@@ -13,6 +13,7 @@ permanecen siempre visibles.
 from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea, QSplitter
 from PySide6.QtCore import Qt, QRect, QPoint, QSize, QEasingCurve, QPropertyAnimation, Signal
 from PySide6.QtGui import QPainter, QColor, QPolygon, QFont
+from gui.styles import get_theme_token
 
 
 class EdgeTabButton(QWidget):
@@ -54,14 +55,14 @@ class EdgeTabButton(QWidget):
 
         # Fondo: lado plano pegado al borde exterior, lado redondeado hacia el contenido.
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#2a2a2a" if self._hovered else "#1a1a1a"))
+        p.setBrush(QColor(get_theme_token('fondo_hover', '#2a2a2a') if self._hovered else get_theme_token('fondo_elemento', '#1a1a1a')))
         if self.edge == "left":
             p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
         else:
             p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
 
         if self._hovered:
-            p.setBrush(QColor("#1DC038"))
+            p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
             if self.edge == "left":
                 p.drawRect(0, 0, 3, h)
             else:
@@ -73,7 +74,7 @@ class EdgeTabButton(QWidget):
         # hacia un costado.
         points_right = (self.edge == "left") != self._is_open
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#B9E640") if self._hovered else QColor("#888888"))
+        p.setBrush(QColor(get_theme_token('acento_primario', '#B9E640')) if self._hovered else QColor(get_theme_token('texto_tenue', '#888888')))
         cx = w // 2
         if points_right:
             triangle = QPolygon([QPoint(cx - 4, h // 2 - 8), QPoint(cx - 4, h // 2 + 8), QPoint(cx + 4, h // 2)])
@@ -98,13 +99,13 @@ class TextEdgeTabButton(EdgeTabButton):
         w, h = self.width(), self.height()
 
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#2a2a2a" if self._hovered else "#1a1a1a"))
+        p.setBrush(QColor(get_theme_token('fondo_hover', '#2a2a2a') if self._hovered else get_theme_token('fondo_elemento', '#1a1a1a')))
         if self.edge == "left":
             p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
         else:
             p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
         if self._hovered:
-            p.setBrush(QColor("#1DC038"))
+            p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
             if self.edge == "left":
                 p.drawRect(0, 0, 3, h)
             else:
@@ -114,7 +115,7 @@ class TextEdgeTabButton(EdgeTabButton):
         font = QFont(get_active_font_family(), 9)
         font.setBold(True)
         p.setFont(font)
-        p.setPen(QColor("#B9E640") if (self._hovered or self._is_open) else QColor("#888888"))
+        p.setPen(QColor(get_theme_token('acento_primario', '#B9E640')) if (self._hovered or self._is_open) else QColor(get_theme_token('texto_tenue', '#888888')))
         p.translate(w / 2, h / 2)
         p.rotate(-90.0)
         # Rect rotado: su ancho es el alto de la pestaña y su alto, el ancho.

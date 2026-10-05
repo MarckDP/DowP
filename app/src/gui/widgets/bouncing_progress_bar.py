@@ -26,8 +26,10 @@ class BouncingProgressBar(QProgressBar):
         self._bounce_pos = 0.0        # 0.0 … 1.0
         self._status_text = ""
         
-        # Cargar colores desde el sistema de temas (evita hardcodeo)
+        # Cargar colores desde el sistema de temas (evita hardcodeo), y de nuevo al cambiarlo
         self.refresh_theme_colors()
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(lambda _tokens: self.refresh_theme_colors())
         self.setFixedHeight(18) # Barra ultra delgada
 
         # Grupo de animación para el ping-pong

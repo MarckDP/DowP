@@ -33,6 +33,7 @@ from core.tabs.video_tools.alpha_policy import (
     quick_alpha_codec, alpha_capable_codecs, alpha_video_args, QUICK_ALPHA_CODECS,
 )
 from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
+from gui.styles import set_themed_style
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
 
@@ -127,11 +128,10 @@ class ConvertPanel(QWidget):
     def _card_frame(self, title: str | None = None, parent=None) -> tuple[QFrame, QVBoxLayout]:
         frame = QFrame(parent or self)
         frame.setObjectName("advancedCard")
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        frame.setStyleSheet(f"""
+        set_themed_style(frame, lambda: f"""
             QFrame#advancedCard {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)

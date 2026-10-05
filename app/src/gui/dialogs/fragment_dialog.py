@@ -16,6 +16,8 @@ from gui.styles import get_theme_token
 from gui.widgets.media_trim_player_widget import MediaTrimPlayerWidget
 from core.tabs.advanced_process.fragment_logic import FragmentManager, FragmentState
 from core.utils.paths import get_src_dir
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 # ── Icon helpers ────────────────────────────────────────────
 _SVG_DIR = os.path.join(get_src_dir(), "assets", "icons", "svg")
@@ -74,7 +76,7 @@ class _FragmentItem(QWidget):
         btn_play.setIconSize(QSize(14, 14))
         btn_play.setFixedSize(22, 22)
         btn_play.setToolTip(self.tr("Previsualizar en bucle"))
-        btn_play.setStyleSheet(f"""
+        set_themed_style(btn_play, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_sutil', '#333333')};
@@ -89,13 +91,13 @@ class _FragmentItem(QWidget):
         top_row.addWidget(btn_play)
 
         lbl_prefix = QLabel("_")
-        lbl_prefix.setStyleSheet("color: #888; font-size: 11px; font-weight: bold;")
+        set_themed_style(lbl_prefix, lambda: f"color: {get_theme_token('texto_tenue', '#888')}; font-size: 11px; font-weight: bold;")
         lbl_prefix.setFixedWidth(8)
         top_row.addWidget(lbl_prefix)
         
         self.suffix_input = QLineEdit(suffix)
         self.suffix_input.setPlaceholderText("sufijo...")
-        self.suffix_input.setStyleSheet(f"""
+        set_themed_style(self.suffix_input, lambda: f"""
             QLineEdit {{
                 background: {get_theme_token('fondo_secundario', '#121212')};
                 color: {get_theme_token('acento_primario', '#B9E640')};
@@ -118,17 +120,17 @@ class _FragmentItem(QWidget):
         btn_del.setIconSize(QSize(15, 15))
         btn_del.setFixedSize(22, 22)
         btn_del.setToolTip(self.tr("Eliminar fragmento"))
-        btn_del.setStyleSheet("""
+        btn_del.setStyleSheet(apply_shapes("""
             QPushButton { background: transparent; border: none; border-radius: 6px; padding: 0px; }
             QPushButton:hover { background: rgba(229,57,53,160); }
-        """)
+        """))
         btn_del.clicked.connect(on_delete)
         top_row.addWidget(btn_del)
         layout.addLayout(top_row)
 
         # Fila inferior: tiempos
         lbl = QLabel(text)
-        lbl.setStyleSheet("color: #999; font-size: 11px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_gris', '#999')}; font-size: 11px;")
         layout.addWidget(lbl)
 
 
@@ -252,14 +254,14 @@ class FragmentDialog(QDialog):
         # Loading overlay
         self.loading_label = QLabel(self.tr("Cargando..."), self.trim_player.preview_container)
         self.loading_label.setAlignment(Qt.AlignCenter)
-        self.loading_label.setStyleSheet("""
+        self.loading_label.setStyleSheet(apply_shapes(f"""
             background-color: rgba(0,0,0,185);
-            color: #B9E640;
+            color: {get_theme_token('acento_primario', '#B9E640')};
             font-size: 16px;
             font-weight: bold;
             border-radius: 8px;
             padding: 10px 20px;
-        """)
+        """))
         self.loading_label.adjustSize()
         self.loading_label.hide()
 
@@ -267,7 +269,7 @@ class FragmentDialog(QDialog):
         self.error_label = QLabel(self.trim_player.preview_container)
         self.error_label.setAlignment(Qt.AlignCenter)
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet("""
+        self.error_label.setStyleSheet(apply_shapes("""
             background-color: rgba(30,0,0,210);
             color: #ff5252;
             font-size: 15px;
@@ -275,21 +277,21 @@ class FragmentDialog(QDialog):
             border: 1px solid #d32f2f;
             border-radius: 8px;
             padding: 15px;
-        """)
+        """))
         self.error_label.hide()
 
         # Info overlay (amarillo — nota informativa debajo del error)
         self.info_label = QLabel(self.trim_player.preview_container)
         self.info_label.setAlignment(Qt.AlignCenter)
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("""
+        self.info_label.setStyleSheet(apply_shapes("""
             background-color: rgba(40,30,0,210);
             color: #FFD740;
             font-size: 12px;
             border: 1px solid #b8860b;
             border-radius: 8px;
             padding: 10px 15px;
-        """)
+        """))
         self.info_label.hide()
 
         # Fondo (miniatura atenuada) que reemplaza al video cuando el stream falla — ver
@@ -314,11 +316,11 @@ class FragmentDialog(QDialog):
         # Botón "Añadir fragmento", insertado en la barra de controles del reproductor
         # (mismo patrón que SubclipDialog con btn_add_subclip) justo a la derecha de "Out".
         self.btn_add_ctrl = QPushButton()
-        self.btn_add_ctrl.setIcon(_icon("add.svg", "#000000", 18))
+        self.btn_add_ctrl.setIcon(_icon("add.svg", get_theme_token("boton_acento_texto", "#000000"), 18))
         self.btn_add_ctrl.setIconSize(QSize(18, 18))
         self.btn_add_ctrl.setFixedSize(32, 32)
         self.btn_add_ctrl.setToolTip(self.tr("Añadir fragmento"))
-        self.btn_add_ctrl.setStyleSheet(f"""
+        set_themed_style(self.btn_add_ctrl, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_secundario', '#1DC038')};
                 border: none;
@@ -391,7 +393,7 @@ class FragmentDialog(QDialog):
         list_container = QFrame()
         list_container.setObjectName("fragmentList")
         list_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        list_container.setStyleSheet(f"""
+        set_themed_style(list_container, lambda: f"""
             QFrame#fragmentList {{
                 background-color: {get_theme_token('fondo_secundario', '#121212')};
                 border: 1px solid {get_theme_token('borde_normal', '#222')};
@@ -405,7 +407,7 @@ class FragmentDialog(QDialog):
         # Header (looks like a table header, inside the rounded box)
         header_widget = QWidget()
         header_widget.setFixedHeight(36)
-        header_widget.setStyleSheet(f"""
+        set_themed_style(header_widget, lambda: f"""
             background-color: {get_theme_token('fondo_elemento', '#1a1a1a')};
             border-radius: 5px 5px 0 0;
             border-bottom: 1px solid {get_theme_token('borde_sutil', '#2a2a2a')};
@@ -414,14 +416,14 @@ class FragmentDialog(QDialog):
         hh.setContentsMargins(12, 0, 10, 0)
         lbl_header = QLabel(self.tr("Fragmentos guardados"))
         lbl_header.setAlignment(Qt.AlignCenter)
-        lbl_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #aaa; letter-spacing: 0.5px;")
+        set_themed_style(lbl_header, lambda: f"font-size: 12px; font-weight: bold; color: {get_theme_token('texto_gris', '#aaa')}; letter-spacing: 0.5px;")
         hh.addWidget(lbl_header)
         list_v.addWidget(header_widget)
 
         # The actual QListWidget inside the container
         self.list_fragments = QListWidget()
         self.list_fragments.setObjectName("innerFragmentList")
-        self.list_fragments.setStyleSheet(f"""
+        set_themed_style(self.list_fragments, lambda: f"""
             QListWidget {{
                 background: transparent;
                 border: none;
@@ -435,8 +437,8 @@ class FragmentDialog(QDialog):
                 margin: 0px;
             }}
             QListWidget::item:selected {{
-                background-color: #1b3b22;
-                border-bottom: 1px solid #224;
+                background-color: {get_theme_token('boton_secundario_fondo', '#1b3b22')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#224')};
             }}
             QListWidget::item:last-child {{
                 border-bottom: none;
@@ -456,7 +458,7 @@ class FragmentDialog(QDialog):
 
         self.btn_cancel = QPushButton(self.tr("Cancelar"))
         self.btn_cancel.setFixedHeight(32)
-        self.btn_cancel.setStyleSheet("""
+        self.btn_cancel.setStyleSheet(apply_shapes("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #b71c1c, stop:0.6 #e53935, stop:1 #ef5350);
@@ -466,7 +468,7 @@ class FragmentDialog(QDialog):
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #c62828, stop:1 #b71c1c);
             }
-        """)
+        """))
         self.btn_cancel.clicked.connect(self.reject)
 
         self.btn_save = QPushButton(self.tr("Guardar"))

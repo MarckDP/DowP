@@ -6,10 +6,11 @@ from core.utils.config_manager import get_config, save_config
 from core.setup.ytdlp_setup import get_ytdlp_path
 from core.setup.ffmpeg_setup import check_ffmpeg, get_ffmpeg_dir
 from gui.widgets.combo_box import AutoPopupComboBox
-from gui.styles import apply_folder_browse_button_style, generate_tinted_svg
+from gui.styles import apply_folder_browse_button_style, generate_tinted_svg, register_theme_callback
 from core.utils.paths import get_src_dir
 import os
 import sys
+from gui.styles import get_theme_token
 
 class CookieTestWorker(QThread):
     finished = Signal(bool, str)
@@ -285,7 +286,8 @@ class CookiesPage(QWidget):
         
         self.test_status_label.setText(self.tr("Probando..."))
         self.test_status_label.setIcon(QIcon())
-        self.test_status_label.setStyleSheet("border: none; background: transparent; color: #d8c94a; padding: 0px;") # estado_aviso
+        self._paint_testing_status()
+        register_theme_callback(self.test_status_label, "estado_tema", self._paint_testing_status)
         self.test_btn.setEnabled(False)
         
         self.worker = CookieTestWorker(mode, file_path, browser, profile)
@@ -295,13 +297,21 @@ class CookiesPage(QWidget):
     def on_test_finished(self, success, message):
         self.test_btn.setEnabled(True)
         self.test_status_label.setText(message)
+        self._paint_test_status(success)
+        register_theme_callback(self.test_status_label, "estado_tema", lambda: self._paint_test_status(success))
+
+    def _paint_testing_status(self):
+        self.test_status_label.setStyleSheet(
+            f"border: none; background: transparent; color: {get_theme_token('estado_aviso', '#d8c94a')}; padding: 0px;")
+
+    def _paint_test_status(self, success):
         icons_dir = os.path.join(get_src_dir(), "assets", "icons", "svg")
         if success:
-            self.test_status_label.setIcon(QIcon(generate_tinted_svg("check_circle", "#40d66b")))
-            self.test_status_label.setStyleSheet("border: none; background: transparent; color: #40d66b; padding: 0px;") # estado_exito
+            self.test_status_label.setIcon(QIcon(generate_tinted_svg("check_circle", get_theme_token('estado_exito', '#40d66b'))))
+            self.test_status_label.setStyleSheet(f"border: none; background: transparent; color: {get_theme_token('estado_exito', '#40d66b')}; padding: 0px;") # estado_exito
         else:
-            self.test_status_label.setIcon(QIcon(generate_tinted_svg("error", "#ff6b5f")))
-            self.test_status_label.setStyleSheet("border: none; background: transparent; color: #ff6b5f; padding: 0px;") # estado_error
+            self.test_status_label.setIcon(QIcon(generate_tinted_svg("error", get_theme_token('estado_error', '#ff6b5f'))))
+            self.test_status_label.setStyleSheet(f"border: none; background: transparent; color: {get_theme_token('estado_error', '#ff6b5f')}; padding: 0px;") # estado_error
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(

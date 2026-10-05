@@ -108,6 +108,10 @@ class MediaTableModel(QAbstractTableModel):
         
     def get_cached_icon(self, icon_name: str, color: str, size: int = None) -> QIcon:
         key = f"{icon_name}_{color}_{size}"
+        if "placeholder" in key:
+            # El relleno lleva el fondo del tema: la clave incluye ese color para que
+            # al cambiar de tema no se reutilice el del modo anterior.
+            key += "_" + get_theme_token("miniatura_relleno_fondo", "#1c1c1e")
         if key not in self._icon_cache:
             if "placeholder" in key:
                  self._icon_cache[key] = get_placeholder_thumbnail_icon(icon_name.replace("_placeholder", ""), color)
@@ -324,7 +328,7 @@ class MediaTableModel(QAbstractTableModel):
                         return cached_icon
                     remote_thumb_mgr.request_thumbnail(thumb_url, fallback_url=item.get("ruta"))
                     placeholder_name = "movie.svg" if tipo == "video" else "image.svg"
-                    placeholder_color = "#9b59b6" if tipo == "video" else "#2ecc71"
+                    placeholder_color = "#9b59b6" if tipo == "video" else get_theme_token('estado_exito', '#2ecc71')
                     if self._view_mode == "grid":
                         return self.get_cached_icon(f"{placeholder_name}_placeholder", placeholder_color)
                     else:
@@ -351,11 +355,11 @@ class MediaTableModel(QAbstractTableModel):
                 # Devolver ícono por defecto mientras carga
                 if self._view_mode == "grid":
                     if tipo == "video": return self.get_cached_icon("movie.svg_placeholder", "#9b59b6")
-                    elif tipo == "imagen": return self.get_cached_icon("image.svg_placeholder", "#2ecc71")
+                    elif tipo == "imagen": return self.get_cached_icon("image.svg_placeholder", get_theme_token('estado_exito', '#2ecc71'))
                     elif tipo == "audio": return self.get_cached_icon("music_note.svg_placeholder", "#3498db")
                 else:
                     if tipo == "video": return self.get_cached_icon("movie.svg", "#9b59b6", size=18)
-                    elif tipo == "imagen": return self.get_cached_icon("image.svg", "#2ecc71", size=18)
+                    elif tipo == "imagen": return self.get_cached_icon("image.svg", get_theme_token('estado_exito', '#2ecc71'), size=18)
                     elif tipo == "audio": return self.get_cached_icon("music_note.svg", "#3498db", size=18)
 
         elif role == Qt.SizeHintRole:

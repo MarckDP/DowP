@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 )
 
 from core import credits
+from gui.styles import set_themed_style
+from gui.styles import get_theme_token
 
 
 def _tr(text: str) -> str:
@@ -32,15 +34,39 @@ def link_html(text: str, url: str) -> str:
     return f'<a href="{url}" style="color:{color}; text-decoration:none;">{text}</a>'
 
 
-def make_link_label(text: str, url: str, style: str = "") -> QLabel:
-    label = QLabel(link_html(text, url))
+def make_link_label(text: str, url: str, style="") -> QLabel:
+    """style puede ser un str o una función que lo devuelva (para que se recalcule con
+    el tema). El color del enlace va dentro del HTML, así que al cambiar de tema la
+    etiqueta se regenera entera."""
+    import shiboken6
+    from gui.theme_manager import get_theme_manager
+
+    label = QLabel()
     label.setTextFormat(Qt.RichText)
     label.setOpenExternalLinks(True)
     label.setTextInteractionFlags(Qt.TextBrowserInteraction)
-    label.setStyleSheet(f"border: none; background: transparent; {style}")
     if url:
         label.setToolTip(url)
         label.setCursor(Qt.PointingHandCursor)
+
+    def refresh(_tokens=None):
+        if not shiboken6.isValid(label):
+            return
+        label.setText(link_html(text, url))
+        extra = style() if callable(style) else style
+        label.setStyleSheet(f"border: none; background: transparent; {extra}")
+
+    refresh()
+    manager = get_theme_manager()
+    manager.theme_changed.connect(refresh)
+
+    def _disconnect(*_):
+        try:
+            manager.theme_changed.disconnect(refresh)
+        except (RuntimeError, TypeError):
+            pass
+
+    label.destroyed.connect(_disconnect)
     return label
 
 
@@ -50,15 +76,12 @@ def _styled_button(text: str, primary: bool = False) -> QPushButton:
     btn.setObjectName("dialogButton")
     btn.setCursor(Qt.PointingHandCursor)
     btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-    bg = get_theme_token("boton_secundario_fondo", "#1b3b22")
-    fg = get_theme_token("boton_secundario_texto", "#B9E640")
-    hover = get_theme_token("boton_secundario_hover", "#224a2b")
-    btn.setStyleSheet(f"""
+    set_themed_style(btn, lambda: f"""
         QPushButton#dialogButton {{
-            background-color: {bg}; color: {fg}; border: none; border-radius: 6px;
+            background-color: {get_theme_token('boton_secundario_fondo', '#1b3b22')}; color: {get_theme_token('boton_secundario_texto', '#B9E640')}; border: none; border-radius: 6px;
             padding: 8px 20px; font-weight: bold;
         }}
-        QPushButton#dialogButton:hover {{ background-color: {hover}; }}
+        QPushButton#dialogButton:hover {{ background-color: {get_theme_token('boton_secundario_hover', '#224a2b')}; }}
     """)
     return btn
 
@@ -81,7 +104,7 @@ class _FramelessDialog(QDialog):
         main_layout.setContentsMargins(0, 0, 0, 0)
         container = QFrame()
         container.setObjectName("AboutDialogContainer")
-        container.setStyleSheet(f"""
+        set_themed_style(container, lambda: f"""
             QFrame#AboutDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -99,13 +122,13 @@ class _FramelessDialog(QDialog):
         title_bar.btn_max.hide()
         title_bar.btn_close.clicked.disconnect()
         title_bar.btn_close.clicked.connect(self.reject)
-        title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
-            }
+            }}
         """)
         central.addWidget(title_bar)
 
@@ -128,15 +151,13 @@ class CreditsDialog(_FramelessDialog):
         super().__init__(QCoreApplication.translate("Credits", "Créditos y licencias"), 560, 620, parent)
         from gui.styles import get_theme_token
         text_main = get_theme_token("texto_principal", "#ffffff")
-        text_sec = get_theme_token("texto_secundario", "#aaaaaa")
-        accent = get_theme_token("boton_secundario_texto", "#B9E640")
 
         intro = QLabel(QCoreApplication.translate(
             "Credits",
             "DowP es software libre (licencia GPL-3.0) y existe gracias a estos proyectos "
             "de código abierto. Gracias a todas las personas que los hacen posibles."))
         intro.setWordWrap(True)
-        intro.setStyleSheet(f"color: {text_sec}; font-size: 12px; border: none; background: transparent;")
+        set_themed_style(intro, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 12px; border: none; background: transparent;")
         self.content_layout.addWidget(intro)
 
         body = QWidget()
@@ -146,7 +167,7 @@ class CreditsDialog(_FramelessDialog):
 
         for group, items in credits.THIRD_PARTY:
             header = QLabel(_tr(group))
-            header.setStyleSheet(f"color: {accent}; font-weight: bold; font-size: 13px; "
+            set_themed_style(header, lambda: f"color: {get_theme_token('boton_secundario_texto', '#B9E640')}; font-weight: bold; font-size: 13px; "
                                  "margin-top: 8px; border: none; background: transparent;")
             body_layout.addWidget(header)
             for name, purpose, license_name, url in items:
@@ -160,14 +181,14 @@ class CreditsDialog(_FramelessDialog):
                 if purpose:
                     purpose_lbl = QLabel(_tr(purpose))
                     purpose_lbl.setWordWrap(True)
-                    purpose_lbl.setStyleSheet(f"color: {text_sec}; font-size: 11px; border: none; background: transparent;")
+                    set_themed_style(purpose_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 11px; border: none; background: transparent;")
                     col.addWidget(purpose_lbl)
                 row.addLayout(col, 1)
                 lic = QLabel(_tr(license_name))
                 lic.setAlignment(Qt.AlignRight | Qt.AlignTop)
                 lic.setWordWrap(True)
                 lic.setFixedWidth(150)
-                lic.setStyleSheet(f"color: {text_sec}; font-size: 11px; border: none; background: transparent;")
+                set_themed_style(lic, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 11px; border: none; background: transparent;")
                 row.addWidget(lic, 0, Qt.AlignTop)
                 body_layout.addLayout(row)
         body_layout.addStretch()
@@ -188,11 +209,9 @@ class SupportDialog(_FramelessDialog):
         super().__init__(QCoreApplication.translate("Credits", "Otras formas de apoyar"), 400, 620, parent)
         from gui.styles import get_theme_token
         from core.utils.paths import get_src_dir
-        text_main = get_theme_token("texto_principal", "#ffffff")
-        text_sec = get_theme_token("texto_secundario", "#aaaaaa")
 
         title = QLabel("Binance Pay")
-        title.setStyleSheet(f"color: {text_main}; font-weight: bold; font-size: 15px; border: none; background: transparent;")
+        set_themed_style(title, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-weight: bold; font-size: 15px; border: none; background: transparent;")
         self.content_layout.addWidget(title, 0, Qt.AlignHCenter)
 
         qr = QLabel()
@@ -207,7 +226,7 @@ class SupportDialog(_FramelessDialog):
         uid_row.addStretch()
         uid_label = QLabel(QCoreApplication.translate("Credits", "Binance ID (UID): {0}").format(credits.BINANCE_UID))
         uid_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        uid_label.setStyleSheet(f"color: {text_main}; font-size: 13px; border: none; background: transparent;")
+        set_themed_style(uid_label, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-size: 13px; border: none; background: transparent;")
         uid_row.addWidget(uid_label)
         self.btn_copy = _styled_button(QCoreApplication.translate("Credits", "Copiar"))
         self.btn_copy.clicked.connect(self._copy_uid)
@@ -221,12 +240,12 @@ class SupportDialog(_FramelessDialog):
             "Comprueba que el UID coincide antes de enviar."))
         note.setWordWrap(True)
         note.setAlignment(Qt.AlignCenter)
-        note.setStyleSheet(f"color: {text_sec}; font-size: 11px; border: none; background: transparent;")
+        set_themed_style(note, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 11px; border: none; background: transparent;")
         self.content_layout.addWidget(note)
 
         thanks = QLabel(QCoreApplication.translate("Credits", "¡Gracias por apoyar DowP!"))
         thanks.setAlignment(Qt.AlignCenter)
-        thanks.setStyleSheet(f"color: {text_main}; font-size: 12px; border: none; background: transparent;")
+        set_themed_style(thanks, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-size: 12px; border: none; background: transparent;")
         self.content_layout.addWidget(thanks)
 
         self.add_close_row(QCoreApplication.translate("Credits", "Cerrar"))

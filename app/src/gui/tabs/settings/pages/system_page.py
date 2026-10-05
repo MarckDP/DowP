@@ -18,6 +18,7 @@ from core.utils.config_manager import get_config
 from core.utils.hardware_detector import detect_hardware
 from gui.styles import get_theme_token
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
 
 
 class ScanHardwareThread(QThread):
@@ -49,7 +50,7 @@ class SystemPage(QWidget):
 
     def _section_title(self, text):
         label = QLabel(text)
-        label.setStyleSheet("font-weight: bold; font-size: 13px; color: #ffffff; "
+        set_themed_style(label, lambda: f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_activo', '#ffffff')}; "
                             "border: none; background: transparent; margin-bottom: 4px;")
         return label
 
@@ -65,14 +66,14 @@ class SystemPage(QWidget):
         layout.setSpacing(8)
 
         title = QLabel(self.tr("Apoya DowP"))
-        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE; border: none; background: transparent;")
+        set_themed_style(title, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')}; border: none; background: transparent;")
         layout.addWidget(title)
 
         desc = QLabel(self.tr(
             "DowP es gratis y lo seguirá siendo. Si te resulta útil, puedes invitarme un café "
             "para ayudar a mantenerlo."))
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #888888; font-size: 11px; border: none; background: transparent;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px; border: none; background: transparent;")
         layout.addWidget(desc)
 
         buttons = QHBoxLayout()
@@ -111,11 +112,11 @@ class SystemPage(QWidget):
             row = QHBoxLayout()
             row.setSpacing(8)
             name_lbl = make_link_label(QCoreApplication.translate("Credits", name), url,
-                                       "font-size: 12px; font-weight: bold; color: #EEEEEE;")
+                                       lambda: f"font-size: 12px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
             row.addWidget(name_lbl)
             what = QLabel("— " + QCoreApplication.translate("Credits", contribution))
             what.setWordWrap(True)
-            what.setStyleSheet("color: #aaaaaa; font-size: 12px; border: none; background: transparent;")
+            set_themed_style(what, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 12px; border: none; background: transparent;")
             row.addWidget(what, 1)
             self.content_layout.addLayout(row)
 
@@ -191,10 +192,10 @@ class SystemPage(QWidget):
 
         # --- SECCIÓN: SISTEMA (Texto puro) ---
         self.section_title = QLabel(self.tr("Sistema"))
-        self.section_title.setStyleSheet("""
+        set_themed_style(self.section_title, lambda: f"""
             font-weight: bold;
             font-size: 13px;
-            color: #ffffff;
+            color: {get_theme_token('texto_activo', '#ffffff')};
             border: none;
             background: transparent;
             margin-bottom: 4px;
@@ -214,10 +215,10 @@ class SystemPage(QWidget):
 
         # Subsección: Encoders detectados
         lbl_enc_title = QLabel(self.tr("Codificadores de vídeo detectados (FFmpeg)"))
-        lbl_enc_title.setStyleSheet("""
+        set_themed_style(lbl_enc_title, lambda: f"""
             font-weight: bold;
             font-size: 11px;
-            color: #aaaaaa;
+            color: {get_theme_token('texto_gris', '#aaaaaa')};
             border: none;
             background: transparent;
             margin-top: 8px;
@@ -239,44 +240,43 @@ class SystemPage(QWidget):
         self.action_layout.setContentsMargins(0, 10, 0, 0)
         self.action_layout.setSpacing(8)
 
-        borde_btn = get_theme_token('borde', '#3d3d3d')
-        btn_style = f"""
+        btn_style = lambda: f"""
             QPushButton {{
                 background-color: transparent;
-                border: 1px solid {borde_btn};
+                border: 1px solid {get_theme_token('borde', '#3d3d3d')};
                 border-radius: 4px;
-                color: #dddddd;
+                color: {get_theme_token('texto_fuerte', '#dddddd')};
                 font-weight: bold;
                 font-size: 11px;
                 padding: 4px 10px;
             }}
             QPushButton:hover {{
                 background-color: {get_theme_token('fondo_hover', '#2a2a2a')};
-                color: #ffffff;
-                border-color: #555555;
+                color: {get_theme_token('texto_activo', '#ffffff')};
+                border-color: {get_theme_token('borde_fuerte', '#555555')};
             }}
             QPushButton:disabled {{
-                color: #666666;
-                border-color: #2d2d2d;
+                color: {get_theme_token('texto_secundario', '#666666')};
+                border-color: {get_theme_token('borde', '#2d2d2d')};
             }}
         """
 
         self.btn_redetect = QPushButton(self.tr("Redetectar hardware"))
         self.btn_redetect.setFixedHeight(28)
         self.btn_redetect.setCursor(Qt.PointingHandCursor)
-        self.btn_redetect.setStyleSheet(btn_style)
+        set_themed_style(self.btn_redetect, btn_style)
         self.btn_redetect.setToolTip(self.tr("Vuelve a escanear la CPU, GPU y encoders de vídeo disponibles"))
         self.btn_redetect.clicked.connect(self.on_redetect_clicked)
 
         self.btn_open_log = QPushButton(self.tr("Ver registro FFmpeg"))
         self.btn_open_log.setFixedHeight(28)
         self.btn_open_log.setCursor(Qt.PointingHandCursor)
-        self.btn_open_log.setStyleSheet(btn_style)
+        set_themed_style(self.btn_open_log, btn_style)
         self.btn_open_log.setToolTip(self.tr("Abre el archivo ffmpeg_encoders_log.json con el informe completo"))
         self.btn_open_log.clicked.connect(self.on_open_log_clicked)
 
         self.lbl_status = QLabel("")
-        self.lbl_status.setStyleSheet("color: #888888; font-size: 10px; border: none; background: transparent;")
+        set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 10px; border: none; background: transparent;")
 
         self.action_layout.addWidget(self.btn_redetect)
         self.action_layout.addWidget(self.btn_open_log)
@@ -292,11 +292,11 @@ class SystemPage(QWidget):
         row = QHBoxLayout()
         row.setContentsMargins(0, 3, 0, 3)
         lbl_title = QLabel(label_text)
-        lbl_title.setStyleSheet("font-weight: bold; font-size: 11px; color: #aaaaaa; border: none; background: transparent;")
+        set_themed_style(lbl_title, lambda: f"font-weight: bold; font-size: 11px; color: {get_theme_token('texto_gris', '#aaaaaa')}; border: none; background: transparent;")
         lbl_title.setFixedWidth(200)
         
         lbl_val = QLabel(default_val)
-        lbl_val.setStyleSheet("font-size: 11px; color: #ffffff; border: none; background: transparent;")
+        set_themed_style(lbl_val, lambda: f"font-size: 11px; color: {get_theme_token('texto_activo', '#ffffff')}; border: none; background: transparent;")
         lbl_val.setTextInteractionFlags(Qt.TextSelectableByMouse)
         
         row.addWidget(lbl_title)
@@ -362,12 +362,11 @@ class SystemPage(QWidget):
 
         for enc in supported_list:
             badge = QLabel(enc)
-            accent = get_theme_token('acento_primario', '#B9E640')
-            badge.setStyleSheet(f"""
+            set_themed_style(badge, lambda: f"""
                 QLabel {{
                     background-color: transparent;
-                    color: {accent};
-                    border: 1px solid {accent};
+                    color: {get_theme_token('acento_primario', '#B9E640')};
+                    border: 1px solid {get_theme_token('acento_primario', '#B9E640')};
                     border-radius: 4px;
                     padding: 2px 6px;
                     font-size: 10px;

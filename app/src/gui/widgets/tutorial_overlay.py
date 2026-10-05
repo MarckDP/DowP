@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QRect, QPoint, Signal, QPropertyAnimation, QEasin
 from PySide6.QtGui import QPainter, QPainterPath, QColor, QRegion
 
 from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class TutorialOverlay(QWidget):
@@ -47,30 +48,26 @@ class TutorialOverlay(QWidget):
         self.card.setFixedWidth(320)
         
         # Estilos de la tarjeta
-        bg_color = get_theme_token("fondo_secundario", "#1e1e1e")
-        border_color = get_theme_token("acento_primario", "#B9E640")
-        text_color = get_theme_token("texto_primario", "#ffffff")
-        text_sec = get_theme_token("texto_secundario", "#a0a0a0")
         
-        self.card.setStyleSheet(f"""
+        set_themed_style(self.card, lambda: f"""
             QFrame#tutorialCard {{
-                background-color: {bg_color};
-                border: 2px solid {border_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 2px solid {get_theme_token('acento_primario', '#B9E640')};
                 border-radius: 10px;
             }}
             QLabel#tutTitle {{
-                color: {border_color};
+                color: {get_theme_token('acento_primario', '#B9E640')};
                 font-weight: bold;
                 font-size: 16px;
                 border: none;
             }}
             QLabel#tutDesc {{
-                color: {text_color};
+                color: {get_theme_token('texto_primario', '#ffffff')};
                 font-size: 13px;
                 border: none;
             }}
             QLabel#tutCounter {{
-                color: {text_sec};
+                color: {get_theme_token('texto_secundario', '#a0a0a0')};
                 font-size: 12px;
                 border: none;
             }}
@@ -106,9 +103,9 @@ class TutorialOverlay(QWidget):
         
         self.btn_next = QPushButton(self.tr("Siguiente"))
         self.btn_next.setCursor(Qt.PointingHandCursor)
-        self.btn_next.setStyleSheet(f"""
+        set_themed_style(self.btn_next, lambda: f"""
             QPushButton {{
-                background-color: {border_color};
+                background-color: {get_theme_token('acento_primario', '#B9E640')};
                 color: #000000;
                 border-radius: 4px;
                 font-weight: bold;

@@ -69,6 +69,8 @@ from core.setup.models_setup import (
     get_rembg_model_size_bytes, download_rembg_model, delete_rembg_model,
     delete_custom_rembg_model, CUSTOM_REMBG_FAMILY,
 )
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _GPU_MACOS_WARNING = QCoreApplication.translate(
     "RembgPopoverContent",
@@ -117,12 +119,10 @@ class RembgPopoverContent(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("rembgPopover")
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#rembgPopover {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -133,7 +133,7 @@ class RembgPopoverContent(QFrame):
         self._label_widgets = []
 
         title = QLabel(self.tr("Eliminar Fondo con IA"))
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         # Aceleración por hardware -- a diferencia del reescalado (siempre GPU), rembg
@@ -192,7 +192,7 @@ class RembgPopoverContent(QFrame):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"background-color: {border}; max-height: 1px; border: none;")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')}; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
         # Suavizado (feather del borde)

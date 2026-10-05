@@ -2,6 +2,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen
 from PySide6.QtCore import Qt, Signal, QRect
+from gui.styles import get_theme_token
 
 class RangeSlider(QWidget):
     range_changed = Signal(int, int)
@@ -66,7 +67,7 @@ class RangeSlider(QWidget):
 
         # Background track
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(QColor("#3E3E3E")))
+        painter.setBrush(QBrush(QColor(get_theme_token('pista_slider', '#3E3E3E'))))
         painter.drawRoundedRect(track_rect, 3, 3)
 
         x_start = self._val_to_x(self._start_val)
@@ -79,12 +80,12 @@ class RangeSlider(QWidget):
             x_end - x_start,
             self._track_height,
         )
-        painter.setBrush(QBrush(QColor("#4CAF50")))
+        painter.setBrush(QBrush(QColor(get_theme_token('estado_exito', '#4CAF50'))))
         painter.drawRoundedRect(active_rect, 3, 3)
 
         # Handles
         painter.setBrush(QBrush(QColor("#FFFFFF")))
-        painter.setPen(QPen(QColor("#4CAF50"), 2))
+        painter.setPen(QPen(QColor(get_theme_token('estado_exito', '#4CAF50')), 2))
         r = self._handle_radius
         painter.drawEllipse(x_start - r, cy - r, r * 2, r * 2)
         painter.drawEllipse(x_end   - r, cy - r, r * 2, r * 2)

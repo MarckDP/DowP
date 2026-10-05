@@ -90,7 +90,9 @@ class RichTextDelegate(CheckmarkComboDelegate):
             painter.save()
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             bg_rect = opt.rect.adjusted(2, 1, -2, -1)
-            painter.setBrush(QColor(255, 255, 255, 22))
+            active_bg = QColor(get_theme_token('texto_activo', '#ffffff'))
+            active_bg.setAlpha(22)
+            painter.setBrush(active_bg)
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(bg_rect, 4, 4)
             painter.restore()
@@ -131,14 +133,10 @@ class RichTextDelegate(CheckmarkComboDelegate):
                 font.setBold(True)
                 painter.setFont(font)
             else:
-                if is_hovered:
-                    text_color = opt.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.HighlightedText)
-                    if text_color.lightness() < 40:
-                        text_color = QColor("#ffffff")
-                elif is_current:
-                    text_color = QColor("#ffffff")
+                if is_hovered or is_current:
+                    text_color = QColor(get_theme_token('texto_activo', '#ffffff'))
                 else:
-                    text_color = QColor("#c5c5c5")
+                    text_color = QColor(get_theme_token('texto_medio', '#c5c5c5'))
                 painter.setPen(text_color)
                 font.setBold(False)
                 painter.setFont(font)
@@ -160,7 +158,8 @@ class RichTextDelegate(CheckmarkComboDelegate):
         painter.restore()
 
         # 3. Dibujar el checkmark verde si es el ítem seleccionado
-        if is_current and self._cached_check_pixmap:
+        check_pixmap = self._check_pixmap() if is_current else None
+        if check_pixmap:
             painter.save()
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -170,7 +169,7 @@ class RichTextDelegate(CheckmarkComboDelegate):
             x = option.rect.right() - margin_right - icon_display_size
             y = option.rect.top() + (option.rect.height() - icon_display_size) // 2
 
-            painter.drawPixmap(x, y, icon_display_size, icon_display_size, self._cached_check_pixmap)
+            painter.drawPixmap(x, y, icon_display_size, icon_display_size, check_pixmap)
             painter.restore()
 
     def sizeHint(self, option, index):
@@ -279,8 +278,8 @@ class RichComboBox(AutoPopupComboBox):
             QCoreApplication.translate("RichComboBox", "[Multi-Idioma]"): get_theme_token("etiqueta_multi_idioma", "#9b59b6"),
         }
         _icon_dir = os.path.join(get_src_dir(), "assets", "icons", "svg")
-        self.star_pixmap = self._get_colored_icon(os.path.join(_icon_dir, "star.svg"), "#4CAF50")
-        self.warning_pixmap = self._get_colored_icon(os.path.join(_icon_dir, "warning.svg"), "#FFC107")
+        self.star_pixmap = self._get_colored_icon(os.path.join(_icon_dir, "star.svg"), get_theme_token('estado_exito', '#4CAF50'))
+        self.warning_pixmap = self._get_colored_icon(os.path.join(_icon_dir, "warning.svg"), get_theme_token('estado_aviso', '#FFC107'))
 
     def _get_colored_icon(self, path, color_hex):
         if not os.path.exists(path): return None

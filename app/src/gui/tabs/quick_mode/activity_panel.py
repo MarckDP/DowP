@@ -17,6 +17,7 @@ from gui.tabs.quick_mode.download_row import QuickDownloadRow, PlaylistGroupRow
 from gui.widgets.native_file_drag import start_native_file_drag
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
+from gui.styles import set_themed_style
 
 
 class ActivityPanel(QFrame):
@@ -45,12 +46,10 @@ class ActivityPanel(QFrame):
     def init_ui(self):
         # Aplicar el estilo de caja redondeada
         self.setAttribute(Qt.WA_StyledBackground, True)
-        borde_color = get_theme_token('borde_normal', '#2d2d2d')
-        fondo_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#activityPanel {{
-                background-color: {fondo_color};
-                border: 1px solid {borde_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -65,7 +64,7 @@ class ActivityPanel(QFrame):
         header_layout.setSpacing(6)
         
         self.lbl_title = QLabel(self.tr("Lista de descargas") if hasattr(self, "tr") else "Lista de descargas")
-        self.lbl_title.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px; font-weight: bold;")
+        set_themed_style(self.lbl_title, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px; font-weight: bold;")
         header_layout.addWidget(self.lbl_title)
         
         header_layout.addStretch(1)
@@ -80,7 +79,7 @@ class ActivityPanel(QFrame):
         if os.path.exists(_close_icon):
             self.btn_cancel_all.setIcon(QIcon(_close_icon))
             self.btn_cancel_all.setIconSize(QSize(12, 12))
-        self.btn_cancel_all.setStyleSheet(f"""
+        set_themed_style(self.btn_cancel_all, lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 color: {get_theme_token('texto_secundario', '#888888')};
@@ -106,7 +105,7 @@ class ActivityPanel(QFrame):
         if os.path.exists(_delete_icon):
             self.btn_clear_all.setIcon(QIcon(_delete_icon))
             self.btn_clear_all.setIconSize(QSize(14, 14))
-        self.btn_clear_all.setStyleSheet(f"""
+        set_themed_style(self.btn_clear_all, lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 color: {get_theme_token('texto_secundario', '#888888')};
@@ -130,7 +129,7 @@ class ActivityPanel(QFrame):
         self.header_line = QFrame()
         self.header_line.setFrameShape(QFrame.HLine)
         self.header_line.setFrameShadow(QFrame.Sunken)
-        self.header_line.setStyleSheet(f"background-color: {get_theme_token('borde_normal', '#2d2d2d')};")
+        set_themed_style(self.header_line, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')};")
         self.header_line.setFixedHeight(1)
         layout.addWidget(self.header_line)
 
@@ -147,7 +146,7 @@ class ActivityPanel(QFrame):
         
         # Etiqueta de placeholder cuando no hay descargas
         self.empty_lbl = QLabel(self.tr("Aquí aparecerán tus descargas") if hasattr(self, "tr") else "Aquí aparecerán tus descargas")
-        self.empty_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.empty_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.empty_lbl.setAlignment(Qt.AlignCenter)
         self.activity_layout.addWidget(self.empty_lbl)
         

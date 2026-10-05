@@ -7,7 +7,8 @@ from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QIcon
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
-from gui.styles import load_stylesheet
+from gui.theme_manager import get_theme_manager
+from gui.styles import get_theme_token, generate_tinted_svg, register_theme_callback
 from gui.widgets.title_bar import CustomTitleBar
 from gui.widgets.tab_drag_hover import TabBarDragHoverSwitcher
 from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
@@ -148,6 +149,7 @@ class HoverIconButton(QPushButton):
 
 
 from PySide6.QtCore import Qt, QPointF, QSize, QTimer, QRectF, QVariantAnimation, QEasingCurve
+from gui.styles import apply_shapes
 
 class EditorAppWidget(QWidget):
     """Widget de editor NLE con icono nítido, animación de respiración al iniciar y línea verde cuando está conectado."""
@@ -314,7 +316,8 @@ class EditorStatusCornerWidget(QWidget):
         # 2. Botón de Ajustes (más grande, separado a la derecha)
         self.btn_settings = HoverIconButton(normal_size=(25, 25), hover_size=(29, 29))
         self.btn_settings.setFixedSize(QSize(38, 38))
-        self.btn_settings.setIcon(QIcon(os.path.join(self.icons_dir, "settings.svg")))
+        self._apply_settings_icon()
+        register_theme_callback(self.btn_settings, "icono_tema", self._apply_settings_icon)
         self.btn_settings.setToolTip(self.tr("Ajustes"))
 
         # Punto rojo de "hay una actualización" -- hijo del propio botón para no
@@ -323,11 +326,11 @@ class EditorStatusCornerWidget(QWidget):
         # SettingsTab.update_status_changed, conectado desde MainWindow).
         self.update_badge = QLabel(self.btn_settings)
         self.update_badge.setFixedSize(10, 10)
-        self.update_badge.setStyleSheet("""
+        self.update_badge.setStyleSheet(apply_shapes("""
             background-color: #e74c3c;
             border-radius: 5px;
             border: 1.5px solid #1a1a1a;
-        """)
+        """))
         self.update_badge.move(26, 0)
         self.update_badge.hide()
 
@@ -503,6 +506,10 @@ class EditorStatusCornerWidget(QWidget):
             if hasattr(self, 'editor_manager') and self.editor_manager:
                 self.editor_manager.force_adobe_target(None)
 
+    def _apply_settings_icon(self):
+        tinted = generate_tinted_svg("settings.svg", get_theme_token("icono_principal", "#e3e3e3"))
+        self.btn_settings.setIcon(QIcon(tinted or os.path.join(self.icons_dir, "settings.svg")))
+
     def on_settings_clicked(self):
         self.main_window.settings_overlay.open_page(0)
 
@@ -634,15 +641,14 @@ class MainWindow(QMainWindow):
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         self.setAttribute(Qt.WA_TranslucentBackground, False)
 
-        # Cargar tema inicial
-        config = get_config()
-        initial_theme = config.get("theme", "dark")
-
         version = QApplication.instance().applicationVersion()
         self.setWindowTitle(f"DowP {version}")
         self.setMinimumSize(800, 600)
         self.resize(1100, 750)
-        self.setStyleSheet(load_stylesheet(initial_theme))
+        # Tema inicial: la hoja de estilos va en esta ventana (ver ThemeManager) y la
+        # paleta a nivel de aplicación.
+        get_theme_manager().set_style_target(self)
+        get_theme_manager().apply()
 
         # ── Layout principal ──────────────────────────────────────────────────
         central_widget = QWidget()
@@ -802,14 +808,13 @@ class MainWindow(QMainWindow):
             self.activateWindow()
 
     def update_theme(self, theme_name):
+        # Tema y modo ya quedaron guardados por Ajustes (ver GeneralPage): solo reaplicar.
         logger.info(f"MainWindow: Cambiando tema a {theme_name}")
-        self.setStyleSheet(load_stylesheet(theme_name))
+        get_theme_manager().apply()
 
     def update_font(self, font_name):
         logger.info(f"MainWindow: Cambiando tipografía activa a {font_name}")
-        config = get_config()
-        theme_name = config.get("theme", "dark")
-        self.setStyleSheet(load_stylesheet(theme_name))
+        get_theme_manager().apply()
 
     def open_preset_creator(self, kind: str):
         """Desde "+ Crear preajuste..." de Posprocesar (Modo Rápido / Proceso Avanzado):

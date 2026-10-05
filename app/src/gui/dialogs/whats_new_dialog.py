@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 )
 
 from core.updater.whats_new_content import get_whats_new_items
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 # El contexto va como string LITERAL en cada llamada a QCoreApplication.translate(),
 # nunca como variable: pyside6-lupdate escanea el codigo de forma estatica y no
@@ -32,7 +34,7 @@ def _build_item_row(title: str, description: str, parent=None) -> QWidget:
 
     check = QLabel("✓")
     check.setFixedWidth(18)
-    check.setStyleSheet(f"""
+    set_themed_style(check, lambda: f"""
         color: {get_theme_token("boton_secundario_texto", "#B9E640")};
         font-weight: bold;
         font-size: 14px;
@@ -46,7 +48,7 @@ def _build_item_row(title: str, description: str, parent=None) -> QWidget:
 
     lbl_title = QLabel(title)
     lbl_title.setWordWrap(True)
-    lbl_title.setStyleSheet(f"""
+    set_themed_style(lbl_title, lambda: f"""
         color: {get_theme_token("texto_principal", "#ffffff")};
         font-weight: bold;
         font-size: 13px;
@@ -55,7 +57,7 @@ def _build_item_row(title: str, description: str, parent=None) -> QWidget:
     """)
     lbl_desc = QLabel(description)
     lbl_desc.setWordWrap(True)
-    lbl_desc.setStyleSheet(f"""
+    set_themed_style(lbl_desc, lambda: f"""
         color: {get_theme_token("texto_secundario", "#aaaaaa")};
         font-size: 12px;
         border: none;
@@ -79,19 +81,19 @@ def build_whats_new_content(version: str, parent=None) -> QWidget:
     layout.setSpacing(14)
 
     heading = QLabel(QCoreApplication.translate("WhatsNewDialog", "DowP {0}").format(version))
-    heading.setStyleSheet("""
+    set_themed_style(heading, lambda: f"""
         font-weight: bold;
         font-size: 16px;
-        color: #ffffff;
+        color: {get_theme_token('texto_activo', '#ffffff')};
         border: none;
         background: transparent;
     """)
     layout.addWidget(heading)
 
     subheading = QLabel(QCoreApplication.translate("WhatsNewDialog", "Esto es lo nuevo en esta versión:"))
-    subheading.setStyleSheet("""
+    set_themed_style(subheading, lambda: f"""
         font-size: 12px;
-        color: #aaaaaa;
+        color: {get_theme_token('texto_gris', '#aaaaaa')};
         border: none;
         background: transparent;
     """)
@@ -125,7 +127,7 @@ class WhatsNewDialog(QDialog):
 
         container = QFrame()
         container.setObjectName("WhatsNewDialogContainer")
-        container.setStyleSheet(f"""
+        set_themed_style(container, lambda: f"""
             QFrame#WhatsNewDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -143,13 +145,13 @@ class WhatsNewDialog(QDialog):
         title_bar.btn_max.hide()
         title_bar.btn_close.clicked.disconnect()
         title_bar.btn_close.clicked.connect(self.reject)
-        title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
-            }
+            }}
         """)
         central_layout.addWidget(title_bar)
 
@@ -177,7 +179,7 @@ class WhatsNewDialog(QDialog):
         btn_close.setObjectName("dialogButton")
         btn_close.setCursor(Qt.PointingHandCursor)
         btn_close.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        btn_close.setStyleSheet(f"""
+        set_themed_style(btn_close, lambda: f"""
             QPushButton#dialogButton {{
                 background-color: {get_theme_token("boton_secundario_fondo", "#1b3b22")};
                 color: {get_theme_token("boton_secundario_texto", "#B9E640")};

@@ -2,6 +2,7 @@ import math
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QLinearGradient
+from gui.styles import get_theme_token
 
 _MIN_DB = -60.0
 
@@ -54,14 +55,14 @@ class AudioVolumeMeterWidget(QWidget):
         bar_x = w - bar_w - 2 # A la derecha
         
         # Borde
-        painter.setPen(QColor("#2d2d2d"))
+        painter.setPen(QColor(get_theme_token('borde', '#2d2d2d')))
         painter.drawRect(bar_x, 0, bar_w, h - 1)
             
         # Gradiente profesional calibrado en dB
         grad = QLinearGradient(0, h, 0, 0)
         grad.setColorAt(0.0, QColor("#1DC038"))   # Verde en -60 dB
         grad.setColorAt(0.70, QColor("#1DC038"))  # Verde hasta -18 dB
-        grad.setColorAt(0.85, QColor("#FFC107"))  # Amarillo en -9 dB
+        grad.setColorAt(0.85, QColor(get_theme_token('estado_aviso', '#FFC107')))  # Amarillo en -9 dB
         grad.setColorAt(0.95, QColor("#FF8800"))  # Naranja en -3 dB
         grad.setColorAt(1.0, QColor("#FF4444"))   # Rojo en 0 dB
         
@@ -77,7 +78,7 @@ class AudioVolumeMeterWidget(QWidget):
             peak_ratio = _linear_to_db_ratio(self._peak)
             if peak_ratio > 0:
                 y_peak = int(h - peak_ratio * h)
-                painter.fillRect(bar_x + 1, y_peak, bar_w - 1, 2, QColor("#FFFFFF"))
+                painter.fillRect(bar_x + 1, y_peak, bar_w - 1, 2, QColor(get_theme_token('cabezal', '#FFFFFF')))
             
             # Decaimiento del pico para animación suave
             if self._peak > self._level:
@@ -92,7 +93,7 @@ class AudioVolumeMeterWidget(QWidget):
         painter.setFont(font)
 
         # Sub-ticks cada 3 dB
-        painter.setPen(QColor("#444444"))
+        painter.setPen(QColor(get_theme_token('onda_cuadricula_fuerte', '#444444')))
         for db_sub in range(0, int(_MIN_DB), -3):
             if db_sub % 6 != 0:
                 r_sub = (db_sub - _MIN_DB) / (0.0 - _MIN_DB)
@@ -108,11 +109,11 @@ class AudioVolumeMeterWidget(QWidget):
             if y >= h - 1: y = h - 2
             if y <= 5: y = 7
 
-            painter.setPen(QColor("#777777"))
+            painter.setPen(QColor(get_theme_token('texto_apagado', '#777777')))
             painter.drawLine(bar_x - 4, y, bar_x, y)
 
             text = str(db_val)
-            painter.setPen(QColor("#999999"))
+            painter.setPen(QColor(get_theme_token('texto_gris', '#999999')))
             text_rect = painter.boundingRect(0, y - 5, bar_x - 5, 10, Qt.AlignRight | Qt.AlignVCenter, text)
             painter.drawText(text_rect, Qt.AlignRight | Qt.AlignVCenter, text)
 
@@ -181,7 +182,7 @@ class MultiChannelMeterWidget(QWidget):
         grad = QLinearGradient(0, h, 0, 0)
         grad.setColorAt(0.0, QColor("#1DC038"))   # Verde en -60 dB
         grad.setColorAt(0.70, QColor("#1DC038"))  # Verde hasta -18 dB
-        grad.setColorAt(0.85, QColor("#FFC107"))  # Amarillo en -9 dB
+        grad.setColorAt(0.85, QColor(get_theme_token('estado_aviso', '#FFC107')))  # Amarillo en -9 dB
         grad.setColorAt(0.95, QColor("#FF8800"))  # Naranja en -3 dB
         grad.setColorAt(1.0, QColor("#FF4444"))   # Rojo en 0 dB
 
@@ -194,7 +195,7 @@ class MultiChannelMeterWidget(QWidget):
         bar_x = self._LABEL_W
 
         # Dibujar sub-ticks cada 3 dB para aspecto de regla milimétrica profesional
-        painter.setPen(QColor("#444444"))
+        painter.setPen(QColor(get_theme_token('onda_cuadricula_fuerte', '#444444')))
         for db_sub in range(0, int(_MIN_DB), -3):
             if db_sub % 6 != 0:
                 r_sub = (db_sub - _MIN_DB) / (0.0 - _MIN_DB)
@@ -210,11 +211,11 @@ class MultiChannelMeterWidget(QWidget):
             if y >= h - 1: y = h - 2
             if y <= 5: y = 7
 
-            painter.setPen(QColor("#777777"))
+            painter.setPen(QColor(get_theme_token('texto_apagado', '#777777')))
             painter.drawLine(bar_x - 4, y, bar_x, y)
 
             text = str(db_val)
-            painter.setPen(QColor("#999999"))
+            painter.setPen(QColor(get_theme_token('texto_gris', '#999999')))
             text_rect = painter.boundingRect(0, y - 5, self._LABEL_W - 5, 10, Qt.AlignRight | Qt.AlignVCenter, text)
             painter.drawText(text_rect, Qt.AlignRight | Qt.AlignVCenter, text)
 
@@ -223,7 +224,7 @@ class MultiChannelMeterWidget(QWidget):
             bar_x = self._LABEL_W + i * (self._BAR_W + self._BAR_GAP)
 
             # Fondo / borde de la barra
-            painter.setPen(QColor("#2d2d2d"))
+            painter.setPen(QColor(get_theme_token('borde', '#2d2d2d')))
             painter.drawRect(bar_x, 0, self._BAR_W, h - 1)
 
             # Dibujar nivel en dB
@@ -240,7 +241,7 @@ class MultiChannelMeterWidget(QWidget):
                 peak_ratio = _linear_to_db_ratio(peak)
                 if peak_ratio > 0:
                     y_peak = int(h - peak_ratio * h)
-                    painter.fillRect(bar_x + 1, y_peak, self._BAR_W - 1, 2, QColor("#FFFFFF"))
+                    painter.fillRect(bar_x + 1, y_peak, self._BAR_W - 1, 2, QColor(get_theme_token('cabezal', '#FFFFFF')))
 
                 if peak > level:
                     self._peaks[i] -= 0.015

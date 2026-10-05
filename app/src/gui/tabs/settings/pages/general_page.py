@@ -9,10 +9,12 @@ from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_user_themes_dir, get_user_fonts_dir
 from core.utils.font_manager import get_available_fonts, init_fonts
 from core.version import IS_BETA
-from gui.styles import get_available_themes, apply_folder_open_button_style
+from gui.styles import get_available_themes, apply_folder_open_button_style, get_theme_token
+from core.utils.theme_loader import sync_legacy_theme_key
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
 
 class GeneralPage(QWidget):
     language_changed = Signal(str)
@@ -75,16 +77,14 @@ class GeneralPage(QWidget):
         card_top_row = QHBoxLayout()
         card_top_row.setSpacing(8)
         card_title = QLabel(self.tr("Actualizaciones DowP"))
-        card_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(card_title, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         card_top_row.addWidget(card_title)
 
         card_info_btn = QToolButton()
         card_info_btn.setText("?")
         card_info_btn.setFixedSize(20, 20)
-        card_info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-        )
+        set_themed_style(card_info_btn, lambda: "QToolButton { border: 1px solid #555; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: #2a2a2a; }}")
         card_info_btn.setToolTip(self.tr(
             "Solo releases oficiales: recibe únicamente versiones estables, ya probadas.\n"
             "Todas (incluye experimentales): recibe también compilaciones de prueba, antes de "
@@ -144,14 +144,48 @@ class GeneralPage(QWidget):
         
         self.btn_open_themes = QPushButton()
         self.btn_open_themes.setFixedSize(30, 30)
-        apply_folder_open_button_style(self.btn_open_themes, tooltip=self.tr("Abrir carpeta de temas personalizados (%APPDATA%/DowP2/themes)"), icon_size=15)
-        self.btn_open_themes.clicked.connect(self._open_user_themes_dir)
+        apply_folder_open_button_style(self.btn_open_themes, tooltip=self.tr("Importar, exportar o eliminar temas"), icon_size=15)
+        self.btn_open_themes.clicked.connect(self._show_themes_menu)
 
         self.theme_row.addWidget(self.theme_label)
         self.theme_row.addStretch()
         self.theme_row.addWidget(self.theme_combo)
         self.theme_row.addWidget(self.btn_open_themes)
         self.content_layout.addLayout(self.theme_row)
+
+        # 2b. Modo (claro / oscuro / según el sistema) del tema elegido
+        self.mode_row = QHBoxLayout()
+        self.mode_label = QLabel(self.tr("Modo"))
+        self.mode_label.setObjectName("settingsLabel")
+
+        self.mode_combo = AutoPopupComboBox()
+        self.mode_combo.setFixedWidth(180)
+        self.mode_combo.addItem(self.tr("Oscuro"), "dark")
+        self.mode_combo.addItem(self.tr("Claro"), "light")
+        self.mode_combo.addItem(self.tr("Según el sistema"), "system")
+
+        self.mode_row.addWidget(self.mode_label)
+        self.mode_row.addStretch()
+        self.mode_row.addWidget(self.mode_combo)
+        # Mismo ancho que el botón de carpeta de la fila de Tema, para alinear los combos.
+        self.mode_row.addSpacing(30 + self.theme_row.spacing())
+        self.content_layout.addLayout(self.mode_row)
+
+        # Aviso tras cambiar tema o modo: la mayor parte se actualiza en vivo, pero algunos
+        # estilos se calculan al crear cada widget y solo cambian del todo al reiniciar.
+        # Sin diálogo (a diferencia del idioma) para no interrumpir mientras se prueban modos.
+        self.theme_restart_hint = QWidget()
+        hint_row = QHBoxLayout(self.theme_restart_hint)
+        hint_row.setContentsMargins(0, 0, 0, 0)
+        self.theme_restart_label = QLabel(self.tr("Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza."))
+        self.theme_restart_label.setWordWrap(True)
+        set_themed_style(self.theme_restart_label, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
+        self.btn_theme_restart = QPushButton(self.tr("Reiniciar ahora"))
+        self.btn_theme_restart.clicked.connect(self._restart_for_theme)
+        hint_row.addWidget(self.theme_restart_label, 1)
+        hint_row.addWidget(self.btn_theme_restart)
+        self.theme_restart_hint.hide()
+        self.content_layout.addWidget(self.theme_restart_hint)
 
         # 3. Tipografía / Fuente
         self.font_row = QHBoxLayout()
@@ -196,7 +230,7 @@ class GeneralPage(QWidget):
         self.paste_label.setObjectName("settingsLabel")
         
         self.paste_desc = QLabel(self.tr("Al volver a la ventana, pega automáticamente la URL copiada en el campo de análisis."))
-        self.paste_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.paste_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.paste_desc.setWordWrap(True)
         
         self.paste_vbox.addWidget(self.paste_label)
@@ -217,7 +251,7 @@ class GeneralPage(QWidget):
         
         self.adobe_desc = QLabel(self.tr("Si está activo, preseleccionará el formato más compatible (✨). Si no, la mejor calidad absoluta."))
         self.adobe_desc.setWordWrap(True)
-        self.adobe_desc.setStyleSheet("color: #888888; font-size: 11px;") # Compact description
+        set_themed_style(self.adobe_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;") # Compact description
         
         self.adobe_vbox.addWidget(self.adobe_label)
         self.adobe_vbox.addWidget(self.adobe_desc)
@@ -236,7 +270,7 @@ class GeneralPage(QWidget):
         self.tutorials_label.setObjectName("settingsLabel")
         
         self.tutorials_desc = QLabel(self.tr("Si deseas volver a ver los tutoriales iniciales de cada pestaña, puedes restablecerlos aquí."))
-        self.tutorials_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.tutorials_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.tutorials_desc.setWordWrap(True)
         
         self.tutorials_vbox.addWidget(self.tutorials_label)
@@ -264,6 +298,7 @@ class GeneralPage(QWidget):
         # Connections
         self.lang_combo.currentIndexChanged.connect(self.on_language_selection)
         self.theme_combo.currentIndexChanged.connect(self.on_theme_selection)
+        self.mode_combo.currentIndexChanged.connect(self.on_mode_selection)
         self.font_combo.currentIndexChanged.connect(self.on_font_selection)
         self.auto_switch.toggled.connect(self.on_auto_analyze_toggled)
         self.paste_switch.toggled.connect(self.on_auto_paste_toggled)
@@ -286,7 +321,7 @@ class GeneralPage(QWidget):
         enable_desc = QLabel(self.tr(
             "Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia "
             "y Editor de Imagen. Un sonido para cuando todo sale bien y otro si algo falla."))
-        enable_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(enable_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         enable_desc.setWordWrap(True)
         enable_vbox.addWidget(enable_label)
         enable_vbox.addWidget(enable_desc)
@@ -324,7 +359,7 @@ class GeneralPage(QWidget):
             label = QLabel(title)
             label.setObjectName("settingsLabel")
             name_label = QLabel()
-            name_label.setStyleSheet("color: #888888; font-size: 11px;")
+            set_themed_style(name_label, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
             vbox.addWidget(label)
             vbox.addWidget(name_label)
 
@@ -460,6 +495,103 @@ class GeneralPage(QWidget):
         sn.reset_custom_sound(kind)
         self._refresh_sound_names()
 
+    # ── Gestión de temas (importar / exportar / eliminar) ─────────────────────
+    def _show_themes_menu(self):
+        from PySide6.QtWidgets import QMenu
+        from core.utils import theme_io
+        current = self.theme_combo.currentData() or "dowp"
+        menu = QMenu(self)
+        menu.addAction(self.tr("Importar tema…"), self._import_theme)
+        menu.addAction(self.tr("Exportar tema actual…"), self._export_theme)
+        act_delete = menu.addAction(self.tr("Eliminar este tema"), self._delete_theme)
+        act_delete.setEnabled(theme_io.is_user_theme(current))
+        menu.addSeparator()
+        menu.addAction(self.tr("Abrir carpeta de temas"), self._open_user_themes_dir)
+        menu.exec(self.btn_open_themes.mapToGlobal(self.btn_open_themes.rect().bottomLeft()))
+
+    def _select_theme(self, theme_id):
+        """Recarga la lista y elige el tema (lo aplica on_theme_selection)."""
+        self._populate_themes()
+        index = self.theme_combo.findData(theme_id)
+        if index < 0:
+            index = self.theme_combo.findData("dowp")
+        if self.theme_combo.currentIndex() == index:
+            self.on_theme_selection(index)
+        else:
+            self.theme_combo.setCurrentIndex(index)
+
+    def _import_theme(self):
+        from PySide6.QtWidgets import QFileDialog
+        from core.utils import theme_io
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Importar tema"), os.path.expanduser("~"), self.tr("Temas de DowP (*.json)"))
+        if not path:
+            return
+        try:
+            theme_id, data, report = theme_io.read_theme_file(path)
+        except theme_io.ThemeImportError as e:
+            QMessageBox.warning(self, self.tr("No se pudo importar el tema"), str(e))
+            return
+        if theme_io.is_user_theme(theme_id):
+            answer = QMessageBox.question(
+                self, self.tr("Importar tema"),
+                self.tr("Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?").format(theme_id))
+            if answer != QMessageBox.Yes:
+                return
+        try:
+            theme_io.save_imported(theme_id, data)
+        except OSError as e:
+            QMessageBox.warning(self, self.tr("No se pudo importar el tema"), str(e))
+            return
+
+        lines = [self.tr("Se importó el tema «{0}» y ya está aplicado.").format(report["name"])]
+        if report.get("converted"):
+            lines.append(self.tr("Era un tema de DowP 1: se convirtió al formato nuevo. "
+                                 "Lo que no tiene equivalente se toma del tema DowP."))
+        if report["invalid"]:
+            shown = ", ".join(report["invalid"][:5]) + ("…" if len(report["invalid"]) > 5 else "")
+            lines.append(self.tr("Se ignoraron {0} colores no válidos: {1}").format(len(report["invalid"]), shown))
+        self._select_theme(theme_id)
+        QMessageBox.information(self, self.tr("Tema importado"), "\n\n".join(lines))
+
+    def _export_theme(self):
+        from PySide6.QtWidgets import QFileDialog
+        from core.utils import theme_io
+        theme_id = self.theme_combo.currentData() or "dowp"
+        suggested = os.path.join(os.path.expanduser("~"), f"{theme_id}.json")
+        path, _ = QFileDialog.getSaveFileName(
+            self, self.tr("Exportar tema"), suggested, self.tr("Temas de DowP (*.json)"))
+        if not path:
+            return
+        if not path.lower().endswith(".json"):
+            path += ".json"
+        try:
+            theme_io.export_theme(theme_id, path)
+        except OSError as e:
+            QMessageBox.warning(self, self.tr("No se pudo exportar el tema"), str(e))
+            return
+        QMessageBox.information(
+            self, self.tr("Tema exportado"),
+            self.tr("Se guardó el tema completo, con sus dos modos, formas y tipografía. "
+                    "Puedes editarlo y volver a importarlo, o compartirlo.") + "\n\n" + path)
+
+    def _delete_theme(self):
+        from core.utils import theme_io
+        theme_id = self.theme_combo.currentData()
+        if not theme_id or not theme_io.is_user_theme(theme_id):
+            return
+        answer = QMessageBox.question(
+            self, self.tr("Eliminar tema"),
+            self.tr("¿Eliminar el tema «{0}»? Se volverá al tema DowP.").format(self.theme_combo.currentText()))
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            theme_io.delete_user_theme(theme_id)
+        except OSError as e:
+            QMessageBox.warning(self, self.tr("No se pudo eliminar el tema"), str(e))
+            return
+        self._select_theme("dowp")
+
     def _open_user_themes_dir(self):
         """Abre la carpeta de temas personalizados del usuario en el explorador de archivos."""
         themes_dir = get_user_themes_dir()
@@ -477,9 +609,18 @@ class GeneralPage(QWidget):
         self.theme_combo.blockSignals(True)
         self.theme_combo.clear()
         themes = get_available_themes()
+        self._theme_has_modes = {}
         for t in themes:
             self.theme_combo.addItem(t["name"], t["id"])
+            self._theme_has_modes[t["id"]] = t.get("has_modes", False)
         self.theme_combo.blockSignals(False)
+
+    def _update_mode_combo_state(self, theme_id):
+        """Un tema sin parejas [claro, oscuro] se ve igual en cualquier modo: el selector
+        queda desactivado (pero conserva su valor, por si se vuelve a un tema con modos)."""
+        has_modes = getattr(self, "_theme_has_modes", {}).get(theme_id, True)
+        self.mode_combo.setEnabled(has_modes)
+        self.mode_combo.setToolTip("" if has_modes else self.tr("Este tema tiene un solo modo"))
 
     def _populate_fonts(self):
         """Carga las fuentes disponibles dinámicamente."""
@@ -493,13 +634,13 @@ class GeneralPage(QWidget):
         self.font_combo.blockSignals(False)
 
     def update_switch_colors(self):
-        config = get_config()
-        accent = "#B9E640" if config.get("theme") == "dark" else "#1DC038"
-        self.auto_switch.setTrackColors("#333333", accent)
-        self.paste_switch.setTrackColors("#333333", accent)
-        self.adobe_switch.setTrackColors("#333333", accent)
+        accent = get_theme_token("acento_primario", "#B9E640")
+        off = get_theme_token("switch_apagado", "#333333")
+        self.auto_switch.setTrackColors(off, accent)
+        self.paste_switch.setTrackColors(off, accent)
+        self.adobe_switch.setTrackColors(off, accent)
         if hasattr(self, "sound_switch"):
-            self.sound_switch.setTrackColors("#333333", accent)
+            self.sound_switch.setTrackColors(off, accent)
 
     def load_current_settings(self):
         config = get_config()
@@ -519,10 +660,14 @@ class GeneralPage(QWidget):
             
         # Load Themes
         self._populate_themes()
-        theme = config.get("theme", "dark")
+        theme = config.get("theme_id", "dowp")
         index = self.theme_combo.findData(theme)
         if index >= 0:
             self.theme_combo.setCurrentIndex(index)
+        mode_index = self.mode_combo.findData(config.get("theme_mode", "dark"))
+        if mode_index >= 0:
+            self.mode_combo.setCurrentIndex(mode_index)
+        self._update_mode_combo_state(theme)
             
         # Load Fonts
         self._populate_fonts()
@@ -609,12 +754,44 @@ class GeneralPage(QWidget):
         theme_code = self.theme_combo.itemData(index)
         if not theme_code: return
         config = get_config()
-        if config.get("theme") != theme_code:
-            config["theme"] = theme_code
+        if config.get("theme_id") != theme_code:
+            config["theme_id"] = theme_code
+            sync_legacy_theme_key(config)
             save_config(config)
-            self.update_switch_colors()
             logger.info(f"GeneralPage: Tema cambiado a {theme_code}")
+            self._update_mode_combo_state(theme_code)
+            # Primero se aplica el tema (MainWindow.update_theme) y después se leen sus
+            # colores: al revés, los interruptores tomaban los del tema anterior.
             self.theme_changed.emit(theme_code)
+            self.update_switch_colors()
+            self.theme_restart_hint.show()
+
+    def on_mode_selection(self, index):
+        if self._is_loading: return
+        mode = self.mode_combo.itemData(index)
+        if not mode: return
+        config = get_config()
+        if config.get("theme_mode") != mode:
+            config["theme_mode"] = mode
+            sync_legacy_theme_key(config)
+            save_config(config)
+            logger.info(f"GeneralPage: Modo de tema cambiado a {mode}")
+            self.theme_changed.emit(config.get("theme_id", "dowp"))
+            self.update_switch_colors()
+            self.theme_restart_hint.show()
+
+    def _restart_for_theme(self):
+        """Mismo reinicio que el cambio de idioma (ver _prompt_language_restart)."""
+        from core.utils.app_restart import restart_app
+        if restart_app():
+            from PySide6.QtWidgets import QApplication
+            QApplication.instance().quit()
+        else:
+            QMessageBox.warning(
+                self,
+                self.tr("No se pudo reiniciar"),
+                self.tr("Cierra y vuelve a abrir DowP a mano para aplicar el tema por completo."),
+            )
 
     def on_font_selection(self, index):
         if self._is_loading: return

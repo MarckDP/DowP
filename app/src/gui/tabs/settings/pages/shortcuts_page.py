@@ -9,9 +9,11 @@ from PySide6.QtWidgets import (
 )
 
 from core.utils import shortcuts
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, register_theme_callback
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _MODIFIER_KEYS = {Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_AltGr, Qt.Key_CapsLock}
 
@@ -31,6 +33,7 @@ class KeyCaptureButton(QPushButton):
         self.setCursor(Qt.PointingHandCursor)
         self.clicked.connect(self._start_capture)
         self._refresh()
+        register_theme_callback(self, "estilo_tema", self._refresh)
 
     def set_key(self, key: str):
         self._key = key
@@ -43,7 +46,7 @@ class KeyCaptureButton(QPushButton):
             self.setText(shortcuts.native_text(self._key) if self._key else "—")
         accent = get_theme_token('acento_primario', '#B9E640')
         border = accent if self._capturing else get_theme_token('borde', '#2d2d2d')
-        self.setStyleSheet(f"""
+        self.setStyleSheet(apply_shapes(f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
                 color: {get_theme_token('texto_principal', '#ffffff')};
@@ -53,8 +56,8 @@ class KeyCaptureButton(QPushButton):
                 font-weight: bold;
             }}
             QPushButton:hover {{ border-color: {accent}; }}
-            QPushButton:disabled {{ color: #777777; background-color: transparent; }}
-        """)
+            QPushButton:disabled {{ color: {get_theme_token('texto_apagado', '#777777')}; background-color: transparent; }}
+        """))
 
     def _start_capture(self):
         self._capturing = True
@@ -125,7 +128,7 @@ class ShortcutRow(QWidget):
         self.btn_reset.setIcon(get_colored_svg_icon("refresh.svg", icon_color, size=14))
         self.btn_reset.setIconSize(QSize(14, 14))
         self.btn_reset.setFixedSize(28, 28)
-        self.btn_reset.setStyleSheet(f"""
+        set_themed_style(self.btn_reset, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
                 border: 1px solid {get_theme_token('borde', '#2d2d2d')};
@@ -187,7 +190,7 @@ class ShortcutsPage(QWidget):
             "Haz clic en una tecla y presiona la combinación nueva. Retroceso la deja vacía y "
             "Esc cancela. Cada acción admite una tecla principal y una alternativa."))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(hint, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         layout.addWidget(hint)
 
         for section_id, section_name in shortcuts.SECTIONS.items():

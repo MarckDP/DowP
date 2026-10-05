@@ -7,10 +7,9 @@ tanto para fuentes empaquetadas en assets/fonts como para fuentes personalizadas
 agregadas por el usuario en %APPDATA%/DowP2/fonts.
 """
 import os
-import json
 from PySide6.QtGui import QFontDatabase
 from core.logger.logger_manager import logger
-from core.utils.paths import get_src_dir, get_user_fonts_dir, get_user_themes_dir, get_app_data_dir
+from core.utils.paths import get_src_dir, get_user_fonts_dir, get_app_data_dir
 from core.utils.config_manager import get_config
 
 # Pesos estándar ofrecidos en el selector de marca de agua (nombre, valor de eje 'wght').
@@ -112,7 +111,7 @@ def _ensure_active_font(theme_name: str = None) -> str:
         target_family = configured_font
     else:
         if not theme_name:
-            theme_name = config.get("theme", "dark")
+            theme_name = config.get("theme_id", "dowp")
         theme_font = get_theme_defined_font(theme_name)
         if theme_font:
             target_family = theme_font
@@ -196,24 +195,11 @@ def get_font_file_path(family: str) -> str:
 
 
 def get_theme_defined_font(theme_name: str) -> str:
-    """Lee el archivo JSON del tema para ver si especifica una fuente personalizada."""
+    """Fuente personalizada que pide el tema, si la define (ver theme_loader.get_theme_font)."""
     if not theme_name:
         return ""
-
-    user_theme_file = os.path.join(get_user_themes_dir(), f"{theme_name}.json")
-    builtin_theme_file = os.path.join(get_src_dir(), "gui", "themes", f"{theme_name}.json")
-
-    json_path = user_theme_file if os.path.exists(user_theme_file) else builtin_theme_file
-
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data.get("fuente", "") or data.get("font_family", "")
-        except Exception as e:
-            logger.debug(f"FontManager: No se pudo leer fuente del tema '{theme_name}': {e}")
-
-    return ""
+    from core.utils.theme_loader import get_theme_font
+    return get_theme_font(theme_name)
 
 
 def get_active_font_family(theme_name: str = None) -> str:

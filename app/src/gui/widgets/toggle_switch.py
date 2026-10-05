@@ -25,11 +25,16 @@ class ToggleSwitch(QWidget):
         self.setFixedSize(self.TRACK_WIDTH, self.TRACK_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
 
-        # Colores por defecto (se pueden sobreescribir desde fuera)
-        self._color_off_track = QColor("#333333")
-        self._color_on_track = QColor("#B9E640")
-        self._color_knob = QColor("#ffffff")
-        self._color_off_border = QColor("#444444")
+        # None = tomar el color del tema al pintar (se pueden fijar desde fuera)
+        self._color_off_track = None
+        self._color_on_track = None
+        self._color_knob = None
+
+        try:
+            from gui.theme_manager import get_theme_manager
+            get_theme_manager().theme_changed.connect(self._on_theme_changed)
+        except Exception:
+            pass
 
         # Animación del knob
         self._anim = QPropertyAnimation(self, b"knob_x")
@@ -75,6 +80,17 @@ class ToggleSwitch(QWidget):
         self._color_knob = QColor(color)
         self.update()
 
+    def _on_theme_changed(self, _tokens=None):
+        try:
+            self.update()
+        except RuntimeError:
+            pass
+
+    @staticmethod
+    def _token(name, fallback):
+        from gui.styles import get_theme_token
+        return QColor(get_theme_token(name, fallback))
+
     # ── Eventos ──────────────────────────────────────────────
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -104,19 +120,21 @@ class ToggleSwitch(QWidget):
         progress = (self._knob_x - min_x) / (max_x - min_x) if max_x != min_x else 0
 
         # Track (fondo ovalado)
-        track_color = self._interpolate_color(
-            self._color_off_track, self._color_on_track, progress
-        )
+        off_track = self._color_off_track or self._token("switch_apagado", "#333333")
+        on_track = self._color_on_track or self._token("acento_primario", "#B9E640")
+        track_color = self._interpolate_color(off_track, on_track, progress)
         radius = self.TRACK_HEIGHT / 2
 
-        p.setPen(QPen(self._color_off_border, 1))
+        # El borde solo se ve con el switch apagado; encendido se funde con el acento
+        border = self._interpolate_color(self._token("switch_borde", "#444444"), on_track, progress)
+        p.setPen(QPen(border, 1))
         p.setBrush(track_color)
         p.drawRoundedRect(0, 0, self.TRACK_WIDTH, self.TRACK_HEIGHT, radius, radius)
 
         # Knob (círculo)
         knob_y = (self.TRACK_HEIGHT - self.KNOB_DIAMETER) / 2
         p.setPen(Qt.NoPen)
-        p.setBrush(self._color_knob)
+        p.setBrush(self._color_knob or self._token("switch_perilla", "#ffffff"))
         p.drawEllipse(int(self._knob_x), int(knob_y),
                        self.KNOB_DIAMETER, self.KNOB_DIAMETER)
 

@@ -39,6 +39,7 @@ from core.utils.download_history import (
 )
 from gui.styles import get_theme_token, set_button_variant
 from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
+from gui.styles import set_themed_style
 
 PANEL_WIDTH = 390
 # Más grande que la pestaña por defecto de CollapsiblePanel (20x90): es el único acceso al
@@ -378,11 +379,10 @@ class HistoryPanelContent(QFrame):
         super().__init__(parent)
         self._history = download_history()
         self.setObjectName("historyPanelContent")
-        border_color = get_theme_token('borde_normal', '#222222')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#historyPanelContent {{
                 background-color: {get_theme_token('fondo_secundario', '#121212')};
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 6px;
             }}
         """)
@@ -397,11 +397,10 @@ class HistoryPanelContent(QFrame):
         header_box.setContentsMargins(0, 0, 0, 0)
         header_box.setSpacing(0)
         header = QLabel(self.tr("Historial"))
-        header.setStyleSheet(
-            f"color: {get_theme_token('texto_activo', '#ffffff')}; padding: 8px 18px; background: transparent; border: none;")
+        set_themed_style(header, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; padding: 8px 18px; background: transparent; border: none;")
         underline = QFrame()
         underline.setFixedHeight(3)
-        underline.setStyleSheet(f"background-color: {get_theme_token('acento_primario', '#B9E640')}; border: none;")
+        set_themed_style(underline, lambda: f"background-color: {get_theme_token('acento_primario', '#B9E640')}; border: none;")
         header_row = QHBoxLayout()
         header_row.setContentsMargins(0, 0, 0, 0)
         tab = QVBoxLayout()
@@ -414,7 +413,7 @@ class HistoryPanelContent(QFrame):
         header_box.addLayout(header_row)
         divider = QFrame()
         divider.setFixedHeight(1)
-        divider.setStyleSheet(f"background-color: {border_color}; border: none;")
+        set_themed_style(divider, lambda: f"background-color: {get_theme_token('borde_normal', '#222222')}; border: none;")
         header_box.addWidget(divider)
         layout.addLayout(header_box)
 
@@ -447,7 +446,7 @@ class HistoryPanelContent(QFrame):
         self.empty_label = QLabel()
         self.empty_label.setWordWrap(True)
         self.empty_label.setAlignment(Qt.AlignCenter)
-        self.empty_label.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.empty_label, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         layout.addWidget(self.empty_label, 1)
 
         self.btn_clear = QPushButton(self.tr("Borrar historial"))

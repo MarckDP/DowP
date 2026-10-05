@@ -159,10 +159,20 @@ def get_contrast_svg_icon(name: str, normal_color_hex="#B9E640", active_color_he
     return icon
 
 
+def get_themed_svg_icon(name: str) -> QIcon:
+    """Icono monocromo teñido con el color de iconos del tema (no usar con logos de
+    colores como los de Adobe/DaVinci: para esos, get_svg_icon)."""
+    from gui.styles import themed_icon
+    return themed_icon(name)
+
+
 def get_folder_icon() -> QIcon:
+    """Carpeta sin color personalizado: toma el color de iconos del tema."""
+    from gui.styles import generate_tinted_svg, get_theme_token
+    color = get_theme_token("icono_principal", "#e3e3e3")
     icon = QIcon()
-    path_closed = os.path.join(_SVG_DIR, "folder.svg")
-    path_open = os.path.join(_SVG_DIR, "folder_open.svg")
+    path_closed = generate_tinted_svg("folder.svg", color) or os.path.join(_SVG_DIR, "folder.svg")
+    path_open = generate_tinted_svg("folder_open.svg", color) or os.path.join(_SVG_DIR, "folder_open.svg")
     if os.path.exists(path_closed):
         icon.addFile(path_closed, QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         icon.addFile(path_closed, QSize(), QIcon.Mode.Selected, QIcon.State.Off)
@@ -177,7 +187,10 @@ _PLACEHOLDER_CACHE = {}
 
 def get_placeholder_thumbnail_icon(svg_name: str, color_hex: str, canvas_size=256) -> QIcon:
     """Genera un QIcon con un lienzo cuadrado uniforme para evitar desajustes en el GridMode."""
-    cache_key = f"{svg_name}:{color_hex}:{canvas_size}"
+    from gui.styles import get_theme_token
+    bg_hex = get_theme_token("miniatura_relleno_fondo", "#1c1c1e")
+    border_hex = get_theme_token("miniatura_relleno_borde", "#2d2d32")
+    cache_key = f"{svg_name}:{color_hex}:{canvas_size}:{bg_hex}:{border_hex}"
     if cache_key in _PLACEHOLDER_CACHE:
         return _PLACEHOLDER_CACHE[cache_key]
 
@@ -188,8 +201,8 @@ def get_placeholder_thumbnail_icon(svg_name: str, color_hex: str, canvas_size=25
     painter.setRenderHint(QPainter.Antialiasing)
 
     # Dibujar fondo rectangular redondeado
-    bg_color = QColor("#1c1c1e")
-    border_color = QColor("#2d2d32")
+    bg_color = QColor(bg_hex)
+    border_color = QColor(border_hex)
     painter.setBrush(bg_color)
     painter.setPen(border_color)
     painter.drawRoundedRect(4, 4, canvas_size - 8, canvas_size - 8, 12, 12)

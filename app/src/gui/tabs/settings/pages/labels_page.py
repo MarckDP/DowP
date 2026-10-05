@@ -7,6 +7,8 @@ from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_src_dir
 from gui.styles import get_theme_token
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 class LabelRow(QFrame):
     delete_requested = Signal(str)
@@ -29,10 +31,10 @@ class LabelRow(QFrame):
         info_layout.setSpacing(2)
 
         self.name_lbl = QLabel(self.name)
-        self.name_lbl.setStyleSheet(f"color: {self.color}; font-weight: bold; font-size: 13px; border: none; background: transparent;")
+        self.name_lbl.setStyleSheet(apply_shapes(f"color: {self.color}; font-weight: bold; font-size: 13px; border: none; background: transparent;"))
 
         self.path_lbl = QLabel(self.path)
-        self.path_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 11px; border: none; background: transparent;")
+        set_themed_style(self.path_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 11px; border: none; background: transparent;")
         self.path_lbl.setWordWrap(True)
 
         info_layout.addWidget(self.name_lbl)
@@ -49,7 +51,7 @@ class LabelRow(QFrame):
         self.btn_edit.setFixedSize(26, 26)
         self.btn_edit.setIcon(get_colored_icon(os.path.join(_icon_dir, "edit.svg"), get_theme_token('texto_principal', '#ffffff'), 16))
         self.btn_edit.setIconSize(QSize(16, 16))
-        self.btn_edit.setStyleSheet("""
+        self.btn_edit.setStyleSheet(apply_shapes("""
             QPushButton {
                 background: transparent;
                 border: none;
@@ -58,7 +60,7 @@ class LabelRow(QFrame):
             QPushButton:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
-        """)
+        """))
         self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.name))
 
         # Delete button (SVG icon, tinted red)
@@ -67,7 +69,7 @@ class LabelRow(QFrame):
         self.btn_delete.setFixedSize(26, 26)
         self.btn_delete.setIcon(get_colored_icon(os.path.join(_icon_dir, "close.svg"), '#e74c3c', 16))
         self.btn_delete.setIconSize(QSize(16, 16))
-        self.btn_delete.setStyleSheet("""
+        self.btn_delete.setStyleSheet(apply_shapes("""
             QPushButton {
                 background: transparent;
                 border: none;
@@ -76,7 +78,7 @@ class LabelRow(QFrame):
             QPushButton:hover {
                 background-color: rgba(231, 76, 60, 0.15);
             }
-        """)
+        """))
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self.name))
 
         layout.addLayout(info_layout, 1)
@@ -85,7 +87,7 @@ class LabelRow(QFrame):
 
         borde = get_theme_token('borde', '#2d2d2d')
         fondo = get_theme_token('fondo_secundario', '#1e1e1e')
-        self.setStyleSheet(f"""
+        self.setStyleSheet(apply_shapes(f"""
             QFrame {{
                 background-color: {fondo};
                 border: 1px solid {borde};
@@ -94,7 +96,7 @@ class LabelRow(QFrame):
             QFrame:hover {{
                 border-color: {self.color};
             }}
-        """)
+        """))
 
 
 class LabelsPage(QWidget):
@@ -104,6 +106,9 @@ class LabelsPage(QWidget):
         super().__init__()
         self.init_ui()
         self.load_labels()
+        # Las tarjetas se construyen con los colores del tema: rehacerlas al cambiarlo.
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(lambda _tokens: self.load_labels())
 
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -138,7 +143,7 @@ class LabelsPage(QWidget):
         self.add_btn.clicked.connect(self.open_add_dialog)
 
         self.feedback_lbl = QLabel("")
-        self.feedback_lbl.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        set_themed_style(self.feedback_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 11px;")
         
         btn_layout.addWidget(self.add_btn)
         btn_layout.addWidget(self.feedback_lbl)
@@ -169,7 +174,7 @@ class LabelsPage(QWidget):
 
         # Empty state label
         self.empty_lbl = QLabel(self.tr("No hay etiquetas registradas. Crea una arriba."))
-        self.empty_lbl.setStyleSheet("color: #888888; font-style: italic; border: none; background: transparent;")
+        set_themed_style(self.empty_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-style: italic; border: none; background: transparent;")
         self.empty_lbl.setAlignment(Qt.AlignCenter)
         self.scroll_layout.addWidget(self.empty_lbl)
 
@@ -188,7 +193,7 @@ class LabelsPage(QWidget):
             save_config(config)
             
             self.feedback_lbl.setText(self.tr("¡Etiqueta creada con éxito!"))
-            self.feedback_lbl.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px;")
+            set_themed_style(self.feedback_lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px;")
             
             self.load_labels()
             self.labels_changed.emit()
@@ -219,7 +224,7 @@ class LabelsPage(QWidget):
             save_config(config)
             
             self.feedback_lbl.setText(self.tr("Etiqueta actualizada."))
-            self.feedback_lbl.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px;")
+            set_themed_style(self.feedback_lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px;")
             
             self.load_labels()
             self.labels_changed.emit()
@@ -233,7 +238,7 @@ class LabelsPage(QWidget):
         save_config(config)
 
         self.feedback_lbl.setText(self.tr("Etiqueta eliminada."))
-        self.feedback_lbl.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        set_themed_style(self.feedback_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 11px;")
         
         self.load_labels()
         self.labels_changed.emit()

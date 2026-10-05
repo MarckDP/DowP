@@ -24,6 +24,8 @@ from gui.styles import get_theme_token
 from core.utils.preset_manager import (
     IA_POST_DOWNLOAD_FUNCTIONS, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
 )
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _PRESET_NAMESPACE = "video_tools/avanzado"
 _UPSCALE_PRESET_NAMESPACE = IA_TOOLS_NAMESPACE
@@ -101,7 +103,7 @@ class RecodeOptionsWidget(QFrame):
         self.title_label = QLabel(self.tr("Posprocesar"))
         self.title_label.setObjectName("sectionTitle")
         self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.setStyleSheet(_TITLE_STYLE_BASE)
+        self.title_label.setStyleSheet(apply_shapes(_TITLE_STYLE_BASE))
         header_layout.addWidget(self.title_label)
 
         self.header_widget.mousePressEvent = self._on_header_clicked
@@ -190,7 +192,7 @@ class RecodeOptionsWidget(QFrame):
         # reescalado no tiene nombre visible (ver upscale_chain.py).
         divider = QFrame(self.body_container)
         divider.setFrameShape(QFrame.HLine)
-        divider.setStyleSheet(f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')};")
+        set_themed_style(divider, lambda: f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')};")
         divider.setFixedHeight(1)
         body_layout.addWidget(divider)
 
@@ -318,7 +320,7 @@ class RecodeOptionsWidget(QFrame):
             accent = get_theme_token('acento_primario', '#B9E640')
             self.title_label.setStyleSheet(f"{_TITLE_STYLE_BASE} color: {accent};")
         else:
-            self.title_label.setStyleSheet(_TITLE_STYLE_BASE)
+            self.title_label.setStyleSheet(apply_shapes(_TITLE_STYLE_BASE))
         self.header_highlight_changed.emit(active)
 
     def _on_header_clicked(self, event):

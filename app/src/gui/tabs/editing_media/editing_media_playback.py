@@ -11,6 +11,7 @@ from PySide6.QtMultimedia import QMediaPlayer
 from core.logger.logger_manager import logger
 from gui.tabs.editing_media.editing_media_icons import get_svg_icon, get_colored_svg_icon
 from core.tabs.editing_media.editing_media_logic import WaveformExtractorThread
+from gui.styles import get_theme_token
 
 
 class VideoDerivativeResolveThread(QThread):
@@ -921,7 +922,7 @@ class PlaybackMixin:
             elif bucket == "attribution_nc":
                 lic_title = QCoreApplication.translate("PlaybackMixin", "Uso No Comercial (CC-BY-NC)")
                 lic_desc = QCoreApplication.translate("PlaybackMixin", "No puedes usar este medio en videos monetizados o proyectos comerciales. Es obligatorio dar crédito al autor.")
-                lic_color = "#E67E22" # Orange
+                lic_color = get_theme_token('estado_aviso', '#E67E22') # Orange
                 cc_url = "https://creativecommons.org/licenses/by-nc/4.0/"
                 tasl = QCoreApplication.translate("PlaybackMixin", '"{title}" por {author} ({author_url}) obtenida de {source_url} está licenciada bajo {lic} ({cc_url})').format(
                     title=title, author=author, author_url=author_url, source_url=source_url, lic=raw_license, cc_url=cc_url
@@ -930,7 +931,7 @@ class PlaybackMixin:
             elif bucket == "attribution_nd":
                 lic_title = QCoreApplication.translate("PlaybackMixin", "Sin Derivados (CC-BY-ND)")
                 lic_desc = QCoreApplication.translate("PlaybackMixin", "Uso comercial permitido, pero NO puedes modificar ni recortar este medio -- solo redistribuirlo tal cual, dando crédito al autor.")
-                lic_color = "#E67E22" # Orange -- misma cautela visual que No Comercial, restricción distinta
+                lic_color = get_theme_token('estado_aviso', '#E67E22') # Orange -- misma cautela visual que No Comercial, restricción distinta
                 # A diferencia de "attribution_nc" (mezcla NC con ND por no tener bucket propio
                 # antes), acá el código crudo YA es específicamente "by-nd" (ver
                 # OpenverseProvider.normalize_license) -- por eso sí se puede asumir esta URL de
@@ -970,7 +971,7 @@ class PlaybackMixin:
             else:
                 lic_title = QCoreApplication.translate("PlaybackMixin", "Licencia Desconocida")
                 lic_desc = QCoreApplication.translate("PlaybackMixin", "Revisa la licencia original antes de usar este medio.")
-                lic_color = "#A6ADC8" # Gray
+                lic_color = get_theme_token('texto_suave', '#A6ADC8') # Gray
                 tasl = ""
                 icon_name = "error.svg"
 

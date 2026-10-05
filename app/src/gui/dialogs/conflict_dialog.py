@@ -1,6 +1,8 @@
 # src/gui/dialogs/conflict_dialog.py
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class ConflictDialog(QDialog):
@@ -35,7 +37,7 @@ class ConflictDialog(QDialog):
 
         self.central_widget = QFrame()
         self.central_widget.setObjectName("ConflictDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        set_themed_style(self.central_widget, lambda: f"""
             QFrame#ConflictDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -59,20 +61,20 @@ class ConflictDialog(QDialog):
                 background-color: {get_theme_token("boton_secundario_hover", "#224a2b")};
             }}
             QPushButton#dialogNeutralButton {{
-                background-color: #333333;
-                color: #e0e0e0;
-                border: 1px solid #4a4a4a;
+                background-color: {get_theme_token('boton_neutro_fondo', '#333333')};
+                color: {get_theme_token('texto_principal', '#e0e0e0')};
+                border: 1px solid {get_theme_token('boton_neutro_borde', '#4a4a4a')};
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
             }}
             QPushButton#dialogNeutralButton:hover {{
-                background-color: #3d3d3d;
+                background-color: {get_theme_token('boton_neutro_hover', '#3d3d3d')};
             }}
             QPushButton#dialogCancelButton {{
                 background-color: transparent;
-                color: #e74c3c;
-                border: 1px solid #e74c3c;
+                color: {get_theme_token('etiqueta_peligro', '#e74c3c')};
+                border: 1px solid {get_theme_token('etiqueta_peligro', '#e74c3c')};
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
@@ -95,13 +97,13 @@ class ConflictDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self._on_cancel)
-        self.title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(self.title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
-            }
+            }}
         """)
         central_layout.addWidget(self.title_bar)
 

@@ -16,6 +16,7 @@ from gui.tabs.video_tools.ia_output_options import VideoIAOutputOptions
 from core.tabs.video_tools.ia_video_common import CONTAINERS_16BIT
 from core.utils.preset_manager import IA_TOOL_FUNCTIONS, IA_TOOLS_NAMESPACE
 from core.utils.recode_guard import CONTAINER_LABELS
+from gui.styles import set_themed_style
 
 # Namespace PROPIO, no "video_tools/avanzado" -- ese namespace ya lo lee tal
 # cual el picker de Recodificar de Modo Rápido, y su ejecución asume presets
@@ -86,11 +87,10 @@ class UpscaleIAPanel(QWidget):
     def _card(self, parent, title: str):
         frame = QFrame(parent)
         frame.setObjectName("advancedCard")
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        frame.setStyleSheet(f"""
+        set_themed_style(frame, lambda: f"""
             QFrame#advancedCard {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)

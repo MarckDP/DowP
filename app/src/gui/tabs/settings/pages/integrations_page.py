@@ -11,6 +11,9 @@ from gui.styles import apply_folder_browse_button_style, set_button_variant
 import os
 import platform
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class _ElevatedRemovalThread(QThread):
@@ -111,10 +114,10 @@ class IntegrationsPage(QWidget):
         header_layout = QHBoxLayout()
         title = QLabel(self.tr("Adobe Premiere Pro & After Effects"))
         title.setObjectName("settingsSectionTitle")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        title.setStyleSheet(apply_shapes("font-size: 16px; font-weight: bold;"))
         
         self.adobe_status_lbl = QLabel(self.tr("Desconectado"))
-        self.adobe_status_lbl.setStyleSheet("color: #ff5555; font-weight: bold;")
+        set_themed_style(self.adobe_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
         
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -189,7 +192,7 @@ class IntegrationsPage(QWidget):
         # Description
         desc = QLabel(self.tr("Instala la extensión DowP Importer en Premiere, After Effects o Photoshop. Activa los interruptores arriba y configura la ruta para lanzar las aplicaciones desde DowP. A Photoshop solo se le envían imágenes."))
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #aaaaaa; margin-top: 10px;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; margin-top: 10px;")
         card_layout.addWidget(desc)
         
         # Mantener referencias para estado visual (compatibilidad anterior por ahora)
@@ -219,7 +222,7 @@ class IntegrationsPage(QWidget):
         header_layout = QHBoxLayout()
         title = QLabel(self.tr("DowP Importer"))
         title.setObjectName("settingsSectionTitle")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        title.setStyleSheet(apply_shapes("font-size: 16px; font-weight: bold;"))
         self.importer_status_lbl = QLabel()
         self.importer_status_lbl.setStyleSheet("font-weight: bold;")
         header_layout.addWidget(title)
@@ -229,7 +232,7 @@ class IntegrationsPage(QWidget):
 
         self.importer_desc_lbl = QLabel()
         self.importer_desc_lbl.setWordWrap(True)
-        self.importer_desc_lbl.setStyleSheet("color: #aaaaaa;")
+        set_themed_style(self.importer_desc_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')};")
         card_layout.addWidget(self.importer_desc_lbl)
 
         actions = QHBoxLayout()
@@ -247,9 +250,9 @@ class IntegrationsPage(QWidget):
         # ── Aviso de copia antigua en la ubicación de sistema ──
         self.importer_conflict_frame = QFrame()
         self.importer_conflict_frame.setStyleSheet(
-            "QFrame { border: 1px solid #ffa500; border-radius: 6px;"
+            apply_shapes("QFrame { border: 1px solid #ffa500; border-radius: 6px;"
             " background-color: rgba(255, 165, 0, 0.08); }"
-            " QLabel { border: none; background: transparent; }"
+            " QLabel { border: none; background: transparent; }")
         )
         conflict_layout = QVBoxLayout(self.importer_conflict_frame)
         conflict_layout.setContentsMargins(12, 10, 12, 10)
@@ -293,7 +296,7 @@ class IntegrationsPage(QWidget):
 
         if state == "unsupported":
             self.importer_status_lbl.setText(self.tr("No disponible"))
-            self.importer_status_lbl.setStyleSheet("color: #aaaaaa; font-weight: bold;")
+            set_themed_style(self.importer_status_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold;")
             self.importer_desc_lbl.setText(
                 self.tr("Las extensiones de Adobe no existen en este sistema."))
             self.btn_importer_install.setVisible(False)
@@ -309,7 +312,7 @@ class IntegrationsPage(QWidget):
 
         if state == "not_installed":
             self.importer_status_lbl.setText(self.tr("No instalado"))
-            self.importer_status_lbl.setStyleSheet("color: #aaaaaa; font-weight: bold;")
+            set_themed_style(self.importer_status_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold;")
             self.btn_importer_uninstall.setVisible(False)
             if no_adobe:
                 # Sin Adobe en la máquina el panel no sirve de nada: se deja disponible
@@ -461,10 +464,10 @@ class IntegrationsPage(QWidget):
         header_layout = QHBoxLayout()
         title = QLabel(self.tr("DaVinci Resolve"))
         title.setObjectName("settingsSectionTitle")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        title.setStyleSheet(apply_shapes("font-size: 16px; font-weight: bold;"))
         
         self.davinci_status_lbl = QLabel(self.tr("Desconectado"))
-        self.davinci_status_lbl.setStyleSheet("color: #ff5555; font-weight: bold;")
+        set_themed_style(self.davinci_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
         
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -519,7 +522,7 @@ class IntegrationsPage(QWidget):
         
         desc = QLabel(self.tr("La integración de DaVinci usa la API nativa de scripting. Asegúrate de tener DaVinci abierto y permitir scripts (Preferencias -> Sistema -> General -> External scripting = Local)."))
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #aaaaaa; margin-top: 10px;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; margin-top: 10px;")
         card_layout.addWidget(desc)
         
         self.content_layout.addWidget(self.davinci_card)
@@ -701,7 +704,7 @@ class IntegrationsPage(QWidget):
         
         checkbox = QCheckBox(self.tr("Activar acceso directo a {0}").format(app_name))
         checkbox.setChecked(is_enabled)
-        checkbox.setStyleSheet("font-weight: bold; font-size: 14px;")
+        checkbox.setStyleSheet(apply_shapes("font-weight: bold; font-size: 14px;"))
         
         top_row.addWidget(icon_lbl)
         top_row.addWidget(checkbox)
@@ -817,7 +820,7 @@ class IntegrationsPage(QWidget):
             self.adobe_status_lbl.setStyleSheet("color: #55ff55; font-weight: bold;")
         else:
             self.adobe_status_lbl.setText(self.tr("Desconectado"))
-            self.adobe_status_lbl.setStyleSheet("color: #ff5555; font-weight: bold;")
+            set_themed_style(self.adobe_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
 
         for app_id, (_label, attr, svg) in self.ADOBE_STATUS_APPS.items():
             label = getattr(self, attr, None)

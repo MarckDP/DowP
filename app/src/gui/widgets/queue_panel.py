@@ -6,10 +6,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QVariantAnimation, QEasingCurve, Signal, QTimer
 from PySide6.QtGui import QColor, QIcon, QPixmap, QPainter, QCursor
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, tooltip_qss, register_theme_callback
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from core.utils.queue_manager import ORIGIN_ADVANCED
+from gui.styles import set_themed_style, apply_shapes
 
 ICONS_DIR = os.path.join(get_src_dir(), "assets", "icons", "svg")
 
@@ -63,7 +64,7 @@ class QueueItemCard(QFrame):
         self.job_id = job_id
         self.is_playlist = is_playlist
         self._is_selected = False
-        self._current_border = get_theme_token('borde', '#2d2d2d')
+        self._border_token = None  # (token, respaldo) del estado; None = borde normal
         self._press_pos = None
         self._dragging = False
         # Una tarjeta terminada se arrastra a otra aplicación con todo lo que produjo;
@@ -105,6 +106,32 @@ class QueueItemCard(QFrame):
         else:
             self.setToolTip("")
 
+    def _apply_card_icons(self):
+        tenue = get_theme_token("texto_tenue", "#888888")
+        acento = get_theme_token("acento_primario", "#B9E640")
+        self.btn_up.setIcon(get_colored_icon('arrow_upward_alt.svg', tenue, size=12))
+        self.btn_down.setIcon(get_colored_icon('arrow_downward_alt.svg', tenue, size=12))
+        self.btn_reset.setIcon(get_colored_icon('arrow_back.svg', acento))
+        self.btn_folder.setIcon(get_colored_icon('folder_open.svg', acento))
+        self.btn_configure.setIcon(get_colored_icon('settings.svg', tenue))
+
+    def _on_theme_changed(self):
+        self._apply_card_icons()
+        self._apply_style()
+
+    def _set_status_style(self, token, fallback, bold, percent=False):
+        """Colorea el estado (y el porcentaje si percent=True; percent=None lo devuelve
+        al acento). Incluye la regla de tooltip: el tooltip de Qt es un QLabel hijo y,
+        si no, heredaría el color del estado."""
+        weight = " font-weight: bold;" if bold else ""
+        set_themed_style(self.status_lbl, lambda: (
+            f"QLabel {{ color: {get_theme_token(token, fallback)}; font-size: 10px;{weight} }}" + tooltip_qss()))
+        if percent:
+            set_themed_style(self.percent_lbl, lambda: (
+                f"QLabel {{ color: {get_theme_token(token, fallback)}; font-size: 10px; font-weight: bold; }}" + tooltip_qss()))
+        elif percent is None:
+            set_themed_style(self.percent_lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
+
     def _apply_style(self):
         bg_color = get_theme_token('fondo_principal', '#121212')
         acento = get_theme_token('acento_primario', '#B9E640')
@@ -120,7 +147,7 @@ class QueueItemCard(QFrame):
             new_style = f"""
                 QFrame#queueItemCard {{
                     background-color: {bg_color};
-                    border: 1px solid {self._current_border};
+                    border: 1px solid {get_theme_token(*self._border_token) if self._border_token else get_theme_token('borde', '#2d2d2d')};
                     border-radius: 6px;
                 }}
                 QFrame#queueItemCard:hover {{
@@ -129,6 +156,7 @@ class QueueItemCard(QFrame):
             """
         
         # Solo re-estilizar si el CSS realmente cambió
+        new_style = apply_shapes(new_style)
         if self.styleSheet() == new_style:
             return
         
@@ -199,28 +227,26 @@ class QueueItemCard(QFrame):
         top_layout = QHBoxLayout()
         
         self.title_lbl = QLabel(title)
-        self.title_lbl.setStyleSheet(f"color: {get_theme_token('texto_principal', '#ffffff')}; font-weight: bold;")
+        set_themed_style(self.title_lbl, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-weight: bold;")
         self.title_lbl.setWordWrap(False)
         self.title_lbl.setMinimumWidth(0)
         self.title_lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.update_title(title)
         
         self.status_lbl = QLabel(self.tr("En espera"))
-        self.status_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
+        set_themed_style(self.status_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
         self.status_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.status_lbl.setMinimumWidth(0)
         self.status_lbl.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         
         # Botones de control
         self.btn_up = QPushButton()
-        self.btn_up.setIcon(get_colored_icon('arrow_upward_alt.svg', '#888888', size=12))
         self.btn_up.setToolTip(self.tr("Mover arriba"))
         self.btn_up.setFixedSize(16, 16)
         self.btn_up.setStyleSheet("border: none; background: transparent; padding: 0px; min-width: 0px; min-height: 0px;")
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self.job_id))
 
         self.btn_down = QPushButton()
-        self.btn_down.setIcon(get_colored_icon('arrow_downward_alt.svg', '#888888', size=12))
         self.btn_down.setToolTip(self.tr("Mover abajo"))
         self.btn_down.setFixedSize(16, 16)
         self.btn_down.setStyleSheet("border: none; background: transparent; padding: 0px; min-width: 0px; min-height: 0px;")
@@ -234,8 +260,6 @@ class QueueItemCard(QFrame):
         self.btn_close.clicked.connect(lambda: self.delete_requested.emit(self.job_id))
         
         self.btn_reset = QPushButton()
-        acento_color = get_theme_token('acento_primario', '#B9E640')
-        self.btn_reset.setIcon(get_colored_icon('arrow_back.svg', acento_color))
         self.btn_reset.setToolTip(self.tr("Restaurar descarga"))
         self.btn_reset.setFixedSize(16, 16)
         self.btn_reset.setStyleSheet("border: none; background: transparent; padding: 0px; min-width: 0px; min-height: 0px;")
@@ -243,7 +267,6 @@ class QueueItemCard(QFrame):
         self.btn_reset.hide()
 
         self.btn_folder = QPushButton()
-        self.btn_folder.setIcon(get_colored_icon('folder_open.svg', acento_color))
         self.btn_folder.setToolTip(self.tr("Abrir carpeta contenedora"))
         self.btn_folder.setFixedSize(16, 16)
         self.btn_folder.setStyleSheet("border: none; background: transparent; padding: 0px; min-width: 0px; min-height: 0px;")
@@ -251,11 +274,12 @@ class QueueItemCard(QFrame):
         self.btn_folder.hide()
 
         self.btn_configure = QPushButton()
-        self.btn_configure.setIcon(get_colored_icon('settings.svg', '#888888'))
         self.btn_configure.setToolTip(self.tr("Configurar Playlist"))
         self.btn_configure.setFixedSize(16, 16)
         self.btn_configure.setStyleSheet("border: none; background: transparent; padding: 0px; min-width: 0px; min-height: 0px;")
         self.btn_configure.clicked.connect(lambda: self.configure_requested.emit(self.job_id))
+        self._apply_card_icons()
+        register_theme_callback(self, "tarjeta_tema", self._on_theme_changed)
         if not self.is_playlist:
             self.btn_configure.hide()
         
@@ -279,7 +303,7 @@ class QueueItemCard(QFrame):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet(f"""
+        set_themed_style(self.progress_bar, lambda: f"""
             QProgressBar {{
                 background-color: {get_theme_token('progreso_fondo', '#0f0f0f')};
                 border: none;
@@ -298,12 +322,12 @@ class QueueItemCard(QFrame):
         info_layout = QHBoxLayout()
         
         self.info_lbl = QLabel("")
-        self.info_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
+        set_themed_style(self.info_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
         self.info_lbl.setMinimumWidth(0)
         self.info_lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         
         self.percent_lbl = QLabel("0%")
-        self.percent_lbl.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
+        set_themed_style(self.percent_lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
         self.percent_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         
         info_layout.addWidget(self.info_lbl, 1)
@@ -311,7 +335,7 @@ class QueueItemCard(QFrame):
         layout.addLayout(info_layout)
         
         # Aplicar borde y fondo usando tokens de color del tema
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#queueItemCard {{
                 background-color: {get_theme_token('fondo_principal', '#121212')};
                 border: 1px solid {get_theme_token('borde', '#2d2d2d')};
@@ -376,40 +400,27 @@ class QueueItemCard(QFrame):
             self.status_lbl.setText(status_text)
             self._update_elided_title()
             
-            # Cambiar colores según estado
-            border_color = get_theme_token('borde', '#2d2d2d')
+            # Cambiar colores según estado. Se guardan TOKENS, no colores: las hojas se
+            # registran con set_themed_style y se recalculan al cambiar de tema.
+            border_token = None
             if status_text == self.tr("Completado"):
-                color = get_theme_token('estado_exito', '#40d66b')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                self.percent_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                border_color = color
-            elif status_text == self.tr("Error"):
-                color = get_theme_token('estado_error', '#ff6b5f')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                self.percent_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                border_color = color
-            elif status_text == self.tr("Cancelado"):
-                color = get_theme_token('estado_error', '#ff6b5f')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                self.percent_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                border_color = color
+                self._set_status_style("estado_exito", "#40d66b", bold=True, percent=True)
+                border_token = ("estado_exito", "#40d66b")
+            elif status_text in (self.tr("Error"), self.tr("Cancelado")):
+                self._set_status_style("estado_error", "#ff6b5f", bold=True, percent=True)
+                border_token = ("estado_error", "#ff6b5f")
             elif status_text == self.tr("Omitido"):
-                color = get_theme_token('estado_aviso', '#d8c94a')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                self.percent_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                border_color = color
+                self._set_status_style("estado_aviso", "#d8c94a", bold=True, percent=True)
+                border_token = ("estado_aviso", "#d8c94a")
             elif status_text == self.tr("Descargando"):
-                color = get_theme_token('estado_progreso', '#3498db')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px;")
-                border_color = color
+                self._set_status_style("estado_progreso", "#3498db", bold=False)
+                border_token = ("estado_progreso", "#3498db")
             elif status_text.startswith(self.tr("Analizando")) or "Analizando" in status_text:
-                color = get_theme_token('estado_progreso', '#3498db')
-                self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
-                border_color = color
+                self._set_status_style("estado_progreso", "#3498db", bold=True)
+                border_token = ("estado_progreso", "#3498db")
             elif status_text == self.tr("En espera"):
                 # Reseteo completo: restaurar colores neutros, barra a 0, ocultar reset
-                self.status_lbl.setStyleSheet(f"color: {get_theme_token('estado_espera', '#aaaaaa')}; font-size: 10px;")
-                self.percent_lbl.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
+                self._set_status_style("estado_espera", "#aaaaaa", bold=False, percent=None)
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(0)
                 self.percent_lbl.setText("0%")
@@ -417,7 +428,6 @@ class QueueItemCard(QFrame):
                 self.info_lbl.setText("")
                 self.info_lbl.setToolTip("")
                 self.status_lbl.setToolTip("")
-                border_color = get_theme_token('borde', '#2d2d2d')
 
             if status_text in (self.tr("Completado"), self.tr("Error"), self.tr("Cancelado"), self.tr("Omitido")):
                 self.btn_reset.show()
@@ -433,7 +443,7 @@ class QueueItemCard(QFrame):
             else:
                 self.btn_folder.hide()
 
-            self._current_border = border_color
+            self._border_token = border_token
             self._apply_style()
 
     def update_title(self, title):
@@ -504,7 +514,7 @@ class QueuePanel(QWidget):
         
         # Título del panel
         self.header_lbl = QLabel(self.tr("Cola de Descargas"))
-        self.header_lbl.setStyleSheet(f"""
+        set_themed_style(self.header_lbl, lambda: f"""
             color: {get_theme_token('acento_primario', '#B9E640')};
             font-size: 12px;
             font-weight: bold;
@@ -528,14 +538,12 @@ class QueuePanel(QWidget):
         # Indicador de inserción para el arrastre de tarjetas (línea delgada que
         # marca dónde quedaría la tarjeta si se suelta ahí). Oculto por defecto.
         self._drag_indicator = QFrame(self.scroll_content)
-        self._drag_indicator.setStyleSheet(
-            f"background-color: {get_theme_token('estado_progreso', '#3498db')}; border-radius: 1px;"
-        )
+        set_themed_style(self._drag_indicator, lambda: f"background-color: {get_theme_token('estado_progreso', '#3498db')}; border-radius: 1px;")
         self._drag_indicator.hide()
 
         # Mensaje de lista vacía
         self.empty_lbl = QLabel(self.tr("No hay descargas en cola"))
-        self.empty_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.empty_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.empty_lbl.setAlignment(Qt.AlignCenter)
         self.scroll_layout.addWidget(self.empty_lbl)
         
@@ -544,7 +552,7 @@ class QueuePanel(QWidget):
         
         # Botón limpiar lista
         self.btn_clear_list = QPushButton(self.tr("Limpiar Lista"))
-        self.btn_clear_list.setStyleSheet(f"""
+        set_themed_style(self.btn_clear_list, lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 border: 1px solid {get_theme_token('borde', '#333')};
@@ -567,7 +575,7 @@ class QueuePanel(QWidget):
 
         # Botón resetear estado
         self.btn_reset_all = QPushButton(self.tr("Resetear Estado"))
-        self.btn_reset_all.setStyleSheet(f"""
+        set_themed_style(self.btn_reset_all, lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 border: 1px solid {get_theme_token('borde', '#333')};

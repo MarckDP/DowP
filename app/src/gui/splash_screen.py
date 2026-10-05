@@ -27,6 +27,8 @@ from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from core.utils.font_manager import get_active_font_family
 from core.version import get_display_version
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class DependencyCheckWorker(QThread):
@@ -227,7 +229,6 @@ class SplashScreen(QWidget):
         text_main = get_theme_token("texto_principal", "#e0e0e0")
         text_sec = get_theme_token("texto_secundario", "#666666")
         accent = get_theme_token("acento_primario", "#B9E640")
-        accent2 = get_theme_token("acento_secundario", "#1DC038")
         success = get_theme_token("estado_exito", "#40d66b")
         warning = get_theme_token("estado_aviso", "#d8c94a")
         error = get_theme_token("estado_error", "#ff6b5f")
@@ -249,10 +250,10 @@ class SplashScreen(QWidget):
         # ── Contenedor principal con borde redondeado ──
         container = QFrame(self)
         container.setObjectName("splashContainer")
-        container.setStyleSheet(f"""
+        set_themed_style(container, lambda: f"""
             QFrame#splashContainer {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#121212')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 16px;
             }}
         """)
@@ -291,7 +292,7 @@ class SplashScreen(QWidget):
         # (no APP_VERSION crudo): muestra "Beta" en vez del numero interno
         # mientras dure la fase beta, igual que el resto de la UI.
         title_lbl = QLabel(f"DowP {get_display_version()}", container)
-        title_lbl.setStyleSheet(f"""
+        title_lbl.setStyleSheet(apply_shapes(f"""
             color: {text_main};
             font-family: {self._font_family};
             font-size: 26px;
@@ -299,12 +300,12 @@ class SplashScreen(QWidget):
             background: transparent;
             border: none;
             letter-spacing: 0.5px;
-        """)
+        """))
         text_col.addWidget(title_lbl, 0, Qt.AlignLeft | Qt.AlignBottom)
 
         # "Iniciando..." — texto delgado y pequeño
         self.status_label = QLabel("Iniciando...", container)
-        self.status_label.setStyleSheet(f"""
+        self.status_label.setStyleSheet(apply_shapes(f"""
             color: {text_sec};
             font-family: {self._font_family};
             font-size: 11px;
@@ -312,7 +313,7 @@ class SplashScreen(QWidget):
             background: transparent;
             border: none;
             letter-spacing: 0.5px;
-        """)
+        """))
         text_col.addWidget(self.status_label, 0, Qt.AlignLeft | Qt.AlignTop)
 
         header.addLayout(text_col)
@@ -330,14 +331,14 @@ class SplashScreen(QWidget):
         self.loading_bar.setRange(0, 0)  # Modo indeterminado
         self.loading_bar.setTextVisible(False)
         self.loading_bar.setFixedHeight(3)
-        self.loading_bar.setStyleSheet(f"""
+        set_themed_style(self.loading_bar, lambda: f"""
             QProgressBar {{
-                background-color: {bg_dark};
+                background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
                 border: none;
                 border-radius: 1px;
             }}
             QProgressBar::chunk {{
-                background-color: {accent};
+                background-color: {get_theme_token('acento_primario', '#B9E640')};
                 border-radius: 1px;
             }}
         """)
@@ -348,10 +349,10 @@ class SplashScreen(QWidget):
         # ═══════════════════════════════════════════════════════
         self.deps_container = QFrame(container)
         self.deps_container.setObjectName("depsContainer")
-        self.deps_container.setStyleSheet(f"""
+        set_themed_style(self.deps_container, lambda: f"""
             QFrame#depsContainer {{
-                background-color: {bg_dark};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 10px;
             }}
             QLabel {{
@@ -359,13 +360,13 @@ class SplashScreen(QWidget):
                 background: transparent;
             }}
             QProgressBar {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#121212')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 3px;
                 height: 6px;
             }}
             QProgressBar::chunk {{
-                background-color: {accent};
+                background-color: {get_theme_token('acento_primario', '#B9E640')};
                 border-radius: 2px;
             }}
         """)
@@ -390,17 +391,17 @@ class SplashScreen(QWidget):
         # Dot indicador
         dot = QLabel("●", self.deps_container)
         dot.setFixedWidth(14)
-        dot.setStyleSheet(f"color: {colors['text_sec']}; font-size: 10px;")
+        dot.setStyleSheet(apply_shapes(f"color: {colors['text_sec']}; font-size: 10px;"))
         dot.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         row.addWidget(dot)
 
         # Nombre
         name_lbl = QLabel(f"<b>{name}</b>", self.deps_container)
-        name_lbl.setStyleSheet(f"""
-            color: #cccccc;
+        name_lbl.setStyleSheet(apply_shapes(f"""
+            color: {get_theme_token('texto_medio', '#cccccc')};
             font-family: {self._font_family};
             font-size: 11px;
-        """)
+        """))
         name_lbl.setFixedWidth(60)
         row.addWidget(name_lbl)
 
@@ -415,12 +416,12 @@ class SplashScreen(QWidget):
 
         # Status
         status = QLabel("Esperando...", self.deps_container)
-        status.setStyleSheet(f"""
+        status.setStyleSheet(apply_shapes(f"""
             color: {colors['text_sec']};
             font-family: {self._font_family};
             font-size: 10px;
             font-weight: 600;
-        """)
+        """))
         status.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         status.setMinimumWidth(100)
         row.addWidget(status)
@@ -455,25 +456,25 @@ class SplashScreen(QWidget):
             self._ensure_dep_row(dep_id, name)
             row = self.dep_rows[dep_id]
             if installed:
-                row["dot"].setStyleSheet(f"color: {self._colors['success']}; font-size: 10px;")
+                row["dot"].setStyleSheet(apply_shapes(f"color: {self._colors['success']}; font-size: 10px;"))
                 row["bar"].hide()
                 v_str = str(version)
                 v_text = f"v{v_str}" if (v_str and not v_str.startswith("v") and v_str != "OK") else v_str
                 row["status"].setText(v_text or "OK")
-                row["status"].setStyleSheet(f"""
+                row["status"].setStyleSheet(apply_shapes(f"""
                     color: {self._colors['success']};
                     font-family: {self._font_family};
                     font-size: 10px; font-weight: 600;
-                """)
+                """))
             else:
-                row["dot"].setStyleSheet(f"color: {self._colors['text_sec']}; font-size: 10px;")
+                row["dot"].setStyleSheet(apply_shapes(f"color: {self._colors['text_sec']}; font-size: 10px;"))
                 row["bar"].hide()
                 row["status"].setText("Pendiente")
-                row["status"].setStyleSheet(f"""
+                row["status"].setStyleSheet(apply_shapes(f"""
                     color: {self._colors['text_sec']};
                     font-family: {self._font_family};
                     font-size: 10px; font-weight: 600;
-                """)
+                """))
 
     @Slot(str)
     def _on_status_update(self, msg):
@@ -483,13 +484,13 @@ class SplashScreen(QWidget):
     def _on_dep_started(self, dep_id, name):
         self._ensure_dep_row(dep_id, name)
         row = self.dep_rows[dep_id]
-        row["dot"].setStyleSheet(f"color: {self._colors['warning']}; font-size: 10px;")
+        row["dot"].setStyleSheet(apply_shapes(f"color: {self._colors['warning']}; font-size: 10px;"))
         row["status"].setText(self.tr("Descargando... 0%"))
-        row["status"].setStyleSheet(f"""
+        row["status"].setStyleSheet(apply_shapes(f"""
             color: {self._colors['warning']};
             font-family: {self._font_family};
             font-size: 10px; font-weight: 600;
-        """)
+        """))
         row["bar"].setValue(0)
         row["bar"].show()
 
@@ -517,36 +518,36 @@ class SplashScreen(QWidget):
         row["bar"].hide()
 
         if success:
-            row["dot"].setStyleSheet(f"color: {self._colors['success']}; font-size: 10px;")
+            row["dot"].setStyleSheet(apply_shapes(f"color: {self._colors['success']}; font-size: 10px;"))
             v_str = str(version_or_msg)
             v_text = f"v{v_str}" if (v_str and not v_str.startswith("v") and v_str != "OK") else v_str
             row["status"].setText(v_text or "OK")
-            row["status"].setStyleSheet(f"""
+            row["status"].setStyleSheet(apply_shapes(f"""
                 color: {self._colors['success']};
                 font-family: {self._font_family};
                 font-size: 10px; font-weight: 600;
-            """)
+            """))
         else:
-            row["dot"].setStyleSheet(f"color: {self._colors['error']}; font-size: 10px;")
+            row["dot"].setStyleSheet(apply_shapes(f"color: {self._colors['error']}; font-size: 10px;"))
             row["status"].setText(self.tr("Error"))
-            row["status"].setStyleSheet(f"""
+            row["status"].setStyleSheet(apply_shapes(f"""
                 color: {self._colors['error']};
                 font-family: {self._font_family};
                 font-size: 10px; font-weight: 600;
-            """)
+            """))
 
     @Slot()
     def _on_all_ready(self):
         """Dependencias listas → construir MainWindow ANTES de desvanecer."""
         self.status_label.setText(self.tr("Iniciando aplicación..."))
-        self.status_label.setStyleSheet(f"""
+        self.status_label.setStyleSheet(apply_shapes(f"""
             color: {self._colors['text_sec']};
             font-family: {self._font_family};
             font-size: 11px;
             font-weight: 300;
             background: transparent;
             border: none;
-        """)
+        """))
         # Dar un frame para que el label se actualice
         QApplication.processEvents()
 
@@ -567,14 +568,14 @@ class SplashScreen(QWidget):
         self.loading_bar.setRange(0, 100)
         self.loading_bar.setValue(0)
         self.status_label.setText(self.tr("Error: {0}").format(msg))
-        self.status_label.setStyleSheet(f"""
+        self.status_label.setStyleSheet(apply_shapes(f"""
             color: {self._colors['error']};
             font-family: {self._font_family};
             font-size: 11px;
             font-weight: 600;
             background: transparent;
             border: none;
-        """)
+        """))
         # Emitir failed después de un breve delay para que el usuario lea
         QTimer.singleShot(3000, self.failed.emit)
 

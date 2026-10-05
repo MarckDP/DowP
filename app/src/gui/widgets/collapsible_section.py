@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt, QEvent, Signal, QPropertyAnimation, QEasingCurve,
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QWidget
 
 from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class CollapsibleSection(QFrame):
@@ -29,11 +30,10 @@ class CollapsibleSection(QFrame):
         self._is_expanded = start_expanded
         self._anim_group = None
 
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#collapsibleSection {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)

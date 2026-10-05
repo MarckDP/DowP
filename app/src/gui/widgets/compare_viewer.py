@@ -15,9 +15,11 @@ from PySide6.QtCore import Qt, QPointF, QRectF
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen
 
 from gui.styles import (
+    register_theme_callback,
     VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip,
     get_theme_token,
 )
+from gui.styles import apply_shapes
 
 _DIVIDER_GRAB_MARGIN = 8
 _HANDLE_RADIUS = 7
@@ -37,6 +39,7 @@ class CompareViewer(QGraphicsView):
         self.setFrameShape(QGraphicsView.NoFrame)
         self._checker_tile = self._build_checker_tile()
         self._dark_bg_color = QColor(get_theme_token('fondo_principal', '#0a0a0a'))
+        register_theme_callback(self, "fondo_tema", self.refresh_checker_theme)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -84,13 +87,13 @@ class CompareViewer(QGraphicsView):
         # mousePressEvent/mouseMoveEvent de este mismo widget.
         self._handle = QLabel(self)
         self._handle.setFixedSize(_HANDLE_RADIUS * 2, _HANDLE_RADIUS * 2)
-        self._handle.setStyleSheet(f"""
+        self._handle.setStyleSheet(apply_shapes(f"""
             QLabel {{
                 background-color: {divider_color.name()};
                 border: 2px solid white;
                 border-radius: {_HANDLE_RADIUS}px;
             }}
-        """)
+        """))
         self._handle.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self._handle.hide()
 

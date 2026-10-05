@@ -28,6 +28,7 @@ from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManage
 from core.tabs.editing_media.editing_media_logic import VALID_IMAGE_EXTS, VALID_VECTOR_EXTS, format_size
 from core.logger.logger_manager import logger
 from core.utils.paths import get_pasted_images_dir
+from gui.styles import set_themed_style
 
 # Copia adaptada de gui/tabs/video_tools/media_queue_widget.py::MediaQueueWidget (misma
 # estructura/estilo tal cual pidió el usuario) -- sin lo específico de video/audio
@@ -106,7 +107,7 @@ def _accent_rgba(alpha: int) -> str:
 SUPPORTED_EXTENSIONS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS
 
 # Mismo color que usa el Gestor de Medios (media_model.py) para el ícono de "imagen".
-_IMAGE_ICON_COLOR = "#2ecc71"
+_IMAGE_ICON_COLOR = get_theme_token('estado_exito', '#2ecc71')
 _ROW_THUMB_SIZE = 18  # px, cuadrado
 
 _HEADERS = (QCoreApplication.translate("image_queue_widget", "Nombre"),
@@ -321,8 +322,6 @@ class ImageQueueWidget(QFrame):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
-        bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        border_color = get_theme_token('borde_normal', '#2d2d2d')
         # Eliminado el estilo de tarjeta para permitir unificación externa
         self.setStyleSheet("""
             QFrame#imageQueueWidget {
@@ -339,7 +338,7 @@ class ImageQueueWidget(QFrame):
         self.lbl_title.setAlignment(Qt.AlignCenter)
 
         self.lbl_count = QLabel(self.tr("0 archivos"), self)
-        self.lbl_count.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.lbl_count, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.lbl_count.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         header_grid.addWidget(self.lbl_title, 0, 0, 1, 3, Qt.AlignCenter)
@@ -421,10 +420,10 @@ class ImageQueueWidget(QFrame):
         # sobreescribir keyPressEvent directamente.
         self.tree.installEventFilter(self)
 
-        self.tree.setStyleSheet(f"""
+        set_themed_style(self.tree, lambda: f"""
             QTreeView#imageQueueTree {{
                 background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 padding: 0px;
                 color: {get_theme_token('texto_principal', '#cdd6f4')};
                 font-size: 12px;
@@ -454,7 +453,7 @@ class ImageQueueWidget(QFrame):
                 color: {get_theme_token('texto_secundario', '#a6adc8')};
                 padding: 6px 8px;
                 border: none;
-                border-right: 1px solid {border_color};
+                border-right: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-bottom: 1px solid {get_theme_token('acento_primario', '#B9E640')};
                 font-weight: bold;
                 font-size: 11px;
@@ -503,9 +502,9 @@ class ImageQueueWidget(QFrame):
         # que el panel angosto (~380px con margen incluido, ver comentario de los
         # botones más arriba).
         self.lbl_drop_hint.setWordWrap(True)
-        self.lbl_drop_hint.setStyleSheet(f"""
+        set_themed_style(self.lbl_drop_hint, lambda: f"""
             color: {get_theme_token('texto_secundario', '#888888')};
-            border: 1px dashed {border_color};
+            border: 1px dashed {get_theme_token('borde_normal', '#2d2d2d')};
             border-radius: 6px;
             padding: 8px;
             font-size: 11px;

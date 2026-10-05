@@ -21,6 +21,9 @@ from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.title_bar import CustomTitleBar
 from gui.tabs.advanced_process.video_details_components import RichComboBox, RichTextDelegate
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 PLAYLIST_MODE_OPTIONS = [
     (QCoreApplication.translate("playlist_selection_dialog", "Video + Audio"), "video+audio"),
@@ -180,7 +183,7 @@ class PlaylistItemRow(QFrame):
         self.thumb.setFixedSize(96, 54)
         self.thumb.setAlignment(Qt.AlignCenter)
         self.thumb.setText("...")
-        self.thumb.setStyleSheet("background: #151515; color: #888; border: 1px solid #333; border-radius: 4px;")
+        set_themed_style(self.thumb, lambda: f"background: {get_theme_token('fondo_miniatura', '#151515')}; color: {get_theme_token('texto_tenue', '#888')}; border: 1px solid {get_theme_token('borde_sutil', '#333')}; border-radius: 4px;")
         layout.addWidget(self.thumb)
 
         text_col = QVBoxLayout()
@@ -189,17 +192,17 @@ class PlaylistItemRow(QFrame):
         self.title.setStyleSheet("font-weight: 600;")
         self.title.setToolTip(self.title.text())
         self.meta = QLabel(f"#{index + 1}  |  {format_duration(entry.get('duration'))}")
-        self.meta.setStyleSheet("color: #888; font-size: 11px;")
+        set_themed_style(self.meta, lambda: f"color: {get_theme_token('texto_tenue', '#888')}; font-size: 11px;")
         text_col.addWidget(self.title)
         text_col.addWidget(self.meta)
         layout.addLayout(text_col, 1)
 
-        self.setStyleSheet("""
-            QFrame#playlistItemRow {
-                background: #171717;
-                border: 1px solid #2e2e2e;
+        set_themed_style(self, lambda: f"""
+            QFrame#playlistItemRow {{
+                background: {get_theme_token('tarjeta_lista_fondo', '#171717')};
+                border: 1px solid {get_theme_token('tarjeta_lista_borde', '#2e2e2e')};
                 border-radius: 6px;
-            }
+            }}
         """)
 
     def set_thumbnail(self, data):
@@ -243,12 +246,12 @@ class PlaylistSelectionDialog(QDialog):
         
         self.central_widget = QFrame()
         self.central_widget.setObjectName("PlaylistDialogContainer")
-        self.central_widget.setStyleSheet("""
-            QFrame#PlaylistDialogContainer {
-                background-color: #0d0d0d;
-                border: 1px solid #333333;
+        set_themed_style(self.central_widget, lambda: f"""
+            QFrame#PlaylistDialogContainer {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border: 1px solid {get_theme_token('borde_sutil', '#333333')};
                 border-radius: 12px;
-            }
+            }}
         """)
         
         layout = QVBoxLayout(self.central_widget)
@@ -315,7 +318,7 @@ class PlaylistSelectionDialog(QDialog):
         cancel = QPushButton(self.tr("Cancelar"))
         cancel.setFixedWidth(110)
         cancel.setFixedHeight(35)
-        cancel.setStyleSheet("""
+        cancel.setStyleSheet(apply_shapes("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #b71c1c, stop:0.6 #e53935, stop:1 #ef5350);
@@ -325,7 +328,7 @@ class PlaylistSelectionDialog(QDialog):
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #c62828, stop:1 #b71c1c);
             }
-        """)
+        """))
         accept = QPushButton(self.tr("Aceptar"))
         accept.setObjectName("analyzeButton")
         accept.setFixedWidth(110)

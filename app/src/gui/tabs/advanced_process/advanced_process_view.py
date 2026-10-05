@@ -43,6 +43,7 @@ from gui.tabs.advanced_process.subtitle_controller import SubtitleController
 from gui.tabs.advanced_process.recode_controller import RecodeController
 from gui.tabs.advanced_process.playlist_controller import PlaylistController
 from gui.tabs.advanced_process.download_controller import DownloadController
+from gui.styles import set_themed_style
 
 class AdvancedProcessTab(QWidget):
     def __init__(self):
@@ -230,12 +231,10 @@ class AdvancedProcessTab(QWidget):
         bar = QFrame()
         bar.setObjectName("analysisOptionsBar")
         from gui.styles import get_theme_token
-        borde_color = get_theme_token('borde_normal', '#2d2d2d')
-        fondo_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        bar.setStyleSheet(f"""
+        set_themed_style(bar, lambda: f"""
             QFrame#analysisOptionsBar {{
-                background-color: {fondo_color};
-                border: 1px solid {borde_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -261,7 +260,7 @@ class AdvancedProcessTab(QWidget):
         # Divisor vertical
         self.divider = QFrame()
         self.divider.setFixedWidth(1)
-        self.divider.setStyleSheet(f"background-color: {borde_color}; border: none; border-radius: 0px;")
+        set_themed_style(self.divider, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')}; border: none; border-radius: 0px;")
         layout.addWidget(self.divider)
 
         # Opciones de miniatura
@@ -289,7 +288,7 @@ class AdvancedProcessTab(QWidget):
         # Divisor vertical para separar de las opciones globales
         self.global_divider = QFrame()
         self.global_divider.setFixedWidth(1)
-        self.global_divider.setStyleSheet(f"background-color: {borde_color}; border: none; border-radius: 0px;")
+        set_themed_style(self.global_divider, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')}; border: none; border-radius: 0px;")
         layout.addWidget(self.global_divider)
 
         # Opciones globales de calidad/modo

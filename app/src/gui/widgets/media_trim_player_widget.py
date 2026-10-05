@@ -15,14 +15,15 @@ from PySide6.QtMultimedia import (
 )
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 
-from gui.styles import get_theme_token, apply_player_play_button_style
-from gui.tabs.editing_media.editing_media_icons import get_svg_icon, get_colored_svg_icon
+from gui.styles import get_theme_token, apply_player_play_button_style, token_rgba, register_theme_callback
+from gui.tabs.editing_media.editing_media_icons import get_svg_icon, get_colored_svg_icon, get_themed_svg_icon
 from gui.widgets.timeline_ruler import TimelineRulerWidget
 from gui.widgets.audio_meter import MultiChannelMeterWidget
 from gui.widgets.volume_control import VolumeControlWidget
 from core.tabs.editing_media.waveform_cache_manager import WaveformCacheManager
 from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager, ALPHA_PREVIEW_DIVISOR
 from core.logger.logger_manager import logger
+from gui.styles import set_themed_style
 
 # Opciones del selector de calidad de previsualización: (etiqueta, modo, divisor).
 # modo "auto" recalcula el divisor según la resolución nativa real del video (ver
@@ -390,7 +391,7 @@ class TrimWaveformWidget(QWidget):
                 self.loading_timer.stop()
 
         # Fondo oscuro
-        painter.fillRect(0, 0, w, h, QColor("#0d0d0d"))
+        painter.fillRect(0, 0, w, h, QColor(get_theme_token('onda_fondo', '#0d0d0d')))
 
         mid_y = h / 2.0
         x_in = int(self.in_ratio * w)
@@ -409,11 +410,12 @@ class TrimWaveformWidget(QWidget):
             painter.drawLine(sx_out, 0, sx_out, h)
 
         # Fondo sutil de la zona seleccionada
-        highlight = QColor(185, 230, 64, 15)
+        highlight = QColor(get_theme_token('acento_primario', '#B9E640'))
+        highlight.setAlpha(15)
         painter.fillRect(x_in, 0, max(1, x_out - x_in), h, highlight)
 
         # Línea central (eje 0)
-        painter.setPen(QPen(QColor(60, 60, 60), 1))
+        painter.setPen(QPen(QColor(get_theme_token('onda_linea', '#3c3c3c')), 1))
         painter.drawLine(0, int(mid_y), w, int(mid_y))
 
         if self.is_downloading:
@@ -421,16 +423,16 @@ class TrimWaveformWidget(QWidget):
             # barra de progreso indeterminada que recorre el ancho del widget.
             bar_h = 4
             bar_y = int(mid_y - bar_h / 2)
-            painter.fillRect(0, bar_y, w, bar_h, QColor(40, 40, 40))
+            painter.fillRect(0, bar_y, w, bar_h, QColor(get_theme_token('onda_barra', '#282828')))
             sweep_w = max(40, int(w * 0.18))
             phase_ratio = (math.sin(self.loading_phase) + 1) / 2.0  # 0..1
             sweep_x = int(phase_ratio * max(1, w - sweep_w))
             painter.fillRect(sweep_x, bar_y, sweep_w, bar_h, QColor(get_theme_token('acento_primario', '#B9E640')))
 
-            painter.setPen(QPen(QColor('#cdd6f4')))
+            painter.setPen(QPen(QColor(get_theme_token("texto_valor", "#cdd6f4"))))
             painter.drawText(self.rect(), Qt.AlignCenter, self.tr("Descargando medio en alta calidad..."))
         elif self.is_error:
-            painter.setPen(QPen(QColor('#FF5555'), 1))
+            painter.setPen(QPen(QColor(get_theme_token("estado_error", "#FF5555")), 1))
             painter.drawLine(0, int(mid_y), w, int(mid_y))
             painter.setPen(QPen(QColor('#FF8888')))
             msg = self.error_message or self.tr("Error al descargar el medio en alta calidad.")
@@ -482,39 +484,41 @@ class TrimWaveformWidget(QWidget):
 
         # Barra superior y Agarrador Central de Selección (Range Drag Handle)
         if x_out - x_in > 4:
-            painter.fillRect(x_in, 0, x_out - x_in, 3, QColor(185, 230, 64, 200))
+            range_bar = QColor(get_theme_token('acento_primario', '#B9E640'))
+            range_bar.setAlpha(200)
+            painter.fillRect(x_in, 0, x_out - x_in, 3, range_bar)
             center_x = (x_in + x_out) // 2
             pill_w = min(36, max(16, (x_out - x_in) - 8))
             pill_x = center_x - (pill_w // 2)
 
             if pill_w >= 14:
                 painter.setPen(Qt.NoPen)
-                painter.setBrush(QColor('#B9E640'))
+                painter.setBrush(QColor(get_theme_token("acento_primario", "#B9E640")))
                 painter.drawRoundedRect(pill_x, 0, pill_w, 10, 3, 3)
 
                 # Muescas de agarre (|||) en el centro
-                painter.setPen(QPen(QColor('#141414'), 1))
+                painter.setPen(QPen(QColor(get_theme_token("contorno_marcador", "#141414")), 1))
                 painter.drawLine(center_x - 3, 3, center_x - 3, 7)
                 painter.drawLine(center_x, 3, center_x, 7)
                 painter.drawLine(center_x + 3, 3, center_x + 3, 7)
 
         # Línea de In (Verde con agarrador)
-        pen_in = QPen(QColor('#1DC038'), 2, Qt.SolidLine)
+        pen_in = QPen(QColor(get_theme_token("acento_secundario", "#1DC038")), 2, Qt.SolidLine)
         painter.setPen(pen_in)
         painter.drawLine(x_in, 0, x_in, h)
-        painter.setBrush(QColor('#1DC038'))
+        painter.setBrush(QColor(get_theme_token("acento_secundario", "#1DC038")))
         painter.drawRect(x_in - 3, 0, 6, 8)
 
         # Línea de Out (Rojo con agarrador)
-        pen_out = QPen(QColor('#FF5555'), 2, Qt.SolidLine)
+        pen_out = QPen(QColor(get_theme_token("estado_error", "#FF5555")), 2, Qt.SolidLine)
         painter.setPen(pen_out)
         painter.drawLine(x_out, 0, x_out, h)
-        painter.setBrush(QColor('#FF5555'))
+        painter.setBrush(QColor(get_theme_token("estado_error", "#FF5555")))
         painter.drawRect(x_out - 3, h - 8, 6, 8)
 
         # Playhead (Blanco)
         playhead_x = int(self._playback_ratio * w)
-        pen_ph = QPen(QColor('#FFFFFF'), 2, Qt.SolidLine)
+        pen_ph = QPen(QColor(get_theme_token('cabezal', '#FFFFFF')), 2, Qt.SolidLine)
         painter.setPen(pen_ph)
         painter.drawLine(playhead_x, 0, playhead_x, h)
 
@@ -863,12 +867,12 @@ class _CropOverlayItem(QGraphicsObject):
         painter.fillRect(QRectF(cr.right(), cr.top(), vr.right() - cr.right(), cr.height()), mask_color)
 
         scale = self._current_scale()
-        painter.setPen(QPen(QColor("#1DC038"), 2.0 / scale))
+        painter.setPen(QPen(QColor(get_theme_token('acento_secundario', '#1DC038')), 2.0 / scale))
         painter.setBrush(Qt.NoBrush)
         painter.drawRect(cr)
 
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor("#B9E640"))
+        painter.setBrush(QColor(get_theme_token('acento_primario', '#B9E640')))
         handle_size = self._HANDLE_SIZE / scale
         half = handle_size / 2.0
         for hx, hy in self._handle_centers():
@@ -1121,7 +1125,7 @@ class _DraggableWatermarkItem(QGraphicsObject):
         center = self._handle_center()
         painter.setOpacity(1.0)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor("#B9E640"))
+        painter.setBrush(QColor(get_theme_token('acento_primario', '#B9E640')))
         painter.drawRect(QRectF(center.x() - m / 2.0, center.y() - m / 2.0, m, m))
 
     def _zone_at(self, pos: QPointF) -> str | None:
@@ -1384,12 +1388,10 @@ class MediaTrimPlayerWidget(QWidget):
             # (p.ej. la cola de medios o el panel de opciones en Herramientas Multimedia).
             self.setObjectName("mediaTrimPlayerWidget")
             self.setAttribute(Qt.WA_StyledBackground, True)
-            bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-            border_color = get_theme_token('borde_normal', '#2d2d2d')
-            self.setStyleSheet(f"""
+            set_themed_style(self, lambda: f"""
                 QWidget#mediaTrimPlayerWidget {{
-                    background-color: {bg_color};
-                    border: 1px solid {border_color};
+                    background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                    border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                     border-radius: 6px;
                 }}
             """)
@@ -1442,7 +1444,7 @@ class MediaTrimPlayerWidget(QWidget):
 
         self.lbl_audio_art = QLabel(self.tr("Vista Previa de Audio"))
         self.lbl_audio_art.setAlignment(Qt.AlignCenter)
-        self.lbl_audio_art.setStyleSheet("color: #89b4fa; font-weight: bold; font-size: 16px; background: transparent;")
+        set_themed_style(self.lbl_audio_art, lambda: f"color: {get_theme_token('texto_clave', '#89b4fa')}; font-weight: bold; font-size: 16px; background: transparent;")
         self.lbl_audio_art.setVisible(False)
         prev_layout.addWidget(self.lbl_audio_art, 1)
 
@@ -1470,7 +1472,7 @@ class MediaTrimPlayerWidget(QWidget):
 
         self.lbl_empty_title = QLabel(self.tr("Vista Previa y Recorte"))
         self.lbl_empty_title.setAlignment(Qt.AlignCenter)
-        self.lbl_empty_title.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_secundario', '#777777')}; background: transparent;")
+        set_themed_style(self.lbl_empty_title, lambda: f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_secundario', '#777777')}; background: transparent;")
         empty_layout.addWidget(self.lbl_empty_title)
 
         self.lbl_empty_subtitle = QLabel(self.tr("Carga o selecciona un medio para previsualizarlo y ajustar sus puntos In / Out"))
@@ -1478,7 +1480,7 @@ class MediaTrimPlayerWidget(QWidget):
         # Sin wrap, Qt exige el ancho de la oración completa como mínimo (~400px) solo para
         # este texto de ayuda — con wrap, se acomoda en más líneas en layouts angostos.
         self.lbl_empty_subtitle.setWordWrap(True)
-        self.lbl_empty_subtitle.setStyleSheet(f"font-size: 11px; color: {get_theme_token('texto_deshabilitado', '#555555')}; background: transparent;")
+        set_themed_style(self.lbl_empty_subtitle, lambda: f"font-size: 11px; color: {get_theme_token('texto_deshabilitado', '#555555')}; background: transparent;")
         empty_layout.addWidget(self.lbl_empty_subtitle)
 
         empty_outer.addWidget(empty_inner, 0, Qt.AlignCenter)
@@ -1493,18 +1495,18 @@ class MediaTrimPlayerWidget(QWidget):
         self.btn_quality.setCursor(Qt.PointingHandCursor)
         self.btn_quality.setToolTip(self.tr("Resolución de previsualización (no afecta la exportación final)"))
         self.btn_quality.setFixedHeight(20)
-        self.btn_quality.setStyleSheet("""
-            QToolButton {
-                background-color: rgba(20, 20, 20, 200);
-                border: 1px solid #444;
+        set_themed_style(self.btn_quality, lambda: f"""
+            QToolButton {{
+                background-color: {token_rgba('contorno_marcador', '#141414', 200)};
+                border: 1px solid {get_theme_token('borde_campo', '#444444')};
                 border-radius: 6px;
-                color: #cdd6f4;
+                color: {get_theme_token('texto_valor', '#cdd6f4')};
                 font-size: 10px;
                 font-weight: bold;
                 padding: 2px 6px;
-            }
-            QToolButton:hover { background-color: rgba(185, 230, 64, 200); color: #141414; border-color: #B9E640; }
-            QToolButton::menu-indicator { image: none; }
+            }}
+            QToolButton:hover {{ background-color: {token_rgba('acento_primario', '#B9E640', 200)}; color: {get_theme_token('boton_acento_texto', '#000000')}; border-color: {get_theme_token('acento_primario', '#B9E640')}; }}
+            QToolButton::menu-indicator {{ image: none; }}
         """)
         self.quality_menu = QMenu(self.btn_quality)
         self.btn_quality.setMenu(self.quality_menu)
@@ -1526,17 +1528,17 @@ class MediaTrimPlayerWidget(QWidget):
         self.lbl_time_info = QLabel("00:00:00.000 / 00:00:00.000")
         self.lbl_time_info.setAlignment(Qt.AlignCenter)
         self.lbl_time_info.setFixedHeight(20)
-        self.lbl_time_info.setStyleSheet("""
-            QLabel {
+        set_themed_style(self.lbl_time_info, lambda: f"""
+            QLabel {{
                 background-color: #000000;
-                color: #cdd6f4;
+                color: #cdd6f4;  /* fijo: va sobre la franja negra del vídeo en ambos modos */
                 font-size: 11px;
                 font-weight: bold;
                 border-top-left-radius: 0px;
                 border-top-right-radius: 0px;
                 border-bottom-left-radius: 6px;
                 border-bottom-right-radius: 6px;
-            }
+            }}
         """)
 
         preview_col = QVBoxLayout()
@@ -1562,9 +1564,11 @@ class MediaTrimPlayerWidget(QWidget):
         zoom_bar.setContentsMargins(0, 0, 0, 0)
 
         lbl_zoom_icon = QLabel()
-        icon_zoom = get_svg_icon("zoom_in.svg")
+        icon_zoom = get_themed_svg_icon("zoom_in.svg")
         if not icon_zoom.isNull():
             lbl_zoom_icon.setPixmap(icon_zoom.pixmap(16, 16))
+            register_theme_callback(lbl_zoom_icon, "icono_tema",
+                                    lambda: lbl_zoom_icon.setPixmap(get_themed_svg_icon("zoom_in.svg").pixmap(16, 16)))
         else:
             lbl_zoom_icon.setText("🔍")
         zoom_bar.addWidget(lbl_zoom_icon)
@@ -1581,7 +1585,7 @@ class MediaTrimPlayerWidget(QWidget):
         zoom_bar.addSpacing(16)
 
         self.lbl_zoom_y_icon = QLabel("dB")
-        self.lbl_zoom_y_icon.setStyleSheet("color: #888; font-size: 11px; font-weight: bold;")
+        set_themed_style(self.lbl_zoom_y_icon, lambda: f"color: {get_theme_token('texto_tenue', '#888')}; font-size: 11px; font-weight: bold;")
         zoom_bar.addWidget(self.lbl_zoom_y_icon)
 
         self.slider_zoom_y = QSlider(Qt.Horizontal)
@@ -1602,22 +1606,22 @@ class MediaTrimPlayerWidget(QWidget):
         self.btn_audio_track.setCursor(Qt.PointingHandCursor)
         self.btn_audio_track.setToolTip(self.tr("Seleccionar pista de audio para previsualización"))
         self.btn_audio_track.setFixedHeight(22)
-        self.btn_audio_track.setStyleSheet("""
-            QToolButton {
+        set_themed_style(self.btn_audio_track, lambda: f"""
+            QToolButton {{
                 background-color: rgba(30, 30, 30, 220);
                 border: 1px solid #444;
                 border-radius: 4px;
-                color: #cdd6f4;
+                color: {get_theme_token('texto_valor', '#cdd6f4')};
                 font-size: 11px;
                 font-weight: 500;
                 padding: 2px 8px;
-            }
-            QToolButton:hover {
-                background-color: rgba(185, 230, 64, 30);
-                color: #B9E640;
-                border-color: #B9E640;
-            }
-            QToolButton::menu-indicator { image: none; }
+            }}
+            QToolButton:hover {{
+                background-color: {token_rgba('acento_primario', '#B9E640', 30)};
+                color: {get_theme_token('acento_primario', '#B9E640')};
+                border-color: {get_theme_token('acento_primario', '#B9E640')};
+            }}
+            QToolButton::menu-indicator {{ image: none; }}
         """)
         self.audio_track_menu = QMenu(self.btn_audio_track)
         self.btn_audio_track.setMenu(self.audio_track_menu)
@@ -1653,17 +1657,17 @@ class MediaTrimPlayerWidget(QWidget):
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.scroll_area.setFixedHeight(90)
-        self.scroll_area.setStyleSheet("""
-            QScrollArea { border: none; background: transparent; }
-            QScrollBar:horizontal {
-                border: none; background: #222; height: 10px; margin: 0px 0px 0 0px; border-radius: 5px;
-            }
-            QScrollBar::handle:horizontal {
-                background: #555; min-width: 20px; border-radius: 5px;
-            }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        set_themed_style(self.scroll_area, lambda: f"""
+            QScrollArea {{ border: none; background: transparent; }}
+            QScrollBar:horizontal {{
+                border: none; background: {get_theme_token('barra_scroll_fondo', '#222')}; height: 10px; margin: 0px 0px 0 0px; border-radius: 5px;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {get_theme_token('barra_scroll_tirador', '#555')}; min-width: 20px; border-radius: 5px;
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 border: none; background: none; width: 0px;
-            }
+            }}
         """)
 
         self.waveform_widget = TrimWaveformWidget()
@@ -1715,26 +1719,28 @@ class MediaTrimPlayerWidget(QWidget):
 
         # Botones In [I] y Out [O] and inputs
         self.btn_set_in = QPushButton()
-        self.btn_set_in.setIcon(get_svg_icon("arrow_menu_open.svg"))
+        self.btn_set_in.setIcon(get_themed_svg_icon("arrow_menu_open.svg"))
+        register_theme_callback(self.btn_set_in, "icono_tema",
+                                lambda: self.btn_set_in.setIcon(get_themed_svg_icon("arrow_menu_open.svg")))
         self.btn_set_in.setIconSize(QSize(20, 20))
         self.btn_set_in.setFixedSize(32, 32)
         self.btn_set_in.setToolTip(self.tr("Establecer punto de entrada (Tecla I)"))
-        self.btn_set_in.setStyleSheet("""
-            QPushButton {
-                background-color: #1a271a;
-                border: 1px solid #1DC038;
+        set_themed_style(self.btn_set_in, lambda: f"""
+            QPushButton {{
+                background-color: {get_theme_token('boton_marca_entrada', '#1a271a')};
+                border: 1px solid {get_theme_token('acento_secundario', '#1DC038')};
                 border-radius: 6px;
-            }
-            QPushButton:hover { background-color: #1DC038; }
+            }}
+            QPushButton:hover {{ background-color: {get_theme_token('acento_secundario', '#1DC038')}; }}
         """)
         self.btn_set_in.clicked.connect(self.set_in_point)
         self.ctrl_bar.addWidget(self.btn_set_in)
 
-        _time_style = f"font-size: 12px; padding: 4px 6px; border-radius: 6px; background: {get_theme_token('fondo_elemento', '#1a1a1a')}; border: 1px solid {get_theme_token('borde_normal', '#222222')}; color: {get_theme_token('texto_activo', '#ffffff')};"
+        _time_style = lambda: f"font-size: 12px; padding: 4px 6px; border-radius: 6px; background: {get_theme_token('fondo_elemento', '#1a1a1a')}; border: 1px solid {get_theme_token('borde_normal', '#222222')}; color: {get_theme_token('texto_activo', '#ffffff')};"
         self.input_time_start = QLineEdit(self._format_seconds_ms(self.in_sec))
         self.input_time_start.setFixedSize(90, 32)
         self.input_time_start.setAlignment(Qt.AlignCenter)
-        self.input_time_start.setStyleSheet(_time_style)
+        set_themed_style(self.input_time_start, _time_style)
         self.input_time_start.editingFinished.connect(self._on_time_input_changed)
         self.ctrl_bar.addWidget(self.input_time_start)
 
@@ -1744,28 +1750,30 @@ class MediaTrimPlayerWidget(QWidget):
         # angosto para un solo guion) y bajo presión terminaba compartiendo espacio con
         # el campo de tiempo de al lado en vez de tener su propio hueco garantizado.
         sep.setFixedWidth(20)
-        sep.setStyleSheet("color: #666; font-size: 15px;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('texto_secundario', '#666')}; font-size: 15px;")
         self.ctrl_bar.addWidget(sep)
 
         self.input_time_end = QLineEdit(self._format_seconds_ms(self.out_sec))
         self.input_time_end.setFixedSize(90, 32)
         self.input_time_end.setAlignment(Qt.AlignCenter)
-        self.input_time_end.setStyleSheet(_time_style)
+        set_themed_style(self.input_time_end, _time_style)
         self.input_time_end.editingFinished.connect(self._on_time_input_changed)
         self.ctrl_bar.addWidget(self.input_time_end)
 
         self.btn_set_out = QPushButton()
-        self.btn_set_out.setIcon(get_svg_icon("arrow_menu_close.svg"))
+        self.btn_set_out.setIcon(get_themed_svg_icon("arrow_menu_close.svg"))
+        register_theme_callback(self.btn_set_out, "icono_tema",
+                                lambda: self.btn_set_out.setIcon(get_themed_svg_icon("arrow_menu_close.svg")))
         self.btn_set_out.setIconSize(QSize(20, 20))
         self.btn_set_out.setFixedSize(32, 32)
         self.btn_set_out.setToolTip(self.tr("Establecer punto de salida (Tecla O)"))
-        self.btn_set_out.setStyleSheet("""
-            QPushButton {
-                background-color: #2b1a1a;
-                border: 1px solid #FF5555;
+        set_themed_style(self.btn_set_out, lambda: f"""
+            QPushButton {{
+                background-color: {get_theme_token('boton_marca_salida', '#2b1a1a')};
+                border: 1px solid {get_theme_token('estado_error', '#FF5555')};
                 border-radius: 6px;
-            }
-            QPushButton:hover { background-color: #FF5555; }
+            }}
+            QPushButton:hover {{ background-color: {get_theme_token('estado_error', '#FF5555')}; }}
         """)
         self.btn_set_out.clicked.connect(self.set_out_point)
         self.ctrl_bar.addWidget(self.btn_set_out)
@@ -1787,12 +1795,10 @@ class MediaTrimPlayerWidget(QWidget):
         if self._card_style:
             timeline_container.setObjectName("mediaTrimTimelineContainer")
             timeline_container.setAttribute(Qt.WA_StyledBackground, True)
-            bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-            border_color = get_theme_token('borde_normal', '#2d2d2d')
-            timeline_container.setStyleSheet(f"""
+            set_themed_style(timeline_container, lambda: f"""
                 QFrame#mediaTrimTimelineContainer {{
-                    background-color: {bg_color};
-                    border: 1px solid {border_color};
+                    background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                    border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                     border-radius: 6px;
                 }}
             """)

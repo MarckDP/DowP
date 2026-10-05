@@ -31,6 +31,7 @@ from PySide6.QtGui import (
 
 from gui.tabs.image_tools.layers.text_item import EditableTextItem, DEFAULT_TEXT_STYLE
 from gui.styles import (
+    register_theme_callback,
     VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip,
     get_theme_token,
 )
@@ -94,6 +95,7 @@ class ZoomableImageViewer(QGraphicsView):
         self._user_zoomed = False
         self._checker_tile = self._build_checker_tile()
         self._dark_bg_color = QColor(get_theme_token('fondo_principal', '#0a0a0a'))
+        register_theme_callback(self, "fondo_tema", self.refresh_checker_theme)
 
         self._interaction_mode = "canvas_edit"  # "canvas_edit" | "layers_draw"
 

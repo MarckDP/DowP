@@ -14,6 +14,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QLabel
 
 from gui.styles import get_theme_token
+from gui.styles import apply_shapes
 
 
 class KeepAlphaOption(QWidget):
@@ -84,7 +85,7 @@ class KeepAlphaOption(QWidget):
             "warning": get_theme_token("estado_aviso", "#E6A23C"),
             "muted": get_theme_token("texto_secundario", "#888888"),
         }
-        label.setStyleSheet(f"color: {colors.get(severity, colors['muted'])}; font-size: 11px;")
+        label.setStyleSheet(apply_shapes(f"color: {colors.get(severity, colors['muted'])}; font-size: 11px;"))
         label.setText(text)
         label.setVisible(bool(text))
         self._fit_heights()

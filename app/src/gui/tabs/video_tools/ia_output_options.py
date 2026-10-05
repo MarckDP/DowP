@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QCheckBox, QLabel, QVBoxLayout, QWidget
 
 from core.tabs.video_tools.ia_video_common import alpha_supported
 from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class VideoIAOutputOptions(QWidget):
@@ -55,8 +56,7 @@ class VideoIAOutputOptions(QWidget):
             "MP4 (H.264) deforma las normales: úsalo solo como vista previa. Para usar el "
             "mapa, elige MOV o MKV."))
         self.lbl_warning.setWordWrap(True)
-        self.lbl_warning.setStyleSheet(
-            f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
+        set_themed_style(self.lbl_warning, lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
         layout.addWidget(self.lbl_warning)
 
         self._refresh_alpha()

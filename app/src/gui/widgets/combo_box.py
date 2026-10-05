@@ -20,14 +20,12 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
     3. Trunca el texto con '...' si el espacio es reducido para garantizar que nunca solape el checkmark.
     """
 
-    _cached_check_pixmap = None
+    _check_pixmaps = {}  # color del acento -> pixmap (el acento cambia con el tema)
 
     def __init__(self, combo=None, parent=None):
         target_parent = parent or (combo if isinstance(combo, QObject) else None)
         super().__init__(target_parent)
         self._combo = combo if isinstance(combo, QComboBox) else None
-        if CheckmarkComboDelegate._cached_check_pixmap is None:
-            CheckmarkComboDelegate._cached_check_pixmap = self._create_check_pixmap()
 
     def _get_combo(self, option=None):
         if self._combo:
@@ -38,8 +36,15 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
             return self.parent()
         return None
 
+    @classmethod
+    def _check_pixmap(cls):
+        color = get_theme_token("acento_primario", "#B9E640")
+        if color not in cls._check_pixmaps:
+            cls._check_pixmaps[color] = cls._create_check_pixmap(color)
+        return cls._check_pixmaps[color]
+
     @staticmethod
-    def _create_check_pixmap():
+    def _create_check_pixmap(color):
         svg_path = os.path.join(get_src_dir(), "assets", "icons", "svg", "check_small.svg")
         if not os.path.exists(svg_path):
             return None
@@ -52,10 +57,9 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
         renderer = QSvgRenderer(svg_path)
         renderer.render(painter)
 
-        # Colorear con el verde lima primario de DowP (#B9E640)
-        dowp_green = get_theme_token("acento_primario", "#B9E640")
+        # Colorear con el acento del tema
         painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
-        painter.fillRect(pixmap.rect(), QColor(dowp_green))
+        painter.fillRect(pixmap.rect(), QColor(color))
         painter.end()
         return pixmap
 
@@ -94,7 +98,9 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
             painter.save()
             painter.setRenderHint(QPainter.Antialiasing)
             bg_rect = opt.rect.adjusted(2, 1, -2, -1)
-            painter.setBrush(QColor(255, 255, 255, 22))
+            active_bg = QColor(get_theme_token('texto_activo', '#ffffff'))
+            active_bg.setAlpha(22)
+            painter.setBrush(active_bg)
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(bg_rect, 4, 4)
             painter.restore()
@@ -110,7 +116,7 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
         if int(opt.displayAlignment) & Qt.AlignHCenter:
             painter.save()
             painter.setFont(opt.font)
-            painter.setPen(QColor("#c5c5c5"))
+            painter.setPen(QColor(get_theme_token('texto_medio', '#c5c5c5')))
             centered_text = opt.fontMetrics.elidedText(raw_text, Qt.ElideRight, opt.rect.width() - 4)
             painter.drawText(opt.rect, Qt.AlignCenter, centered_text)
             painter.restore()
@@ -144,21 +150,19 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
         painter.save()
         painter.setFont(opt.font)
 
-        if is_hovered:
-            text_color = opt.palette.color(QPalette.Normal, QPalette.HighlightedText)
-            if text_color.lightness() < 40:
-                text_color = QColor("#ffffff")
-        elif is_current:
-            text_color = QColor("#ffffff")  # Blanco puro brillante para la opción activa
+        if is_hovered or is_current:
+            # Máximo contraste del tema (blanco en oscuro, negro en claro)
+            text_color = QColor(get_theme_token('texto_activo', '#ffffff'))
         else:
-            text_color = QColor("#c5c5c5")  # Gris claro estándar
+            text_color = QColor(get_theme_token('texto_medio', '#c5c5c5'))  # Gris claro estándar
 
         painter.setPen(text_color)
         painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, elided_text)
         painter.restore()
 
         # 4. Si este elemento es el actualmente seleccionado, dibujar el checkmark
-        if is_current and self._cached_check_pixmap:
+        check_pixmap = self._check_pixmap() if is_current else None
+        if check_pixmap:
             painter.save()
             painter.setRenderHint(QPainter.SmoothPixmapTransform)
             painter.setRenderHint(QPainter.Antialiasing)
@@ -168,7 +172,7 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
             x = option.rect.right() - margin_right - icon_display_size
             y = option.rect.top() + (option.rect.height() - icon_display_size) // 2
 
-            painter.drawPixmap(x, y, icon_display_size, icon_display_size, self._cached_check_pixmap)
+            painter.drawPixmap(x, y, icon_display_size, icon_display_size, check_pixmap)
             painter.restore()
 
 

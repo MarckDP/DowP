@@ -40,6 +40,7 @@ _VIDEO_CODEC_IDS = ["h264", "hevc", "av1", "vp9"]
 
 from core.tabs.video_tools.alpha_policy import meta_has_alpha, keeps_alpha, codec_label
 from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
+from gui.styles import set_themed_style
 _AUDIO_CODEC_IDS = ["aac", "opus", "mp3"]
 
 _QUALITY_MODE_CQ = "cq"
@@ -126,11 +127,10 @@ class CompressPanel(QWidget):
     def _card_frame(self, title: str | None = None, parent=None) -> tuple[QFrame, QVBoxLayout]:
         frame = QFrame(parent or self)
         frame.setObjectName("advancedCard")
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        frame.setStyleSheet(f"""
+        set_themed_style(frame, lambda: f"""
             QFrame#advancedCard {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -192,27 +192,23 @@ class CompressPanel(QWidget):
         self.level_group = QButtonGroup(page)
         self.level_group.setExclusive(True)
         self._level_buttons = {}
-        accent = get_theme_token('acento_primario', '#B9E640')
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        fondo = get_theme_token('fondo_secundario', '#121212')
-        texto = get_theme_token('texto_principal', '#ffffff')
         for level in advisor.LEVELS:
             btn = QPushButton(advisor.get_level_label(level), page)
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.setMinimumHeight(64)
-            btn.setStyleSheet(f"""
+            set_themed_style(btn, lambda: f"""
                 QPushButton {{
-                    background-color: {fondo};
-                    color: {texto};
-                    border: 1px solid {border_color};
+                    background-color: {get_theme_token('fondo_secundario', '#121212')};
+                    color: {get_theme_token('texto_principal', '#ffffff')};
+                    border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                     border-radius: 6px;
                     padding: 6px;
                     font-weight: bold;
                 }}
                 QPushButton:checked {{
-                    border: 2px solid {accent};
-                    color: {accent};
+                    border: 2px solid {get_theme_token('acento_primario', '#B9E640')};
+                    color: {get_theme_token('acento_primario', '#B9E640')};
                 }}
             """)
             btn.clicked.connect(self._on_quick_changed)

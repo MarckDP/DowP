@@ -37,6 +37,7 @@ except ImportError:
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from gui.styles import (
+    register_theme_callback,
     get_theme_token,
     generate_tinted_svg,
     apply_player_play_button_style,
@@ -69,6 +70,8 @@ from gui.tabs.editing_media.editing_media_icons import LoadingSpinnerWidget
 from gui.tabs.editing_media.media_model import MediaTableModel
 from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManager
 from core.utils.config_manager import get_config, save_config
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 class _DragCleanupMixin:
     """Tras un QDrag nativo hacia otra aplicación (Premiere/AE/DaVinci/Explorador), Qt no
@@ -315,9 +318,13 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.col2_container.setMinimumWidth(220)
         self.col3_container.setMinimumWidth(220)
 
-        # Aplicar hojas de estilo para contenedores y listas
+        # Aplicar hojas de estilo para contenedores y listas (y de nuevo al cambiar de
+        # tema: construye varios estilos con variables y condiciones, más simple
+        # recalcularlos enteros que registrarlos uno a uno).
         self._apply_custom_styles()
-        
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(lambda _tokens: self._on_theme_changed())
+
         # Conectar manager de editores
         from core.services.editor_integration_manager import EditorIntegrationManager
         editor_mgr = EditorIntegrationManager.get_instance()
@@ -327,8 +334,10 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
     def set_license_info(self, title: str, desc: str, color_hex: str, credits_text: str = None, icon_name: str = "copyright.svg"):
         """Actualiza el panel de licencias con los datos (Título, Descripción, Color, y opcionalmente el texto TASL e icono)."""
+        register_theme_callback(self.license_panel, "licencia_tema", lambda: self.set_license_info(
+            title, desc, color_hex, credits_text, icon_name))
         self.lbl_license_text.setText(title)
-        self.lbl_license_text.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {color_hex};")
+        self.lbl_license_text.setStyleSheet(apply_shapes(f"font-size: 12px; font-weight: bold; color: {color_hex};"))
         
         self.lbl_license_desc.setText(desc)
         
@@ -336,18 +345,18 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         icon = get_colored_svg_icon(icon_name, color_hex)
         self.lbl_license_icon.setPixmap(icon.pixmap(16, 16))
 
-        self.license_panel.setStyleSheet(f"""
+        self.license_panel.setStyleSheet(apply_shapes(f"""
             QFrame#licensePanel {{
                 background-color: {get_theme_token('fondo_elemento', '#1e1e1e')};
                 border: 1px solid {color_hex};
                 border-radius: 6px;
             }}
-        """)
+        """))
 
         if credits_text:
             self._current_credits_text = credits_text
             self.btn_copy_credits.setVisible(True)
-            self.btn_copy_credits.setStyleSheet(f"""
+            self.btn_copy_credits.setStyleSheet(apply_shapes(f"""
                 QPushButton {{
                     background-color: transparent;
                     border: 1px solid {get_theme_token('borde_normal', '#444444')};
@@ -360,7 +369,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                     border: 1px solid {color_hex};
                     color: {get_theme_token('texto_principal', '#ffffff')};
                 }}
-            """)
+            """))
         else:
             self._current_credits_text = ""
             self.btn_copy_credits.setVisible(False)
@@ -395,7 +404,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         layout.setSpacing(8)
 
         lbl_section = QLabel(self.tr("Carpetas & Colecciones"))
-        lbl_section.setStyleSheet("font-weight: bold; font-size: 14px; color: white;")
+        set_themed_style(lbl_section, lambda: f"font-weight: bold; font-size: 14px; color: {get_theme_token('texto_activo', '#ffffff')};")
         layout.addWidget(lbl_section)
 
         # Botón para Indexar Carpeta colocado arriba, justo debajo del título
@@ -431,7 +440,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         # Texto indicando los medios indexados al pie de la columna
         self.lbl_indexed_count = QLabel("")
         self.lbl_indexed_count.setAlignment(Qt.AlignCenter)
-        self.lbl_indexed_count.setStyleSheet(f"font-size: 11px; color: {get_theme_token('texto_secundario', '#a6adc8')}; margin-top: 4px; margin-bottom: 2px;")
+        set_themed_style(self.lbl_indexed_count, lambda: f"font-size: 11px; color: {get_theme_token('texto_secundario', '#a6adc8')}; margin-top: 4px; margin-bottom: 2px;")
         layout.addWidget(self.lbl_indexed_count)
 
         return col
@@ -445,7 +454,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
         # Título
         lbl_section = QLabel(self.tr("Lista de Medios"))
-        lbl_section.setStyleSheet("font-weight: bold; font-size: 14px; color: white;")
+        set_themed_style(lbl_section, lambda: f"font-weight: bold; font-size: 14px; color: {get_theme_token('texto_activo', '#ffffff')};")
         layout.addWidget(lbl_section)
 
         # Buscador
@@ -496,7 +505,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.btn_freesound_login = QPushButton()
         self.btn_freesound_login.setFixedSize(32, 32)
         self.btn_freesound_login.setIconSize(QSize(18, 18))
-        self.btn_freesound_login.setStyleSheet(f"""
+        set_themed_style(self.btn_freesound_login, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -532,7 +541,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             btn.setCheckable(True)
             if text == "Todos":
                 btn.setChecked(True)
-            btn.setStyleSheet(f"""
+            set_themed_style(btn, lambda: f"""
                 QPushButton {{
                     background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                     border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -553,7 +562,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         btn_bar.addStretch(1)
 
         # Botones de Modo de Vista (Lista / Cuadrícula)
-        btn_mode_style = f"""
+        btn_mode_style = lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -574,9 +583,9 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.btn_view_list.setFixedSize(28, 28)
         self.btn_view_list.setCheckable(True)
         self.btn_view_list.setToolTip(self.tr("Vista de Lista"))
-        self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", "#FFFFFF", size=16))
+        self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", get_theme_token("texto_activo", "#FFFFFF"), size=16))
         self.btn_view_list.setIconSize(QSize(16, 16))
-        self.btn_view_list.setStyleSheet(btn_mode_style)
+        set_themed_style(self.btn_view_list, btn_mode_style)
         self.btn_view_list.clicked.connect(lambda: self.set_view_mode("list"))
         btn_bar.addWidget(self.btn_view_list)
 
@@ -584,9 +593,9 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.btn_view_grid.setFixedSize(28, 28)
         self.btn_view_grid.setCheckable(True)
         self.btn_view_grid.setToolTip(self.tr("Vista de Cuadrícula"))
-        self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", "#000000", size=16))
+        self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", get_theme_token("boton_texto", "#000000"), size=16))
         self.btn_view_grid.setIconSize(QSize(16, 16))
-        self.btn_view_grid.setStyleSheet(btn_mode_style)
+        set_themed_style(self.btn_view_grid, btn_mode_style)
         self.btn_view_grid.clicked.connect(lambda: self.set_view_mode("grid"))
         self.btn_view_grid.installEventFilter(self)
         btn_bar.addWidget(self.btn_view_grid)
@@ -604,7 +613,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.grid_scale_popup.installEventFilter(self)
         self.grid_scale_popup.setAttribute(Qt.WA_TranslucentBackground)
         self.grid_scale_popup.setFixedWidth(100)
-        self.grid_scale_popup.setStyleSheet(f"""
+        set_themed_style(self.grid_scale_popup, lambda: f"""
             QFrame#gridScalePopup {{
                 background-color: {get_theme_token('panel_fondo', '#181818')};
                 border: 1px solid {get_theme_token('borde_sutil', '#333333')};
@@ -690,12 +699,12 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         login_page_layout.setSpacing(16)
         self.freesound_login_msg_label = QLabel(self.tr("Inicia sesión con Freesound para buscar sonidos 🔑"))
         self.freesound_login_msg_label.setAlignment(Qt.AlignCenter)
-        self.freesound_login_msg_label.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 14px;")
+        set_themed_style(self.freesound_login_msg_label, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 14px;")
         self.btn_freesound_login_big = QPushButton(self.tr("Iniciar Sesión con Freesound"))
         self.btn_freesound_login_big.setFixedHeight(44)
         self.btn_freesound_login_big.setMinimumWidth(260)
         self.btn_freesound_login_big.setCursor(Qt.PointingHandCursor)
-        self.btn_freesound_login_big.setStyleSheet(f"""
+        set_themed_style(self.btn_freesound_login_big, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_primario', '#B9E640')};
                 color: {get_theme_token('fondo_principal', '#0a0a0a')};
@@ -746,7 +755,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
         self.lbl_cover_art = QLabel()
         self.lbl_cover_art.setFixedSize(64, 64)
-        self.lbl_cover_art.setStyleSheet(f"""
+        set_themed_style(self.lbl_cover_art, lambda: f"""
             QLabel {{
                 background-color: {get_theme_token('fondo_elemento', '#1c1c1e')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -761,12 +770,12 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         header_info_v.addStretch()
 
         self.lbl_audio_name = QLabel()
-        self.lbl_audio_name.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {get_theme_token('acento_primario', '#B9E640')};")
+        set_themed_style(self.lbl_audio_name, lambda: f"font-weight: bold; font-size: 13px; color: {get_theme_token('acento_primario', '#B9E640')};")
         self.lbl_audio_name.setWordWrap(True)
         header_info_v.addWidget(self.lbl_audio_name)
 
         self.lbl_audio_sub = QLabel()
-        self.lbl_audio_sub.setStyleSheet("font-size: 11px; color: #a6adc8;")
+        set_themed_style(self.lbl_audio_sub, lambda: f"font-size: 11px; color: {get_theme_token('texto_suave', '#a6adc8')};")
         header_info_v.addWidget(self.lbl_audio_sub)
         header_info_v.addStretch()
 
@@ -775,7 +784,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
         # Título interno
         self.lbl_audio_title = QLabel(self.tr("Visualizador de Espectro"))
-        self.lbl_audio_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #f5c2e7;")
+        set_themed_style(self.lbl_audio_title, lambda: f"font-size: 11px; font-weight: bold; color: {get_theme_token('acento_audio', '#f5c2e7')};")
         audio_layout.addWidget(self.lbl_audio_title)
 
         # El widget gráfico del espectro
@@ -818,7 +827,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         controls_layout.addWidget(self.btn_edit_subclip)
 
         self.lbl_time = QLabel("00:00 / 00:00")
-        self.lbl_time.setStyleSheet("font-size: 11px; color: #a6adc8;")
+        set_themed_style(self.lbl_time, lambda: f"font-size: 11px; color: {get_theme_token('texto_suave', '#a6adc8')};")
         controls_layout.addWidget(self.lbl_time)
 
         controls_layout.addStretch(1)
@@ -841,7 +850,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         layout.setSpacing(8)
 
         lbl_section = QLabel(self.tr("Vista Previa & Detalles"))
-        lbl_section.setStyleSheet("font-weight: bold; font-size: 14px; color: white;")
+        set_themed_style(lbl_section, lambda: f"font-weight: bold; font-size: 14px; color: {get_theme_token('texto_activo', '#ffffff')};")
         layout.addWidget(lbl_section)
 
         # Contenedor para Modo Carrusel
@@ -855,16 +864,16 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         
         self.btn_carousel_prev = QPushButton("<")
         self.btn_carousel_prev.setFixedSize(24, 24)
-        self.btn_carousel_prev.setStyleSheet("background: transparent; font-weight: bold; color: white;")
+        set_themed_style(self.btn_carousel_prev, lambda: f"background: transparent; font-weight: bold; color: {get_theme_token('texto_activo', '#ffffff')};")
         self.btn_carousel_prev.clicked.connect(self._on_carousel_prev)
         
         self.lbl_carousel_status = QLabel(self.tr("{0} de {1}").format(1, 1))
         self.lbl_carousel_status.setAlignment(Qt.AlignCenter)
-        self.lbl_carousel_status.setStyleSheet("color: #a6adc8; font-weight: bold;")
+        set_themed_style(self.lbl_carousel_status, lambda: f"color: {get_theme_token('texto_suave', '#a6adc8')}; font-weight: bold;")
         
         self.btn_carousel_next = QPushButton(">")
         self.btn_carousel_next.setFixedSize(24, 24)
-        self.btn_carousel_next.setStyleSheet("background: transparent; font-weight: bold; color: white;")
+        set_themed_style(self.btn_carousel_next, lambda: f"background: transparent; font-weight: bold; color: {get_theme_token('texto_activo', '#ffffff')};")
         self.btn_carousel_next.clicked.connect(self._on_carousel_next)
         
         carousel_layout.addStretch()
@@ -890,7 +899,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.license_panel = QFrame()
         self.license_panel.setObjectName("licensePanel")
         self.license_panel.setVisible(False)
-        self.license_panel.setStyleSheet(f"""
+        set_themed_style(self.license_panel, lambda: f"""
             QFrame#licensePanel {{
                 background-color: {get_theme_token('fondo_elemento', '#1e1e1e')};
                 border: 1px solid {get_theme_token('acento_primario', '#B9E640')};
@@ -909,13 +918,13 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         top_row.addWidget(self.lbl_license_icon)
 
         self.lbl_license_text = QLabel()
-        self.lbl_license_text.setStyleSheet("font-size: 12px; font-weight: bold; color: white;")
+        set_themed_style(self.lbl_license_text, lambda: f"font-size: 12px; font-weight: bold; color: {get_theme_token('texto_activo', '#ffffff')};")
         top_row.addWidget(self.lbl_license_text, 1)
         license_layout.addLayout(top_row)
 
         # Descripción
         self.lbl_license_desc = QLabel()
-        self.lbl_license_desc.setStyleSheet("font-size: 11px; color: #a6adc8;")
+        set_themed_style(self.lbl_license_desc, lambda: f"font-size: 11px; color: {get_theme_token('texto_suave', '#a6adc8')};")
         self.lbl_license_desc.setWordWrap(True)
         license_layout.addWidget(self.lbl_license_desc)
 
@@ -938,7 +947,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         info_layout.setSpacing(6)
 
         lbl_info_title = QLabel(self.tr("Información Técnica"))
-        lbl_info_title.setStyleSheet("font-weight: bold; font-size: 12px; color: #a6adc8;")
+        set_themed_style(lbl_info_title, lambda: f"font-weight: bold; font-size: 12px; color: {get_theme_token('texto_suave', '#a6adc8')};")
         info_layout.addWidget(lbl_info_title)
 
         # Crear QScrollArea para los metadatos
@@ -950,27 +959,27 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Estilizar el scrollbar de manera elegante
-        scroll_area.verticalScrollBar().setStyleSheet("""
-            QScrollBar:vertical {
+        set_themed_style(scroll_area.verticalScrollBar(), lambda: f"""
+            QScrollBar:vertical {{
                 border: none;
-                background: #111;
+                background: {get_theme_token('barra_scroll_fondo', '#111111')};
                 width: 6px;
                 margin: 0px;
                 border-radius: 3px;
-            }
-            QScrollBar::handle:vertical {
-                background: #333;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {get_theme_token('barra_scroll_tirador', '#333333')};
                 min-height: 20px;
                 border-radius: 3px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #1DC038;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: {get_theme_token('acento_secundario', '#1DC038')};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 border: none;
                 background: none;
                 height: 0px;
-            }
+            }}
         """)
 
         scroll_content = QWidget()
@@ -1009,11 +1018,11 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             
             lbl_key = QLabel(label_text)
             lbl_key.setFixedWidth(90)
-            lbl_key.setStyleSheet("color: #89b4fa; font-size: 11px; font-weight: bold;")
+            set_themed_style(lbl_key, lambda: f"color: {get_theme_token('texto_clave', '#89b4fa')}; font-size: 11px; font-weight: bold;")
             self.metadata_header_labels[key] = lbl_key
             
             lbl_val = QLabel("-")
-            lbl_val.setStyleSheet("color: #cdd6f4; font-size: 11px;")
+            set_themed_style(lbl_val, lambda: f"color: {get_theme_token('texto_valor', '#cdd6f4')}; font-size: 11px;")
             lbl_val.setWordWrap(True)
             self.metadata_labels[key] = lbl_val
             
@@ -1046,12 +1055,12 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.btn_send_editor.setText(self.tr("Ningún editor conectado"))
         self.btn_send_editor.setEnabled(False)
         self.btn_send_editor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.btn_send_editor.setStyleSheet(f"""
+        set_themed_style(self.btn_send_editor, lambda: f"""
             QToolButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
-                color: #cdd6f4;
+                color: {get_theme_token('texto_valor', '#cdd6f4')};
                 padding-left: 10px;
                 padding-right: 10px;
                 font-weight: 500;
@@ -1114,15 +1123,23 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         color = QColor(get_theme_token('acento_primario', '#B9E640'))
         return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})"
 
+    def _on_theme_changed(self):
+        self._apply_custom_styles()
+        self._retint_tree_icons()
+        # Los iconos de la lista (rellenos sin miniatura, tipos) se piden al pintar:
+        # basta con repintar para que salgan con los colores nuevos.
+        for view in (getattr(self, "media_table", None), getattr(self, "media_list", None)):
+            if view is not None:
+                view.viewport().update()
+
     def _apply_custom_styles(self):
         """Aplica colores y bordes usando el sistema de tokens de temas."""
-        fondo_secundario = get_theme_token('fondo_secundario', '#1e1e1e')
         borde_color = get_theme_token('borde_normal', '#2d2d2d')
 
-        box_style = f"""
+        box_style = lambda: f"""
             QFrame#sidebarFrame, QFrame#mediaListFrame, QFrame#previewFrame {{
-                background-color: {fondo_secundario};
-                border: 1px solid {borde_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
             QLabel {{
@@ -1131,12 +1148,12 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             }}
         """
         
-        self.col1_container.setStyleSheet(box_style)
-        self.col2_container.setStyleSheet(box_style)
-        self.col3_container.setStyleSheet(box_style)
+        set_themed_style(self.col1_container, box_style)
+        set_themed_style(self.col2_container, box_style)
+        set_themed_style(self.col3_container, box_style)
 
         # Estilo para el panel de audio
-        self.audio_panel.setStyleSheet(f"""
+        set_themed_style(self.audio_panel, lambda: f"""
             QFrame#audioSpectrumPanel {{
                 background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -1186,7 +1203,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             }}
         """
         if hasattr(self, "media_table"):
-            self.media_table.setStyleSheet(table_style)
+            self.media_table.setStyleSheet(apply_shapes(table_style))
 
         list_style = f"""
             QListView {{
@@ -1215,7 +1232,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                 font-weight: bold;
             }}
         """
-        self.media_list.setStyleSheet(list_style)
+        self.media_list.setStyleSheet(apply_shapes(list_style))
 
         # Obtener rutas absolutas para las imágenes del árbol
         src_dir = get_src_dir()
@@ -1258,7 +1275,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                 background-color: {get_theme_token('seleccion_fondo', '#2d2d2d')};
             }}
         """
-        self.tree_folders.setStyleSheet(tree_style)
+        self.tree_folders.setStyleSheet(apply_shapes(tree_style))
 
     def _update_edit_subclip_button_state(self, has_subclips: bool):
         """Actualiza la apariencia 'encendida/apagada' de los botones de editar subclips
@@ -1289,8 +1306,8 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             if mode == "grid":
                 self.btn_view_grid.setChecked(True)
                 self.btn_view_list.setChecked(False)
-                self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", "#000000", size=14))
-                self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", "#FFFFFF", size=14))
+                self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", get_theme_token("boton_texto", "#000000"), size=14))
+                self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", get_theme_token("texto_activo", "#FFFFFF"), size=14))
                 self.media_model.set_view_mode("grid")
                 self.media_stack.setCurrentWidget(self.media_list)
                 self.media_list.setViewMode(QListView.IconMode)
@@ -1305,8 +1322,8 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             else:
                 self.btn_view_list.setChecked(True)
                 self.btn_view_grid.setChecked(False)
-                self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", "#000000", size=14))
-                self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", "#FFFFFF", size=14))
+                self.btn_view_list.setIcon(get_colored_svg_icon("view_list.svg", get_theme_token("boton_texto", "#000000"), size=14))
+                self.btn_view_grid.setIcon(get_colored_svg_icon("grid_view.svg", get_theme_token("texto_activo", "#FFFFFF"), size=14))
                 if hasattr(self, "grid_scale_popup"):
                     self.grid_scale_popup.hide()
                 self.media_model.set_view_mode("list")

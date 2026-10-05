@@ -16,10 +16,12 @@ from PySide6.QtWidgets import QApplication
 
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, themed_icon, tooltip_qss, register_theme_callback
 from gui.tabs.advanced_process.video_details_components import ThumbnailLoaderThread
 from core.tabs.quick_mode.quick_mode_logic import reveal_in_file_manager
 from core.utils.output_artifacts import collect_output_artifacts
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 def progress_bar_qss():
@@ -63,37 +65,40 @@ class QuickThumbnailWidget(QWidget):
         
         # Etiqueta de duración superpuesta
         self.duration_label = QLabel(self)
-        self.duration_label.setStyleSheet("""
+        self.duration_label.setStyleSheet(apply_shapes("""
             background-color: rgba(0, 0, 0, 0.75);
             color: #ffffff;
             font-size: 8px;
             font-weight: bold;
             border-radius: 3px;
             padding: 1px 3px;
-        """)
+        """))
         self.duration_label.setAlignment(Qt.AlignCenter)
         self.duration_label.hide()
         
         self.thumb_label.setGeometry(0, 0, 96, 54)
+        self._placeholder_shown = False
         self._set_default_thumbnail()
         
     def _set_default_thumbnail(self):
         icon_path = os.path.join(get_src_dir(), "assets", "icons", "svg", "movie.svg")
         
-        bg_color = get_theme_token('fondo_principal', '#121212')
-        borde_color = get_theme_token('borde', '#2d2d2d')
         
-        self.thumb_label.setStyleSheet(f"""
+        set_themed_style(self.thumb_label, lambda: f"""
             QLabel {{
-                background-color: {bg_color};
-                border: 1px solid {borde_color};
+                background-color: {get_theme_token('fondo_principal', '#121212')};
+                border: 1px solid {get_theme_token('borde', '#2d2d2d')};
                 border-radius: 4px;
             }}
         """)
         
         if os.path.exists(icon_path):
-            pixmap = QIcon(icon_path).pixmap(24, 24)
-            self.thumb_label.setPixmap(pixmap)
+            self._placeholder_shown = True
+            self.thumb_label.setPixmap(themed_icon("movie.svg").pixmap(24, 24))
+            # Mientras siga sin miniatura real, el icono se re-tiñe con el tema
+            register_theme_callback(self.thumb_label, "icono_tema", lambda: (
+                self.thumb_label.setPixmap(themed_icon("movie.svg").pixmap(24, 24))
+                if self._placeholder_shown else None))
         else:
             self.thumb_label.setText("🎞️")
             
@@ -122,6 +127,7 @@ class QuickThumbnailWidget(QWidget):
             self.duration_label.hide()
             
     def set_pixmap(self, pixmap):
+        self._placeholder_shown = False
         self.thumb_label.setText("")
         self.thumb_label.setStyleSheet("background-color: transparent; border: none;")
         scaled = pixmap.scaled(96, 54, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -166,6 +172,7 @@ class QuickDownloadRow(QFrame):
         self._is_selected = False
         self._drag_press_pos = None
         self._status_color = None
+        self._status_token = None
         self.init_ui(title)
 
     def init_ui(self, title):
@@ -186,13 +193,13 @@ class QuickDownloadRow(QFrame):
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
         self.title_lbl = QLabel(title)
-        self.title_lbl.setStyleSheet(f"color: {get_theme_token('texto_principal', '#dddddd')}; font-weight: bold;")
+        set_themed_style(self.title_lbl, lambda: f"color: {get_theme_token('texto_principal', '#dddddd')}; font-weight: bold;")
         self.title_lbl.setWordWrap(False)
         self.title_lbl.setToolTip(title)
         
         self.status_lbl = QLabel(self.tr("En espera") if hasattr(self, "tr") else "En espera")
         self.status_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.status_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
+        set_themed_style(self.status_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
         
         top_layout.addWidget(self.title_lbl, 1)
         top_layout.addWidget(self.status_lbl)
@@ -210,11 +217,11 @@ class QuickDownloadRow(QFrame):
         bottom_layout = QHBoxLayout()
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         self.info_lbl = QLabel("")
-        self.info_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
+        set_themed_style(self.info_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
         
         self.percent_lbl = QLabel("0%")
         self.percent_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.percent_lbl.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
+        set_themed_style(self.percent_lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 10px; font-weight: bold;")
         
         bottom_layout.addWidget(self.info_lbl, 1)
         bottom_layout.addWidget(self.percent_lbl)
@@ -229,7 +236,7 @@ class QuickDownloadRow(QFrame):
         actions_layout.setAlignment(Qt.AlignCenter)
 
         icon_dir = os.path.join(get_src_dir(), "assets", "icons", "svg")
-        _action_btn_style = f"""
+        _action_btn_style = lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 border: none;
@@ -245,13 +252,8 @@ class QuickDownloadRow(QFrame):
         self.btn_reveal = QPushButton()
         self.btn_reveal.setFixedSize(24, 24)
         self.btn_reveal.setToolTip(self.tr("Abrir ubicación del archivo") if hasattr(self, "tr") else "Abrir ubicación del archivo")
-        self.btn_reveal.setStyleSheet(_action_btn_style)
-        _folder_icon = os.path.join(icon_dir, "folder_open.svg")
-        if os.path.exists(_folder_icon):
-            self.btn_reveal.setIcon(QIcon(_folder_icon))
-            self.btn_reveal.setIconSize(QSize(16, 16))
-        else:
-            self.btn_reveal.setText("📂")
+        set_themed_style(self.btn_reveal, _action_btn_style)
+        self.btn_reveal.setIconSize(QSize(16, 16))
         self.btn_reveal.hide()
         self.btn_reveal.clicked.connect(lambda: self.reveal_requested.emit(self))
 
@@ -259,20 +261,31 @@ class QuickDownloadRow(QFrame):
         self.btn_close = QPushButton()
         self.btn_close.setFixedSize(24, 24)
         self.btn_close.setToolTip(self.tr("Quitar de la lista") if hasattr(self, "tr") else "Quitar de la lista")
-        self.btn_close.setStyleSheet(_action_btn_style)
-        _close_icon = os.path.join(icon_dir, "close.svg")
-        if os.path.exists(_close_icon):
-            self.btn_close.setIcon(QIcon(_close_icon))
-            self.btn_close.setIconSize(QSize(14, 14))
-        else:
-            self.btn_close.setText("✕")
+        set_themed_style(self.btn_close, _action_btn_style)
+        self.btn_close.setIconSize(QSize(14, 14))
         self.btn_close.clicked.connect(lambda: self.close_requested.emit(self))
 
         actions_layout.addWidget(self.btn_reveal)
         actions_layout.addWidget(self.btn_close)
         main_layout.addLayout(actions_layout)
 
+        self._apply_row_icons()
         self._refresh_card_style()
+        register_theme_callback(self, "tarjeta_tema", self._on_theme_changed)
+
+    def _apply_row_icons(self):
+        self.btn_reveal.setIcon(themed_icon("folder_open.svg"))
+        self.btn_close.setIcon(themed_icon("close.svg"))
+
+    def _on_theme_changed(self):
+        """La tarjeta se pinta con colores calculados (mezcla del estado sobre el
+        fondo), así que al cambiar de tema hay que recalcularlos: si no, una tarjeta
+        creada en claro se queda clara en oscuro."""
+        self._apply_row_icons()
+        if self._status_token is not None:
+            self._set_status_color(self._status_token)
+        else:
+            self._refresh_card_style()
 
     def _is_alive(self) -> bool:
         """True si el widget de Qt subyacente todavía existe. Las señales que
@@ -466,8 +479,8 @@ class QuickDownloadRow(QFrame):
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Procesando"): ("estado_progreso", "#3498db"),
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Preparando"): ("estado_progreso", "#3498db"),
         QT_TRANSLATE_NOOP("QuickDownloadRow", "Recodificando"): ("estado_progreso", "#3498db"),
-        QT_TRANSLATE_NOOP("QuickDownloadRow", "En espera"): ("estado_espera", "#aaaaaa"),
-        QT_TRANSLATE_NOOP("QuickDownloadRow", "En cola"): ("estado_espera", "#aaaaaa"),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "En espera"): ("estado_espera", get_theme_token('texto_gris', '#aaaaaa')),
+        QT_TRANSLATE_NOOP("QuickDownloadRow", "En cola"): ("estado_espera", get_theme_token('texto_gris', '#aaaaaa')),
     }
     _STATUS_TOKENS_CACHE = None
 
@@ -529,6 +542,7 @@ class QuickDownloadRow(QFrame):
                 color: {get_theme_token('texto_principal', '#dddddd')};
             }}
             {progress_bar_qss()}
+            {tooltip_qss()}
         """
         # En cada tick de progreso se vuelve a llamar aquí aunque nada haya
         # cambiado (update_progress -> _apply_status_color -> _set_status_color
@@ -536,12 +550,13 @@ class QuickDownloadRow(QFrame):
         # repinta la tarjeta hasta 10 veces por segundo por descarga activa -- con
         # varias descargas simultáneas eso es lo que se sentía como que la UI se
         # trababa. Mismo patrón que QueueItemCard._apply_style en queue_panel.py.
+        new_style = apply_shapes(new_style)
         if self.styleSheet() == new_style:
             return
         self.setStyleSheet(new_style)
 
     _TOKEN_ERROR = ("estado_error", "#ff6b5f")
-    _TOKEN_ESPERA = ("estado_espera", "#aaaaaa")
+    _TOKEN_ESPERA = ("estado_espera", get_theme_token('texto_gris', '#aaaaaa'))
 
     @classmethod
     def _resolve_status_token(cls, status):
@@ -569,7 +584,9 @@ class QuickDownloadRow(QFrame):
     def _set_status_color(self, token_default):
         token, default = token_default
         color = get_theme_token(token, default)
-        self.status_lbl.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: bold;")
+        self._status_token = token_default
+        self.status_lbl.setStyleSheet(
+            apply_shapes(f"QLabel {{ color: {color}; font-size: 10px; font-weight: bold; }}" + tooltip_qss()))
         self._status_color = color
         self._refresh_card_style()
 
@@ -786,7 +803,7 @@ class PlaylistGroupRow(QFrame):
         self.btn_toggle = QPushButton()
         self.btn_toggle.setFixedSize(24, 24)
         self.btn_toggle.setCursor(Qt.PointingHandCursor)
-        self.btn_toggle.setStyleSheet(f"""
+        set_themed_style(self.btn_toggle, lambda: f"""
             QPushButton {{ background-color: transparent; border: none; border-radius: 6px; }}
             QPushButton:hover {{ background-color: {get_theme_token('fondo_hover', '#2a2a2a')}; }}
         """)
@@ -803,12 +820,10 @@ class PlaylistGroupRow(QFrame):
         title_row.setContentsMargins(0, 0, 0, 0)
         self.title_lbl = QLabel(title)
         self.title_lbl.setToolTip(title)
-        self.title_lbl.setStyleSheet(
-            f"color: {get_theme_token('texto_principal', '#dddddd')}; font-weight: bold;")
+        set_themed_style(self.title_lbl, lambda: f"color: {get_theme_token('texto_principal', '#dddddd')}; font-weight: bold;")
         self.status_lbl = QLabel(self.tr("{0} de {1}").format(0, item_count))
         self.status_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.status_lbl.setStyleSheet(
-            f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
+        set_themed_style(self.status_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;")
         title_row.addWidget(self.title_lbl, 1)
         title_row.addWidget(self.status_lbl)
         text_col.addLayout(title_row)
@@ -820,7 +835,7 @@ class PlaylistGroupRow(QFrame):
         self.progress_bar.setTextVisible(False)
         # La hoja va sobre la barra, no sobre la tarjeta: puesta en la tarjeta se
         # heredaría también a las filas hijas, que ya pintan la suya.
-        self.progress_bar.setStyleSheet(progress_bar_qss())
+        set_themed_style(self.progress_bar, progress_bar_qss)
         text_col.addWidget(self.progress_bar)
 
         header.addLayout(text_col, 1)
@@ -828,16 +843,14 @@ class PlaylistGroupRow(QFrame):
         self.btn_close = QPushButton()
         self.btn_close.setFixedSize(24, 24)
         self.btn_close.setToolTip(self.tr("Quitar la playlist de la lista"))
-        self.btn_close.setStyleSheet(f"""
+        set_themed_style(self.btn_close, lambda: f"""
             QPushButton {{ background-color: transparent; border: none; border-radius: 6px; padding: 2px; }}
             QPushButton:hover {{ background-color: {get_theme_token('fondo_hover', '#2a2a2a')}; }}
         """)
-        _close_icon = os.path.join(icon_dir, "close.svg")
-        if os.path.exists(_close_icon):
-            self.btn_close.setIcon(QIcon(_close_icon))
-            self.btn_close.setIconSize(QSize(14, 14))
-        else:
-            self.btn_close.setText("✕")
+        self.btn_close.setIcon(themed_icon("close.svg"))
+        self.btn_close.setIconSize(QSize(14, 14))
+        register_theme_callback(self.btn_close, "icono_tema",
+                                lambda: (self.btn_close.setIcon(themed_icon("close.svg")), self._refresh_toggle_icon()))
         self.btn_close.clicked.connect(lambda: self.close_requested.emit(self))
         header.addWidget(self.btn_close, 0, Qt.AlignTop)
 
@@ -938,7 +951,7 @@ class PlaylistGroupRow(QFrame):
     def _refresh_toggle_icon(self):
         path = self._icon_expanded if self._expanded else self._icon_collapsed
         if os.path.exists(path):
-            self.btn_toggle.setIcon(QIcon(path))
+            self.btn_toggle.setIcon(themed_icon(os.path.basename(path)))
             self.btn_toggle.setIconSize(QSize(16, 16))
         else:
             self.btn_toggle.setText("▾" if self._expanded else "▸")

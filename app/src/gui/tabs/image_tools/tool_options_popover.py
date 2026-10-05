@@ -17,8 +17,10 @@ from PySide6.QtWidgets import (
 )
 from gui.tabs.image_tools.layers.text_item import DEFAULT_TEXT_STYLE
 
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, register_theme_callback
 from gui.widgets.popover_button import PopoverTriggerButton
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 # Valores por defecto de cada modo -- también la forma del dict que se persiste.
@@ -72,7 +74,7 @@ class ToolOptionsPopoverContent(QFrame):
         self._loading = False
 
         self.setObjectName("toolOptionsPopover")
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#toolOptionsPopover {{
                 background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -92,7 +94,7 @@ class ToolOptionsPopoverContent(QFrame):
             "text": self.tr("Texto"),
         }
         title = QLabel(titles[mode])
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         if mode == "shape":
@@ -127,7 +129,7 @@ class ToolOptionsPopoverContent(QFrame):
         if mode in hints:
             hint = QLabel(hints[mode])
             hint.setWordWrap(True)
-            hint.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+            set_themed_style(hint, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
             layout.addWidget(hint)
 
         self._sync_enabled_state()
@@ -208,16 +210,17 @@ class ToolOptionsPopoverContent(QFrame):
         return slider, spin
 
     def _paint_swatch(self, btn, color: QColor):
-        btn.setStyleSheet(f"""
+        register_theme_callback(btn, "muestra_tema", lambda: self._paint_swatch(btn, color))
+        btn.setStyleSheet(apply_shapes(f"""
             QPushButton {{
                 background-color: {color.name()};
-                border: 1px solid #555555;
+                border: 1px solid {get_theme_token('borde_fuerte', '#555555')};
                 border-radius: 4px;
                 padding: 0px;
             }}
             QPushButton:hover {{ border-color: {get_theme_token('acento_primario', '#B9E640')}; }}
-            QPushButton:disabled {{ background-color: #2a2a2a; border-color: #3a3a3a; }}
-        """)
+            QPushButton:disabled {{ background-color: {get_theme_token('fondo_control', '#2a2a2a')}; border-color: {get_theme_token('fondo_control_hover', '#3a3a3a')}; }}
+        """))
 
     # -- Estado ---------------------------------------------------------------
     def _set(self, key, value):

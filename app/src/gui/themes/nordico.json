@@ -1,0 +1,507 @@
+{
+    "meta": {
+        "nombre": "Nórdico",
+        "autor": "DowP Team",
+        "version": "1.0",
+        "formato": 2,
+        "descripcion": "Grises azulados y tonos hielo, tranquilo y de bajo contraste, inspirado en Nord."
+    },
+    "formas": {
+        "radio": 6,
+        "radio_chico": 4,
+        "radio_grande": 10,
+        "borde": 1
+    },
+    "tipografia": {
+        "tamano": 13
+    },
+    "colores": {
+        "fondo_principal": [
+            "#eceff4",
+            "#242933"
+        ],
+        "fondo_secundario": [
+            "#e6eaf0",
+            "#2b303b"
+        ],
+        "fondo_terciario": [
+            "#e2e6ee",
+            "#2d323e"
+        ],
+        "panel_fondo": [
+            "#dfe4ed",
+            "#2d333f"
+        ],
+        "fondo_elemento": [
+            "#e7eaf1",
+            "#2e3541"
+        ],
+        "texto_principal": [
+            "#2e3440",
+            "#e4e8f0"
+        ],
+        "texto_secundario": [
+            "#7b88a1",
+            "#586378"
+        ],
+        "texto_deshabilitado": [
+            "#8f9bb1",
+            "#4d576b"
+        ],
+        "texto_activo": [
+            "#242933",
+            "#eceff4"
+        ],
+        "acento_primario": [
+            "#5e81ac",
+            "#88c0d0"
+        ],
+        "acento_secundario": [
+            "#4c6a91",
+            "#5e81ac"
+        ],
+        "borde_normal": [
+            "#d9dfea",
+            "#353c4a"
+        ],
+        "borde_sutil": [
+            "#dce1eb",
+            "#3b4252"
+        ],
+        "seleccion_fondo": [
+            "#d8dee9",
+            "#434c5e"
+        ],
+        "seleccion_texto": [
+            "#4c6a91",
+            "#88c0d0"
+        ],
+        "badge_fondo": [
+            "#d9dfea",
+            "#353c4a"
+        ],
+        "badge_texto": [
+            "#023d85",
+            "#40c1e6"
+        ],
+        "boton_fondo_inicio": [
+            "#5e81ac",
+            "#88c0d0"
+        ],
+        "boton_fondo_fin": [
+            "#4c6a91",
+            "#5e81ac"
+        ],
+        "boton_texto": [
+            "#ffffff",
+            "#2e3440"
+        ],
+        "boton_solo_inicio": [
+            "#70a1ff",
+            "#00c6ff"
+        ],
+        "boton_solo_fin": [
+            "#1e90ff",
+            "#0072ff"
+        ],
+        "boton_solo_texto": "#eceff4",
+        "boton_importar_inicio": [
+            "#35c9b0",
+            "#35d6b8"
+        ],
+        "boton_importar_fin": [
+            "#087c70",
+            "#138f7d"
+        ],
+        "boton_importar_texto": [
+            "#eceff4",
+            "#272c36"
+        ],
+        "boton_descarga_inicio": [
+            "#5e9ea0",
+            "#8fbcbb"
+        ],
+        "boton_descarga_fin": [
+            "#4c6a91",
+            "#88c0d0"
+        ],
+        "boton_descarga_texto": [
+            "#ffffff",
+            "#2e3440"
+        ],
+        "boton_descarga_running_inicio": [
+            "#5e81ac",
+            "#88c0d0"
+        ],
+        "boton_descarga_running_fin": [
+            "#4c6a91",
+            "#5e81ac"
+        ],
+        "boton_descarga_done_inicio": [
+            "#31ba63",
+            "#40d66b"
+        ],
+        "boton_descarga_done_fin": "#168f41",
+        "boton_descarga_error_inicio": [
+            "#e85b50",
+            "#ff6b5f"
+        ],
+        "boton_descarga_error_fin": [
+            "#bf2f29",
+            "#c7352f"
+        ],
+        "boton_descarga_pausar_inicio": [
+            "#f39c12",
+            "#f5af19"
+        ],
+        "boton_descarga_pausar_fin": [
+            "#d35400",
+            "#e65100"
+        ],
+        "boton_descarga_pausar_texto": "#eceff4",
+        "tab_texto_inactivo": [
+            "#7b88a1",
+            "#586378"
+        ],
+        "tab_fondo_seleccionado": [
+            "#e6eaf0",
+            "#2d323e"
+        ],
+        "divisor": [
+            "#d9dfea",
+            "#353c4a"
+        ],
+        "titulo_settings": [
+            "#023d85",
+            "#1d9cc0"
+        ],
+        "divisor_settings": [
+            "#1d66c0",
+            "#01607b"
+        ],
+        "boton_secundario_fondo": [
+            "#e6edf5",
+            "#1b343b"
+        ],
+        "boton_secundario_texto": [
+            "#023d85",
+            "#40c1e6"
+        ],
+        "boton_secundario_hover": [
+            "#d4deeb",
+            "#22414a"
+        ],
+        "checkbox_fondo": [
+            "#eceff4",
+            "#2b303b"
+        ],
+        "checkbox_borde": [
+            "#b8c1d1",
+            "#3b4252"
+        ],
+        "checkbox_checked": [
+            "#1d66c0",
+            "#40c1e6"
+        ],
+        "progreso_fondo": [
+            "#eceff4",
+            "#282d38"
+        ],
+        "progreso_inicio": [
+            "#5e81ac",
+            "#88c0d0"
+        ],
+        "progreso_fin": [
+            "#4c6a91",
+            "#5e81ac"
+        ],
+        "progreso_texto": [
+            "#2e3440",
+            "#eceff4"
+        ],
+        "estado_espera": [
+            "#646f86",
+            "#949fb4"
+        ],
+        "estado_exito": [
+            "#4f7a3a",
+            "#a3be8c"
+        ],
+        "estado_aviso": [
+            "#8a6d1f",
+            "#ebcb8b"
+        ],
+        "estado_error": [
+            "#a33b45",
+            "#bf616a"
+        ],
+        "estado_progreso": [
+            "#3b6ea8",
+            "#81a1c1"
+        ],
+        "boton_fragmentos_inicio": [
+            "#e85b50",
+            "#ff6b5f"
+        ],
+        "boton_fragmentos_fin": [
+            "#e07b00",
+            "#FF8C00"
+        ],
+        "boton_fragmentos_texto": "#eceff4",
+        "etiqueta_combinado": "#3498db",
+        "etiqueta_multi_idioma": "#9b59b6",
+        "etiqueta_estrella": "#f1c40f",
+        "etiqueta_peligro": "#e74c3c",
+        "ajedrez_c1": [
+            "#cdd4e1",
+            "#383f4e"
+        ],
+        "ajedrez_c2": [
+            "#b3bccd",
+            "#2d333f"
+        ],
+        "consola_fondo": "#000000",
+        "consola_texto": "#ffffff",
+        "consola_debug": "#4da6ff",
+        "consola_advertencia": "#ffd60a",
+        "consola_error": "#ff6b5f",
+        "consola_critico": "#ff1744",
+        "combo_flecha_fondo": [
+            "rgba(0, 0, 0, 0.06)",
+            "rgba(0, 0, 0, 0.4)"
+        ],
+        "tarjeta_fondo": [
+            "rgba(0, 0, 0, 0.025)",
+            "rgba(255, 255, 255, 0.035)"
+        ],
+        "resaltado_hover": [
+            "rgba(0, 0, 0, 0.05)",
+            "rgba(255, 255, 255, 0.05)"
+        ],
+        "texto_suave": [
+            "#4c566a",
+            "#d8dee9"
+        ],
+        "texto_clave": [
+            "#4c6a91",
+            "#88c0d0"
+        ],
+        "texto_valor": [
+            "#2e3440",
+            "#e5e9f0"
+        ],
+        "acento_audio": [
+            "#b4407f",
+            "#f5c2e7"
+        ],
+        "texto_titulo": [
+            "#2b303c",
+            "#e8ecf2"
+        ],
+        "texto_fuerte": [
+            "#323946",
+            "#e0e4ec"
+        ],
+        "texto_medio": [
+            "#3b4352",
+            "#c7cdd9"
+        ],
+        "texto_gris": [
+            "#4d576b",
+            "#949fb4"
+        ],
+        "texto_tenue": [
+            "#646f86",
+            "#6f7c93"
+        ],
+        "borde_fuerte": [
+            "#a4aec1",
+            "#4d576b"
+        ],
+        "borde_campo": [
+            "#b8c1d1",
+            "#444c5e"
+        ],
+        "fondo_campo": [
+            "#eceff4",
+            "#323946"
+        ],
+        "fondo_control": [
+            "#d7dde8",
+            "#383f4e"
+        ],
+        "fondo_control_hover": [
+            "#cdd4e1",
+            "#3f4657"
+        ],
+        "borde": [
+            "#c4ccda",
+            "#39404f"
+        ],
+        "fondo_hover": [
+            "#d7dde8",
+            "#383f4e"
+        ],
+        "borde_focus": [
+            "#5e81ac",
+            "#88c0d0"
+        ],
+        "texto_primario": [
+            "#242933",
+            "#eceff4"
+        ],
+        "texto_apagado": [
+            "#727f97",
+            "#646f86"
+        ],
+        "tarjeta_destacada_inicio": [
+            "#e5e9f0",
+            "#373e4d"
+        ],
+        "tarjeta_destacada_fin": [
+            "#dce1eb",
+            "#323845"
+        ],
+        "tarjeta_destacada_borde": [
+            "#c7cfdd",
+            "#404759"
+        ],
+        "tarjeta_futura_fondo": [
+            "#e5e9f0",
+            "#2d333f"
+        ],
+        "onda_fondo": [
+            "#dee3ec",
+            "#272c36"
+        ],
+        "onda_cuadricula": [
+            "#c1cad9",
+            "#3b4252"
+        ],
+        "onda_cuadricula_fuerte": [
+            "#a6b0c3",
+            "#444c5e"
+        ],
+        "onda_barra": [
+            "#d0d7e4",
+            "#373e4d"
+        ],
+        "onda_linea": [
+            "#b3bccd",
+            "#404759"
+        ],
+        "cabezal": [
+            "#2e3440",
+            "#eceff4"
+        ],
+        "contorno_marcador": [
+            "#eceff4",
+            "#2c313c"
+        ],
+        "pista_slider": [
+            "#bbc4d4",
+            "#41495a"
+        ],
+        "icono_tenue": [
+            "#78859e",
+            "#657187"
+        ],
+        "barra_scroll_fondo": [
+            "#d2d9e5",
+            "#353c4a"
+        ],
+        "barra_scroll_tirador": [
+            "#9ca7bb",
+            "#4d576b"
+        ],
+        "boton_marca_entrada": [
+            "#e3f5e5",
+            "#1a271a"
+        ],
+        "boton_marca_salida": [
+            "#f8e3e3",
+            "#2b1a1a"
+        ],
+        "cabecera_dialogo": [
+            "#dee3ec",
+            "#272c36"
+        ],
+        "borde_muestra_color": [
+            "#3b4352",
+            "#eceff4"
+        ],
+        "flecha_control": [
+            "#4d576b",
+            "#cdd3de"
+        ],
+        "boton_neutro_fondo": [
+            "#d4dae6",
+            "#3b4252"
+        ],
+        "boton_neutro_borde": [
+            "#b3bccd",
+            "#475063"
+        ],
+        "boton_neutro_hover": [
+            "#cad1df",
+            "#404859"
+        ],
+        "fondo_miniatura": [
+            "#d9dfea",
+            "#2c323d"
+        ],
+        "tarjeta_lista_fondo": [
+            "#e5e9f0",
+            "#2d333e"
+        ],
+        "tarjeta_lista_borde": [
+            "#cbd2e0",
+            "#394050"
+        ],
+        "titulo_boton_hover": [
+            "#dfe7f0",
+            "#1e343a"
+        ],
+        "titulo_boton_pulsado": [
+            "#cfd9e6",
+            "#162a30"
+        ],
+        "titulo_cerrar_hover": [
+            "#f6d4d4",
+            "#4a1010"
+        ],
+        "titulo_cerrar_pulsado": [
+            "#eebcbc",
+            "#3a0a0a"
+        ],
+        "icono_vacio": [
+            "#aeb8c9",
+            "#444c5e"
+        ],
+        "boton_acento_texto": [
+            "#ffffff",
+            "#2e3440"
+        ],
+        "switch_apagado": [
+            "#c4ccda",
+            "#3b4252"
+        ],
+        "switch_borde": [
+            "#a6b0c3",
+            "#444c5e"
+        ],
+        "switch_perilla": "#eceff4",
+        "icono_principal": [
+            "#3f4757",
+            "#e6eaf0"
+        ],
+        "miniatura_relleno_fondo": [
+            "#d8dee9",
+            "#313845"
+        ],
+        "miniatura_relleno_borde": [
+            "#c4ccda",
+            "#3a4150"
+        ]
+    }
+}

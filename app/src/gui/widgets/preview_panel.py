@@ -13,6 +13,7 @@ from core.logger.logger_manager import logger
 
 
 from PySide6.QtCore import Signal
+from gui.styles import get_theme_token
 
 class EdgeOpenButton(QWidget):
     """Botón de borde para abrir/cerrar el panel."""
@@ -75,7 +76,7 @@ class EdgeOpenButton(QWidget):
 
         # Flecha
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#B9E640") if self.hovered else QColor("#888888"))
+        p.setBrush(QColor("#B9E640") if self.hovered else QColor(get_theme_token('texto_tenue', '#888888')))
         
         if self._pointing_left:
             triangle = QPolygon([

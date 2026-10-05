@@ -1,26 +1,11 @@
 # src/core/tabs/editing_media/folder_color_manager.py
-import os
-import json
 import random
 from core.utils.config_manager import get_config, save_config
-from core.utils.paths import get_src_dir
 
 def get_theme_color(token_key: str, default_value: str = None) -> str:
-    """Resuelve un color de tema directamente desde los archivos de tema en la GUI sin importar módulos GUI."""
-    config = get_config()
-    theme_name = config.get("theme", "dark")
-    
-    # Localizar la ruta de temas de forma correcta
-    json_path = os.path.join(get_src_dir(), "gui", "themes", f"{theme_name}.json")
-    
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data.get("colores", {}).get(token_key, default_value)
-        except Exception:
-            pass
-    return default_value
+    """Color del tema activo (en su modo claro/oscuro) sin importar módulos GUI."""
+    from core.utils.theme_loader import get_active_token
+    return get_active_token(token_key, default_value)
 
 def get_item_color(item_key: str) -> str:
     """Obtiene el color personalizado para una carpeta o colección desde la configuración."""

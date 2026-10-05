@@ -12,6 +12,8 @@ from PySide6.QtCore import Signal, QT_TRANSLATE_NOOP
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
 from core.constants import INTERPOLATION_METHODS
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 # (ancho, alto) por preset -- mismos valores que usaba DowP1 ("Máx" en la etiqueta:
 # se aplican como límite manteniendo proporción, igual que _resize_raster_image()).
@@ -38,12 +40,10 @@ class ResizePopoverContent(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("resizePopover")
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#resizePopover {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -53,7 +53,7 @@ class ResizePopoverContent(QFrame):
         layout.setSpacing(8)
 
         title = QLabel(self.tr("Redimensionar"))
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         lbl_preset = QLabel(self.tr("Preset de escalado:"))

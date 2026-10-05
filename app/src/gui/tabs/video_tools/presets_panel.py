@@ -12,6 +12,7 @@ from gui.tabs.video_tools.upscale_ia_panel import _PRESET_NAMESPACE as _UPSCALE_
 from core.utils.preset_manager import IA_TOOL_FUNCTIONS, ia_tools_fit, recode_preset_fits
 from core.utils.watermark_builder import check_watermark_file
 from core.utils.recode_guard import normalize_container
+from gui.styles import set_themed_style
 
 # Modos del selector de arriba, en el orden de sus botones (mismas etiquetas que el
 # ModeSelector de Proceso Avanzado). Es el mismo valor que guarda cada preajuste de
@@ -106,8 +107,7 @@ class PresetsPanel(QWidget):
         warn_layout.setSpacing(6)
         self.lbl_watermark_warning = QLabel("", self.warning_container)
         self.lbl_watermark_warning.setWordWrap(True)
-        warning_color = get_theme_token("estado_error", "#e06c75")
-        self.lbl_watermark_warning.setStyleSheet(f"color: {warning_color}; font-weight: bold;")
+        set_themed_style(self.lbl_watermark_warning, lambda: f"color: {get_theme_token('estado_error', '#e06c75')}; font-weight: bold;")
         warn_layout.addWidget(self.lbl_watermark_warning)
         self.btn_fix_watermark = QPushButton(self.tr("Seleccionar otra imagen…"), self.warning_container)
         self.btn_fix_watermark.setObjectName("secondaryButton")
@@ -145,11 +145,10 @@ class PresetsPanel(QWidget):
     def _card_frame(self, title: str):
         frame = QFrame(self)
         frame.setObjectName("advancedCard")
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        frame.setStyleSheet(f"""
+        set_themed_style(frame, lambda: f"""
             QFrame#advancedCard {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)

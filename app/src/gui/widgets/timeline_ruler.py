@@ -2,6 +2,7 @@
 from PySide6.QtWidgets import QWidget, QSizePolicy
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QPen, QFont
+from gui.styles import get_theme_token
 
 
 class TimelineRulerWidget(QWidget):
@@ -92,7 +93,7 @@ class TimelineRulerWidget(QWidget):
             return
 
         # Línea inferior (separador)
-        painter.setPen(QPen(QColor("#333333"), 1))
+        painter.setPen(QPen(QColor(get_theme_token('onda_cuadricula', '#333333')), 1))
         painter.drawLine(0, h - 1, w, h - 1)
 
         # Calcular píxeles por segundo
@@ -136,11 +137,11 @@ class TimelineRulerWidget(QWidget):
 
                 if is_main and t >= 0:
                     # Marca principal: línea alta + texto
-                    painter.setPen(QPen(QColor("#888888"), 1))
+                    painter.setPen(QPen(QColor(get_theme_token('texto_tenue', '#888888')), 1))
                     painter.drawLine(int(screen_x), h - 1, int(screen_x), h - 10)
 
                     text = self._format_time(t)
-                    painter.setPen(QColor("#aaaaaa"))
+                    painter.setPen(QColor(get_theme_token('texto_gris', '#aaaaaa')))
                     painter.drawText(int(screen_x) + 3, h - 12, text)
 
             # Sub-marcas
@@ -151,7 +152,7 @@ class TimelineRulerWidget(QWidget):
                 sub_wave_x = (st / self.duration_sec) * self._waveform_width
                 sub_screen_x = sub_wave_x - self._scroll_offset
                 if 0 <= sub_screen_x <= w:
-                    painter.setPen(QPen(QColor("#444444"), 1))
+                    painter.setPen(QPen(QColor(get_theme_token('onda_cuadricula_fuerte', '#444444')), 1))
                     painter.drawLine(int(sub_screen_x), h - 1, int(sub_screen_x), h - 5)
 
             t += interval

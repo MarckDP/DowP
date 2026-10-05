@@ -34,6 +34,8 @@ from core.ytdlp_logic.media_search import KIND_VIDEO, KIND_PLAYLIST, KIND_CHANNE
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 ITEM_ROLE = Qt.UserRole + 1
 
@@ -144,7 +146,7 @@ class _PreviewPanel(QWidget):
         self.dialog = dialog
         self.setObjectName("mediaSearchPreview")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             #mediaSearchPreview {{
                 background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
                 border: 1px solid {get_theme_token('borde_normal', '#333333')};
@@ -157,7 +159,7 @@ class _PreviewPanel(QWidget):
         # Botón chico y cuadrado (mismo criterio en cerrar/play): sin esto, un QPushButton
         # sin estilo propio se pinta con el bisel rectangular por defecto del sistema, que
         # con un ícono adentro se ve como un botón "de más", no como un ícono limpio.
-        square_btn_style = f"""
+        square_btn_style = lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 border: none;
@@ -178,14 +180,13 @@ class _PreviewPanel(QWidget):
         self.title_lbl = QLabel()
         self.title_lbl.setObjectName("mediaSearchPreviewTitle")
         self.title_lbl.setMaximumWidth(self.PLAYER_WIDTH - 34)
-        self.title_lbl.setStyleSheet(
-            f"color: {get_theme_token('texto_principal', '#e0e0e0')}; font-weight: bold; font-size: 11px;")
+        set_themed_style(self.title_lbl, lambda: f"color: {get_theme_token('texto_principal', '#e0e0e0')}; font-weight: bold; font-size: 11px;")
         top.addWidget(self.title_lbl, 1)
         self.btn_close = QPushButton()
         self.btn_close.setIcon(dialog._icon("close.svg", size=14))
         self.btn_close.setIconSize(QSize(14, 14))
         self.btn_close.setFixedSize(26, 26)
-        self.btn_close.setStyleSheet(square_btn_style)
+        set_themed_style(self.btn_close, square_btn_style)
         self.btn_close.setCursor(Qt.PointingHandCursor)
         self.btn_close.setToolTip(self.tr("Cerrar vista previa (Esc)"))
         self.btn_close.clicked.connect(self.closed.emit)
@@ -204,7 +205,7 @@ class _PreviewPanel(QWidget):
         self.video_container = QWidget()
         self.video_container.setObjectName("mediaSearchPreviewContainer")
         self.video_container.setFixedSize(self.PLAYER_WIDTH, self.PLAYER_HEIGHT)
-        self.video_container.setStyleSheet("background-color: #000000; border-radius: 6px;")
+        self.video_container.setStyleSheet(apply_shapes("background-color: #000000; border-radius: 6px;"))
         block_layout.addWidget(self.video_container)
 
         self.video_widget = QVideoWidget(self.video_container)
@@ -220,8 +221,7 @@ class _PreviewPanel(QWidget):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setWordWrap(True)
         self.status_label.setFixedWidth(self.PLAYER_WIDTH - 40)
-        self.status_label.setStyleSheet(
-            f"color: {get_theme_token('texto_principal', '#eeeeee')}; background-color: rgba(0,0,0,170); "
+        set_themed_style(self.status_label, lambda: f"color: {get_theme_token('texto_principal', '#eeeeee')}; background-color: rgba(0,0,0,170); "
             "padding: 10px 16px; border-radius: 8px; font-size: 12px;")
         self.status_label.hide()
 
@@ -234,15 +234,15 @@ class _PreviewPanel(QWidget):
         self.btn_play.setIcon(self._icon_play)
         self.btn_play.setIconSize(QSize(14, 14))
         self.btn_play.setFixedSize(26, 26)
-        self.btn_play.setStyleSheet(square_btn_style)
+        set_themed_style(self.btn_play, square_btn_style)
         self.btn_play.setCursor(Qt.PointingHandCursor)
         self.btn_play.setEnabled(False)
         self.btn_play.clicked.connect(self._toggle_play)
         controls.addWidget(self.btn_play)
 
-        small_style = f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;"
+        small_style = lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 10px;"
         self.time_lbl = QLabel("0:00")
-        self.time_lbl.setStyleSheet(small_style)
+        set_themed_style(self.time_lbl, small_style)
         controls.addWidget(self.time_lbl)
 
         self.seek_slider = QSlider(Qt.Horizontal)
@@ -254,7 +254,7 @@ class _PreviewPanel(QWidget):
         controls.addWidget(self.seek_slider, 1)
 
         self.duration_lbl = QLabel("0:00")
-        self.duration_lbl.setStyleSheet(small_style)
+        set_themed_style(self.duration_lbl, small_style)
         controls.addWidget(self.duration_lbl)
 
         # Control de volumen -- reutiliza el mismo widget que ya usan los otros
@@ -1079,7 +1079,7 @@ class MediaSearchDialog(QDialog):
             btn = QPushButton(self.tr(label))
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
-            btn.setStyleSheet(f"""
+            set_themed_style(btn, lambda: f"""
                 QPushButton {{
                     background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                     border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};

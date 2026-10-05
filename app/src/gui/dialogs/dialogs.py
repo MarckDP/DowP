@@ -7,6 +7,9 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPen, QLinearGradient
 import os
 from core.logger.logger_manager import logger
 from gui.styles import apply_folder_browse_button_style
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 def _apply_dialog_styles(msg_box):
     """
@@ -14,13 +17,10 @@ def _apply_dialog_styles(msg_box):
     """
     try:
         from gui.styles import get_theme_token
-        bg_color = get_theme_token("boton_secundario_fondo", "#1b3b22")
-        fg_color = get_theme_token("boton_secundario_texto", "#B9E640")
-        hover_color = get_theme_token("boton_secundario_hover", "#224a2b")
-        btn_style = f"""
+        btn_style = lambda: f"""
             QPushButton {{
-                background-color: {bg_color};
-                color: {fg_color};
+                background-color: {get_theme_token('boton_secundario_fondo', '#1b3b22')};
+                color: {get_theme_token('boton_secundario_texto', '#B9E640')};
                 border: none;
                 border-radius: 6px;
                 padding: 5px 12px;
@@ -29,11 +29,11 @@ def _apply_dialog_styles(msg_box):
                 min-height: 22px;
             }}
             QPushButton:hover {{
-                background-color: {hover_color};
+                background-color: {get_theme_token('boton_secundario_hover', '#224a2b')};
             }}
         """
         for button in msg_box.buttons():
-            button.setStyleSheet(btn_style)
+            set_themed_style(button, btn_style)
     except Exception as e:
         logger.error(f"Error cargando estilos para el diálogo: {e}")
 
@@ -119,7 +119,7 @@ class AddLabelDialog(QDialog):
         # Central widget container for styling
         self.central_widget = QFrame()
         self.central_widget.setObjectName("AddLabelDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        set_themed_style(self.central_widget, lambda: f"""
             QFrame#AddLabelDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -151,8 +151,8 @@ class AddLabelDialog(QDialog):
             }}
             QPushButton#dialogCancelButton {{
                 background-color: transparent;
-                color: #e74c3c;
-                border: 1px solid #e74c3c;
+                color: {get_theme_token('etiqueta_peligro', '#e74c3c')};
+                border: 1px solid {get_theme_token('etiqueta_peligro', '#e74c3c')};
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
@@ -178,13 +178,13 @@ class AddLabelDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.reject)
-        self.title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(self.title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
-            }
+            }}
         """)
         central_layout.addWidget(self.title_bar)
 
@@ -216,7 +216,7 @@ class AddLabelDialog(QDialog):
         self.btn_color = QPushButton()
         self.btn_color.setFixedSize(30, 30)
         self.btn_color.setCursor(Qt.PointingHandCursor)
-        self.btn_color.setStyleSheet(f"background-color: {self.selected_color}; border: 1px solid #ffffff; border-radius: 15px;")
+        self.btn_color.setStyleSheet(apply_shapes(f"background-color: {self.selected_color}; border: 1px solid {get_theme_token('borde_muestra_color', '#ffffff')}; border-radius: 15px;"))
         self.btn_color.clicked.connect(self.pick_color)
         self.color_button_layout.addWidget(self.btn_color)
         self.color_button_layout.addStretch()
@@ -252,7 +252,7 @@ class AddLabelDialog(QDialog):
 
         # Error feedback
         self.error_lbl = QLabel("")
-        self.error_lbl.setStyleSheet("color: #e74c3c; font-size: 11px;")
+        set_themed_style(self.error_lbl, lambda: f"color: {get_theme_token('etiqueta_peligro', '#e74c3c')}; font-size: 11px;")
         self.error_lbl.hide()  # Ocultar por defecto
         layout.addWidget(self.error_lbl)
 
@@ -283,7 +283,7 @@ class AddLabelDialog(QDialog):
         dialog = AdobeColorPickerDialog(self.selected_color, self)
         if dialog.exec():
             self.selected_color = dialog.get_color()
-            self.btn_color.setStyleSheet(f"background-color: {self.selected_color}; border: 1px solid #ffffff; border-radius: 12px;")
+            self.btn_color.setStyleSheet(apply_shapes(f"background-color: {self.selected_color}; border: 1px solid {get_theme_token('borde_muestra_color', '#ffffff')}; border-radius: 12px;"))
 
     def save_label(self):
         name = self.name_input.text().strip()
@@ -356,7 +356,7 @@ class SavePresetDialog(QDialog):
 
         self.central_widget = QFrame()
         self.central_widget.setObjectName("SavePresetDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        set_themed_style(self.central_widget, lambda: f"""
             QFrame#SavePresetDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -388,8 +388,8 @@ class SavePresetDialog(QDialog):
             }}
             QPushButton#dialogCancelButton {{
                 background-color: transparent;
-                color: #e74c3c;
-                border: 1px solid #e74c3c;
+                color: {get_theme_token('etiqueta_peligro', '#e74c3c')};
+                border: 1px solid {get_theme_token('etiqueta_peligro', '#e74c3c')};
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
@@ -409,13 +409,13 @@ class SavePresetDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.reject)
-        self.title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(self.title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
-            }
+            }}
         """)
         central_layout.addWidget(self.title_bar)
 
@@ -450,7 +450,7 @@ class SavePresetDialog(QDialog):
         layout.addWidget(self.combo_function)
 
         self.error_lbl = QLabel("")
-        self.error_lbl.setStyleSheet("color: #e74c3c; font-size: 11px;")
+        set_themed_style(self.error_lbl, lambda: f"color: {get_theme_token('etiqueta_peligro', '#e74c3c')}; font-size: 11px;")
         self.error_lbl.hide()
         layout.addWidget(self.error_lbl)
 
@@ -519,7 +519,7 @@ class PdfPageRangeDialog(QDialog):
 
         self.central_widget = QFrame()
         self.central_widget.setObjectName("PdfPageRangeDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        set_themed_style(self.central_widget, lambda: f"""
             QFrame#PdfPageRangeDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -551,8 +551,8 @@ class PdfPageRangeDialog(QDialog):
             }}
             QPushButton#dialogCancelButton {{
                 background-color: transparent;
-                color: #e74c3c;
-                border: 1px solid #e74c3c;
+                color: {get_theme_token('etiqueta_peligro', '#e74c3c')};
+                border: 1px solid {get_theme_token('etiqueta_peligro', '#e74c3c')};
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
@@ -572,13 +572,13 @@ class PdfPageRangeDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.reject)
-        self.title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(self.title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
-            }
+            }}
         """)
         central_layout.addWidget(self.title_bar)
 
@@ -602,7 +602,7 @@ class PdfPageRangeDialog(QDialog):
         layout.addWidget(self.range_input)
 
         self.error_lbl = QLabel("")
-        self.error_lbl.setStyleSheet("color: #e74c3c; font-size: 11px;")
+        set_themed_style(self.error_lbl, lambda: f"color: {get_theme_token('etiqueta_peligro', '#e74c3c')}; font-size: 11px;")
         self.error_lbl.setWordWrap(True)
         self.error_lbl.hide()
         layout.addWidget(self.error_lbl)
@@ -766,7 +766,7 @@ class HueSlider(QWidget):
         grad = QLinearGradient(0, top, 0, top + h)
         for i in range(13):  # cada 30°: suficiente para un espectro limpio
             grad.setColorAt(i / 12, QColor.fromHsv((i * 30) % 360, 255, 255))
-        painter.setPen(QPen(QColor("#333333"), 1))
+        painter.setPen(QPen(QColor(get_theme_token('borde_sutil', '#333333')), 1))
         painter.setBrush(grad)
         painter.drawRoundedRect(x + 0.5, top + 0.5, w - 1, h - 1, 3, 3)
 
@@ -774,11 +774,11 @@ class HueSlider(QWidget):
         # Línea fina sobre la tira: blanca con borde oscuro para verse en cualquier tono.
         painter.setPen(QPen(QColor(0, 0, 0, 160), 3))
         painter.drawLine(x + 1, y, x + w - 1, y)
-        painter.setPen(QPen(QColor("#ffffff"), 1))
+        painter.setPen(QPen(QColor(get_theme_token("texto_activo", "#ffffff")), 1))
         painter.drawLine(x + 1, y, x + w - 1, y)
 
         # Flechas a ambos lados apuntando a la tira, como en Adobe.
-        arrow_color = QColor("#ffffff" if self.hasFocus() else "#d0d0d0")
+        arrow_color = QColor(get_theme_token("texto_activo", "#ffffff") if self.hasFocus() else get_theme_token("flecha_control", "#d0d0d0"))
         painter.setPen(Qt.NoPen)
         painter.setBrush(arrow_color)
         a = self.ARROW
@@ -849,7 +849,7 @@ class AdobeColorPickerDialog(QDialog):
         # Central widget container for styling
         self.central_widget = QFrame()
         self.central_widget.setObjectName("ColorPickerDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        set_themed_style(self.central_widget, lambda: f"""
             QFrame#ColorPickerDialogContainer {{
                 background-color: {get_theme_token("fondo_secundario", "#1e1e1e")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -883,8 +883,8 @@ class AdobeColorPickerDialog(QDialog):
             }}
             QPushButton#dialogCancelButton {{
                 background-color: transparent;
-                color: #e74c3c;
-                border: 1px solid #e74c3c;
+                color: {get_theme_token('etiqueta_peligro', '#e74c3c')};
+                border: 1px solid {get_theme_token('etiqueta_peligro', '#e74c3c')};
                 border-radius: 6px;
                 padding: 5px 12px;
                 font-weight: bold;
@@ -911,13 +911,13 @@ class AdobeColorPickerDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.reject)
-        self.title_bar.setStyleSheet("""
-            CustomTitleBar {
-                background-color: #0d0d0d;
-                border-bottom: 1px solid #222222;
+        set_themed_style(self.title_bar, lambda: f"""
+            CustomTitleBar {{
+                background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
-            }
+            }}
         """)
         central_layout.addWidget(self.title_bar)
 
@@ -950,7 +950,7 @@ class AdobeColorPickerDialog(QDialog):
         self.preview_btn.setFlat(True)
         self.preview_btn.setFocusPolicy(Qt.NoFocus)
         self.preview_btn.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.preview_btn.setStyleSheet(f"background-color: {QColor.fromHsv(self.hue, self.sat, self.val).name()}; border: 1px solid #ffffff; border-radius: 30px;")
+        self.preview_btn.setStyleSheet(apply_shapes(f"background-color: {QColor.fromHsv(self.hue, self.sat, self.val).name()}; border: 1px solid {get_theme_token('borde_muestra_color', '#ffffff')}; border-radius: 30px;"))
         
         panel_layout.addWidget(preview_label)
         panel_layout.addWidget(self.preview_btn)
@@ -975,7 +975,7 @@ class AdobeColorPickerDialog(QDialog):
         self.btn_eyedropper.setIconSize(QSize(16, 16))
         self.btn_eyedropper.setCursor(Qt.PointingHandCursor)
         self.btn_eyedropper.setToolTip(self.tr("Tomar un color de la pantalla"))
-        self.btn_eyedropper.setStyleSheet(f"""
+        set_themed_style(self.btn_eyedropper, lambda: f"""
             QPushButton#eyedropperButton {{
                 background-color: {get_theme_token("fondo_principal", "#121212")};
                 border: 1px solid {get_theme_token("borde", "#2d2d2d")};
@@ -1068,11 +1068,11 @@ class AdobeColorPickerDialog(QDialog):
             self.slider.blockSignals(False)
             self.square.blockSignals(False)
             
-            self.preview_btn.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #ffffff; border-radius: 30px;")
+            self.preview_btn.setStyleSheet(apply_shapes(f"background-color: {color.name()}; border: 1px solid {get_theme_token('borde_muestra_color', '#ffffff')}; border-radius: 30px;"))
 
     def update_color_preview(self):
         color = QColor.fromHsv(self.hue, self.sat, self.val)
-        self.preview_btn.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #ffffff; border-radius: 30px;")
+        self.preview_btn.setStyleSheet(apply_shapes(f"background-color: {color.name()}; border: 1px solid {get_theme_token('borde_muestra_color', '#ffffff')}; border-radius: 30px;"))
         
         self.hex_input.blockSignals(True)
         self.hex_input.setText(color.name().upper())

@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QEvent, QPoint, QRect, QSize
 from PySide6.QtGui import QIcon
 
-from gui.styles import get_theme_token, apply_cut_button_style
+from gui.styles import get_theme_token, apply_cut_button_style, register_theme_callback
 from gui.tabs.advanced_process.output_options import OutputOptionsWidget
 from gui.tabs.advanced_process.video_details_components import RichComboBox, RichTextDelegate
 from gui.tabs.advanced_process.recode_options import RecodeOptionsWidget
@@ -28,6 +28,7 @@ from gui.tabs.quick_mode.download_controller import QuickDownloadController
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from core.logger.logger_manager import logger
 from core.tabs.quick_mode.quick_mode_logic import reveal_in_file_manager
+from gui.styles import set_themed_style
 
 
 class QuickModeTab(QWidget):
@@ -101,16 +102,14 @@ class QuickModeTab(QWidget):
         self.recode_bar.setObjectName("quickRecodeBar")
         self.recode_bar.setMinimumWidth(200)
 
-        borde_color = get_theme_token('borde_normal', '#2d2d2d')
-        fondo_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        box_style = f"""
+        box_style = lambda: f"""
             QFrame#analysisOptionsBar {{
-                background-color: {fondo_color};
-                border: 1px solid {borde_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """
-        self.options_panel.setStyleSheet(box_style)
+        set_themed_style(self.options_panel, box_style)
 
         # En Modo Rápido el botón "Descargar" junto a la URL ya dispara la descarga:
         # el botón de descarga duplicado dentro de "Opciones de Salida" es innecesario aquí.
@@ -167,8 +166,7 @@ class QuickModeTab(QWidget):
         sobre lbl_recode_toggle: aquí el header real vive oculto (show_header=False), la
         etiqueta visible es esta otra, fuera del widget."""
         if active:
-            accent = get_theme_token('acento_primario', '#B9E640')
-            self.lbl_recode_toggle.setStyleSheet(f"font-weight: bold; color: {accent};")
+            set_themed_style(self.lbl_recode_toggle, lambda: f"font-weight: bold; color: {get_theme_token('acento_primario', '#B9E640')};")
         else:
             self.lbl_recode_toggle.setStyleSheet("font-weight: bold;")
 
@@ -262,9 +260,10 @@ class QuickModeTab(QWidget):
         self.btn_download.setObjectName("analyzeButton")
         self.btn_download.setFixedSize(32, 32)
         self.btn_download.setToolTip(self.tr("Descargar"))
-        _icon_color = get_theme_token("boton_texto", "#000000")
-        _icon = get_colored_svg_icon("download.svg", _icon_color, size=18)
-        self.btn_download.setIcon(_icon)
+        _apply_download_icon = lambda: self.btn_download.setIcon(
+            get_colored_svg_icon("download.svg", get_theme_token("boton_texto", "#000000"), size=18))
+        _apply_download_icon()
+        register_theme_callback(self.btn_download, "icono_tema", _apply_download_icon)
         self.btn_download.setIconSize(QSize(18, 18))
         self.btn_download.setStyleSheet("padding: 0px;")
         self.btn_download.clicked.connect(self._on_download_clicked)
@@ -294,8 +293,7 @@ class QuickModeTab(QWidget):
         # estilo que advanced_process_view.py::_build_analysis_options_bar (self.divider).
         divider = QFrame()
         divider.setFixedWidth(1)
-        borde_color = get_theme_token('borde_normal', '#2d2d2d')
-        divider.setStyleSheet(f"background-color: {borde_color}; border: none; border-radius: 0px;")
+        set_themed_style(divider, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')}; border: none; border-radius: 0px;")
         layout.addWidget(divider)
 
         self.chk_thumb_file = QCheckBox(self.tr("Guardar miniatura"))

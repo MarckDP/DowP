@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
 
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from gui.styles import set_themed_style
 
 
 class _TitleBar(QWidget):
@@ -25,12 +26,12 @@ class _TitleBar(QWidget):
         layout.setSpacing(4)
 
         lbl = QLabel(title)
-        lbl.setStyleSheet(f"color: {get_theme_token('texto_principal', '#ffffff')}; font-weight: bold; font-size: 12px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-weight: bold; font-size: 12px;")
         layout.addWidget(lbl)
         layout.addStretch()
 
         self.btn_close = QPushButton()
-        self.btn_close.setIcon(get_colored_svg_icon("close.svg", "#888888", size=12))
+        self.btn_close.setIcon(get_colored_svg_icon("close.svg", get_theme_token('texto_tenue', '#888888'), size=12))
         self.btn_close.setFixedSize(18, 18)
         self.btn_close.setCursor(Qt.PointingHandCursor)
         self.btn_close.setStyleSheet("border: none; background: transparent; padding: 0px;")
@@ -88,12 +89,10 @@ class FloatingPanel(QFrame):
         self.resize(width, 360)
         self.setMouseTracking(True)
 
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#floatingPanel {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -108,7 +107,7 @@ class FloatingPanel(QFrame):
 
         sep = QFrame()
         sep.setFixedHeight(1)
-        sep.setStyleSheet(f"background-color: {border};")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')};")
         layout.addWidget(sep)
 
         layout.addWidget(content)

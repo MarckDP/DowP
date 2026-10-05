@@ -60,6 +60,8 @@ from gui.tabs.image_tools.layers.text_item import EditableTextItem
 from gui.widgets.zoomable_image_viewer import ZoomableImageViewer
 from gui.tabs.image_tools.layers.layers_panel import LayersPanel
 from gui.tabs.image_tools.layers.background_dialog import BackgroundDialog
+from gui.styles import set_themed_style, register_theme_callback
+from gui.styles import apply_shapes
 
 _COMPARE_CACHE_SIZE = 5
 
@@ -190,7 +192,7 @@ class ImageToolsTab(QWidget):
             sep = QFrame()
             sep.setFrameShape(QFrame.HLine)
             sep.setFixedHeight(1)
-            sep.setStyleSheet(f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; border: none;")
+            set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; border: none;")
             return sep
 
         self._popover_buttons = []
@@ -623,10 +625,11 @@ class ImageToolsTab(QWidget):
         """Mismo criterio visual que _style_upscale_button/_style_rembg_button --
         verde cuando el preset elegido en el popover no es "No escalar (Original)"
         (el default), gris si lo es."""
+        register_theme_callback(self.btn_resize, "estilo_tema", lambda: self._style_resize_button(is_active))
         if is_active:
-            self.btn_resize.setIcon(get_colored_svg_icon("resize.svg", "#000000", size=18))
+            self.btn_resize.setIcon(get_colored_svg_icon("resize.svg", get_theme_token("boton_acento_texto", "#000000"), size=18))
             self.btn_resize.setToolTip(self.tr("Redimensionar — activo (clic derecho: desactivar)"))
-            self.btn_resize.setStyleSheet(f"""
+            set_themed_style(self.btn_resize, lambda: f"""
                 QPushButton {{
                     min-width: 32px; max-width: 32px;
                     min-height: 32px; max-height: 32px;
@@ -640,9 +643,9 @@ class ImageToolsTab(QWidget):
                 }}
             """)
         else:
-            self.btn_resize.setIcon(get_colored_svg_icon("resize.svg", "#6c7086", size=18))
+            self.btn_resize.setIcon(get_colored_svg_icon("resize.svg", get_theme_token('icono_tenue', '#6c7086'), size=18))
             self.btn_resize.setToolTip(self.tr("Redimensionar"))
-            self.btn_resize.setStyleSheet(f"""
+            set_themed_style(self.btn_resize, lambda: f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -658,10 +661,11 @@ class ImageToolsTab(QWidget):
 
     def _style_rembg_button(self, is_valid: bool):
         """Mismo criterio visual que _style_upscale_button -- ver ese método."""
+        register_theme_callback(self.btn_rembg, "estilo_tema", lambda: self._style_rembg_button(is_valid))
         if is_valid:
-            self.btn_rembg.setIcon(get_colored_svg_icon("background_replace.svg", "#000000", size=18))
+            self.btn_rembg.setIcon(get_colored_svg_icon("background_replace.svg", get_theme_token("boton_acento_texto", "#000000"), size=18))
             self.btn_rembg.setToolTip(self.tr("Eliminar Fondo (IA) — configuración lista (clic derecho: desactivar)"))
-            self.btn_rembg.setStyleSheet(f"""
+            set_themed_style(self.btn_rembg, lambda: f"""
                 QPushButton {{
                     min-width: 32px; max-width: 32px;
                     min-height: 32px; max-height: 32px;
@@ -675,9 +679,9 @@ class ImageToolsTab(QWidget):
                 }}
             """)
         else:
-            self.btn_rembg.setIcon(get_colored_svg_icon("background_replace.svg", "#6c7086", size=18))
+            self.btn_rembg.setIcon(get_colored_svg_icon("background_replace.svg", get_theme_token('icono_tenue', '#6c7086'), size=18))
             self.btn_rembg.setToolTip(self.tr("Eliminar Fondo (IA)"))
-            self.btn_rembg.setStyleSheet(f"""
+            set_themed_style(self.btn_rembg, lambda: f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -693,10 +697,11 @@ class ImageToolsTab(QWidget):
 
     def _style_depth_button(self, is_valid: bool):
         """Mismo criterio visual que _style_upscale_button -- ver ese método."""
+        register_theme_callback(self.btn_depth, "estilo_tema", lambda: self._style_depth_button(is_valid))
         if is_valid:
-            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", "#000000", size=18))
+            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", get_theme_token("boton_acento_texto", "#000000"), size=18))
             self.btn_depth.setToolTip(self.tr("Mapa de Profundidad (IA) — configuración lista (clic derecho: desactivar)"))
-            self.btn_depth.setStyleSheet(f"""
+            set_themed_style(self.btn_depth, lambda: f"""
                 QPushButton {{
                     min-width: 32px; max-width: 32px;
                     min-height: 32px; max-height: 32px;
@@ -710,9 +715,9 @@ class ImageToolsTab(QWidget):
                 }}
             """)
         else:
-            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", "#6c7086", size=18))
+            self.btn_depth.setIcon(get_colored_svg_icon("landscape.svg", get_theme_token('icono_tenue', '#6c7086'), size=18))
             self.btn_depth.setToolTip(self.tr("Mapa de Profundidad (IA)"))
-            self.btn_depth.setStyleSheet(f"""
+            set_themed_style(self.btn_depth, lambda: f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -728,10 +733,11 @@ class ImageToolsTab(QWidget):
 
     def _style_normals_button(self, is_valid: bool):
         """Mismo criterio visual que _style_depth_button -- ver ese método."""
+        register_theme_callback(self.btn_normals, "estilo_tema", lambda: self._style_normals_button(is_valid))
         if is_valid:
-            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", "#000000", size=18))
+            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", get_theme_token("boton_acento_texto", "#000000"), size=18))
             self.btn_normals.setToolTip(self.tr("Mapa de Normales (IA) — configuración lista (clic derecho: desactivar). Al activarlo se apaga el Mapa de Profundidad."))
-            self.btn_normals.setStyleSheet(f"""
+            set_themed_style(self.btn_normals, lambda: f"""
                 QPushButton {{
                     min-width: 32px; max-width: 32px;
                     min-height: 32px; max-height: 32px;
@@ -745,9 +751,9 @@ class ImageToolsTab(QWidget):
                 }}
             """)
         else:
-            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", "#6c7086", size=18))
+            self.btn_normals.setIcon(get_colored_svg_icon("normal_map.svg", get_theme_token('icono_tenue', '#6c7086'), size=18))
             self.btn_normals.setToolTip(self.tr("Mapa de Normales (IA)"))
-            self.btn_normals.setStyleSheet(f"""
+            set_themed_style(self.btn_normals, lambda: f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -766,10 +772,11 @@ class ImageToolsTab(QWidget):
         ícono oscuro cuando hay una configuración lista para usarse, gris neutro si
         no) -- sin reusar esa función porque está atada a "edit.svg"/textos de
         subclip, no genérica."""
+        register_theme_callback(self.btn_upscale, "estilo_tema", lambda: self._style_upscale_button(is_valid))
         if is_valid:
-            self.btn_upscale.setIcon(get_colored_svg_icon("frame_person.svg", "#000000", size=18))
+            self.btn_upscale.setIcon(get_colored_svg_icon("frame_person.svg", get_theme_token("boton_acento_texto", "#000000"), size=18))
             self.btn_upscale.setToolTip(self.tr("Reescalar con IA — configuración lista (clic derecho: desactivar)"))
-            self.btn_upscale.setStyleSheet(f"""
+            set_themed_style(self.btn_upscale, lambda: f"""
                 QPushButton {{
                     min-width: 32px; max-width: 32px;
                     min-height: 32px; max-height: 32px;
@@ -783,9 +790,9 @@ class ImageToolsTab(QWidget):
                 }}
             """)
         else:
-            self.btn_upscale.setIcon(get_colored_svg_icon("frame_person.svg", "#6c7086", size=18))
+            self.btn_upscale.setIcon(get_colored_svg_icon("frame_person.svg", get_theme_token('icono_tenue', '#6c7086'), size=18))
             self.btn_upscale.setToolTip(self.tr("Reescalar con IA"))
-            self.btn_upscale.setStyleSheet(f"""
+            set_themed_style(self.btn_upscale, lambda: f"""
                 QPushButton {{
                     min-width: 30px; max-width: 30px;
                     min-height: 30px; max-height: 30px;
@@ -893,9 +900,7 @@ class ImageToolsTab(QWidget):
             self._tool_buttons["select"].setChecked(True)
 
     def _style_tool_buttons(self):
-        accent = get_theme_token('acento_primario', '#B9E640')
-        bg = get_theme_token('fondo_elemento', '#2d2d2d')
-        border = get_theme_token('borde_normal', '#2d2d2d')
+        register_theme_callback(self, "tool_buttons_tema", lambda: self._style_tool_buttons())
         canvas_right = getattr(self, "_canvas_right_activated", False)
         for key, btn in self._tool_buttons.items():
             if key == "canvas":
@@ -903,25 +908,25 @@ class ImageToolsTab(QWidget):
             else:
                 icon_name = self._TOOL_ICONS[key]
             if btn.isChecked():
-                btn.setIcon(get_colored_svg_icon(icon_name, "#000000", size=18))
-                btn.setStyleSheet(f"""
+                btn.setIcon(get_colored_svg_icon(icon_name, get_theme_token("boton_acento_texto", "#000000"), size=18))
+                set_themed_style(btn, lambda: f"""
                     QPushButton {{
                         min-width: 32px; max-width: 32px;
                         min-height: 32px; max-height: 32px;
-                        background-color: {accent};
+                        background-color: {get_theme_token('acento_primario', '#B9E640')};
                         border: none;
                         border-radius: 6px;
                         padding: 0px;
                     }}
                 """)
             else:
-                btn.setIcon(get_colored_svg_icon(icon_name, "#6c7086", size=18))
-                btn.setStyleSheet(f"""
+                btn.setIcon(get_colored_svg_icon(icon_name, get_theme_token('icono_tenue', '#6c7086'), size=18))
+                set_themed_style(btn, lambda: f"""
                     QPushButton {{
                         min-width: 30px; max-width: 30px;
                         min-height: 30px; max-height: 30px;
-                        background-color: {bg};
-                        border: 1px solid {border};
+                        background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
+                        border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                         border-radius: 6px;
                         padding: 0px;
                     }}
@@ -955,11 +960,12 @@ class ImageToolsTab(QWidget):
             self.layers_floating_panel.hide_panel()
 
     def _style_layers_panel_button(self, checked: bool):
+        register_theme_callback(self.btn_layers_panel, "estilo_tema", lambda: self._style_layers_panel_button(checked))
         icon = "stacks.svg"
-        color = get_theme_token('acento_primario', '#B9E640') if checked else "#6c7086"
+        color = get_theme_token('acento_primario', '#B9E640') if checked else get_theme_token('icono_tenue', '#6c7086')
         self.btn_layers_panel.setIcon(get_colored_svg_icon(icon, color, size=18))
         border = get_theme_token('acento_primario', '#B9E640') if checked else get_theme_token('borde_normal', '#2d2d2d')
-        self.btn_layers_panel.setStyleSheet(f"""
+        self.btn_layers_panel.setStyleSheet(apply_shapes(f"""
             QPushButton {{
                 min-width: 30px; max-width: 30px;
                 min-height: 30px; max-height: 30px;
@@ -971,7 +977,7 @@ class ImageToolsTab(QWidget):
             QPushButton:hover {{
                 background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')};
             }}
-        """)
+        """))
 
     # ------------------------------------------------------------------
     # Puente LayerStack <-> LayersPanel <-> ZoomableImageViewer
@@ -1098,7 +1104,7 @@ class ImageToolsTab(QWidget):
         btn.setIconSize(QSize(16, 16))
         btn.setCursor(Qt.PointingHandCursor)
         btn.setEnabled(False)
-        btn.setStyleSheet(f"""
+        set_themed_style(btn, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -1962,12 +1968,10 @@ class ImageToolsTab(QWidget):
         en la barra inferior de la pestaña."""
         container = QFrame()
         container.setObjectName("unifiedQueuePanel")
-        bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        border_color = get_theme_token('borde_normal', '#2d2d2d')
-        container.setStyleSheet(f"""
+        set_themed_style(container, lambda: f"""
             QFrame#unifiedQueuePanel {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -1982,7 +1986,7 @@ class ImageToolsTab(QWidget):
         # Divisor sutil entre la lista y las opciones
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; max-height: 1px; border: none;")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
         self.convert_panel = ConvertPanel()
@@ -2007,12 +2011,10 @@ class ImageToolsTab(QWidget):
         Modo Rápido, Proceso Avanzado y Herramientas de Video)."""
         card = QFrame()
         card.setObjectName("imageToolsOutputBar")
-        border_color = get_theme_token('borde_normal', '#2d2d2d')
-        bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        card.setStyleSheet(f"""
+        set_themed_style(card, lambda: f"""
             QFrame#imageToolsOutputBar {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)

@@ -11,6 +11,8 @@ from core.logger.logger_manager import logger
 from gui.styles import set_button_variant
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.console_view_widget import ConsoleViewWidget
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
 
 
 class ConsolePage(QWidget):
@@ -81,7 +83,7 @@ class ConsolePage(QWidget):
             "archivo de log."
         ))
         self.active_desc.setWordWrap(True)
-        self.active_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.active_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.main_layout.addWidget(self.active_desc)
 
         # Visor de la consola

@@ -298,7 +298,7 @@ QPushButton#analyzeButton:disabled {
 /* 3. Acento Sólido Verde Plano (Carpeta, Play, Loop, etc.) */
 QPushButton[variant="accent-solid"] {
     background-color: {{acento_secundario}};
-    color: #000000;
+    color: {{boton_acento_texto}};
     border: none;
     border-radius: 6px;
     padding: 6px 14px;
@@ -308,7 +308,7 @@ QPushButton[variant="accent-solid"] {
 QPushButton#pathToolButton,
 #pathToolButton {
     background-color: {{acento_secundario}};
-    color: #000000;
+    color: {{boton_acento_texto}};
     border: none;
     border-radius: 6px;
     padding: 2px;
@@ -320,7 +320,7 @@ QPushButton#pathToolButton:hover,
 #pathToolButton:hover {
     background-color: {{acento_primario}};
     border: none;
-    color: #000000;
+    color: {{boton_acento_texto}};
 }
 
 QPushButton[variant="accent-solid"]:pressed,
@@ -328,7 +328,7 @@ QPushButton#pathToolButton:pressed,
 #pathToolButton:pressed {
     background-color: {{acento_secundario}};
     border: none;
-    color: #000000;
+    color: {{boton_acento_texto}};
 }
 
 QPushButton[variant="accent-solid"]:disabled,
@@ -579,7 +579,7 @@ QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: top right;
     border-left: 1px solid {{borde_normal}};
-    background-color: rgba(0, 0, 0, 0.4); /* Clearly darker section */
+    background-color: {{combo_flecha_fondo}}; /* Clearly darker section */
     width: 25px;
     border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
@@ -746,7 +746,7 @@ QFrame#vtracerCardPanel,
 QFrame#adobeCard,
 QFrame#davinciCard,
 QFrame[variant="card"] {
-    background-color: rgba(255, 255, 255, 0.035);
+    background-color: {{tarjeta_fondo}};
     border: 1px solid {{borde_sutil}};
     border-radius: 6px;
     padding: 4px;
@@ -814,7 +814,7 @@ QWidget#subtitleHeaderWidget {
 }
 
 QWidget#subtitleHeaderWidget:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: {{resaltado_hover}};
     border: 1px solid {{borde_sutil}};
 }
 
@@ -825,7 +825,7 @@ QWidget#recodeHeaderWidget {
 }
 
 QWidget#recodeHeaderWidget:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: {{resaltado_hover}};
     border: 1px solid {{borde_sutil}};
 }
 
@@ -836,7 +836,7 @@ QFrame#quickRecodeBar {
 }
 
 QFrame#quickRecodeBar:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: {{resaltado_hover}};
     border: 1px solid {{borde_sutil}};
 }
 
@@ -1416,7 +1416,7 @@ QPushButton#githubButton {
 
 QPushButton#githubButton:hover {
     background-color: {{acento_primario}};
-    color: #000000;
+    color: {{boton_acento_texto}};
 }
 
 /* ═══════════════════════════════════════════

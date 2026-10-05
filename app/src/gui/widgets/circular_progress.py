@@ -35,13 +35,14 @@ class CircularProgress(QWidget):
         margin = max(_TRACK_WIDTH, _PROGRESS_WIDTH) / 2 + 1
         rect = QRectF(margin, margin, self._diameter - 2 * margin, self._diameter - 2 * margin)
 
-        track_pen = QPen(QColor(_TRACK_COLOR), _TRACK_WIDTH)
+        from gui.styles import get_theme_token
+        track_pen = QPen(QColor(get_theme_token('pista_slider', _TRACK_COLOR)), _TRACK_WIDTH)
         track_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(track_pen)
         painter.drawEllipse(rect)
 
         if self._value > 0:
-            progress_pen = QPen(QColor(_PROGRESS_COLOR), _PROGRESS_WIDTH)
+            progress_pen = QPen(QColor(get_theme_token('acento_primario', _PROGRESS_COLOR)), _PROGRESS_WIDTH)
             progress_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(progress_pen)
             start_angle = 90 * 16  # las 12 en punto, Qt mide en 1/16 de grado

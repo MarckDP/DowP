@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.styles import get_theme_token
+from gui.styles import apply_shapes
 
 _TITLE_STYLE_BASE = "font-weight: bold; font-size: 13px;"
 
@@ -59,7 +60,7 @@ class SubtitleOptionsWidget(QFrame):
         self.title_label = QLabel(self.tr("Subtítulos"))
         self.title_label.setObjectName("sectionTitle")
         self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.setStyleSheet(_TITLE_STYLE_BASE)
+        self.title_label.setStyleSheet(apply_shapes(_TITLE_STYLE_BASE))
 
         header_layout.addWidget(self.title_label)
 
@@ -157,7 +158,7 @@ class SubtitleOptionsWidget(QFrame):
             accent = get_theme_token('acento_primario', '#B9E640')
             self.title_label.setStyleSheet(f"{_TITLE_STYLE_BASE} color: {accent};")
         else:
-            self.title_label.setStyleSheet(_TITLE_STYLE_BASE)
+            self.title_label.setStyleSheet(apply_shapes(_TITLE_STYLE_BASE))
 
     def _expanded_height(self) -> int:
         """Alto real necesario para el cuerpo actual, calculado en vivo (con el tema/

@@ -16,6 +16,7 @@ from core.tabs.image_tools.convert_options import (
     SVG_PRESET_OPTIONS, SVG_CURVE_MODE_OPTIONS, SVG_CLUSTERING_OPTIONS,
     default_options_for_format,
 )
+from gui.styles import set_themed_style
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
 
@@ -57,7 +58,7 @@ class ConvertPanel(QWidget):
         # Divisor sutil entre el selector y las opciones del formato
         sep = QFrame(frame_format)
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; max-height: 1px; border: none;")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_sutil', '#2d2d2d')}; max-height: 1px; border: none;")
         fv.addWidget(sep)
 
         self.format_stack = QStackedWidget(frame_format)

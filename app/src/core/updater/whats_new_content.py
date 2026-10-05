@@ -35,6 +35,18 @@ def get_whats_new_items(version: str) -> list:
         # del problema conocido, que conviene dejar al final.
         return [
             (
+                QCoreApplication.translate("WhatsNewContent", "Temas con modo claro y oscuro"),
+                QCoreApplication.translate("WhatsNewContent", "Cada tema trae su modo claro y su modo oscuro: elige Oscuro, Claro o Según el sistema en Ajustes > General. El modo claro se revisó en toda la app y el cambio se aplica al momento, sin reiniciar."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Cuatro temas nuevos"),
+                QCoreApplication.translate("WhatsNewContent", "Tokyo Night, Café Noir, Rubí y Nórdico, cada uno con su modo claro y oscuro. Elígelos en Ajustes > General > Tema visual."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Crea e importa tus temas"),
+                QCoreApplication.translate("WhatsNewContent", "Con el botón junto a Tema visual puedes importar, exportar y eliminar temas. Un tema define colores, esquinas, bordes y tamaño de letra, y los temas de DowP 1 se convierten solos al importarlos."),
+            ),
+            (
                 QCoreApplication.translate("WhatsNewContent", "Problema conocido: subtítulos de YouTube"),
                 QCoreApplication.translate("WhatsNewContent", "Sin cookies, YouTube a veces limita la descarga de subtítulos (error 429) y eso cancela toda la descarga, no solo los subtítulos. Mientras lo solucionamos: espera unos minutos antes de reintentar, usa las cookies de tu navegador (Ajustes > Cookies), o descarga el video sin subtítulos y bájalos después con el botón \"Descargar subtítulos\"."),
             ),

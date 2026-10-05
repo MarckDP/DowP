@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
+from gui.styles import get_theme_token, set_themed_style, generate_tinted_svg, register_theme_callback
 
 # Ruta base de iconos SVG
 _ICONS_DIR = os.path.join(get_src_dir(), "assets", "icons", "svg")
@@ -17,10 +18,11 @@ _APP_ICONS_DIR = os.path.join(get_src_dir(), "assets", "icons", "app")
 
 
 def _icon(name: str) -> QIcon:
-    """Carga un ícono SVG desde assets/icons/svg/."""
+    """Carga un ícono SVG desde assets/icons/svg/, teñido con el color de iconos del tema."""
     path = os.path.abspath(os.path.join(_ICONS_DIR, name))
     if os.path.exists(path):
-        return QIcon(path)
+        tinted = generate_tinted_svg(name, get_theme_token("icono_principal", "#e3e3e3"))
+        return QIcon(tinted or path)
     logger.warning(f"TitleBar: Ícono no encontrado: {path}")
     return QIcon()
 
@@ -34,22 +36,27 @@ class CustomTitleBar(QWidget):
     # Señal emitida al hacer doble clic (toggle maximize)
     double_clicked = Signal()
 
-    # Estilos de la barra
-    _BAR_STYLE = """
-        CustomTitleBar {
-            background-color: #0d0d0d;
-            border-bottom: 1px solid #222222;
-        }
+    # Estilos de la barra: funciones (no constantes) para que se recalculen al cambiar
+    # de tema -- una constante de clase se evalúa una sola vez, al importar el módulo.
+    @staticmethod
+    def _bar_style():
+        return f"""
+        CustomTitleBar {{
+            background-color: {get_theme_token('cabecera_dialogo', '#0d0d0d')};
+            border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
+        }}
     """
 
-    _TITLE_STYLE = """
-        QLabel {
-            color: #e0e0e0;
+    @staticmethod
+    def _title_style():
+        return f"""
+        QLabel {{
+            color: {get_theme_token('texto_principal', '#e0e0e0')};
             font-size: 13px;
             font-weight: 600;
             background: transparent;
             padding-left: 4px;
-        }
+        }}
     """
 
     _BTN_BASE = """
@@ -75,7 +82,7 @@ class CustomTitleBar(QWidget):
         super().__init__(parent)
         self.setObjectName("CustomTitleBar")
         self.setFixedHeight(36)
-        self.setStyleSheet(self._BAR_STYLE)
+        set_themed_style(self, self._bar_style)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         # Estado de drag
@@ -106,7 +113,7 @@ class CustomTitleBar(QWidget):
         # ── Título (Centrado Absoluto) ────────────────────────────────────────
         # Lo creamos como hijo del widget pero NO lo agregamos al layout
         self.title_label = QLabel(title, self)
-        self.title_label.setStyleSheet(self._TITLE_STYLE)
+        set_themed_style(self.title_label, self._title_style)
         self.title_label.setAlignment(Qt.AlignCenter)
         # Hacerlo transparente a eventos del ratón para no bloquear el drag
         self.title_label.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -120,12 +127,10 @@ class CustomTitleBar(QWidget):
         self.btn_min.setObjectName("titleBarMinimize")
         self.btn_min.setIcon(_icon("minimize.svg"))
         self.btn_min.setToolTip("Minimizar")
-        self.btn_min.setStyleSheet(
-            self._BTN_BASE.format(
-                size=btn_size, radius=radius,
-                hover="#1e3a1e", pressed="#163016"
-            )
-        )
+        set_themed_style(self.btn_min, lambda: self._BTN_BASE.format(
+            size=btn_size, radius=radius,
+            hover=get_theme_token('titulo_boton_hover', '#1e3a1e'), pressed=get_theme_token('titulo_boton_pulsado', '#163016')
+        ))
         self.btn_min.clicked.connect(self._on_minimize)
 
         # Maximizar / Restaurar
@@ -133,12 +138,10 @@ class CustomTitleBar(QWidget):
         self.btn_max.setObjectName("titleBarMaximize")
         self.btn_max.setIcon(_icon("fullscreen.svg"))
         self.btn_max.setToolTip("Maximizar")
-        self.btn_max.setStyleSheet(
-            self._BTN_BASE.format(
-                size=btn_size, radius=radius,
-                hover="#1e3a1e", pressed="#163016"
-            )
-        )
+        set_themed_style(self.btn_max, lambda: self._BTN_BASE.format(
+            size=btn_size, radius=radius,
+            hover=get_theme_token('titulo_boton_hover', '#1e3a1e'), pressed=get_theme_token('titulo_boton_pulsado', '#163016')
+        ))
         self.btn_max.clicked.connect(self._on_maximize_restore)
 
         # Cerrar
@@ -146,13 +149,13 @@ class CustomTitleBar(QWidget):
         self.btn_close.setObjectName("titleBarClose")
         self.btn_close.setIcon(_icon("close.svg"))
         self.btn_close.setToolTip(self.tr("Cerrar"))
-        self.btn_close.setStyleSheet(
-            self._BTN_BASE.format(
-                size=btn_size, radius=radius,
-                hover="#4a1010", pressed="#3a0a0a"
-            )
-        )
+        set_themed_style(self.btn_close, lambda: self._BTN_BASE.format(
+            size=btn_size, radius=radius,
+            hover=get_theme_token('titulo_cerrar_hover', '#4a1010'), pressed=get_theme_token('titulo_cerrar_pulsado', '#3a0a0a')
+        ))
         self.btn_close.clicked.connect(self._on_close)
+
+        register_theme_callback(self, "iconos_tema", self._refresh_icons)
 
         layout.addWidget(self.btn_min)
         layout.addWidget(self.btn_max)
@@ -162,6 +165,12 @@ class CustomTitleBar(QWidget):
 
     def _window(self):
         return self.window()
+
+    def _refresh_icons(self):
+        self.btn_min.setIcon(_icon("minimize.svg"))
+        self.btn_close.setIcon(_icon("close.svg"))
+        maximized = self._window().isMaximized()
+        self.btn_max.setIcon(_icon("fullscreen_exit.svg" if maximized else "fullscreen.svg"))
 
     def _on_minimize(self):
         self._window().showMinimized()

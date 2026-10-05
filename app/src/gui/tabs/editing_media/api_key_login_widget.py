@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
 )
 
 from gui.styles import get_theme_token
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class ApiKeyValidationThread(QThread):
@@ -89,22 +91,20 @@ class ApiKeyLoginWidget(QWidget):
         self.title_label = QLabel()
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setWordWrap(True)
-        self.title_label.setStyleSheet("font-size: 15px; font-weight: bold;")
+        self.title_label.setStyleSheet(apply_shapes("font-size: 15px; font-weight: bold;"))
         layout.addWidget(self.title_label)
 
         self.instructions_label = QLabel()
         self.instructions_label.setAlignment(Qt.AlignCenter)
         self.instructions_label.setWordWrap(True)
-        self.instructions_label.setStyleSheet(
-            f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 13px;"
-        )
+        set_themed_style(self.instructions_label, lambda: f"color: {get_theme_token('texto_secundario', '#aaaaaa')}; font-size: 13px;")
         layout.addWidget(self.instructions_label)
 
         self.btn_open_site = QPushButton()
         self.btn_open_site.setFixedHeight(38)
         self.btn_open_site.setMinimumWidth(180)
         self.btn_open_site.setCursor(Qt.PointingHandCursor)
-        self.btn_open_site.setStyleSheet(f"""
+        set_themed_style(self.btn_open_site, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#3d3d3d')};
@@ -150,7 +150,7 @@ class ApiKeyLoginWidget(QWidget):
         self.btn_save.setFixedHeight(40)
         self.btn_save.setMinimumWidth(160)
         self.btn_save.setCursor(Qt.PointingHandCursor)
-        self.btn_save.setStyleSheet(f"""
+        set_themed_style(self.btn_save, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_primario', '#B9E640')};
                 color: {get_theme_token('fondo_principal', '#0a0a0a')};
@@ -201,7 +201,7 @@ class ApiKeyLoginWidget(QWidget):
             return
         key = self.key_input.text().strip()
         if not key:
-            self.status_label.setStyleSheet("color: #E67E22;")
+            set_themed_style(self.status_label, lambda: f"color: {get_theme_token('estado_aviso', '#E67E22')};")
             self.status_label.setText(QCoreApplication.translate("ApiKeyLoginWidget", "Pega tu API key antes de guardar."))
             return
 
@@ -237,6 +237,6 @@ class ApiKeyLoginWidget(QWidget):
             return
 
         provider.set_api_key(key)
-        self.status_label.setStyleSheet("color: #1DC038;")
+        self.status_label.setStyleSheet(f"color: {get_theme_token('estado_exito', '#1DC038')};")
         self.status_label.setText(QCoreApplication.translate("ApiKeyLoginWidget", "¡Listo! Key guardada."))
         self.key_saved.emit(provider.id)

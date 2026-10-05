@@ -5,12 +5,13 @@ from PySide6.QtWidgets import (
     QGraphicsScene, QGraphicsView
 )
 from PySide6.QtCore import Qt, QUrl, QSize, QSizeF, QRectF
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QColor, QImage
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QColor, QImage, QResizeEvent
 
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from core.tabs.editing_media.editing_media_logic import RAW_EXTS
 from gui.styles import (
+    register_theme_callback,
     get_theme_token,
     apply_player_play_button_style,
     apply_player_loop_button_style,
@@ -21,6 +22,8 @@ from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.volume_control import VolumeControlWidget
 from gui.widgets.zoomable_image_viewer import ZoomableImageViewer
 from gui.widgets.compare_viewer import CompareViewer
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 try:
     from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -41,8 +44,6 @@ class _PreviewVideoView(QGraphicsView):
     """Vista gráfica para renderizar video en el mismo buffer 2D de Qt sin crear ventana nativa HWND,
     con soporte para cuadrícula de fondo tipo transparencia (estilo Photoshop) para videos con canal alfa."""
     SQUARE = 10
-    COLOR_A = QColor(42, 42, 42)
-    COLOR_B = QColor(30, 30, 30)
 
     def __init__(self, scene: QGraphicsScene, video_item: QGraphicsVideoItem, parent=None):
         super().__init__(scene, parent)
@@ -63,13 +64,16 @@ class _PreviewVideoView(QGraphicsView):
     def drawBackground(self, painter: QPainter, rect: QRectF):
         if self._show_checkerboard:
             painter.save()
+            # Colores de la cuadrícula del tema (ajedrez_c1/c2), leídos al pintar
+            color_a = QColor(get_theme_token('ajedrez_c1', '#2a2a2a'))
+            color_b = QColor(get_theme_token('ajedrez_c2', '#1e1e1e'))
             size = self.SQUARE
             r = self.sceneRect() if self.sceneRect().isValid() and not self.sceneRect().isEmpty() else rect
             cols = int(r.width() // size) + 2
             rows = int(r.height() // size) + 2
             for row in range(rows):
                 for col in range(cols):
-                    color = self.COLOR_A if (row + col) % 2 == 0 else self.COLOR_B
+                    color = color_a if (row + col) % 2 == 0 else color_b
                     painter.fillRect(QRectF(r.left() + col * size, r.top() + row * size, size, size), color)
             painter.restore()
         else:
@@ -117,13 +121,14 @@ class PreviewContainerWidget(QFrame):
         # Por defecto usa el QLabel estático de siempre (ajustado a la ventana) -- ver
         # set_zoomable() para el modo con zoom/paneo interactivo del Editor de Imagen.
         self._zoomable = False
+        register_theme_callback(self, "cuadricula_tema", self._refresh_on_theme)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
         
         # Fondo oscuro y bordes redondeados
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#previewContainer {{
                 background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -147,19 +152,19 @@ class PreviewContainerWidget(QFrame):
 
         self.lbl_empty_icon = QLabel()
         self.lbl_empty_icon.setAlignment(Qt.AlignCenter)
-        empty_ico = get_colored_svg_icon("play_arrow.svg", "#444444", size=36)
+        empty_ico = get_colored_svg_icon("play_arrow.svg", get_theme_token('icono_vacio', '#444444'), size=36)
         if not empty_ico.isNull():
             self.lbl_empty_icon.setPixmap(empty_ico.pixmap(36, 36))
         empty_inner_layout.addWidget(self.lbl_empty_icon)
 
         self.lbl_empty_title = QLabel(self.tr("Vista Previa"))
         self.lbl_empty_title.setAlignment(Qt.AlignCenter)
-        self.lbl_empty_title.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_secundario', '#777777')};")
+        set_themed_style(self.lbl_empty_title, lambda: f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_secundario', '#777777')};")
         empty_inner_layout.addWidget(self.lbl_empty_title)
 
         self.lbl_empty_desc = QLabel(self.tr("Selecciona un archivo multimedia de la lista\npara reproducirlo o ver su detalle"))
         self.lbl_empty_desc.setAlignment(Qt.AlignCenter)
-        self.lbl_empty_desc.setStyleSheet("font-size: 11px; color: #555555;")
+        self.lbl_empty_desc.setStyleSheet(apply_shapes("font-size: 11px; color: #555555;"))
         empty_inner_layout.addWidget(self.lbl_empty_desc)
 
         empty_outer.addWidget(empty_inner, 0, Qt.AlignCenter)
@@ -276,7 +281,7 @@ class PreviewContainerWidget(QFrame):
 
         # Etiqueta de tiempo
         self.lbl_video_time = QLabel("00:00 / 00:00")
-        self.lbl_video_time.setStyleSheet("font-size: 11px; color: #a6adc8; background: transparent; border: none;")
+        set_themed_style(self.lbl_video_time, lambda: f"font-size: 11px; color: {get_theme_token('texto_suave', '#a6adc8')}; background: transparent; border: none;")
         self.lbl_video_time.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         btn_layout.addWidget(self.lbl_video_time)
 
@@ -325,6 +330,15 @@ class PreviewContainerWidget(QFrame):
         QLabel estático ajustado a la ventana). Hay que llamarlo una sola vez tras
         crear el widget."""
         self._zoomable = enabled
+
+    def _refresh_on_theme(self):
+        """La imagen estática lleva la cuadrícula "horneada" (se compone al mostrarla):
+        al cambiar de tema se vuelve a componer con los colores nuevos. El vídeo pinta
+        la suya en cada repintado, basta con pedirlo."""
+        if getattr(self, "video_widget", None) is not None:
+            self.video_widget.viewport().update()
+        if getattr(self, "_current_base_pixmap", None) is not None and not self._zoomable:
+            self.resizeEvent(QResizeEvent(self.size(), self.size()))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -501,7 +515,7 @@ class PreviewContainerWidget(QFrame):
             # tanto. (Caso extremo, casi inalcanzable: un EPS/PS totalmente
             # ilegible -- ya quedó loggeado por load_pixmap_for_path.)
             self.placeholder_label.setText(self.tr("Generando vista previa (imagen muy pesada)..."))
-            self.placeholder_label.setStyleSheet("color: #999999; font-size: 12px;")
+            set_themed_style(self.placeholder_label, lambda: f"color: {get_theme_token('texto_gris', '#999999')}; font-size: 12px;")
 
     def load_pixmap_for_path(self, path: str, avail_w: int, avail_h: int) -> QPixmap | None:
         """Decodifica `path` a un QPixmap mostrable -- sin componer checkerboard/
@@ -751,12 +765,12 @@ class PreviewContainerWidget(QFrame):
         ext_name = "EPS" if ext == ".eps" else "PS"
         font_badge = QFont("Segoe UI", 18, QFont.Weight.Bold)
         painter.setFont(font_badge)
-        painter.setPen(QColor("#e67e22"))
+        painter.setPen(QColor(get_theme_token('estado_aviso', '#e67e22')))
         painter.drawText(QRectF(8, 20, card_w - 16, 32), Qt.AlignmentFlag.AlignCenter, f"Vector {ext_name}")
 
         font_name = QFont("Segoe UI", 10)
         painter.setFont(font_name)
-        painter.setPen(QColor("#cccccc"))
+        painter.setPen(QColor(get_theme_token('texto_medio', '#cccccc')))
         painter.drawText(QRectF(16, 60, card_w - 32, 40), Qt.AlignmentFlag.AlignCenter, os.path.basename(path))
 
         if dim_str:
@@ -883,7 +897,7 @@ class PreviewContainerWidget(QFrame):
 
         self.placeholder_label.setPixmap(QPixmap())
         self.placeholder_label.setText(self.tr("▶ [ Previsualización de Video ]\n\n{0}").format(name))
-        self.placeholder_label.setStyleSheet(f"color: {get_theme_token('acento_primario', '#B9E640')}; font-weight: bold; font-size: 13px;")
+        set_themed_style(self.placeholder_label, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-weight: bold; font-size: 13px;")
 
     def show_audio_preview(self, path: str):
         self.stop_media()
@@ -897,7 +911,7 @@ class PreviewContainerWidget(QFrame):
         self.placeholder_label.setPixmap(QPixmap())
         name = os.path.basename(path)
         self.placeholder_label.setText(self.tr("🎵 [ Detalle de Audio ]\n\n{0}").format(name))
-        self.placeholder_label.setStyleSheet("color: #f5c2e7; font-weight: bold; font-size: 13px;")
+        set_themed_style(self.placeholder_label, lambda: f"color: {get_theme_token('acento_audio', '#f5c2e7')}; font-weight: bold; font-size: 13px;")
 
     # Métodos de Control del Reproductor de Video
     def toggle_play_pause(self):

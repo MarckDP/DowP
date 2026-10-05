@@ -31,6 +31,7 @@ from gui.widgets.toggle_switch import ToggleSwitch
 # descargan modelos, y así el progreso de cada descarga se ve en las dos pantallas.
 from gui.widgets.model_download_prompt import format_model_label, model_download_key, model_downloads
 from gui.styles import (
+    register_theme_callback,
     get_theme_token,
     set_button_variant,
     apply_download_action_button_style,
@@ -38,6 +39,8 @@ from gui.styles import (
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class _ProbeInputSizeWorker(QThread):
@@ -70,7 +73,7 @@ class ImportOnnxDialog(QDialog):
         layout = QVBoxLayout(self)
 
         info_lbl = QLabel(self.tr("Archivo: {0}").format(os.path.basename(onnx_path)))
-        info_lbl.setStyleSheet("color: #AAAAAA; font-size: 11px;")
+        set_themed_style(info_lbl, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 11px;")
         info_lbl.setWordWrap(True)
         layout.addWidget(info_lbl)
 
@@ -88,7 +91,7 @@ class ImportOnnxDialog(QDialog):
         layout.addLayout(form)
 
         self.lbl_probe = QLabel(self.tr("Detectando tamaño de entrada..."))
-        self.lbl_probe.setStyleSheet("color: #888888; font-size: 11px; font-style: italic;")
+        set_themed_style(self.lbl_probe, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px; font-style: italic;")
         self.lbl_probe.setWordWrap(True)
         layout.addWidget(self.lbl_probe)
 
@@ -98,7 +101,7 @@ class ImportOnnxDialog(QDialog):
             "modelo -- los legacy tipo U2Net suelen usar 320."
         ))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #666666; font-size: 10px;")
+        set_themed_style(hint, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 10px;")
         layout.addWidget(hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -115,10 +118,10 @@ class ImportOnnxDialog(QDialog):
             height, width = result
             self.spin_size.setValue(max(height, width))
             self.lbl_probe.setText(self.tr("Tamaño detectado: {0}x{1}").format(height, width))
-            self.lbl_probe.setStyleSheet("color: #4CAF50; font-size: 11px;")
+            set_themed_style(self.lbl_probe, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
         else:
             self.lbl_probe.setText(self.tr("No se pudo detectar el tamaño -- confírmalo a mano."))
-            self.lbl_probe.setStyleSheet("color: #FFC107; font-size: 11px;")
+            set_themed_style(self.lbl_probe, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px;")
 
     def get_values(self) -> tuple[str, int]:
         return self.entry_name.text().strip(), self.spin_size.value()
@@ -173,14 +176,14 @@ class ModelRow(QFrame):
         info_vbox.setSpacing(4)
 
         self.lbl_title = QLabel(title)
-        self.lbl_title.setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;")
+        set_themed_style(self.lbl_title, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; font-weight: bold; font-size: 13px;")
         if self._license_text:
             title_row = QHBoxLayout()
             title_row.setSpacing(8)
             title_row.addWidget(self.lbl_title)
             self.lbl_license = QLabel(self._license_text)
-            color = get_theme_token("estado_aviso", "#d8c94a") if self._license_noncommercial else "#888888"
-            self.lbl_license.setStyleSheet(f"color: {color}; font-size: 10px;")
+            color = get_theme_token("estado_aviso", "#d8c94a") if self._license_noncommercial else get_theme_token('texto_tenue', '#888888')
+            self.lbl_license.setStyleSheet(apply_shapes(f"color: {color}; font-size: 10px;"))
             self.lbl_license.setToolTip(self._license_note)
             title_row.addWidget(self.lbl_license, 0, Qt.AlignBottom)
             title_row.addStretch()
@@ -189,7 +192,7 @@ class ModelRow(QFrame):
             info_vbox.addWidget(self.lbl_title)
 
         self.lbl_status = QLabel()
-        self.lbl_status.setStyleSheet("font-size: 11px;")
+        self.lbl_status.setStyleSheet(apply_shapes("font-size: 11px;"))
         info_vbox.addWidget(self.lbl_status)
 
         self.progress_bar = QProgressBar()
@@ -206,10 +209,10 @@ class ModelRow(QFrame):
             # dibuja distinto (o no se dibuja) según la fuente de cada sistema.
             lbl_locked_icon = QLabel()
             lbl_locked_icon.setPixmap(
-                get_colored_svg_icon("login.svg", "#888888", size=14).pixmap(14, 14))
+                get_colored_svg_icon("login.svg", get_theme_token('texto_tenue', '#888888'), size=14).pixmap(14, 14))
             layout.addWidget(lbl_locked_icon, 0, Qt.AlignVCenter)
             lbl_locked = QLabel(self.tr("Requiere cuenta (próximamente)"))
-            lbl_locked.setStyleSheet("color: #888888; font-size: 11px; font-style: italic;")
+            set_themed_style(lbl_locked, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px; font-style: italic;")
             layout.addWidget(lbl_locked, 0, Qt.AlignVCenter)
             return
 
@@ -254,17 +257,25 @@ class ModelRow(QFrame):
             os.path.isdir(self.path_for_size) or os.path.getsize(self.path_for_size) > 1024
         )
 
+    def _set_download_icon(self, name):
+        """El icono depende del estado (instalado o no): se guarda cuál es para volver a
+        teñirlo al cambiar de tema sin recalcular el estado (medir la carpeta de un
+        modelo puede tardar)."""
+        self.btn_download.setIcon(get_colored_svg_icon(
+            name, get_theme_token("boton_acento_texto", "#000000"), size=18,
+            disabled_color_hex=get_theme_token("texto_deshabilitado", "#777777")))
+        register_theme_callback(self.btn_download, "icono_tema", lambda: self._set_download_icon(name))
+
     def refresh_status(self):
         if self.gated:
             return
-        dis_color = get_theme_token("texto_deshabilitado", "#777777")
 
         if self.is_installed():
             size = self._disk_size() if self._disk_size is not None else get_folder_size(self.path_for_size)
             self.lbl_status.setText(self.tr("Instalado ({0})").format(format_bytes(size)))
-            self.lbl_status.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
+            set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px; font-weight: bold;")
             if not self.no_download:
-                self.btn_download.setIcon(get_colored_svg_icon("check_circle.svg", "#000000", size=18, disabled_color_hex=dis_color))
+                self._set_download_icon("check_circle.svg")
                 self.btn_download.setIconSize(QSize(18, 18))
                 self.btn_download.setToolTip(self.tr("Instalado (clic para reinstalar)"))
             self.btn_folder.setDisabled(False)
@@ -280,14 +291,14 @@ class ModelRow(QFrame):
             # entrada huérfana de config.json imposible de borrar desde la interfaz:
             # el modelo seguía apareciendo en la lista para siempre.
             self.lbl_status.setText(self.tr("Archivo no encontrado — elimínalo de la lista"))
-            self.lbl_status.setStyleSheet("color: #FFC107; font-size: 11px; font-weight: bold;")
+            set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px; font-weight: bold;")
             self.btn_folder.setDisabled(False)
             self.btn_delete.setDisabled(False)
 
         else:
             self.lbl_status.setText(self.tr("No descargado"))
-            self.lbl_status.setStyleSheet("color: #888888; font-size: 11px;")
-            self.btn_download.setIcon(get_colored_svg_icon("download.svg", "#000000", size=18, disabled_color_hex=dis_color))
+            set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+            self._set_download_icon("download.svg")
             self.btn_download.setIconSize(QSize(18, 18))
             self.btn_download.setToolTip(self.tr("Descargar"))
             self.btn_folder.setDisabled(True)
@@ -302,7 +313,7 @@ class ModelRow(QFrame):
         self.progress_bar.setVisible(is_downloading)
         if is_downloading:
             self.lbl_status.setText(self.tr("Descargando..."))
-            self.lbl_status.setStyleSheet("color: #FFC107; font-size: 11px; font-weight: bold;")
+            set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px; font-weight: bold;")
             self.btn_download.setToolTip(self.tr("Descargando..."))
 
     def set_progress(self, pct: int):
@@ -372,7 +383,7 @@ class ModelsPage(QWidget):
             "Para modelos ONNX de Eliminar Fondo que no están en el catálogo de arriba "
             "(por ejemplo, descargados a mano desde HuggingFace)."
         ))
-        import_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(import_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         import_desc.setWordWrap(True)
         import_row.addWidget(import_desc, 1)
         self.btn_import_custom = QPushButton(self.tr("Importar modelo ONNX..."))
@@ -463,7 +474,7 @@ class ModelsPage(QWidget):
 
         self.lbl_persist_desc = QLabel()
         self.lbl_persist_desc.setWordWrap(True)
-        self.lbl_persist_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.lbl_persist_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         text_col.addWidget(self.lbl_persist_desc)
         row.addLayout(text_col, 1)
 
@@ -515,7 +526,7 @@ class ModelsPage(QWidget):
             "ocupa entre 200 MB y 900 MB de memoria."
         ))
         self.lbl_max_sessions_desc.setWordWrap(True)
-        self.lbl_max_sessions_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.lbl_max_sessions_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         text_col.addWidget(self.lbl_max_sessions_desc)
         row.addLayout(text_col, 1)
 
@@ -603,12 +614,12 @@ class ModelsPage(QWidget):
 
     def _add_section_header(self, text: str):
         lbl = QLabel(text)
-        lbl.setStyleSheet("color: #EEEEEE; font-size: 14px; font-weight: bold; margin-top: 4px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_titulo', '#EEEEEE')}; font-size: 14px; font-weight: bold; margin-top: 4px;")
         self.content_layout.addWidget(lbl)
 
     def _add_family_header(self, text: str):
         lbl = QLabel(text)
-        lbl.setStyleSheet("color: #B9E640; font-size: 12px; font-weight: bold; margin-top: 6px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 12px; font-weight: bold; margin-top: 6px;")
         self.content_layout.addWidget(lbl)
 
     def _is_gated(self, model_info: dict) -> bool:
@@ -670,7 +681,7 @@ class ModelsPage(QWidget):
         custom = get_custom_rembg_models()
         if not custom:
             lbl = QLabel(self.tr("Todavía no importaste ningún modelo."))
-            lbl.setStyleSheet("color: #666666; font-size: 11px; font-style: italic;")
+            set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px; font-style: italic;")
             self.custom_rows_container.addWidget(lbl)
             return
 

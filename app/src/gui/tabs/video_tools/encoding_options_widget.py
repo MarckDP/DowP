@@ -14,6 +14,7 @@ from gui.tabs.video_tools.editing_panel import EditingPanel
 from gui.tabs.video_tools.advanced_recode_panel import AdvancedRecodePanel
 from gui.tabs.video_tools.upscale_ia_panel import UpscaleIAPanel
 from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
+from gui.styles import set_themed_style
 
 class EncodingOptionsWidget(QFrame):
     """
@@ -30,18 +31,15 @@ class EncodingOptionsWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        bg_color = get_theme_token('fondo_secundario', '#121212')
-        border_color = get_theme_token('borde_normal', '#222222')
-        accent_color = get_theme_token('acento_primario', '#B9E640')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#encodingOptionsWidget {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
+                background-color: {get_theme_token('fondo_secundario', '#121212')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 6px;
             }}
             QTabWidget#encodingTabs::pane {{
                 background: transparent;
-                border-top: 1px solid {border_color};
+                border-top: 1px solid {get_theme_token('borde_normal', '#222222')};
             }}
             QTabWidget#encodingTabs > QTabBar::tab {{
                 background: transparent;

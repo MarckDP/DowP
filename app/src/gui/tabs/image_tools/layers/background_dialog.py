@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 from gui.styles import get_theme_token
 from gui.dialogs.dialogs import AdobeColorPickerDialog
 from core.constants import BACKGROUND_TYPES, GRADIENT_DIRECTIONS
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 # BACKGROUND_TYPES/GRADIENT_DIRECTIONS ya vienen traducidos desde constants.py (evaluado
 # una sola vez al importar, ver i18n.py) -- comparar contra estos alias en vez de volver a
@@ -79,7 +81,7 @@ class BackgroundDialog(QDialog):
         self.btn_pick_image.clicked.connect(self._pick_image)
         self.image_row.addWidget(self.btn_pick_image)
         self.lbl_image_name = QLabel(self.tr("(ninguna)"))
-        self.lbl_image_name.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888')};")
+        set_themed_style(self.lbl_image_name, lambda: f"color: {get_theme_token('texto_secundario', '#888')};")
         self.image_row.addWidget(self.lbl_image_name, 1)
         layout.addLayout(self.image_row)
 
@@ -103,7 +105,7 @@ class BackgroundDialog(QDialog):
         return btn
 
     def _apply_swatch_style(self, btn: QPushButton, color: QColor):
-        btn.setStyleSheet(f"""
+        btn.setStyleSheet(apply_shapes(f"""
             QPushButton {{
                 min-width: 22px; max-width: 22px;
                 min-height: 22px; max-height: 22px;
@@ -115,7 +117,7 @@ class BackgroundDialog(QDialog):
             QPushButton:hover {{
                 border-color: {get_theme_token('acento_primario', '#B9E640')};
             }}
-        """)
+        """))
 
     def _pick_color1(self):
         dialog = AdobeColorPickerDialog(self._color1.name(), self)
@@ -187,8 +189,8 @@ class BackgroundDialog(QDialog):
         if kind == _TYPE_IMAGE and self._image_path:
             path_css = self._image_path.replace("\\", "/")
             self.preview.setStyleSheet(
-                f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px; "
-                f"background-image: url({path_css}); background-position: center; background-repeat: no-repeat;"
+                apply_shapes(f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px; "
+                f"background-image: url({path_css}); background-position: center; background-repeat: no-repeat;")
             )
             return
         # QFrame no soporta QBrush directo por stylesheet -- para sólido/degradado se
@@ -197,15 +199,15 @@ class BackgroundDialog(QDialog):
         # aproximación, ver _build_brush()/build_layer_item()).
         if kind == _TYPE_SOLID:
             self.preview.setStyleSheet(
-                f"background-color: {self._color1.name()}; border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;"
+                apply_shapes(f"background-color: {self._color1.name()}; border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;")
             )
         elif kind == _TYPE_GRADIENT:
             self.preview.setStyleSheet(
-                f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {self._color1.name()}, stop:1 {self._color2.name()});"
-                f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;"
+                apply_shapes(f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {self._color1.name()}, stop:1 {self._color2.name()});"
+                f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px;")
             )
         else:
-            self.preview.setStyleSheet(f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px; background-color: #ffffff;")
+            set_themed_style(self.preview, lambda: f"border: 1px solid {get_theme_token('borde', '#333')}; border-radius: 4px; background-color: #ffffff;")
 
     def build_layer_item(self):
         """Devuelve el QGraphicsItem ya armado para insertar como capa de fondo."""

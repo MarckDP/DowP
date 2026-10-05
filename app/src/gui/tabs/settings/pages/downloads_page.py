@@ -9,6 +9,7 @@ from gui.widgets.toggle_switch import ToggleSwitch
 from gui.styles import get_theme_token, set_button_variant
 from core.utils.download_history import download_history, DEFAULT_MAX_ENTRIES
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
 
 
 class DownloadsPage(QWidget):
@@ -65,7 +66,7 @@ class DownloadsPage(QWidget):
         self.metadata_label = QLabel(self.tr("Incrustar Metadatos"))
         self.metadata_label.setObjectName("settingsLabel")
         self.metadata_desc = QLabel(self.tr("Añade información del video (título, autor, fecha) dentro del archivo multimedia."))
-        self.metadata_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.metadata_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.metadata_desc.setWordWrap(True)
         self.metadata_vbox.addWidget(self.metadata_label)
         self.metadata_vbox.addWidget(self.metadata_desc)
@@ -80,7 +81,7 @@ class DownloadsPage(QWidget):
         self.thumb_label = QLabel(self.tr("Incrustar carátula"))
         self.thumb_label.setObjectName("settingsLabel")
         self.thumb_desc = QLabel(self.tr("Utiliza la miniatura del video como imagen de portada del archivo descargado."))
-        self.thumb_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.thumb_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.thumb_desc.setWordWrap(True)
         self.thumb_vbox.addWidget(self.thumb_label)
         self.thumb_vbox.addWidget(self.thumb_desc)
@@ -95,7 +96,7 @@ class DownloadsPage(QWidget):
         self.sponsors_label = QLabel(self.tr("Eliminar sponsors"))
         self.sponsors_label.setObjectName("settingsLabel")
         self.sponsors_desc = QLabel(self.tr("Utiliza SponsorBlock para identificar y omitir segmentos publicitarios dentro del video."))
-        self.sponsors_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.sponsors_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.sponsors_desc.setWordWrap(True)
         self.sponsors_vbox.addWidget(self.sponsors_label)
         self.sponsors_vbox.addWidget(self.sponsors_desc)
@@ -110,7 +111,7 @@ class DownloadsPage(QWidget):
         self.imp_label = QLabel(self.tr("Usar Impersonate (Disfraz de Navegador)"))
         self.imp_label.setObjectName("settingsLabel")
         self.imp_desc = QLabel(self.tr("Evita bloqueos de YouTube simulando ser Chrome. (Puede ser más lento)"))
-        self.imp_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.imp_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.imp_desc.setWordWrap(True)
         self.imp_vbox.addWidget(self.imp_label)
         self.imp_vbox.addWidget(self.imp_desc)
@@ -125,7 +126,7 @@ class DownloadsPage(QWidget):
         self.concurrent_label = QLabel(self.tr("Descargas simultáneas"))
         self.concurrent_label.setObjectName("settingsLabel")
         self.concurrent_desc = QLabel(self.tr("Número máximo de descargas que se procesarán en paralelo a la vez (1 a 10)."))
-        self.concurrent_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.concurrent_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.concurrent_desc.setWordWrap(True)
         self.concurrent_vbox.addWidget(self.concurrent_label)
         self.concurrent_vbox.addWidget(self.concurrent_desc)
@@ -134,7 +135,7 @@ class DownloadsPage(QWidget):
         self.concurrent_spin.setRange(1, 10)
         self.concurrent_spin.setFixedWidth(70)
         self.concurrent_spin.setFixedHeight(28)
-        self.concurrent_spin.setStyleSheet(f"""
+        spin_qss = lambda: f"""
             QSpinBox {{
                 background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
                 color: {get_theme_token('texto_principal', '#ffffff')};
@@ -143,7 +144,9 @@ class DownloadsPage(QWidget):
                 padding: 2px 6px;
                 font-weight: bold;
             }}
-        """)
+        """
+        self._spin_qss = spin_qss
+        set_themed_style(self.concurrent_spin, spin_qss)
         self.concurrent_row.addLayout(self.concurrent_vbox, 1)
         self.concurrent_row.addWidget(self.concurrent_spin)
         self.content_layout.addLayout(self.concurrent_row)
@@ -157,7 +160,7 @@ class DownloadsPage(QWidget):
         self.speed_desc = QLabel(self.tr(
             "Velocidad máxima de cada descarga. También se aplica a lo que ya está en cola."))
         self.speed_desc.setWordWrap(True)
-        self.speed_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.speed_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.speed_vbox.addWidget(self.speed_label)
         self.speed_vbox.addWidget(self.speed_desc)
         self.speed_spin = QDoubleSpinBox()
@@ -170,7 +173,7 @@ class DownloadsPage(QWidget):
         self.speed_spin.setKeyboardTracking(False)
         self.speed_spin.setFixedWidth(110)
         self.speed_spin.setFixedHeight(28)
-        self.speed_spin.setStyleSheet(self.concurrent_spin.styleSheet().replace("QSpinBox", "QDoubleSpinBox"))
+        set_themed_style(self.speed_spin, lambda: spin_qss().replace("QSpinBox", "QDoubleSpinBox"))
         self.speed_row.addLayout(self.speed_vbox, 1)
         self.speed_row.addWidget(self.speed_spin)
         self.content_layout.addLayout(self.speed_row)
@@ -184,7 +187,7 @@ class DownloadsPage(QWidget):
             "Antepone el número de orden al nombre de cada archivo de una playlist "
             "(ej. «001 - Título»). Las descargas sueltas nunca se numeran."))
         self.numbering_desc.setWordWrap(True)
-        self.numbering_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.numbering_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.numbering_vbox.addWidget(self.numbering_label)
         self.numbering_vbox.addWidget(self.numbering_desc)
         self.numbering_switch = ToggleSwitch()
@@ -200,6 +203,8 @@ class DownloadsPage(QWidget):
 
         # Configuración de colores del switch (basado en tema)
         self.update_switch_colors()
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(lambda _tokens: self.update_switch_colors())
 
         # Connections
         self.metadata_switch.toggled.connect(self.on_embed_metadata_toggled)
@@ -227,7 +232,7 @@ class DownloadsPage(QWidget):
         label = QLabel(self.tr("Guardar historial"))
         label.setObjectName("settingsLabel")
         desc = QLabel(self.tr("Guarda lo que analizas o descargas en Modo Rápido y Proceso Avanzado."))
-        desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         vbox.addWidget(label)
         vbox.addWidget(desc)
         self.history_switch = ToggleSwitch()
@@ -241,7 +246,7 @@ class DownloadsPage(QWidget):
         label = QLabel(self.tr("Máximo de entradas"))
         label.setObjectName("settingsLabel")
         desc = QLabel(self.tr("Al superarlo se borran las más antiguas. 0 = sin límite."))
-        desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         vbox.addWidget(label)
         vbox.addWidget(desc)
         self.history_limit_spin = QSpinBox()
@@ -253,7 +258,7 @@ class DownloadsPage(QWidget):
         self.history_limit_spin.setKeyboardTracking(False)
         self.history_limit_spin.setFixedWidth(110)
         self.history_limit_spin.setFixedHeight(28)
-        self.history_limit_spin.setStyleSheet(self.concurrent_spin.styleSheet())
+        set_themed_style(self.history_limit_spin, self._spin_qss)
         row.addLayout(vbox, 1)
         row.addWidget(self.history_limit_spin)
         self.content_layout.addLayout(row)
@@ -261,7 +266,7 @@ class DownloadsPage(QWidget):
         # Uso actual + borrar
         row = QHBoxLayout()
         self.history_usage_label = QLabel()
-        self.history_usage_label.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.history_usage_label, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self.btn_clear_history = QPushButton(self.tr("Borrar historial"))
         set_button_variant(self.btn_clear_history, "danger")
         row.addWidget(self.history_usage_label, 1)
@@ -304,14 +309,14 @@ class DownloadsPage(QWidget):
             download_history().clear()
 
     def update_switch_colors(self):
-        config = get_config()
-        accent = "#B9E640" if config.get("theme") == "dark" else "#1DC038"
-        self.metadata_switch.setTrackColors("#333333", accent)
-        self.thumb_switch.setTrackColors("#333333", accent)
-        self.sponsors_switch.setTrackColors("#333333", accent)
-        self.imp_switch.setTrackColors("#333333", accent)
-        self.numbering_switch.setTrackColors("#333333", accent)
-        self.history_switch.setTrackColors("#333333", accent)
+        accent = get_theme_token("acento_primario", "#B9E640")
+        off = get_theme_token("switch_apagado", "#333333")
+        self.metadata_switch.setTrackColors(off, accent)
+        self.thumb_switch.setTrackColors(off, accent)
+        self.sponsors_switch.setTrackColors(off, accent)
+        self.imp_switch.setTrackColors(off, accent)
+        self.numbering_switch.setTrackColors(off, accent)
+        self.history_switch.setTrackColors(off, accent)
 
     def load_current_settings(self):
         config = get_config()

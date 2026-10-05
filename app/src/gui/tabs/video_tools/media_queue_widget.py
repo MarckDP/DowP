@@ -101,6 +101,7 @@ def _accent_rgba(alpha: int) -> str:
 from core.utils.media_extensions import (
     VIDEO_EXTS as VIDEO_EXTENSIONS, AUDIO_EXTS as AUDIO_EXTENSIONS, is_accepted_media, file_dialog_patterns,
 )
+from gui.styles import set_themed_style
 # Sin ".webp": solo entra si es animado (ver media_extensions.is_accepted_media).
 SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 
@@ -367,12 +368,10 @@ class MediaQueueWidget(QFrame):
         layout.setSpacing(6)
 
         # Estilo del contenedor
-        bg_color = get_theme_token('fondo_secundario', '#1e1e1e')
-        border_color = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#mediaQueueWidget {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -386,7 +385,7 @@ class MediaQueueWidget(QFrame):
         self.lbl_title.setAlignment(Qt.AlignCenter)
 
         self.lbl_count = QLabel(self.tr("0 archivos"), self)
-        self.lbl_count.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.lbl_count, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.lbl_count.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         header_grid.addWidget(self.lbl_title, 0, 0, 1, 3, Qt.AlignCenter)
@@ -452,10 +451,10 @@ class MediaQueueWidget(QFrame):
         # sobreescribir keyPressEvent directamente.
         self.tree.installEventFilter(self)
 
-        self.tree.setStyleSheet(f"""
+        set_themed_style(self.tree, lambda: f"""
             QTreeView#mediaQueueTree {{
                 background-color: {get_theme_token('fondo_principal', '#0a0a0a')};
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 padding: 0px;
                 color: {get_theme_token('texto_principal', '#cdd6f4')};
                 font-size: 12px;
@@ -485,7 +484,7 @@ class MediaQueueWidget(QFrame):
                 color: {get_theme_token('texto_secundario', '#a6adc8')};
                 padding: 6px 8px;
                 border: none;
-                border-right: 1px solid {border_color};
+                border-right: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-bottom: 1px solid {get_theme_token('acento_primario', '#B9E640')};
                 font-weight: bold;
                 font-size: 11px;
@@ -521,9 +520,9 @@ class MediaQueueWidget(QFrame):
         # Mensaje de arrastre (Drop zone visual)
         self.lbl_drop_hint = QLabel(self.tr("Arrastra archivos de vídeo o audio aquí"))
         self.lbl_drop_hint.setAlignment(Qt.AlignCenter)
-        self.lbl_drop_hint.setStyleSheet(f"""
+        set_themed_style(self.lbl_drop_hint, lambda: f"""
             color: {get_theme_token('texto_secundario', '#888888')};
-            border: 1px dashed {border_color};
+            border: 1px dashed {get_theme_token('borde_normal', '#2d2d2d')};
             border-radius: 6px;
             padding: 8px;
             font-size: 11px;

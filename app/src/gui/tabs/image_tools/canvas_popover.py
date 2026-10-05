@@ -21,6 +21,8 @@ from gui.widgets.combo_box import AutoPopupComboBox
 from core.constants import (
     CANVAS_OPTIONS, CANVAS_PRESET_SIZES, CANVAS_POSITIONS, CANVAS_OVERFLOW_MODES,
 )
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _MARGIN_MODES = ("Añadir Margen Externo", "Add External Margin")
 _NONE_OPTION = "Sin ajuste"
@@ -78,12 +80,10 @@ class CanvasPopoverContent(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("canvasPopover")
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#canvasPopover {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -97,7 +97,7 @@ class CanvasPopoverContent(QFrame):
         layout.setSpacing(8)
 
         title = QLabel(self.tr("Ajustar Canvas (Lienzo)"))
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         option_row = QHBoxLayout()

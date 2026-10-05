@@ -22,6 +22,7 @@ from .pages.system_page import SystemPage
 from .pages.models_page import ModelsPage
 from .pages.console_page import ConsolePage
 from .pages.shortcuts_page import ShortcutsPage
+from gui.styles import apply_shapes
 
 # Índices de las páginas dentro del QStackedWidget de abajo, en el mismo orden en
 # que se añaden. Los usa SettingsModalOverlay.open_page() y cualquier parte de la app
@@ -124,7 +125,7 @@ class SettingsTab(QWidget):
 
         # Version Label
         self.version_label = QLabel(f"v{get_display_version()}")
-        self.version_label.setStyleSheet("color: #555555; font-size: 11px; margin-bottom: 6px;")
+        self.version_label.setStyleSheet(apply_shapes("color: #555555; font-size: 11px; margin-bottom: 6px;"))
         self.version_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(self.version_label)
 
@@ -137,6 +138,9 @@ class SettingsTab(QWidget):
         self.update_button.setCursor(Qt.PointingHandCursor)
         self.update_button.clicked.connect(self._on_update_button_clicked)
         self._apply_update_button_style(gradient=False)
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(
+            lambda _tokens: self._apply_update_button_style(getattr(self, "_update_button_gradient", False)))
         sidebar_layout.addWidget(self.update_button, 0, Qt.AlignCenter)
 
         self.update_progress = CircularProgress(diameter=30)
@@ -221,6 +225,8 @@ class SettingsTab(QWidget):
 
     def _apply_update_button_style(self, gradient: bool):
         from gui.styles import get_theme_token
+        # Recordar el estado para reaplicarlo con el tema nuevo (ver __init__).
+        self._update_button_gradient = gradient
         base = get_theme_token("boton_secundario_fondo", "#1b3b22")
         texto = get_theme_token("boton_secundario_texto", "#B9E640")
         hover = get_theme_token("boton_secundario_hover", "#224a2b")
@@ -232,7 +238,7 @@ class SettingsTab(QWidget):
             f"qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {hover}, stop:1 #4a9456)"
             if gradient else hover
         )
-        self.update_button.setStyleSheet(f"""
+        self.update_button.setStyleSheet(apply_shapes(f"""
             QPushButton#updateButton {{
                 background: {background};
                 color: {texto};
@@ -248,7 +254,7 @@ class SettingsTab(QWidget):
             QPushButton#updateButton:disabled {{
                 color: #777777;
             }}
-        """)
+        """))
 
     def start_update_check(self):
         """Se llama al arrancar (una vez, desde main_window.py) y de nuevo cada

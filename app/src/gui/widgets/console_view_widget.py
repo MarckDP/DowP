@@ -5,6 +5,8 @@ from PySide6.QtGui import QFont, QTextCursor, QTextCharFormat, QColor
 
 from gui.styles import get_theme_token
 from core.logger.console_log_handler import get_console_log_handler
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _LEVEL_TOKENS = {
     "DEBUG": "consola_debug",
@@ -38,7 +40,7 @@ class ConsoleViewWidget(QWidget):
         mono_font.setStyleHint(QFont.Monospace)  # Qt sustituye por una monoespaciada del sistema si "Consolas" no existe
         mono_font.setPointSize(9)
         self.text_view.setFont(mono_font)
-        self.text_view.setStyleSheet(f"""
+        set_themed_style(self.text_view, lambda: f"""
             QPlainTextEdit {{
                 background-color: {get_theme_token('consola_fondo', '#000000')};
                 color: {get_theme_token('consola_texto', '#ffffff')};
@@ -51,7 +53,7 @@ class ConsoleViewWidget(QWidget):
 
         self.placeholder = QLabel(self.tr("Consola desactivada"))
         self.placeholder.setAlignment(Qt.AlignCenter)
-        self.placeholder.setStyleSheet("color: #666666; font-size: 12px;")
+        self.placeholder.setStyleSheet(apply_shapes("color: #666666; font-size: 12px;"))
         layout.addWidget(self.placeholder)
         self.placeholder.hide()
 

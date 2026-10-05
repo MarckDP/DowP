@@ -9,6 +9,9 @@ from core.utils.i18n import logger
 from core.utils.cache_manager import CacheManager, format_bytes
 from gui.styles import apply_folder_browse_button_style
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import get_theme_token
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class CacheCard(QFrame):
@@ -34,14 +37,14 @@ class CacheCard(QFrame):
         info_vbox.setSpacing(4)
 
         self.lbl_title = QLabel(self.name)
-        self.lbl_title.setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;")
+        set_themed_style(self.lbl_title, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; font-weight: bold; font-size: 13px;")
 
         self.lbl_desc = QLabel(self.description)
         self.lbl_desc.setWordWrap(True)
-        self.lbl_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self.lbl_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
 
         self.lbl_stats = QLabel("Calculando...")
-        self.lbl_stats.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
+        set_themed_style(self.lbl_stats, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px; font-weight: bold;")
 
         info_vbox.addWidget(self.lbl_title)
         info_vbox.addWidget(self.lbl_desc)
@@ -69,13 +72,13 @@ class FutureCacheCard(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("futureCacheCard")
-        self.setStyleSheet("""
-            QFrame#futureCacheCard {
-                background-color: #181818;
-                border: 1px dashed #3a3a3a;
+        set_themed_style(self, lambda: f"""
+            QFrame#futureCacheCard {{
+                background-color: {get_theme_token('tarjeta_futura_fondo', '#181818')};
+                border: 1px dashed {get_theme_token('fondo_control_hover', '#3a3a3a')};
                 border-radius: 6px;
                 padding: 12px;
-            }
+            }}
         """)
         init_layout = QHBoxLayout(self)
         init_layout.setContentsMargins(12, 10, 12, 10)
@@ -84,12 +87,12 @@ class FutureCacheCard(QFrame):
         vbox.setSpacing(4)
 
         lbl_title = QLabel(self.tr("Espacio reservado para más cachés"))
-        lbl_title.setStyleSheet("color: #aaaaaa; font-weight: bold; font-size: 12px;")
+        set_themed_style(lbl_title, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold; font-size: 12px;")
 
 
         lbl_desc = QLabel(self.tr("Aquí se integrarán automáticamente las nuevas cachés del sistema a medida que se añadan nuevas funciones (descargas de red, ondas de audio, etc.)."))
         lbl_desc.setWordWrap(True)
-        lbl_desc.setStyleSheet("color: #666666; font-size: 11px;")
+        set_themed_style(lbl_desc, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
 
         vbox.addWidget(lbl_title)
         vbox.addWidget(lbl_desc)
@@ -138,13 +141,13 @@ class MemoryCachePage(QWidget):
         # ---------------- TARJETA RESUMEN TOTAL / MEDIDOR GLOBAL ----------------
         self.total_card = QFrame()
         self.total_card.setObjectName("totalCacheCard")
-        self.total_card.setStyleSheet("""
-            QFrame#totalCacheCard {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #25282a, stop:1 #1c1d1f);
-                border: 1px solid #383c40;
+        set_themed_style(self.total_card, lambda: f"""
+            QFrame#totalCacheCard {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {get_theme_token('tarjeta_destacada_inicio', '#25282a')}, stop:1 {get_theme_token('tarjeta_destacada_fin', '#1c1d1f')});
+                border: 1px solid {get_theme_token('tarjeta_destacada_borde', '#383c40')};
                 border-radius: 6px;
                 padding: 16px;
-            }
+            }}
         """)
 
         total_layout = QVBoxLayout(self.total_card)
@@ -153,10 +156,10 @@ class MemoryCachePage(QWidget):
         # Encabezado del total
         header_hbox = QHBoxLayout()
         lbl_total_title = QLabel(self.tr("Uso Total de Caché"))
-        lbl_total_title.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: bold;")
+        set_themed_style(lbl_total_title, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; font-size: 14px; font-weight: bold;")
         
         self.lbl_total_size = QLabel("0 B")
-        self.lbl_total_size.setStyleSheet("color: #B9E640; font-size: 18px; font-weight: bold;")
+        set_themed_style(self.lbl_total_size, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 18px; font-weight: bold;")
         
         header_hbox.addWidget(lbl_total_title)
         header_hbox.addStretch()
@@ -169,23 +172,23 @@ class MemoryCachePage(QWidget):
         self.meter_bar.setTextVisible(False)
         self.meter_bar.setRange(0, 100)
         self.meter_bar.setValue(0)
-        self.meter_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #121212;
+        set_themed_style(self.meter_bar, lambda: f"""
+            QProgressBar {{
+                background-color: {get_theme_token('fondo_secundario', '#121212')};
                 border-radius: 4px;
                 border: none;
-            }
-            QProgressBar::chunk {
-                background-color: #B9E640;
+            }}
+            QProgressBar::chunk {{
+                background-color: {get_theme_token('acento_primario', '#B9E640')};
                 border-radius: 4px;
-            }
+            }}
         """)
         total_layout.addWidget(self.meter_bar)
 
         # Subtítulo de resumen y botón de borrar todo
         action_hbox = QHBoxLayout()
         self.lbl_total_details = QLabel(self.tr("Calculando uso de memoria y archivos..."))
-        self.lbl_total_details.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        set_themed_style(self.lbl_total_details, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 11px;")
 
         self.btn_clear_all = QPushButton(self.tr("Borrar toda la caché"))
         self.btn_clear_all.setFixedHeight(34)
@@ -204,7 +207,7 @@ class MemoryCachePage(QWidget):
         
         limit_hbox = QHBoxLayout()
         self.lbl_limit = QLabel(self.tr("Límite máximo:"))
-        self.lbl_limit.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        set_themed_style(self.lbl_limit, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 13px;")
         
         self.limit_spinbox = QDoubleSpinBox()
         self.limit_spinbox.setRange(0.0, 999.0)
@@ -214,12 +217,12 @@ class MemoryCachePage(QWidget):
         self.limit_spinbox.setSpecialValueText(self.tr("Sin límite"))
         self.limit_spinbox.setFixedWidth(140)
         self.limit_spinbox.setButtonSymbols(QAbstractSpinBox.PlusMinus)
-        self.limit_spinbox.setStyleSheet("""
+        self.limit_spinbox.setStyleSheet(apply_shapes("""
             QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
                 font-size: 9px;
                 padding: 0px;
             }
-        """)
+        """))
         
         # Cargar valor inicial
         current_limit = get_config().get("max_cache_size_gb", 0.0)
@@ -237,7 +240,7 @@ class MemoryCachePage(QWidget):
         # ---------------- SECCIÓN DE CACHÉS INDIVIDUALES ----------------
         lbl_sec_title = QLabel(self.tr("Cachés de la Aplicación"))
         lbl_sec_title.setObjectName("settingsSectionTitle")
-        lbl_sec_title.setStyleSheet("color: #dddddd; font-size: 13px; font-weight: bold; margin-top: 8px;")
+        set_themed_style(lbl_sec_title, lambda: f"color: {get_theme_token('texto_fuerte', '#dddddd')}; font-size: 13px; font-weight: bold; margin-top: 8px;")
         self.content_layout.addWidget(lbl_sec_title)
 
         # Construir tarjetas de proveedores registrados en CacheManager, agrupadas por scope
@@ -263,7 +266,7 @@ class MemoryCachePage(QWidget):
             if not providers:
                 continue
             lbl_group = QLabel(scope_labels[scope])
-            lbl_group.setStyleSheet("color: #777777; font-size: 10px; font-weight: bold; letter-spacing: 1px; margin-top: 4px;")
+            set_themed_style(lbl_group, lambda: f"color: {get_theme_token('texto_apagado', '#777777')}; font-size: 10px; font-weight: bold; letter-spacing: 1px; margin-top: 4px;")
             self.content_layout.addWidget(lbl_group)
             for provider in providers:
                 card = CacheCard(
@@ -282,7 +285,7 @@ class MemoryCachePage(QWidget):
         # ---------------- ADMINISTRADOR DE MEDIOS (carpeta de descargas por defecto) ----------------
         lbl_media_title = QLabel(self.tr("Administrador de Medios"))
         lbl_media_title.setObjectName("settingsSectionTitle")
-        lbl_media_title.setStyleSheet("color: #dddddd; font-size: 13px; font-weight: bold; margin-top: 8px;")
+        set_themed_style(lbl_media_title, lambda: f"color: {get_theme_token('texto_fuerte', '#dddddd')}; font-size: 13px; font-weight: bold; margin-top: 8px;")
         self.content_layout.addWidget(lbl_media_title)
 
         self.download_dir_card = QFrame()
@@ -292,7 +295,7 @@ class MemoryCachePage(QWidget):
         dl_layout.setSpacing(8)
 
         lbl_dl_title_row = QLabel(self.tr("Carpeta de descargas por defecto (medios web sin etiqueta)"))
-        lbl_dl_title_row.setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;")
+        set_themed_style(lbl_dl_title_row, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; font-weight: bold; font-size: 13px;")
         dl_layout.addWidget(lbl_dl_title_row)
 
         lbl_dl_desc = QLabel(self.tr(
@@ -300,7 +303,7 @@ class MemoryCachePage(QWidget):
             "seleccionaste ninguna etiqueta. Por defecto se usa la carpeta Downloads del sistema."
         ))
         lbl_dl_desc.setWordWrap(True)
-        lbl_dl_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(lbl_dl_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         dl_layout.addWidget(lbl_dl_desc)
 
         dl_path_hbox = QHBoxLayout()
@@ -338,7 +341,7 @@ class MemoryCachePage(QWidget):
         sub_layout.setSpacing(8)
 
         lbl_sub_title_row = QLabel(self.tr("Carpeta de subclips rápidos (sin editor conectado)"))
-        lbl_sub_title_row.setStyleSheet("color: #ffffff; font-weight: bold; font-size: 13px;")
+        set_themed_style(lbl_sub_title_row, lambda: f"color: {get_theme_token('texto_activo', '#ffffff')}; font-weight: bold; font-size: 13px;")
         sub_layout.addWidget(lbl_sub_title_row)
 
         lbl_sub_desc = QLabel(self.tr(
@@ -346,7 +349,7 @@ class MemoryCachePage(QWidget):
             "conectado. Por defecto se guardan en 'Documentos/DowP2/Subclips'."
         ))
         lbl_sub_desc.setWordWrap(True)
-        lbl_sub_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(lbl_sub_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         sub_layout.addWidget(lbl_sub_desc)
 
         sub_path_hbox = QHBoxLayout()
@@ -380,7 +383,7 @@ class MemoryCachePage(QWidget):
         sub_stats_hbox.setSpacing(8)
 
         self.lbl_subclip_stats = QLabel(self.tr("Calculando..."))
-        self.lbl_subclip_stats.setStyleSheet("color: #4CAF50; font-size: 11px; font-weight: bold;")
+        set_themed_style(self.lbl_subclip_stats, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px; font-weight: bold;")
 
         self.btn_clear_subclips = QPushButton(self.tr("Borrar subclips"))
         self.btn_clear_subclips.setFixedHeight(30)

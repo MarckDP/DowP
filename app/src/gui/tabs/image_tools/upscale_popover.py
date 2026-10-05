@@ -52,6 +52,8 @@ from core.setup.models_setup import (
     is_upscaling_engine_installed, get_upscaling_engine_size_bytes, download_upscaling_engine,
     delete_upscaling_engine,
 )
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _TILE_TOOLTIP = QCoreApplication.translate(
     "UpscalePopoverContent",
@@ -90,12 +92,10 @@ class UpscalePopoverContent(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("upscalePopover")
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#upscalePopover {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -106,7 +106,7 @@ class UpscalePopoverContent(QFrame):
         self._label_widgets = []
 
         title = QLabel(self.tr("Reescalar con IA"))
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         # Motor

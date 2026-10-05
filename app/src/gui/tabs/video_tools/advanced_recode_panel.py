@@ -61,6 +61,8 @@ _PRESET_NAMESPACE = "video_tools/avanzado"
 _SINGLE_AUDIO_STREAM_CONTAINERS = {"mp3", "wav", "flac"}
 
 from PySide6.QtCore import QT_TR_NOOP, QT_TRANSLATE_NOOP
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes, token_rgba
 
 _SEVERITY_LABELS = {
     "ok": QT_TRANSLATE_NOOP("AdvancedRecodePanel", "Compatible"),
@@ -278,11 +280,10 @@ class AdvancedRecodePanel(QWidget):
         frame = QFrame(parent or self)
         frame.setObjectName("advancedCard")
         if bordered:
-            border_color = get_theme_token('borde_sutil', '#2d2d2d')
-            frame.setStyleSheet(f"""
+            set_themed_style(frame, lambda: f"""
                 QFrame#advancedCard {{
                     background-color: transparent;
-                    border: 1px solid {border_color};
+                    border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                     border-radius: 6px;
                 }}
             """)
@@ -1093,7 +1094,7 @@ class AdvancedRecodePanel(QWidget):
 
     def _update_color_button(self, button: QPushButton, color: QColor):
         button.setStyleSheet(
-            f"QPushButton {{ background-color: {color.name()}; border: 1px solid #555555; border-radius: 4px; }}"
+            apply_shapes(f"QPushButton {{ background-color: {color.name()}; border: 1px solid #555555; border-radius: 4px; }}")
         )
 
     def _on_pick_watermark_text_color(self):
@@ -2259,17 +2260,17 @@ class AdvancedRecodePanel(QWidget):
 
         if is_cpu_forced or not has_hw:
             self.lbl_video_engine.setText(self.tr("CPU"))
-            self.lbl_video_engine.setStyleSheet("""
-                QPushButton {
+            set_themed_style(self.lbl_video_engine, lambda: f"""
+                QPushButton {{
                     background-color: rgba(255, 255, 255, 0.08);
-                    color: #aaaaaa;
+                    color: {get_theme_token('texto_gris', '#aaaaaa')};
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 4px;
                     padding: 2px 8px;
                     font-size: 11px;
                     font-weight: bold;
-                }
-                QPushButton:hover { background-color: rgba(255, 255, 255, 0.15); }
+                }}
+                QPushButton:hover {{ background-color: rgba(255, 255, 255, 0.15); }}
             """)
             if alpha_lock:
                 self.lbl_video_engine.setToolTip(self.tr("La transparencia solo se puede codificar por CPU."))
@@ -2279,18 +2280,18 @@ class AdvancedRecodePanel(QWidget):
                 self.lbl_video_engine.setToolTip("")
         else:
             self.lbl_video_engine.setText(self.tr("GPU Acelerado"))
-            self.lbl_video_engine.setStyleSheet("""
-                QPushButton {
-                    background-color: rgba(185, 230, 64, 0.15);
-                    color: #B9E640;
-                    border: 1px solid rgba(185, 230, 64, 0.35);
+            self.lbl_video_engine.setStyleSheet(apply_shapes(f"""
+                QPushButton {{
+                    background-color: {token_rgba('acento_primario', '#B9E640', 38)};
+                    color: {get_theme_token('acento_primario', '#B9E640')};
+                    border: 1px solid {token_rgba('acento_primario', '#B9E640', 89)};
                     border-radius: 4px;
                     padding: 2px 8px;
                     font-size: 11px;
                     font-weight: bold;
-                }
-                QPushButton:hover { background-color: rgba(185, 230, 64, 0.25); }
-            """)
+                }}
+                QPushButton:hover {{ background-color: {token_rgba('acento_primario', '#B9E640', 64)}; }}
+            """))
             self.lbl_video_engine.setToolTip(self.tr("Clic para usar codificación por CPU"))
 
         self.lbl_video_engine.setVisible(True)

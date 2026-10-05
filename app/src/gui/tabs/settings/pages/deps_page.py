@@ -36,6 +36,8 @@ from core.setup.ghostscript_setup import (
     get_remote_version as gs_remote, get_install_info as gs_install_info,
 )
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class UpdateCheckWorker(QThread):
@@ -209,35 +211,33 @@ class FFmpegOptionsPanel(QFrame):
         # ── Título y Estado General ──────────────────────────────────────────
         title_row = QHBoxLayout()
         title_lbl = QLabel(self.tr("FFmpeg (Motor Multimedia)"))
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(title_lbl, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         title_row.addWidget(title_lbl)
 
         info_btn = QToolButton()
         info_btn.setText("?")
         info_btn.setFixedSize(20, 20)
-        info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         info_btn.setToolTip(self._TOOLTIP_FFMPEG)
         title_row.addWidget(info_btn)
 
         self._status_badge = QLabel(self.tr("Chequeando..."))
-        self._status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._status_badge.setStyleSheet(apply_shapes("font-weight: bold; font-size: 12px;"))
         title_row.addWidget(self._status_badge)
 
         title_row.addStretch()
 
         self._version_summary = QLabel(self.tr("Versión: Calculando..."))
-        self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
         title_row.addWidget(self._version_summary)
 
         root.addLayout(title_row)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #333;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
         root.addWidget(sep)
 
         # ── Selector de Modo Principal ────────────────────────────────────────
@@ -247,7 +247,7 @@ class FFmpegOptionsPanel(QFrame):
 
         mode_lbl = QLabel(self.tr("Origen:"))
         mode_lbl.setFixedWidth(80)
-        mode_lbl.setStyleSheet("color: #DDD; font-size: 12px; font-weight: bold;")
+        set_themed_style(mode_lbl, lambda: f"color: {get_theme_token('texto_fuerte', '#DDD')}; font-size: 12px; font-weight: bold;")
         row_mode.addWidget(mode_lbl)
 
         self._group_mode = QButtonGroup(self)
@@ -279,7 +279,7 @@ class FFmpegOptionsPanel(QFrame):
 
         v_lbl = QLabel(self.tr("Compilación:"))
         v_lbl.setFixedWidth(80)
-        v_lbl.setStyleSheet("color: #CCC; font-size: 12px;")
+        set_themed_style(v_lbl, lambda: f"color: {get_theme_token('texto_medio', '#CCC')}; font-size: 12px;")
         row_variant.addWidget(v_lbl)
 
         self._group_variant = QButtonGroup(self)
@@ -305,7 +305,7 @@ class FFmpegOptionsPanel(QFrame):
 
         c_lbl = QLabel(self.tr("Canal:"))
         c_lbl.setFixedWidth(80)
-        c_lbl.setStyleSheet("color: #CCC; font-size: 12px;")
+        set_themed_style(c_lbl, lambda: f"color: {get_theme_token('texto_medio', '#CCC')}; font-size: 12px;")
         row_channel.addWidget(c_lbl)
 
         self._group_channel = QButtonGroup(self)
@@ -373,7 +373,7 @@ class FFmpegOptionsPanel(QFrame):
         custom_layout.setSpacing(6)
 
         c_path_lbl = QLabel(self.tr("Ruta al ejecutable ffmpeg.exe o carpeta contenedora:"))
-        c_path_lbl.setStyleSheet("color: #CCC; font-size: 12px;")
+        set_themed_style(c_path_lbl, lambda: f"color: {get_theme_token('texto_medio', '#CCC')}; font-size: 12px;")
         custom_layout.addWidget(c_path_lbl)
 
         custom_input_row = QHBoxLayout()
@@ -392,7 +392,7 @@ class FFmpegOptionsPanel(QFrame):
         custom_layout.addLayout(custom_input_row)
 
         self._custom_status_lbl = QLabel()
-        self._custom_status_lbl.setStyleSheet("font-size: 11px;")
+        self._custom_status_lbl.setStyleSheet(apply_shapes("font-size: 11px;"))
         custom_layout.addWidget(self._custom_status_lbl)
 
         root.addWidget(self._custom_box)
@@ -406,7 +406,7 @@ class FFmpegOptionsPanel(QFrame):
         root.addWidget(self._progress_bar)
 
         self._progress_msg = QLabel()
-        self._progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self._progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self._progress_msg.hide()
         root.addWidget(self._progress_msg)
 
@@ -470,28 +470,28 @@ class FFmpegOptionsPanel(QFrame):
             ok, ver, msg = validate_custom_ffmpeg(path)
             if ok:
                 self._status_badge.setText(self.tr("✓ Instalado (Personalizado)"))
-                self._status_badge.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: bold;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 12px; font-weight: bold;")
                 self._version_summary.setText(self.tr("Versión: {0}").format(ver))
                 self._custom_status_lbl.setText(self.tr("✓ {0} (Versión: {1})").format(msg, ver))
-                self._custom_status_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
+                set_themed_style(self._custom_status_lbl, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             else:
                 self._status_badge.setText(self.tr("✗ Inválido"))
-                self._status_badge.setStyleSheet("color: #F44336; font-size: 12px; font-weight: bold;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px; font-weight: bold;")
                 self._version_summary.setText(self.tr("No disponible"))
                 self._custom_status_lbl.setText(f"⚠ {msg}")
-                self._custom_status_lbl.setStyleSheet("color: #FFC107; font-size: 11px;")
+                set_themed_style(self._custom_status_lbl, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px;")
         else:
             if is_installed:
                 ver = ffmpeg_local() or "?"
                 variant_tag = "Full" if "full" in ver.lower() else "Essentials"
                 self._status_badge.setText(self.tr("✓ Instalado"))
-                self._status_badge.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: bold;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 12px; font-weight: bold;")
                 self._version_summary.setText(self.tr("Versión: {0} ({1})").format(ver, variant_tag))
                 self._btn_download.setText(self.tr("Reinstalar"))
                 set_button_variant(self._btn_download, "secondary")
             else:
                 self._status_badge.setText("✗ Falta")
-                self._status_badge.setStyleSheet("color: #F44336; font-size: 12px; font-weight: bold;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px; font-weight: bold;")
                 self._version_summary.setText(self.tr("No instalado"))
                 self._btn_download.setText(self.tr("Descargar"))
                 set_button_variant(self._btn_download, "accent-blue")
@@ -610,7 +610,7 @@ class FFmpegOptionsPanel(QFrame):
             self._progress_msg.setText(message)
             self._progress_msg.show()
             self._status_badge.setText(self.tr("Descargando..."))
-            self._status_badge.setStyleSheet("color: #FFC107; font-size: 12px; font-weight: bold;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 12px; font-weight: bold;")
         else:
             self._progress_bar.hide()
             self._progress_msg.hide()
@@ -659,7 +659,7 @@ class FFmpegOptionsPanel(QFrame):
         if mac_native_ffmpeg_available():
             self._version_summary.setText(
                 self.tr("Versión: {0} (hay una versión nativa para tu Mac)").format(local_ver))
-            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             self._btn_download.setText(self.tr("Actualizar"))
             set_button_variant(self._btn_download, "accent-blue")
             return
@@ -670,7 +670,7 @@ class FFmpegOptionsPanel(QFrame):
 
         if r_ver != l_ver and r_ver not in l_ver:
             self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(local_ver, remote_ver))
-            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             self._btn_download.setText(self.tr("Actualizar"))
             set_button_variant(self._btn_download, "accent-blue")
 
@@ -751,28 +751,26 @@ class YTDLPAndPOTPanel(QFrame):
         ytdlp_top_row.setSpacing(8)
 
         ytdlp_title = QLabel(self.tr("yt-dlp (Motor Principal de Descargas)"))
-        ytdlp_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(ytdlp_title, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         ytdlp_top_row.addWidget(ytdlp_title)
 
         ytdlp_info_btn = QToolButton()
         ytdlp_info_btn.setText("?")
         ytdlp_info_btn.setFixedSize(20, 20)
-        ytdlp_info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(ytdlp_info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         ytdlp_info_btn.setToolTip(self._TOOLTIP_YTDLP)
         ytdlp_top_row.addWidget(ytdlp_info_btn)
 
         self._ytdlp_status_badge = QLabel(self.tr("Chequeando..."))
-        self._ytdlp_status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._ytdlp_status_badge.setStyleSheet(apply_shapes("font-weight: bold; font-size: 12px;"))
         ytdlp_top_row.addWidget(self._ytdlp_status_badge)
 
         ytdlp_top_row.addStretch()
 
         self._ytdlp_version_summary = QLabel(self.tr("Versión: Calculando..."))
-        self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
         ytdlp_top_row.addWidget(self._ytdlp_version_summary)
 
         root.addLayout(ytdlp_top_row)
@@ -784,7 +782,7 @@ class YTDLPAndPOTPanel(QFrame):
 
         c_lbl = QLabel(self.tr("Canal:"))
         c_lbl.setFixedWidth(80)
-        c_lbl.setStyleSheet("color: #CCC; font-size: 12px; font-weight: bold;")
+        set_themed_style(c_lbl, lambda: f"color: {get_theme_token('texto_medio', '#CCC')}; font-size: 12px; font-weight: bold;")
         row_ytdlp_channel.addWidget(c_lbl)
 
         self._group_ytdlp_channel = QButtonGroup(self)
@@ -809,7 +807,7 @@ class YTDLPAndPOTPanel(QFrame):
         ytdlp_desc = QLabel(self.tr(
             "El núcleo de descargas, maneja la extracción de datos de YouTube y otras plataformas."
         ))
-        ytdlp_desc.setStyleSheet("color: #888888; font-size: 12px;")
+        set_themed_style(ytdlp_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         ytdlp_desc.setWordWrap(True)
         ytdlp_desc_row.addWidget(ytdlp_desc, 1)
 
@@ -830,14 +828,14 @@ class YTDLPAndPOTPanel(QFrame):
         root.addWidget(self._ytdlp_progress_bar)
 
         self._ytdlp_progress_msg = QLabel("")
-        self._ytdlp_progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self._ytdlp_progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self._ytdlp_progress_msg.hide()
         root.addWidget(self._ytdlp_progress_msg)
 
         # Separador entre yt-dlp y PO Token Provider
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #333;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
         root.addWidget(sep)
 
         # ═════════════════════════════════════════════════════════════════════
@@ -847,17 +845,15 @@ class YTDLPAndPOTPanel(QFrame):
         pot_title_row.setSpacing(8)
 
         pot_title = QLabel(self.tr("PO Token Provider (Bypass Anti-Bot YouTube)"))
-        pot_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #DDDDDD;")
+        set_themed_style(pot_title, lambda: f"font-size: 13px; font-weight: bold; color: {get_theme_token('texto_fuerte', '#DDDDDD')};")
         pot_title_row.addWidget(pot_title)
 
         pot_info_btn = QToolButton()
         pot_info_btn.setText("?")
         pot_info_btn.setFixedSize(18, 18)
-        pot_info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 9px;"
-            " color: #AAA; font-size: 10px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(pot_info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 9px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 10px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         pot_info_btn.setToolTip(self._TOOLTIP_POT)
         pot_title_row.addWidget(pot_info_btn)
         pot_title_row.addStretch()
@@ -877,7 +873,7 @@ class YTDLPAndPOTPanel(QFrame):
         row_bgutil = QHBoxLayout()
         row_bgutil.addWidget(self._radio_bgutil)
         self._bgutil_status = QLabel(self.tr("Chequeando..."))
-        self._bgutil_status.setStyleSheet("color: #888; font-size: 11px;")
+        set_themed_style(self._bgutil_status, lambda: f"color: {get_theme_token('texto_tenue', '#888')}; font-size: 11px;")
         row_bgutil.addWidget(self._bgutil_status)
         row_bgutil.addStretch()
         self._bgutil_btn = QPushButton(self.tr("Comprobando..."))
@@ -899,7 +895,7 @@ class YTDLPAndPOTPanel(QFrame):
         row_wpc = QHBoxLayout()
         row_wpc.addWidget(self._radio_wpc)
         self._wpc_status = QLabel(self.tr("Chequeando..."))
-        self._wpc_status.setStyleSheet("color: #888; font-size: 11px;")
+        set_themed_style(self._wpc_status, lambda: f"color: {get_theme_token('texto_tenue', '#888')}; font-size: 11px;")
         row_wpc.addWidget(self._wpc_status)
         row_wpc.addStretch()
         self._wpc_btn = QPushButton(self.tr("Instalar"))
@@ -923,18 +919,16 @@ class YTDLPAndPOTPanel(QFrame):
         # Sub-fila Navegador WPC
         browser_label_row = QHBoxLayout()
         browser_lbl = QLabel(self.tr("Navegador para WPC:"))
-        browser_lbl.setStyleSheet("color: #BBB; font-size: 12px;")
+        set_themed_style(browser_lbl, lambda: f"color: {get_theme_token('texto_medio', '#BBB')}; font-size: 12px;")
         browser_label_row.addWidget(browser_lbl)
 
         browser_help = QToolButton()
         browser_help.setText("?")
         browser_help.setFixedSize(18, 18)
         browser_help.setToolTip(self._TOOLTIP_WPC_BROWSER)
-        browser_help.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 9px;"
-            " color: #AAA; font-size: 10px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(browser_help, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 9px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 10px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         browser_label_row.addWidget(browser_help)
         browser_label_row.addStretch()
         root.addLayout(browser_label_row)
@@ -945,7 +939,7 @@ class YTDLPAndPOTPanel(QFrame):
         self._browser_field.textChanged.connect(self._on_browser_path_changed)
 
         self._browser_detected_lbl = QLabel()
-        self._browser_detected_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
+        set_themed_style(self._browser_detected_lbl, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
 
         browse_btn = QPushButton()
         browse_btn.setFixedSize(32, 32)
@@ -1016,18 +1010,18 @@ class YTDLPAndPOTPanel(QFrame):
     def _update_ytdlp_ui(self):
         if self.is_ytdlp_installed:
             self._ytdlp_status_badge.setText(self.tr("✓ Instalado"))
-            self._ytdlp_status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._ytdlp_status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
             v_text = self.tr("Versión: {0}").format(self.ytdlp_local_ver) if self.ytdlp_local_ver else self.tr("Versión: Desconocida")
             self._ytdlp_version_summary.setText(v_text)
-            self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._ytdlp_btn_action.setText(self.tr("Reinstalar"))
             self._ytdlp_btn_action.setDisabled(False)
             set_button_variant(self._ytdlp_btn_action, "secondary")
         else:
             self._ytdlp_status_badge.setText(self.tr("✗ Falta"))
-            self._ytdlp_status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._ytdlp_status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
             self._ytdlp_version_summary.setText(self.tr("No instalado"))
-            self._ytdlp_version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+            set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
             self._ytdlp_btn_action.setText(self.tr("Descargar"))
             self._ytdlp_btn_action.setDisabled(False)
             set_button_variant(self._ytdlp_btn_action, "accent-blue")
@@ -1041,7 +1035,7 @@ class YTDLPAndPOTPanel(QFrame):
             return
         if not remote_ver:
             self._ytdlp_version_summary.setText(self.tr("Versión: {0}").format(self.ytdlp_local_ver))
-            self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             return
 
         r_ver = str(remote_ver).strip().lstrip('v')
@@ -1052,7 +1046,7 @@ class YTDLPAndPOTPanel(QFrame):
 
         if r_ver != l_ver and r_ver not in l_ver:
             self._ytdlp_version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.ytdlp_local_ver, remote_ver))
-            self._ytdlp_version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             
             # Texto descriptivo según el canal
             if channel == "nightly" and len(l_ver.split('.')) < 4:
@@ -1067,7 +1061,7 @@ class YTDLPAndPOTPanel(QFrame):
             set_button_variant(self._ytdlp_btn_action, "accent-blue")
         else:
             self._ytdlp_version_summary.setText(self.tr("Versión: {0}").format(self.ytdlp_local_ver))
-            self._ytdlp_version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._ytdlp_version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._ytdlp_btn_action.setText(self.tr("Reinstalar"))
             self._ytdlp_btn_action.setDisabled(False)
             set_button_variant(self._ytdlp_btn_action, "secondary")
@@ -1087,7 +1081,7 @@ class YTDLPAndPOTPanel(QFrame):
             self._ytdlp_progress_msg.setText(message if message else self.tr("Iniciando..."))
             self._ytdlp_progress_msg.show()
             self._ytdlp_status_badge.setText(self.tr("Procesando"))
-            self._ytdlp_status_badge.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._ytdlp_status_badge, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
         else:
             self._ytdlp_progress_bar.hide()
             self._ytdlp_progress_msg.hide()
@@ -1108,14 +1102,14 @@ class YTDLPAndPOTPanel(QFrame):
         if check_potprovider():
             ver = potprovider_local() or "?"
             self._bgutil_status.setText(f"✓ Instalado  v{ver}")
-            self._bgutil_status.setStyleSheet("color: #4CAF50; font-size: 11px;")
+            set_themed_style(self._bgutil_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             self._bgutil_btn.setText(self.tr("Reinstalar"))
             self._bgutil_btn.setDisabled(False)
             set_button_variant(self._bgutil_btn, "secondary")
             self._bgutil_btn.setVisible(True)
         else:
             self._bgutil_status.setText(self.tr("✗ No instalado"))
-            self._bgutil_status.setStyleSheet("color: #F44336; font-size: 11px;")
+            set_themed_style(self._bgutil_status, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 11px;")
             self._bgutil_btn.setText(self.tr("Instalar"))
             self._bgutil_btn.setDisabled(False)
             set_button_variant(self._bgutil_btn, "accent-blue")
@@ -1126,13 +1120,13 @@ class YTDLPAndPOTPanel(QFrame):
         if check_wpc():
             ver = wpc_local() or "?"
             self._wpc_status.setText(f"✓ Instalado  v{ver}")
-            self._wpc_status.setStyleSheet("color: #4CAF50; font-size: 11px;")
+            set_themed_style(self._wpc_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             self._wpc_btn.setText(self.tr("Reinstalar"))
             self._wpc_btn.setDisabled(False)
             set_button_variant(self._wpc_btn, "secondary")
         else:
             self._wpc_status.setText(self.tr("✗ No instalado"))
-            self._wpc_status.setStyleSheet("color: #F44336; font-size: 11px;")
+            set_themed_style(self._wpc_status, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 11px;")
             self._wpc_btn.setText(self.tr("Instalar"))
             self._wpc_btn.setDisabled(False)
             set_button_variant(self._wpc_btn, "accent-blue")
@@ -1145,12 +1139,12 @@ class YTDLPAndPOTPanel(QFrame):
             name = get_browser_display_name()
             if name and name != "No detectado":
                 self._browser_detected_lbl.setText(self.tr("Auto-detectado: {0}").format(name))
-                self._browser_detected_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
+                set_themed_style(self._browser_detected_lbl, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             else:
                 self._browser_detected_lbl.setText(
                     self.tr("⚠ No se detectó ningún navegador Chromium (Chrome, Brave, Edge...)")
                 )
-                self._browser_detected_lbl.setStyleSheet("color: #FFC107; font-size: 11px;")
+                set_themed_style(self._browser_detected_lbl, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px;")
 
     def _on_radio_changed(self, btn_id):
         mapping = {0: "bgutil", 1: "wpc", 2: "none"}
@@ -1191,13 +1185,13 @@ class YTDLPAndPOTPanel(QFrame):
 
         if r_ver != l_ver and r_ver not in l_ver:
             self._bgutil_status.setText(self.tr("✓ Instalado  v{0} (Nueva: {1})").format(local_ver, remote_ver))
-            self._bgutil_status.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 11px;")
+            set_themed_style(self._bgutil_status, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 11px;")
             self._bgutil_btn.setText(self.tr("Actualizar"))
             self._bgutil_btn.setDisabled(False)
             set_button_variant(self._bgutil_btn, "accent-blue")
         else:
             self._bgutil_status.setText(f"✓ Instalado  v{local_ver}")
-            self._bgutil_status.setStyleSheet("color: #4CAF50; font-size: 11px;")
+            set_themed_style(self._bgutil_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             self._bgutil_btn.setText(self.tr("Reinstalar"))
             self._bgutil_btn.setDisabled(False)
             set_button_variant(self._bgutil_btn, "secondary")
@@ -1242,13 +1236,13 @@ class YTDLPAndPOTPanel(QFrame):
 
         if r_ver != l_ver and r_ver not in l_ver:
             self._wpc_status.setText(self.tr("✓ Instalado  v{0} (Nueva: {1})").format(local_ver, remote_ver))
-            self._wpc_status.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 11px;")
+            set_themed_style(self._wpc_status, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 11px;")
             self._wpc_btn.setText(self.tr("Actualizar"))
             self._wpc_btn.setDisabled(False)
             set_button_variant(self._wpc_btn, "accent-blue")
         else:
             self._wpc_status.setText(f"✓ Instalado  v{local_ver}")
-            self._wpc_status.setStyleSheet("color: #4CAF50; font-size: 11px;")
+            set_themed_style(self._wpc_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             self._wpc_btn.setText(self.tr("Reinstalar"))
             self._wpc_btn.setDisabled(False)
             set_button_variant(self._wpc_btn, "secondary")
@@ -1308,35 +1302,33 @@ class DenoCardPanel(QFrame):
         top_row.setSpacing(8)
 
         title_lbl = QLabel(self.tr("Deno (Runtime JavaScript)"))
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(title_lbl, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         top_row.addWidget(title_lbl)
 
         info_btn = QToolButton()
         info_btn.setText("?")
         info_btn.setFixedSize(20, 20)
-        info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         info_btn.setToolTip(self._TOOLTIP_DENO)
         top_row.addWidget(info_btn)
 
         self._status_badge = QLabel(self.tr("Chequeando..."))
-        self._status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._status_badge.setStyleSheet(apply_shapes("font-weight: bold; font-size: 12px;"))
         top_row.addWidget(self._status_badge)
 
         top_row.addStretch()
 
         self._version_summary = QLabel(self.tr("Versión: Calculando..."))
-        self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
         top_row.addWidget(self._version_summary)
 
         root.addLayout(top_row)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #333;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
         root.addWidget(sep)
 
         # ── Descripción y Botón de Acción ────────────────────────────────────
@@ -1346,7 +1338,7 @@ class DenoCardPanel(QFrame):
         desc_lbl = QLabel(self.tr(
             "Entorno de ejecución de JavaScript. Necesario por yt-dlp para resolver los challenges de YouTube (EJS)."
         ))
-        desc_lbl.setStyleSheet("color: #888888; font-size: 12px;")
+        set_themed_style(desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         desc_lbl.setWordWrap(True)
         bottom_row.addWidget(desc_lbl, 1)
 
@@ -1368,7 +1360,7 @@ class DenoCardPanel(QFrame):
         root.addWidget(self._progress_bar)
 
         self._progress_msg = QLabel("")
-        self._progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self._progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self._progress_msg.hide()
         root.addWidget(self._progress_msg)
 
@@ -1386,18 +1378,18 @@ class DenoCardPanel(QFrame):
     def _update_ui_state(self):
         if self.is_installed:
             self._status_badge.setText(self.tr("✓ Instalado"))
-            self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
             v_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
             self._version_summary.setText(v_text)
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
         else:
             self._status_badge.setText(self.tr("✗ Falta"))
-            self._status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
             self._version_summary.setText(self.tr("No instalado"))
-            self._version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Descargar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
@@ -1411,19 +1403,19 @@ class DenoCardPanel(QFrame):
             return
         if not remote_ver:
             self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             return
         r_ver = str(remote_ver).strip().lstrip('v')
         l_ver = str(self.local_ver).strip().lstrip('v')
         if r_ver != l_ver and r_ver not in l_ver:
             self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
-            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             self._btn_action.setText(self.tr("Actualizar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
         else:
             self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
@@ -1442,7 +1434,7 @@ class DenoCardPanel(QFrame):
             self._progress_msg.setText(message if message else self.tr("Iniciando..."))
             self._progress_msg.show()
             self._status_badge.setText(self.tr("Procesando"))
-            self._status_badge.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
         else:
             self._progress_bar.hide()
             self._progress_msg.hide()
@@ -1493,35 +1485,33 @@ class VtracerCardPanel(QFrame):
         top_row.setSpacing(8)
 
         title_lbl = QLabel(self.tr("vtracer (Vectorizado a SVG)"))
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(title_lbl, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         top_row.addWidget(title_lbl)
 
         info_btn = QToolButton()
         info_btn.setText("?")
         info_btn.setFixedSize(20, 20)
-        info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         info_btn.setToolTip(self._TOOLTIP_VTRACER)
         top_row.addWidget(info_btn)
 
         self._status_badge = QLabel(self.tr("Chequeando..."))
-        self._status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._status_badge.setStyleSheet(apply_shapes("font-weight: bold; font-size: 12px;"))
         top_row.addWidget(self._status_badge)
 
         top_row.addStretch()
 
         self._version_summary = QLabel(self.tr("Versión: Calculando..."))
-        self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
         top_row.addWidget(self._version_summary)
 
         root.addLayout(top_row)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #333;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
         root.addWidget(sep)
 
         # ── Descripción y Botón de Acción ────────────────────────────────────
@@ -1531,7 +1521,7 @@ class VtracerCardPanel(QFrame):
         desc_lbl = QLabel(self.tr(
             "Vectoriza imágenes a SVG. Necesario en el Editor de Imagen para exportar a ese formato."
         ))
-        desc_lbl.setStyleSheet("color: #888888; font-size: 12px;")
+        set_themed_style(desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         desc_lbl.setWordWrap(True)
         bottom_row.addWidget(desc_lbl, 1)
 
@@ -1553,7 +1543,7 @@ class VtracerCardPanel(QFrame):
         root.addWidget(self._progress_bar)
 
         self._progress_msg = QLabel("")
-        self._progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self._progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self._progress_msg.hide()
         root.addWidget(self._progress_msg)
 
@@ -1571,18 +1561,18 @@ class VtracerCardPanel(QFrame):
     def _update_ui_state(self):
         if self.is_installed:
             self._status_badge.setText(self.tr("✓ Instalado"))
-            self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
             v_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
             self._version_summary.setText(v_text)
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
         else:
             self._status_badge.setText(self.tr("✗ Falta"))
-            self._status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
             self._version_summary.setText(self.tr("No instalado"))
-            self._version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Descargar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
@@ -1596,19 +1586,19 @@ class VtracerCardPanel(QFrame):
             return
         if not remote_ver:
             self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             return
         r_ver = str(remote_ver).strip().lstrip('v')
         l_ver = str(self.local_ver).strip().lstrip('v')
         if r_ver != l_ver and r_ver not in l_ver:
             self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
-            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             self._btn_action.setText(self.tr("Actualizar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
         else:
             self._version_summary.setText(self.tr("Versión: {0}").format(self.local_ver))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
@@ -1627,7 +1617,7 @@ class VtracerCardPanel(QFrame):
             self._progress_msg.setText(message if message else self.tr("Iniciando..."))
             self._progress_msg.show()
             self._status_badge.setText(self.tr("Procesando"))
-            self._status_badge.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
         else:
             self._progress_bar.hide()
             self._progress_msg.hide()
@@ -1694,35 +1684,33 @@ class GhostscriptCardPanel(QFrame):
         top_row.setSpacing(8)
 
         title_lbl = QLabel(self.tr("Ghostscript (EPS/PS del Editor de Imagen)"))
-        title_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #EEEEEE;")
+        set_themed_style(title_lbl, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         top_row.addWidget(title_lbl)
 
         info_btn = QToolButton()
         info_btn.setText("?")
         info_btn.setFixedSize(20, 20)
-        info_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            " color: #AAA; font-size: 11px; background: #2a2a2a; }"
-            " QToolButton:hover { background: #3a3a3a; color: #FFF; }"
-        )
+        set_themed_style(info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
         info_btn.setToolTip(self._TOOLTIP_GS)
         top_row.addWidget(info_btn)
 
         self._status_badge = QLabel(self.tr("Chequeando..."))
-        self._status_badge.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._status_badge.setStyleSheet(apply_shapes("font-weight: bold; font-size: 12px;"))
         top_row.addWidget(self._status_badge)
 
         top_row.addStretch()
 
         self._version_summary = QLabel(self.tr("Versión: Calculando..."))
-        self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+        set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
         top_row.addWidget(self._version_summary)
 
         root.addLayout(top_row)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #333;")
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
         root.addWidget(sep)
 
         # ── Rama Windows: descarga gestionada por DowP ──────────────────────────
@@ -1734,7 +1722,7 @@ class GhostscriptCardPanel(QFrame):
         desc_lbl = QLabel(self.tr(
             "Opcional -- solo hace falta para convertir archivos EPS/PS. El resto del Editor de Imagen no lo necesita."
         ))
-        desc_lbl.setStyleSheet("color: #888888; font-size: 12px;")
+        set_themed_style(desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         desc_lbl.setWordWrap(True)
         windows_layout.addWidget(desc_lbl, 1)
 
@@ -1760,7 +1748,7 @@ class GhostscriptCardPanel(QFrame):
             "en este sistema operativo: instálalo desde tu terminal con el comando de abajo y "
             "después presiona \"Verificar\"."
         ))
-        system_desc_lbl.setStyleSheet("color: #888888; font-size: 12px;")
+        set_themed_style(system_desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         system_desc_lbl.setWordWrap(True)
         system_layout.addWidget(system_desc_lbl)
 
@@ -1770,10 +1758,8 @@ class GhostscriptCardPanel(QFrame):
         self._command_field = QLineEdit()
         self._command_field.setReadOnly(True)
         self._command_field.setCursorPosition(0)
-        self._command_field.setStyleSheet(
-            "QLineEdit { background: #1e1e1e; color: #DDD; border: 1px solid #444;"
-            " border-radius: 4px; padding: 4px 8px; font-family: Consolas, monospace; }"
-        )
+        set_themed_style(self._command_field, lambda: f"QLineEdit {{ background: {get_theme_token('fondo_campo', '#1e1e1e')}; color: {get_theme_token('texto_fuerte', '#DDD')}; border: 1px solid {get_theme_token('borde_campo', '#444')};"
+            " border-radius: 4px; padding: 4px 8px; font-family: Consolas, monospace; }")
         command_row.addWidget(self._command_field, 1)
 
         self._btn_copy = QPushButton(self.tr("Copiar"))
@@ -1795,7 +1781,7 @@ class GhostscriptCardPanel(QFrame):
         system_layout.addLayout(command_row)
 
         self._system_hint_lbl = QLabel("")
-        self._system_hint_lbl.setStyleSheet("font-size: 11px;")
+        self._system_hint_lbl.setStyleSheet(apply_shapes("font-size: 11px;"))
         self._system_hint_lbl.setWordWrap(True)
         system_layout.addWidget(self._system_hint_lbl)
 
@@ -1809,7 +1795,7 @@ class GhostscriptCardPanel(QFrame):
         root.addWidget(self._progress_bar)
 
         self._progress_msg = QLabel("")
-        self._progress_msg.setStyleSheet("color: #888888; font-size: 11px;")
+        set_themed_style(self._progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         self._progress_msg.hide()
         root.addWidget(self._progress_msg)
 
@@ -1829,43 +1815,43 @@ class GhostscriptCardPanel(QFrame):
             self._command_field.setCursorPosition(0)
             if self.is_installed:
                 self._status_badge.setText(self.tr("✓ Instalado (Sistema)"))
-                self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
                 ver_text = self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida")
                 self._version_summary.setText(ver_text)
-                self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+                set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
                 self._system_hint_lbl.setText(self.tr(
                     "Detectado en el sistema -- DowP no lo gestiona aquí, actualízalo con {0} cuando quieras."
                 ).format(self._pkg_label))
-                self._system_hint_lbl.setStyleSheet("color: #4CAF50; font-size: 11px;")
+                set_themed_style(self._system_hint_lbl, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             else:
                 self._status_badge.setText(self.tr("✗ Falta"))
-                self._status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
                 self._version_summary.setText(self.tr("No instalado"))
-                self._version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+                set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
                 self._system_hint_lbl.setText(self.tr(
                     "No se detectó Ghostscript vía {0}. Copia el comando, ejecútalo en tu terminal "
                     "y después presiona \"Verificar\"."
                 ).format(self._pkg_label))
-                self._system_hint_lbl.setStyleSheet("color: #FFC107; font-size: 11px;")
+                set_themed_style(self._system_hint_lbl, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px;")
             return
 
         if self.is_installed:
             self._status_badge.setText(self.tr("✓ Instalado"))
-            self._status_badge.setStyleSheet("color: #4CAF50; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
             # Mismo resguardo que la rama de Mac/Linux: la version se lee del binario
             # (`gs --version`), asi que puede no llegar, y "Versión: None" no informa
             # de nada.
             self._version_summary.setText(
                 self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida"))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Reinstalar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
         else:
             self._status_badge.setText(self.tr("✗ Falta"))
-            self._status_badge.setStyleSheet("color: #F44336; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
             self._version_summary.setText(self.tr("No instalado"))
-            self._version_summary.setStyleSheet("color: #F44336; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Descargar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
@@ -1896,14 +1882,13 @@ class GhostscriptCardPanel(QFrame):
 
         if has_update:
             self._version_summary.setText(self.tr("Versión: {0} (Nueva: {1})").format(self.local_ver, remote_ver))
-            self._version_summary.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
             self._btn_action.setText(self.tr("Actualizar"))
-            self._btn_action.setStyleSheet(
-                "background-color: #007BFF; color: white; border: none; font-weight: bold;")
+            set_themed_style(self._btn_action, lambda: f"background-color: {get_theme_token('estado_progreso', '#007BFF')}; color: {get_theme_token('boton_solo_texto', 'white')}; border: none; font-weight: bold;")
         else:
             self._version_summary.setText(
                 self.tr("Versión: {0}").format(self.local_ver) if self.local_ver else self.tr("Versión: Desconocida"))
-            self._version_summary.setStyleSheet("color: #AAAAAA; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             # Se mantiene "Reinstalar" habilitado, a diferencia del resto de las
             # tarjetas, que pasan a un "Actualizado" desactivado: reinstalar es la
             # forma de reparar una extraccion a medias y esta tarjeta la ofrece
@@ -1948,7 +1933,7 @@ class GhostscriptCardPanel(QFrame):
             self._progress_msg.setText(message if message else self.tr("Iniciando..."))
             self._progress_msg.show()
             self._status_badge.setText(self.tr("Procesando"))
-            self._status_badge.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px;")
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-weight: bold; font-size: 12px;")
         else:
             self._progress_bar.hide()
             self._progress_msg.hide()

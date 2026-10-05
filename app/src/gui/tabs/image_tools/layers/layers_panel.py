@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _KIND_ICON = {"image": "image.svg", "shape": "edit.svg", "raster": "content_cut.svg", "fill": "grid_view.svg",
               "text": "title4.svg"}
@@ -75,14 +77,14 @@ class LayerRow(QFrame):
         top.addWidget(self.lbl_thumb)
 
         self.lbl_name = QLabel(name)
-        self.lbl_name.setStyleSheet(f"color: {get_theme_token('texto_principal', '#ffffff')}; font-size: 11px;")
+        set_themed_style(self.lbl_name, lambda: f"color: {get_theme_token('texto_principal', '#ffffff')}; font-size: 11px;")
         top.addWidget(self.lbl_name, 1)
 
-        self.btn_up = self._mini_btn("arrow_upward_alt.svg", "#888888", self.tr("Subir"))
+        self.btn_up = self._mini_btn("arrow_upward_alt.svg", get_theme_token('texto_tenue', '#888888'), self.tr("Subir"))
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self.layer_id))
         top.addWidget(self.btn_up)
 
-        self.btn_down = self._mini_btn("arrow_downward_alt.svg", "#888888", self.tr("Bajar"))
+        self.btn_down = self._mini_btn("arrow_downward_alt.svg", get_theme_token('texto_tenue', '#888888'), self.tr("Bajar"))
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self.layer_id))
         top.addWidget(self.btn_down)
 
@@ -109,7 +111,7 @@ class LayerRow(QFrame):
         opacity_row.addWidget(self.slider_opacity, 1)
         self.lbl_opacity_val = QLabel("100%")
         self.lbl_opacity_val.setFixedWidth(30)
-        self.lbl_opacity_val.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
+        set_themed_style(self.lbl_opacity_val, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 10px;")
         self.lbl_opacity_val.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         opacity_row.addWidget(self.lbl_opacity_val)
         layout.addLayout(opacity_row)
@@ -117,14 +119,12 @@ class LayerRow(QFrame):
     def _set_thumb(self, kind: str, color: QColor | None):
         if color is not None:
             self.lbl_thumb.setStyleSheet(
-                f"background-color: {color.name()}; border: 1px solid #444444; border-radius: 3px;"
+                apply_shapes(f"background-color: {color.name()}; border: 1px solid #444444; border-radius: 3px;")
             )
             return
-        icon = get_colored_svg_icon(_KIND_ICON.get(kind, "image.svg"), "#888888", size=14)
-        self.lbl_thumb.setStyleSheet(
-            f"background-color: {get_theme_token('fondo_principal', '#121212')}; "
-            f"border: 1px solid #444444; border-radius: 3px;"
-        )
+        icon = get_colored_svg_icon(_KIND_ICON.get(kind, "image.svg"), get_theme_token('texto_tenue', '#888888'), size=14)
+        set_themed_style(self.lbl_thumb, lambda: f"background-color: {get_theme_token('fondo_principal', '#121212')}; "
+            f"border: 1px solid #444444; border-radius: 3px;")
         if not icon.isNull():
             self.lbl_thumb.setPixmap(icon.pixmap(14, 14))
             self.lbl_thumb.setAlignment(Qt.AlignCenter)
@@ -157,13 +157,13 @@ class LayerRow(QFrame):
     def _apply_style(self):
         bg = get_theme_token('fondo_hover', '#1a1a1a') if self._selected else get_theme_token('fondo_principal', '#121212')
         border = get_theme_token('acento_primario', '#B9E640') if self._selected else get_theme_token('borde', '#2d2d2d')
-        self.setStyleSheet(f"""
+        self.setStyleSheet(apply_shapes(f"""
             QFrame#layerRow {{
                 background-color: {bg};
                 border: 1px solid {border};
                 border-radius: 4px;
             }}
-        """)
+        """))
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -212,7 +212,7 @@ class LayersPanel(QFrame):
         self.btn_add_background = QPushButton(self.tr("+ Fondo"))
         self.btn_add_background.setCursor(Qt.PointingHandCursor)
         self.btn_add_background.clicked.connect(self.add_background_requested.emit)
-        self.btn_add_background.setStyleSheet(f"""
+        set_themed_style(self.btn_add_background, lambda: f"""
             QPushButton {{
                 background-color: transparent;
                 border: 1px solid {get_theme_token('borde', '#333')};
@@ -229,7 +229,7 @@ class LayersPanel(QFrame):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"background-color: {get_theme_token('borde', '#2d2d2d')}; max-height: 1px; border: none;")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde', '#2d2d2d')}; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
         # -- Lista de capas -- SIN scroll horizontal (setHorizontalScrollBarPolicy
@@ -248,7 +248,7 @@ class LayersPanel(QFrame):
         self.scroll_layout.setAlignment(Qt.AlignTop)
 
         self.empty_lbl = QLabel(self.tr("Sin capas todavía"))
-        self.empty_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.empty_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.empty_lbl.setAlignment(Qt.AlignCenter)
         self.scroll_layout.addWidget(self.empty_lbl)
 

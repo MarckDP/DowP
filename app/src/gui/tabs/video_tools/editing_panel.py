@@ -25,6 +25,7 @@ from core.tabs.video_tools.codec_profiles import (
 from core.tabs.video_tools.size_estimator import source_codec_id
 from core.tabs.video_tools.alpha_policy import meta_has_alpha, alpha_video_args, profile_keeps_alpha
 from gui.tabs.video_tools.keep_alpha_option import KeepAlphaOption
+from gui.styles import set_themed_style
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
 
@@ -178,11 +179,10 @@ class EditingPanel(QWidget):
     def _card_frame(self, title: str | None = None, parent=None) -> tuple[QFrame, QVBoxLayout]:
         frame = QFrame(parent or self)
         frame.setObjectName("advancedCard")
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        frame.setStyleSheet(f"""
+        set_themed_style(frame, lambda: f"""
             QFrame#advancedCard {{
                 background-color: transparent;
-                border: 1px solid {border_color};
+                border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                 border-radius: 6px;
             }}
         """)
@@ -213,32 +213,27 @@ class EditingPanel(QWidget):
         group = QButtonGroup(parent)
         group.setExclusive(True)
         buttons = {}
-        accent = get_theme_token('acento_primario', '#B9E640')
-        border_color = get_theme_token('borde_sutil', '#2d2d2d')
-        fondo = get_theme_token('fondo_secundario', '#121212')
-        texto = get_theme_token('texto_principal', '#ffffff')
-        muted = get_theme_token('texto_secundario', '#888888')
         for key, label in items.items():
             btn = QPushButton(label, parent)
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.setMinimumHeight(min_height)
-            btn.setStyleSheet(f"""
+            set_themed_style(btn, lambda: f"""
                 QPushButton {{
-                    background-color: {fondo};
-                    color: {texto};
-                    border: 1px solid {border_color};
+                    background-color: {get_theme_token('fondo_secundario', '#121212')};
+                    color: {get_theme_token('texto_principal', '#ffffff')};
+                    border: 1px solid {get_theme_token('borde_sutil', '#2d2d2d')};
                     border-radius: 6px;
                     padding: 6px;
                     font-weight: bold;
                 }}
                 QPushButton:checked {{
-                    border: 2px solid {accent};
-                    color: {accent};
+                    border: 2px solid {get_theme_token('acento_primario', '#B9E640')};
+                    color: {get_theme_token('acento_primario', '#B9E640')};
                 }}
                 QPushButton:disabled {{
-                    color: {muted};
-                    border: 1px dashed {border_color};
+                    color: {get_theme_token('texto_secundario', '#888888')};
+                    border: 1px dashed {get_theme_token('borde_sutil', '#2d2d2d')};
                 }}
             """)
             btn.clicked.connect(on_changed)

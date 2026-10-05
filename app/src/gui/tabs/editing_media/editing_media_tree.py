@@ -17,6 +17,7 @@ from gui.tabs.editing_media.editing_media_icons import (
     get_colored_svg_icon,
     get_colored_folder_icon,
     get_svg_icon,
+    get_themed_svg_icon,
     get_contrast_svg_icon,
     get_folder_icon,
     get_placeholder_thumbnail_icon
@@ -25,6 +26,8 @@ from gui.tabs.editing_media.editing_media_icons import (
 from core.tabs.editing_media.folder_color_manager import get_item_color, set_item_color, get_random_label_color
 from core.tabs.editing_media.editing_media_logic import VALID_EXTS, resolve_filter_type
 from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManager
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 
@@ -60,13 +63,13 @@ class TreeListMixin:
         
         # 1. Nodo Raíz de Medios Web (agrupa los orígenes remotos: Freesound, Wikimedia, ...)
         self.web_root = QTreeWidgetItem(self.tree_folders, [QCoreApplication.translate("TreeListMixin", "Medios Web")])
-        self.web_root.setIcon(0, get_svg_icon("travel_explore.svg"))
+        self.web_root.setIcon(0, get_themed_svg_icon("travel_explore.svg"))
         self.web_root.setData(0, Qt.UserRole, {"tipo": "root_web"})
         self.web_root.setExpanded(True)
 
         for source_id, provider in getattr(self, "web_providers", {}).items():
             source_item = QTreeWidgetItem(self.web_root, [provider.display_name])
-            source_item.setIcon(0, get_svg_icon("travel_explore.svg"))
+            source_item.setIcon(0, get_themed_svg_icon("travel_explore.svg"))
             source_item.setData(0, Qt.UserRole, {"tipo": "web_source", "source_id": source_id})
 
         # 2. Nodo Raíz de Directorios Físicos
@@ -98,7 +101,7 @@ class TreeListMixin:
 
         # 3. Nodo Raíz de Colecciones Virtuales
         self.virtual_root = QTreeWidgetItem(self.tree_folders, [QCoreApplication.translate("TreeListMixin", "Colecciones")])
-        self.virtual_root.setIcon(0, get_svg_icon("star.svg"))
+        self.virtual_root.setIcon(0, get_themed_svg_icon("star.svg"))
         self.virtual_root.setData(0, Qt.UserRole, {"tipo": "root_virtual"})
         self.virtual_root.setExpanded(True)
 
@@ -106,20 +109,7 @@ class TreeListMixin:
             if col_name == "Default":
                 continue  # Ya se muestra dentro de Directorios, ver más arriba.
             item = QTreeWidgetItem(self.virtual_root, [self._format_collection_title(col_name)])
-            color = get_item_color(f"col:{col_name}")
-            if col_name == "Descargados":
-                accent_color = get_theme_token("acento_primario", "#B9E640")
-                item.setIcon(0, get_colored_svg_icon("download.svg", color or accent_color))
-            elif col_name == "Subclips":
-                accent_color = get_theme_token("acento_primario", "#B9E640")
-                item.setIcon(0, get_colored_svg_icon("content_cut.svg", color or accent_color))
-            elif col_name == "Favoritos":
-                accent_color = get_theme_token("acento_primario", "#B9E640")
-                item.setIcon(0, get_colored_svg_icon("star.svg", color or accent_color))
-            elif color:
-                item.setIcon(0, get_colored_svg_icon("star.svg", color))
-            else:
-                item.setIcon(0, get_svg_icon("star.svg"))
+            item.setIcon(0, self._collection_icon(col_name))
             item.setData(0, Qt.UserRole, {"tipo": "collection", "nombre": col_name})
 
 
@@ -135,6 +125,48 @@ class TreeListMixin:
 
         # Restaurar estado de botones
         self._update_button_states()
+
+    def _collection_icon(self, col_name):
+        color = get_item_color(f"col:{col_name}")
+        builtin = {"Descargados": "download.svg", "Subclips": "content_cut.svg", "Favoritos": "star.svg"}
+        if col_name in builtin:
+            return get_colored_svg_icon(builtin[col_name], color or get_theme_token("acento_primario", "#B9E640"))
+        if color:
+            return get_colored_svg_icon("star.svg", color)
+        return get_themed_svg_icon("star.svg")
+
+    def _retint_tree_icons(self):
+        """Al cambiar de tema: vuelve a teñir los iconos del árbol sin reconstruirlo
+        (reconstruirlo plegaría las subcarpetas ya abiertas)."""
+        def folder_icon(key):
+            color = get_item_color(key)
+            return get_colored_folder_icon(color) if color else get_folder_icon()
+
+        def walk(item):
+            data = item.data(0, Qt.UserRole)
+            tipo = data.get("tipo") if isinstance(data, dict) else None
+            icon = None
+            if tipo in ("root_web", "web_source"):
+                icon = get_themed_svg_icon("travel_explore.svg")
+            elif tipo == "root_physical":
+                icon = get_folder_icon()
+            elif tipo in ("folder", "subfolder"):
+                icon = folder_icon(f"folder:{data.get('ruta')}")
+            elif tipo == "root_virtual":
+                icon = get_themed_svg_icon("star.svg")
+            elif tipo == "collection":
+                name = data.get("nombre")
+                icon = folder_icon("col:Default") if name == "Default" else self._collection_icon(name)
+            if icon is not None:
+                item.setIcon(0, icon)
+            for i in range(item.childCount()):
+                walk(item.child(i))
+
+        if getattr(self, "tree_folders", None) is None:
+            return
+        root = self.tree_folders.invisibleRootItem()
+        for i in range(root.childCount()):
+            walk(root.child(i))
 
     def _restore_tree_selection(self, parent_item, target_data):
         """Busca y restaura recursivamente la selección del árbol tras un refresco."""
@@ -1076,7 +1108,7 @@ class TreeListMixin:
         index = view_widget.indexAt(position)
         
         menu = QMenu(self)
-        menu.setStyleSheet(f"""
+        set_themed_style(menu, lambda: f"""
             QMenu {{
                 background-color: {get_theme_token('fondo_elemento', '#1e1e1e')};
                 border: 1px solid {get_theme_token('borde_normal', '#3d3d3d')};
@@ -1153,10 +1185,10 @@ class TreeListMixin:
                 if len(file_paths) == 1:
                     is_remote = file_paths[0].startswith("http://") or file_paths[0].startswith("https://")
                     if is_remote:
-                        act_download = menu.addAction(get_svg_icon("download.svg"), QCoreApplication.translate("TreeListMixin", "Descargar Medio"))
+                        act_download = menu.addAction(get_themed_svg_icon("download.svg"), QCoreApplication.translate("TreeListMixin", "Descargar Medio"))
                         act_download.triggered.connect(self._on_download_clicked)
                     else:
-                        act_reveal = menu.addAction(get_svg_icon("folder_open.svg"), QCoreApplication.translate("TreeListMixin", "Abrir en Explorador"))
+                        act_reveal = menu.addAction(get_themed_svg_icon("folder_open.svg"), QCoreApplication.translate("TreeListMixin", "Abrir en Explorador"))
                         act_reveal.triggered.connect(self._on_reveal_clicked)
                 
                 from core.services.editor_integration_manager import EditorIntegrationManager
@@ -1190,13 +1222,13 @@ class TreeListMixin:
                 if imagenes:
                     n = len(imagenes)
                     label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Editor de Imagen").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Editor de Imagen")
-                    act_send_img = menu.addAction(get_svg_icon("image.svg"), label)
+                    act_send_img = menu.addAction(get_themed_svg_icon("image.svg"), label)
                     act_send_img.triggered.connect(lambda checked=False, items=imagenes: self._on_send_to_tool_clicked(items, "image"))
 
                 if medios_av:
                     n = len(medios_av)
                     label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Herramientas Multimedia").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Herramientas Multimedia")
-                    act_send_vid = menu.addAction(get_svg_icon("movie.svg"), label)
+                    act_send_vid = menu.addAction(get_themed_svg_icon("movie.svg"), label)
                     act_send_vid.triggered.connect(lambda checked=False, items=medios_av: self._on_send_to_tool_clicked(items, "video"))
 
                 menu.addSeparator()
@@ -1329,11 +1361,11 @@ class TreeListMixin:
         self.sort_ascending = asc
         if hasattr(self, "btn_sort_dir"):
             if asc:
-                self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_upward_alt.svg", "#FFFFFF", size=16))
+                self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_upward_alt.svg", get_theme_token('texto_activo', '#FFFFFF'), size=16))
                 self.btn_sort_dir.setIconSize(QSize(16, 16))
                 self.btn_sort_dir.setToolTip(QCoreApplication.translate("TreeListMixin", "Orden Ascendente (A-Z, Antiguos primero)"))
             else:
-                self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_downward_alt.svg", "#FFFFFF", size=16))
+                self.btn_sort_dir.setIcon(get_colored_svg_icon("arrow_downward_alt.svg", get_theme_token('texto_activo', '#FFFFFF'), size=16))
                 self.btn_sort_dir.setIconSize(QSize(16, 16))
                 self.btn_sort_dir.setToolTip(QCoreApplication.translate("TreeListMixin", "Orden Descendente (Z-A, Recientes primero)"))
         self._apply_active_filters_fast()
@@ -1347,13 +1379,13 @@ class TreeListMixin:
             color = self._get_border_accent_color()
             fondo_secundario = get_theme_token('fondo_secundario', '#1e1e1e')
             if hasattr(self, "col2_container"):
-                self.col2_container.setStyleSheet(f"""
+                self.col2_container.setStyleSheet(apply_shapes(f"""
                     QFrame#mediaListFrame {{
                         background-color: {fondo_secundario};
                         border: 2px dashed {color};
                         border-radius: 6px;
                     }}
-                """)
+                """))
 
     def _get_border_accent_color(self):
         # Usar getter para evitar imports circulares de estilos si es posible

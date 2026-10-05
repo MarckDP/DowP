@@ -14,6 +14,8 @@ from core.logger.logger_manager import logger
 from core.setup.ytdlp_setup import check_ytdlp, download_ytdlp, get_local_version as get_ytdlp_version
 from core.setup.ffmpeg_setup import check_ffmpeg, download_ffmpeg, get_local_version as get_ffmpeg_version
 from core.setup.deno_setup import check_deno, download_deno, get_local_version as get_deno_version
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 class DependencyInstallerWorker(QThread):
@@ -127,7 +129,6 @@ class DependencyDialog(QDialog):
         bg_principal = get_theme_token("fondo_principal", "#0a0a0a")
         borde_color = get_theme_token("borde_normal", "#222222")
         texto_principal = get_theme_token("texto_principal", "#e0e0e0")
-        texto_secundario = get_theme_token("texto_secundario", "#666666")
         acento_primario = get_theme_token("acento_primario", "#B9E640")
         btn_bg = get_theme_token("boton_secundario_fondo", "#1b3b22")
         btn_fg = get_theme_token("boton_secundario_texto", "#B9E640")
@@ -144,7 +145,7 @@ class DependencyDialog(QDialog):
         # Contenedor central (Frame con bordes redondeados y fondo oscuro)
         self.central_widget = QFrame()
         self.central_widget.setObjectName("DependencyDialogContainer")
-        self.central_widget.setStyleSheet(f"""
+        self.central_widget.setStyleSheet(apply_shapes(f"""
             QFrame#DependencyDialogContainer {{
                 background-color: {bg_secundario};
                 border: 1px solid {borde_color};
@@ -190,7 +191,7 @@ class DependencyDialog(QDialog):
             QPushButton#cancelButton:hover {{
                 background-color: rgba(255, 107, 95, 0.15);
             }}
-        """)
+        """))
         main_dialog_layout.addWidget(self.central_widget)
 
         # Layout interno del contenedor central
@@ -204,10 +205,10 @@ class DependencyDialog(QDialog):
         self.title_bar.btn_max.hide()
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.on_close_clicked)
-        self.title_bar.setStyleSheet(f"""
+        set_themed_style(self.title_bar, lambda: f"""
             CustomTitleBar {{
                 background-color: #080808;
-                border-bottom: 1px solid {borde_color};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-top-left-radius: 11px;
                 border-top-right-radius: 11px;
             }}
@@ -232,7 +233,7 @@ class DependencyDialog(QDialog):
 
         # Mensaje de estado general (Abajo)
         self.status_message = QLabel(self.tr("Verificando estado del sistema..."))
-        self.status_message.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa;")
+        set_themed_style(self.status_message, lambda: f"font-size: 11px; font-weight: bold; color: {get_theme_token('texto_gris', '#aaaaaa')};")
         content_layout.addWidget(self.status_message)
 
         # Fila de acciones/botones
@@ -257,7 +258,7 @@ class DependencyDialog(QDialog):
         """Crea y añade un elemento de dependencia al layout."""
         item_frame = QFrame()
         item_frame.setObjectName(f"dep_item_frame_{dep_id}")
-        item_frame.setStyleSheet(f"""
+        item_frame.setStyleSheet(apply_shapes(f"""
             QFrame#dep_item_frame_{dep_id} {{
                 background-color: {get_theme_token("fondo_principal", "#0a0a0a")};
                 border: 1px solid {get_theme_token("borde_sutil", "#1c1c1c")};
@@ -267,7 +268,7 @@ class DependencyDialog(QDialog):
                 border: none;
                 background-color: transparent;
             }}
-        """)
+        """))
         frame_layout = QVBoxLayout(item_frame)
         frame_layout.setContentsMargins(12, 10, 12, 10)
         frame_layout.setSpacing(6)
@@ -276,10 +277,10 @@ class DependencyDialog(QDialog):
         header_layout = QHBoxLayout()
         
         name_lbl = QLabel(f"<b>{name}</b>")
-        name_lbl.setStyleSheet("font-size: 12px;")
+        name_lbl.setStyleSheet(apply_shapes("font-size: 12px;"))
         
         status_lbl = QLabel(self.tr("Verificando..."))
-        status_lbl.setStyleSheet(f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px; font-weight: bold;")
+        set_themed_style(status_lbl, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px; font-weight: bold;")
         
         header_layout.addWidget(name_lbl)
         header_layout.addStretch()
@@ -307,12 +308,12 @@ class DependencyDialog(QDialog):
         """Inicia el proceso de verificación y descarga asíncrona."""
         self.btn_retry.hide()
         self.status_message.setText(self.tr("Iniciando instalador de dependencias..."))
-        self.status_message.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        set_themed_style(self.status_message, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 11px;")
 
         # Inicializar estados visuales de dependencias no verificadas
         for dep_id, widgets in self.dep_widgets.items():
             widgets["status_lbl"].setText(self.tr("Esperando..."))
-            widgets["status_lbl"].setStyleSheet(f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
+            set_themed_style(widgets["status_lbl"], lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
             widgets["progress_bar"].hide()
 
         # Lanzar hilo secundario
@@ -331,7 +332,7 @@ class DependencyDialog(QDialog):
         """Se activa cuando una dependencia comienza a descargarse."""
         widgets = self.dep_widgets[dep_id]
         widgets["status_lbl"].setText(self.tr("Descargando... 0%"))
-        widgets["status_lbl"].setStyleSheet(f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px; font-weight: bold;")
+        set_themed_style(widgets["status_lbl"], lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px; font-weight: bold;")
         widgets["progress_bar"].setValue(0)
         widgets["progress_bar"].show()
         
@@ -352,10 +353,10 @@ class DependencyDialog(QDialog):
         
         if success:
             widgets["status_lbl"].setText(self.tr("Instalada (v{0})").format(version_or_msg))
-            widgets["status_lbl"].setStyleSheet(f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px; font-weight: bold;")
+            set_themed_style(widgets["status_lbl"], lambda: f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px; font-weight: bold;")
         else:
             widgets["status_lbl"].setText(self.tr("Error al instalar"))
-            widgets["status_lbl"].setStyleSheet(f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px; font-weight: bold;")
+            set_themed_style(widgets["status_lbl"], lambda: f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px; font-weight: bold;")
             logger.error(f"Error instalando {dep_id}: {version_or_msg}")
 
     @Slot(bool)
@@ -365,12 +366,12 @@ class DependencyDialog(QDialog):
             self.worker.wait(1000)
         if overall_success:
             self.status_message.setText(self.tr("¡Todas las dependencias instaladas correctamente! Iniciando..."))
-            self.status_message.setStyleSheet(f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px; font-weight: bold;")
+            set_themed_style(self.status_message, lambda: f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px; font-weight: bold;")
             self.thread().msleep(800)
             self.accept()
         else:
             self.status_message.setText(self.tr("Error: Una o más dependencias no pudieron ser configuradas."))
-            self.status_message.setStyleSheet(f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px; font-weight: bold;")
+            set_themed_style(self.status_message, lambda: f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px; font-weight: bold;")
             self.btn_retry.show()
 
     def on_close_clicked(self):

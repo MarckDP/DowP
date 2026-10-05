@@ -11,10 +11,12 @@ from PySide6.QtGui import QIcon, QPainter, QColor, QDrag
 from gui.styles import get_theme_token, apply_cut_button_style, set_button_variant
 from gui.widgets.send_state_button import SendButtonState
 from gui.widgets.media_trim_player_widget import MediaTrimPlayerWidget
-from gui.tabs.editing_media.editing_media_icons import get_svg_icon, get_colored_svg_icon
+from gui.tabs.editing_media.editing_media_icons import get_svg_icon, get_colored_svg_icon, get_themed_svg_icon
 from core.services.editor_integration_manager import EditorIntegrationManager
 from core.utils.subclip_export import export_subclip
 from core.logger.logger_manager import logger
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 
 def _start_file_drag(source_widget, paths: list):
@@ -59,9 +61,9 @@ class SubclipItemWidget(QWidget):
 
         self.btn_play = QPushButton()
         self.btn_play.setFixedSize(22, 22)
-        self.btn_play.setIcon(get_svg_icon("play_arrow.svg"))
+        self.btn_play.setIcon(get_themed_svg_icon("play_arrow.svg"))
         self.btn_play.setIconSize(QSize(14, 14))
-        self.btn_play.setStyleSheet(f"""
+        set_themed_style(self.btn_play, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_sutil', '#333333')};
@@ -76,7 +78,7 @@ class SubclipItemWidget(QWidget):
         top_row.addWidget(self.btn_play)
 
         self.txt_name = QLineEdit(name)
-        self.txt_name.setStyleSheet(f"""
+        set_themed_style(self.txt_name, lambda: f"""
             QLineEdit {{
                 background: {get_theme_token('fondo_secundario', '#121212')};
                 color: {get_theme_token('acento_primario', '#B9E640')};
@@ -95,14 +97,14 @@ class SubclipItemWidget(QWidget):
         top_row.addWidget(self.txt_name, 1)
 
         btn_del = QPushButton()
-        btn_del.setIcon(get_svg_icon("delete.svg"))
+        btn_del.setIcon(get_themed_svg_icon("delete.svg"))
         btn_del.setIconSize(QSize(15, 15))
         btn_del.setFixedSize(22, 22)
         btn_del.setToolTip(self.tr("Eliminar subclip"))
-        btn_del.setStyleSheet("""
+        btn_del.setStyleSheet(apply_shapes("""
             QPushButton { background: transparent; border: none; border-radius: 6px; padding: 0px; }
             QPushButton:hover { background: rgba(229,57,53,160); }
-        """)
+        """))
         btn_del.clicked.connect(lambda: on_delete(index))
         top_row.addWidget(btn_del)
         layout.addLayout(top_row)
@@ -112,7 +114,7 @@ class SubclipItemWidget(QWidget):
         in_fmt = self._format_time(in_sec)
         out_fmt = self._format_time(out_sec)
         lbl = QLabel(f"{in_fmt} ➔ {out_fmt} ({dur:.2f}s)")
-        lbl.setStyleSheet("color: #999; font-size: 11px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_gris', '#999')}; font-size: 11px;")
         layout.addWidget(lbl)
 
     def _format_time(self, seconds: float) -> str:
@@ -323,7 +325,7 @@ class SubclipEditorDialog(QDialog):
 
         btn_close = QPushButton()
         btn_close.setObjectName("modalCloseBtn")
-        btn_close.setIcon(get_svg_icon("close.svg"))
+        btn_close.setIcon(get_themed_svg_icon("close.svg"))
         btn_close.setIconSize(QSize(14, 14))
         btn_close.setFixedSize(26, 26)
         btn_close.setCursor(Qt.PointingHandCursor)
@@ -350,7 +352,7 @@ class SubclipEditorDialog(QDialog):
         self.btn_add_subclip = QPushButton()
         self.btn_add_subclip.setCursor(Qt.PointingHandCursor)
         dis_color = get_theme_token("texto_deshabilitado", "#777777")
-        self.btn_add_subclip.setIcon(get_colored_svg_icon("add.svg", "#000000", size=18, disabled_color_hex=dis_color))
+        self.btn_add_subclip.setIcon(get_colored_svg_icon("add.svg", get_theme_token("boton_acento_texto", "#000000"), size=18, disabled_color_hex=dis_color))
         self.btn_add_subclip.setIconSize(QSize(18, 18))
         self.btn_add_subclip.setFixedSize(32, 32)
         self.btn_add_subclip.setToolTip(self.tr("Añadir subclip"))
@@ -373,7 +375,7 @@ class SubclipEditorDialog(QDialog):
         right_layout.setSpacing(8)
 
         lbl_list_title = QLabel(self.tr("Subclips del Medio"))
-        lbl_list_title.setStyleSheet("font-weight: bold; font-size: 13px; color: white;")
+        lbl_list_title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px; color: white;"))
         right_layout.addWidget(lbl_list_title)
 
         borde_norm = get_theme_token('borde_normal', '#222222')
@@ -382,7 +384,7 @@ class SubclipEditorDialog(QDialog):
         select_bg = get_theme_token('seleccion_fondo', '#222222')
 
         self.list_subclips = QListWidget()
-        self.list_subclips.setStyleSheet("""
+        self.list_subclips.setStyleSheet(apply_shapes("""
             QListWidget {
                 background-color: %s;
                 border: 1px solid %s;
@@ -400,7 +402,7 @@ class SubclipEditorDialog(QDialog):
                 background-color: #1b3b22;
                 border-bottom: 1px solid #224;
             }
-        """ % (bg_list, borde_norm, bg_elem, borde_norm))
+        """ % (bg_list, borde_norm, bg_elem, borde_norm)))
         right_layout.addWidget(self.list_subclips, 1)
 
         # Botón Split de Envío a Editores
@@ -410,7 +412,7 @@ class SubclipEditorDialog(QDialog):
         self.btn_send.setFixedHeight(32)
         self.btn_send.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        self.btn_send.setStyleSheet("""
+        self.btn_send.setStyleSheet(apply_shapes("""
             QToolButton {
                 background-color: %s;
                 border: 1px solid %s;
@@ -428,7 +430,7 @@ class SubclipEditorDialog(QDialog):
             QToolButton:hover {
                 background-color: %s;
             }
-        """ % (bg_elem, borde_norm, borde_norm, select_bg))
+        """ % (bg_elem, borde_norm, borde_norm, select_bg)))
 
         self.send_menu = QMenu(self.btn_send)
         self.action_send_single = self.send_menu.addAction(self.tr("Enviar solo subclip actual"))

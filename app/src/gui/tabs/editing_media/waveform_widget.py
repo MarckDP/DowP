@@ -200,7 +200,7 @@ class AudioWaveformWidget(QWidget):
 
         if getattr(self, "is_video_only", False):
             # Dibujar regla de tiempo para video sin audio
-            painter.setPen(QPen(QColor("#333333"), 1))
+            painter.setPen(QPen(QColor(get_theme_token('onda_cuadricula', '#333333')), 1))
             painter.drawLine(start_x, int(mid_y), end_x, int(mid_y))
             
             duration = getattr(self, "duration_sec", 1.0)
@@ -224,7 +224,7 @@ class AudioWaveformWidget(QWidget):
             while t <= duration:
                 x = start_x + (t / duration) * span
                 if 0 <= x <= width:
-                    painter.setPen(QPen(QColor("#888888"), 1))
+                    painter.setPen(QPen(QColor(get_theme_token('texto_tenue', '#888888')), 1))
                     painter.drawLine(int(x), int(mid_y), int(x), int(mid_y) - 6)
                     
                     total_frames = int(round(t * fps))
@@ -235,7 +235,7 @@ class AudioWaveformWidget(QWidget):
                     hh = total_sec // 3600
                     text = f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}" if duration >= 3600 else f"{mm:02d}:{ss:02d}:{ff:02d}"
                     
-                    painter.setPen(QColor("#aaaaaa"))
+                    painter.setPen(QColor(get_theme_token('texto_gris', '#aaaaaa')))
                     painter.drawText(int(x) + 2, int(mid_y) - 8, text)
                 
                 num_subs = 4 if fps > 30 or interval != 1.0 else int(round(fps)) if fps <= 10 else 5
@@ -244,7 +244,7 @@ class AudioWaveformWidget(QWidget):
                     st = t + si * sub_interval
                     if st > duration: continue
                     sub_x = start_x + (st / duration) * span
-                    painter.setPen(QPen(QColor("#444444"), 1))
+                    painter.setPen(QPen(QColor(get_theme_token('onda_cuadricula_fuerte', '#444444')), 1))
                     painter.drawLine(int(sub_x), int(mid_y), int(sub_x), int(mid_y) - 3)
                 
                 t += interval

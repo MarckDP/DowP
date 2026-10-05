@@ -40,6 +40,8 @@ from core.setup.models_setup import (
     get_depth_model_license_note, get_depth_model_size_bytes, is_depth_model_installed,
     is_depth_model_noncommercial,
 )
+from gui.styles import set_themed_style
+from gui.styles import apply_shapes
 
 _GPU_MACOS_WARNING = QCoreApplication.translate(
     "DepthPopoverContent",
@@ -113,12 +115,10 @@ class DepthPopoverContent(QFrame):
         super().__init__(parent)
         self._video_mode = video_mode
         self.setObjectName("depthPopover")
-        bg = get_theme_token('fondo_secundario', '#1e1e1e')
-        border = get_theme_token('borde_normal', '#2d2d2d')
-        self.setStyleSheet(f"""
+        set_themed_style(self, lambda: f"""
             QFrame#depthPopover {{
-                background-color: {bg};
-                border: 1px solid {border};
+                background-color: {get_theme_token('fondo_secundario', '#1e1e1e')};
+                border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
                 border-radius: 8px;
             }}
         """)
@@ -129,7 +129,7 @@ class DepthPopoverContent(QFrame):
         self._label_widgets = []
 
         title = QLabel(self.tr("Mapa de Profundidad con IA"))
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px;"))
         layout.addWidget(title)
 
         # Mismo criterio por SO que Eliminar Fondo (ver docstring de rembg_popover.py).
@@ -168,8 +168,7 @@ class DepthPopoverContent(QFrame):
         # A qué resolución calcula el modelo elegido -- informativo, no editable.
         self.lbl_process = QLabel()
         self.lbl_process.setWordWrap(True)
-        self.lbl_process.setStyleSheet(
-            f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(self.lbl_process, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         self.lbl_process.setVisible(False)
         layout.addWidget(self.lbl_process)
 
@@ -197,7 +196,7 @@ class DepthPopoverContent(QFrame):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(f"background-color: {border}; max-height: 1px; border: none;")
+        set_themed_style(sep, lambda: f"background-color: {get_theme_token('borde_normal', '#2d2d2d')}; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
         # Solo con MoGe-2: los demás modelos calculan a una resolución fija.
@@ -274,8 +273,7 @@ class DepthPopoverContent(QFrame):
             "El ancho de bits (8 o 16) se elige en las opciones de PNG y TIFF, "
             "en Formato de salida."))
         lbl_bits.setWordWrap(True)
-        lbl_bits.setStyleSheet(
-            f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
+        set_themed_style(lbl_bits, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         lbl_bits.setVisible(not video_mode)
         layout.addWidget(lbl_bits)
 
@@ -406,7 +404,7 @@ class DepthPopoverContent(QFrame):
             text = self.tr("Licencia: {0}").format(license_name)
             color = get_theme_token('texto_secundario', '#888888')
         self.lbl_license.setText(text)
-        self.lbl_license.setStyleSheet(f"color: {color}; font-size: 10px;")
+        self.lbl_license.setStyleSheet(apply_shapes(f"color: {color}; font-size: 10px;"))
         self.lbl_license.setToolTip(get_depth_model_license_note(model_info))
         self.lbl_license.setVisible(True)
 

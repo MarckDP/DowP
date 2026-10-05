@@ -2,22 +2,25 @@
 """
 Motor de Temas DowP 2.0
 ========================
-Lee un template QSS (_base.qss) y un archivo de tokens JSON ({tema}.json),
-reemplaza las variables {{token}} por sus valores, y genera assets dinámicos
-como el ícono SVG del triángulo del ComboBox.
+Lee un template QSS (_base.qss) y los tokens del tema activo, reemplaza las
+variables {{token}} por sus valores, y genera assets dinámicos como el ícono SVG
+del triángulo del ComboBox.
 
-Para crear un tema custom:
-  1. Copiar dark.json o light.json
-  2. Renombrar (ej: monokai.json)
-  3. Cambiar los colores
-  4. Seleccionarlo desde Ajustes
+Los temas (con sus dos modos, claro y oscuro) los carga y resuelve
+core/utils/theme_loader.py; el que los aplica a la app es gui/theme_manager.py.
+
+Para crear un tema: Ajustes > General > botón junto a "Tema visual" > Exportar tema
+actual, editar el JSON y volver a importarlo. El formato completo (colores en sus dos
+modos, formas y tipografía) está en gui/themes/TEMAS.md.
 """
 import os
+import re
 import json
 import tempfile
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from PySide6.QtCore import QCoreApplication
+from core.utils.theme_loader import DEFAULT_SHAPES as DEFAULT_SHAPES_UI
 
 # Directorio base de temas
 _THEMES_DIR = os.path.join(get_src_dir(), "gui", "themes")
@@ -26,9 +29,6 @@ _BASE_QSS = os.path.join(_THEMES_DIR, "_base.qss")
 # Directorio temporal para assets generados (SVGs, etc.)
 _TEMP_DIR = os.path.join(tempfile.gettempdir(), "dowp_theme_assets")
 os.makedirs(_TEMP_DIR, exist_ok=True)
-
-# Cache de tokens para evitar lecturas de disco repetitivas
-_THEME_CACHE = {}
 
 
 def generate_triangle_svg(color: str) -> str:
@@ -55,6 +55,43 @@ def generate_triangle_svg(color: str) -> str:
             return ""
     
     return svg_path.replace("\\", "/")
+
+def themed_icon(icon_name: str, token: str = "icono_principal", fallback: str = "#e3e3e3"):
+    """QIcon de assets/icons/svg teñido con un token del tema (sigue siendo vectorial).
+    Para que cambie en vivo, quien lo usa lo vuelve a pedir desde un
+    register_theme_callback."""
+    from PySide6.QtGui import QIcon
+    tinted = generate_tinted_svg(icon_name, get_theme_token(token, fallback))
+    if tinted:
+        return QIcon(tinted)
+    return QIcon(os.path.join(get_src_dir(), "assets", "icons", "svg", icon_name))
+
+
+def token_rgba(token: str, fallback: str, alpha: int) -> str:
+    """'rgba(r, g, b, alpha)' a partir de un token (los tokens son '#rrggbb')."""
+    from PySide6.QtGui import QColor
+    c = QColor(get_theme_token(token, fallback))
+    if not c.isValid():
+        c = QColor(fallback)
+    return f"rgba({c.red()}, {c.green()}, {c.blue()}, {alpha})"
+
+
+def tooltip_qss() -> str:
+    """Regla QToolTip del tema, para añadirla a hojas locales que fijan color a sus
+    QLabel: el tooltip de Qt ES un QLabel hijo del widget, así que sin esto hereda
+    ese color (p. ej. rojo de error) en vez del de los tooltips."""
+    return f"""
+        QToolTip {{
+            background-color: {get_theme_token('fondo_terciario', '#2a2a2a')};
+            color: {get_theme_token('texto_activo', '#ffffff')};
+            border: 1px solid {get_theme_token('borde_sutil', '#333333')};
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: normal;
+        }}
+    """
+
 
 def generate_tinted_svg(icon_name: str, color_hex: str) -> str:
     """
@@ -165,44 +202,6 @@ def _generate_checkbox_checked_svg(color: str) -> str:
     return svg_path.replace("\\", "/")
 
 
-def _get_theme_path(theme_name: str) -> str:
-    """Busca el archivo JSON del tema en AppData (temas de usuario) y luego en el directorio empaquetado."""
-    from core.utils.paths import get_user_themes_dir
-    user_path = os.path.join(get_user_themes_dir(), f"{theme_name}.json")
-    if os.path.exists(user_path):
-        return user_path
-    
-    builtin_path = os.path.join(_THEMES_DIR, f"{theme_name}.json")
-    if os.path.exists(builtin_path):
-        return builtin_path
-    
-    return ""
-
-
-def _load_theme_tokens(theme_name: str) -> dict:
-    """
-    Carga los tokens de color desde el archivo JSON del tema con cache.
-    """
-    if theme_name in _THEME_CACHE:
-        return _THEME_CACHE[theme_name]
-
-    json_path = _get_theme_path(theme_name)
-    
-    if not json_path or not os.path.exists(json_path):
-        logger.error(f"Temas: Archivo de tema no encontrado: {theme_name}.json")
-        return {}
-    
-    try:
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            tokens = data.get("colores", {})
-            _THEME_CACHE[theme_name] = tokens
-            return tokens
-    except Exception as e:
-        logger.error(f"Temas: Error leyendo tokens del tema: {e}")
-        return {}
-
-
 def _load_base_template() -> str:
     """
     Carga el template QSS base.
@@ -221,94 +220,226 @@ def _load_base_template() -> str:
 
 def get_available_themes() -> list:
     """
-    Retorna una lista de temas disponibles con sus metadatos (id, nombre, is_user).
+    Retorna una lista de temas disponibles con sus metadatos (id, name, is_user, has_modes).
     Escanea tanto los temas empaquetados como los temas personalizados del usuario en AppData.
     """
-    from core.utils.paths import get_user_themes_dir
-    themes = []
-    seen_ids = set()
-
-    # 1. Temas empaquetados
-    if os.path.isdir(_THEMES_DIR):
-        for filename in os.listdir(_THEMES_DIR):
-            if filename.endswith(".json"):
-                theme_id = filename[:-5]
-                name = _read_theme_display_name(os.path.join(_THEMES_DIR, filename), theme_id)
-                themes.append({"id": theme_id, "name": name, "is_user": False})
-                seen_ids.add(theme_id)
-
-    # 2. Temas de usuario (%APPDATA%/DowP2/themes)
-    user_dir = get_user_themes_dir()
-    if os.path.isdir(user_dir):
-        for filename in os.listdir(user_dir):
-            if filename.endswith(".json"):
-                theme_id = filename[:-5]
-                if theme_id not in seen_ids:
-                    name = _read_theme_display_name(os.path.join(user_dir, filename), theme_id)
-                    themes.append({"id": theme_id, "name": f"{name} (Usuario)", "is_user": True})
-                    seen_ids.add(theme_id)
-
+    from core.utils.theme_loader import list_themes
+    themes = list_themes()
+    for t in themes:
+        if t["is_user"]:
+            t["name"] = QCoreApplication.translate("Styles", "{0} (Usuario)").format(t["name"])
     return themes
 
 
-def _read_theme_display_name(json_path: str, default_id: str) -> str:
-    """Lee el nombre amigable del tema desde su metadata si existe."""
+# Estilos que se vuelven a calcular al cambiar de tema (ver set_themed_style). Una
+# entrada por widget (la última gana: un widget que cambia de estado a menudo no acumula
+# entradas) y referencias débiles: al destruirse el widget, su entrada desaparece sola.
+import weakref as _weakref
+_THEMED_STYLES = _weakref.WeakKeyDictionary()
+
+
+_RADIUS_RE = re.compile(r"(radius\s*:\s*)(\d+(?:\.\d+)?)px")
+_FONT_RE = re.compile(r"(font-size\s*:\s*)(\d+(?:\.\d+)?)px")
+_BORDER_RE = re.compile(r"(\bborder(?:-top|-bottom|-left|-right)?(?:-width)?\s*:\s*)(\d+(?:\.\d+)?)px")
+
+
+def _fmt_px(value: float) -> str:
+    value = max(0.0, value)
+    return f"{int(round(value))}px" if abs(value - round(value)) < 0.05 or value >= 3 else f"{value:.1f}px"
+
+
+def _scaled_radius(px: float, shapes: dict) -> float:
+    """Los estilos están escritos con las formas por defecto (radio 6, chico 4, grande
+    8). Cada esquina se escala con el grupo al que pertenece su valor original. No se
+    tocan las que dibujan círculos o píldoras (9, 10, 14 y 20+ px: indicadores de
+    radio, botones de info, chips), que dependen del alto del widget y no del tema."""
+    d = DEFAULT_SHAPES_UI
+    if px <= 0:
+        return px
+    if px <= 4:
+        return px * shapes["radio_chico"] / d["radio_chico"]
+    if px <= 7:
+        return px * shapes["radio"] / d["radio"]
+    if px in (8, 11, 12, 16):
+        return px * shapes["radio_grande"] / d["radio_grande"]
+    return px
+
+
+_SIZE_RE = re.compile(r"(?:^|[;{\s])(?:min-|max-)?(?:width|height)\s*:\s*(\d+)px")
+_BLOCK_RE = re.compile(r"\{[^{}]*\}")
+
+
+def _scale_radii(qss: str, shapes: dict) -> str:
+    """Escala los radios bloque a bloque: si en el mismo bloque hay un alto o ancho que
+    es el doble del radio, es un círculo o una píldora y se deja como está."""
+    def scale_in(text):
+        sizes = {int(x) for x in _SIZE_RE.findall(text)}
+        def one(m):
+            px = float(m.group(2))
+            if px > 0 and int(px * 2) in sizes:
+                return m.group(0)
+            return m.group(1) + _fmt_px(_scaled_radius(px, shapes))
+        return _RADIUS_RE.sub(one, text)
+    if "{" not in qss:  # hoja sin selectores: todo es un solo bloque
+        return scale_in(qss)
+    return _BLOCK_RE.sub(lambda b: scale_in(b.group(0)), qss)
+
+
+def apply_shapes(qss: str) -> str:
+    """Adapta una hoja de estilos a las formas y el tamaño de letra del tema activo
+    (bloques "formas" y "tipografia" del JSON). Con los valores por defecto la deja
+    tal cual, así el tema DowP no cambia en nada."""
+    from core.utils.theme_loader import get_active_shapes
+    shapes = get_active_shapes()
+    if not qss or shapes == DEFAULT_SHAPES_UI:
+        return qss
+    d = DEFAULT_SHAPES_UI
+    if (shapes["radio"], shapes["radio_chico"], shapes["radio_grande"]) != (d["radio"], d["radio_chico"], d["radio_grande"]):
+        qss = _scale_radii(qss, shapes)
+    if shapes["tamano_fuente"] != d["tamano_fuente"]:
+        factor = shapes["tamano_fuente"] / d["tamano_fuente"]
+        qss = _FONT_RE.sub(lambda m: m.group(1) + f"{max(7, int(round(float(m.group(2)) * factor)))}px", qss)
+    if shapes["borde"] != d["borde"]:
+        # Solo los bordes normales (1px). Los más gruesos son de dibujo (aro de los
+        # botones de radio, foco, marcas) y dependen del tamaño del indicador.
+        qss = _BORDER_RE.sub(
+            lambda m: m.group(1) + _fmt_px(shapes["borde"]) if float(m.group(2)) == d["borde"] else m.group(0), qss)
+    return qss
+
+
+def set_themed_style(widget, builder):
+    """Aplica builder() como hoja de estilos del widget y la recuerda para recalcularla
+    cuando cambie el tema o el modo (ThemeManager -> refresh_themed_styles).
+
+    builder es una función sin argumentos que solo debe depender de get_theme_token(...):
+    así, volver a llamarla con el tema nuevo da el estilo correcto."""
+    shaped = lambda: apply_shapes(builder())
+    qss = shaped()
+    widget.setStyleSheet(qss)
+    _THEMED_STYLES[widget] = (shaped, qss)
+
+
+# Ayudantes de estilo con estado (apply_*_button_style): al cambiar de tema se vuelven a
+# llamar con los MISMOS argumentos, así se recalculan estilo e icono teñido juntos. Una
+# entrada por (widget, ayudante): la última llamada (el estado actual) es la que vale.
+_THEMED_CALLS = _weakref.WeakKeyDictionary()
+
+
+def _prune_themed_calls():
+    import shiboken6
+    for widget in list(_THEMED_CALLS.keys()):
+        if not shiboken6.isValid(widget):
+            _THEMED_CALLS.pop(widget, None)
+
+
+def _themed_calls_for(widget):
+    """Las llamadas suelen guardar métodos del propio widget (referencia fuerte): al
+    destruirse el widget se quita su entrada, para no retener su objeto Python."""
     try:
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            meta_name = data.get("meta", {}).get("nombre")
-            if meta_name:
-                return meta_name
-    except Exception:
+        if widget in _THEMED_CALLS:
+            return _THEMED_CALLS[widget]
+        calls = _THEMED_CALLS.setdefault(widget, {})
+    except TypeError:
+        return None
+    try:
+        from PySide6.QtCore import QTimer
+        widget.destroyed.connect(lambda *_: QTimer.singleShot(0, _prune_themed_calls))
+    except (AttributeError, RuntimeError):
         pass
-    # Nombres por defecto bonitos
-    if default_id == "dark":
-        return "Modo Oscuro"
-    elif default_id == "light":
-        return "Modo Claro"
-    return default_id.replace("_", " ").title()
+    return calls
+
+
+def _remember_for_theme(widget, fn, *args, **kwargs):
+    """Lo llaman los ayudantes apply_* al aplicarse: guarda cómo repetir la llamada."""
+    calls = _themed_calls_for(widget)
+    if calls is not None:
+        calls[fn.__name__] = (fn, args, kwargs)
+
+
+def register_theme_callback(widget, key: str, callback):
+    """Como _remember_for_theme, para métodos con estado: callback() sin argumentos
+    (normalmente un lambda que repite la llamada con el estado actual). Se vuelve a
+    ejecutar al cambiar de tema mientras el widget exista; la última de cada key vale."""
+    calls = _themed_calls_for(widget)
+    if calls is not None:
+        calls[key] = (callback, None, None)
+
+
+def refresh_themed_styles() -> int:
+    """Recalcula los estilos registrados con set_themed_style. Se salta los widgets ya
+    destruidos y los que otro código cambió después con setStyleSheet() (por ejemplo,
+    un estado de 'descargando'): pisarlos con el estilo registrado sería un error."""
+    import shiboken6
+    updated = 0
+    for widget, calls in list(_THEMED_CALLS.items()):
+        if not shiboken6.isValid(widget):
+            _THEMED_CALLS.pop(widget, None)
+            continue
+        for fn, args, kwargs in list(calls.values()):
+            try:
+                if args is None:
+                    fn()
+                else:
+                    fn(widget, *args, **kwargs)
+                updated += 1
+            except RuntimeError:
+                _THEMED_CALLS.pop(widget, None)
+                break
+    for widget, (builder, qss) in list(_THEMED_STYLES.items()):
+        if not shiboken6.isValid(widget):
+            _THEMED_STYLES.pop(widget, None)
+            continue
+        try:
+            if widget.styleSheet() != qss:
+                continue
+            new_qss = builder()
+            widget.setStyleSheet(new_qss)
+            _THEMED_STYLES[widget] = (builder, new_qss)
+            updated += 1
+        except RuntimeError:
+            _THEMED_STYLES.pop(widget, None)
+    return updated
 
 
 def get_theme_token(token_key: str, default_value: str = None) -> str:
     """
-    Obtiene un token de color del tema actual.
+    Obtiene un token de color del tema activo (en el modo activo, claro u oscuro).
     """
-    from core.utils.config_manager import get_config
-    config = get_config()
-    theme_name = config.get("theme", "dark")
-    tokens = _load_theme_tokens(theme_name)
-    return tokens.get(token_key, default_value)
+    from core.utils.theme_loader import get_active_token
+    return get_active_token(token_key, default_value)
 
 
-def load_stylesheet(theme_name: str = "dark", font_family: str = None) -> str:
+def load_stylesheet(theme_name: str = None, font_family: str = None, tokens: dict = None) -> str:
     """
-    Genera el QSS final para el tema solicitado.
-    
+    Genera el QSS final.
+
     1. Lee _base.qss (template con {{variables}})
-    2. Lee {theme_name}.json (definición de colores)
+    2. Toma los tokens: los recibidos, o los del tema activo (ya resueltos según el
+       modo claro/oscuro por core/utils/theme_loader.py)
     3. Inyecta la fuente activa (font_manager o tema) en {{fuente_principal}}
     4. Genera los SVGs dinámicos con el color de acento
     5. Reemplaza todas las {{variables}} por sus valores
     6. Retorna el QSS listo para aplicar
     """
     from core.utils.font_manager import get_active_font_family
-    
+    from core.utils.theme_loader import get_active_tokens
+
     # 1. Cargar template base
     template = _load_base_template()
     if not template:
         logger.warning("Temas: Template vacío, usando estilos por defecto")
         return ""
-    
-    # 2. Cargar tokens del tema
-    tokens = _load_theme_tokens(theme_name)
+
+    # 2. Tokens (copia: lo de abajo agrega claves que no son del tema)
+    tokens = dict(tokens if tokens is not None else get_active_tokens())
     if not tokens:
-        logger.warning(f"Temas: No se pudieron cargar tokens para '{theme_name}'")
+        logger.warning("Temas: No hay tokens de tema para generar los estilos")
         return ""
-    
+
     # 3. Inyectar tipografía activa
     active_font = font_family or get_active_font_family(theme_name)
     tokens["fuente_principal"] = active_font
-    
+
     # 4. Generar SVGs dinámicos con el color de acento primario
     triangle_color = tokens.get("acento_primario", "#B9E640")
     triangle_path = generate_triangle_svg(triangle_color)
@@ -318,22 +449,20 @@ def load_stylesheet(theme_name: str = "dark", font_family: str = None) -> str:
     tokens["icono_radio_checked"] = _generate_radio_checked_svg(triangle_color)
     check_icon_color = tokens.get("boton_texto", "#000000")
     tokens["icono_checkbox_checked"] = _generate_checkbox_checked_svg(check_icon_color)
-    
+
     # 5. Reemplazar todas las {{variables}}
     result = template
     for key, value in tokens.items():
         result = result.replace("{{" + key + "}}", value)
-    
+
     # 6. Verificar si quedaron variables sin resolver
     import re
     unresolved = re.findall(r"\{\{(\w+)\}\}", result)
     if unresolved:
-        logger.warning(f"Temas: Variables sin resolver en '{theme_name}': {unresolved}")
-    
-    # Limpiar cache al recargar el stylesheet para asegurar que los cambios se apliquen
-    _THEME_CACHE.clear()
-    
-    logger.info(f"Temas: Tema '{theme_name}' cargado con tipografía '{active_font}'")
+        logger.warning(f"Temas: Variables sin resolver: {unresolved}")
+
+    result = apply_shapes(result)
+    logger.info(f"Temas: estilos generados con tipografía '{active_font}'")
     return result
 
 
@@ -393,7 +522,8 @@ def apply_folder_browse_button_style(btn, tooltip=None, icon_size=18):
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
     from PySide6.QtCore import QSize
     dis_color = get_theme_token("texto_deshabilitado", "#777777")
-    btn.setIcon(get_colored_svg_icon("folder_managed.svg", "#000000", size=icon_size, disabled_color_hex=dis_color))
+    _remember_for_theme(btn, apply_folder_browse_button_style, tooltip=tooltip, icon_size=icon_size)
+    btn.setIcon(get_colored_svg_icon("folder_managed.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size, disabled_color_hex=dis_color))
     btn.setIconSize(QSize(icon_size, icon_size))
     if not btn.objectName():
         btn.setObjectName("pathToolButton")
@@ -414,7 +544,8 @@ def apply_folder_open_button_style(btn, tooltip=None, icon_size=18):
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
     from PySide6.QtCore import QSize
     dis_color = get_theme_token("texto_deshabilitado", "#777777")
-    btn.setIcon(get_colored_svg_icon("folder_open.svg", "#000000", size=icon_size, disabled_color_hex=dis_color))
+    _remember_for_theme(btn, apply_folder_open_button_style, tooltip=tooltip, icon_size=icon_size)
+    btn.setIcon(get_colored_svg_icon("folder_open.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size, disabled_color_hex=dis_color))
     btn.setIconSize(QSize(icon_size, icon_size))
     if not btn.objectName() and not btn.text():
         btn.setObjectName("pathToolButton")
@@ -435,7 +566,8 @@ def apply_download_action_button_style(btn, tooltip=None, icon_size=18):
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
     from PySide6.QtCore import QSize
     dis_color = get_theme_token("texto_deshabilitado", "#777777")
-    btn.setIcon(get_colored_svg_icon("download.svg", "#000000", size=icon_size, disabled_color_hex=dis_color))
+    _remember_for_theme(btn, apply_download_action_button_style, tooltip=tooltip, icon_size=icon_size)
+    btn.setIcon(get_colored_svg_icon("download.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size, disabled_color_hex=dis_color))
     btn.setIconSize(QSize(icon_size, icon_size))
     if not btn.objectName():
         btn.setObjectName("pathToolButton")
@@ -477,13 +609,13 @@ def apply_cut_button_style(btn, status="normal", icon_size=18, shape="circular",
             "bg": get_theme_token('fondo_elemento', '#2d2d2d'),
             "hover": get_theme_token('seleccion_fondo', '#3d3d3d'),
             "border": f"1px solid {get_theme_token('borde_normal', '#3d3d3d')}",
-            "icon": "#FFFFFF"
+            "icon": get_theme_token('texto_activo', '#FFFFFF')
         },
         "saved":   {
             "bg": get_theme_token('acento_secundario', '#1DC038'),
             "hover": get_theme_token('acento_primario', '#B9E640'),
             "border": "none",
-            "icon": "#000000"
+            "icon": get_theme_token('boton_acento_texto', '#000000')
         },
         "unsaved": {
             "bg": get_theme_token('estado_aviso', '#ffc107'),
@@ -494,10 +626,12 @@ def apply_cut_button_style(btn, status="normal", icon_size=18, shape="circular",
     }
     
     cfg = colors.get(status, colors["normal"])
+    _remember_for_theme(btn, apply_cut_button_style, status=status, icon_size=icon_size, shape=shape, icon_name=icon_name)
     btn.setIcon(get_colored_svg_icon(icon_name, cfg["icon"], size=icon_size))
     
     if shape == "square":
-        radius = 6
+        from core.utils.theme_loader import get_active_shapes
+        radius = int(round(get_active_shapes()["radio"]))
     else:
         # Círculo perfecto: radio = mitad de la altura del botón
         radius = 17
@@ -518,7 +652,7 @@ def apply_cut_button_style(btn, status="normal", icon_size=18, shape="circular",
             background-color: {cfg['hover']};
         }}
         QPushButton:disabled {{
-            background-color: #555;
+            background-color: {get_theme_token('borde_fuerte', '#555')};
         }}
     """)
 
@@ -532,9 +666,10 @@ def apply_player_play_button_style(btn, is_playing: bool = False, icon_size: int
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
     
     icon_name = "pause.svg" if is_playing else "play_arrow.svg"
-    btn.setIcon(get_colored_svg_icon(icon_name, "#000000", size=icon_size))
+    _remember_for_theme(btn, apply_player_play_button_style, is_playing=is_playing, icon_size=icon_size)
+    btn.setIcon(get_colored_svg_icon(icon_name, get_theme_token("boton_acento_texto", "#000000"), size=icon_size))
         
-    btn.setStyleSheet(f"""
+    set_themed_style(btn, lambda: f"""
         QPushButton {{
             background-color: {get_theme_token('acento_secundario', '#1DC038')};
             border: none;
@@ -557,11 +692,12 @@ def apply_player_loop_button_style(btn, is_active: bool = False, icon_size: int 
     - is_active=False: Fondo gris (#2d2d2d), border (#2d2d2d), hover (#3d3d3d), icono repeat.svg en #6c7086.
     """
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+    _remember_for_theme(btn, apply_player_loop_button_style, is_active=is_active, icon_size=icon_size)
         
     if is_active:
-        btn.setIcon(get_colored_svg_icon("repeat.svg", "#000000", size=icon_size))
+        btn.setIcon(get_colored_svg_icon("repeat.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size))
         btn.setToolTip("Repetir: Activado")
-        btn.setStyleSheet(f"""
+        set_themed_style(btn, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_secundario', '#1DC038')};
                 border: none;
@@ -576,9 +712,9 @@ def apply_player_loop_button_style(btn, is_active: bool = False, icon_size: int 
             }}
         """)
     else:
-        btn.setIcon(get_colored_svg_icon("repeat.svg", "#6c7086", size=icon_size))
+        btn.setIcon(get_colored_svg_icon("repeat.svg", get_theme_token('icono_tenue', '#6c7086'), size=icon_size))
         btn.setToolTip("Repetir: Desactivado")
-        btn.setStyleSheet(f"""
+        set_themed_style(btn, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -601,11 +737,12 @@ def apply_edit_subclip_button_style(btn, has_subclips: bool = False, icon_size: 
     - has_subclips=False ("apagado"): fondo gris neutro, ícono gris apagado.
     """
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+    _remember_for_theme(btn, apply_edit_subclip_button_style, has_subclips=has_subclips, icon_size=icon_size)
 
     if has_subclips:
-        btn.setIcon(get_colored_svg_icon("edit.svg", "#000000", size=icon_size))
+        btn.setIcon(get_colored_svg_icon("edit.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size))
         btn.setToolTip(QCoreApplication.translate("styles", "Editar / Recortar Subclips (In/Out) — hay subclips guardados"))
-        btn.setStyleSheet(f"""
+        set_themed_style(btn, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_secundario', '#1DC038')};
                 border: none;
@@ -620,9 +757,9 @@ def apply_edit_subclip_button_style(btn, has_subclips: bool = False, icon_size: 
             }}
         """)
     else:
-        btn.setIcon(get_colored_svg_icon("edit.svg", "#6c7086", size=icon_size))
+        btn.setIcon(get_colored_svg_icon("edit.svg", get_theme_token('icono_tenue', '#6c7086'), size=icon_size))
         btn.setToolTip(QCoreApplication.translate("styles", "Editar / Recortar Subclips (In/Out)"))
-        btn.setStyleSheet(f"""
+        set_themed_style(btn, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
@@ -643,12 +780,8 @@ def apply_volume_control_style(btn_mute, slider):
     Aplica el estilo unificado basado en tokens de tema para el botón Mute
     y el Slider de Volumen en cualquier reproductor.
     """
-    bg_hover = get_theme_token('seleccion_fondo', '#3d3d3d')
-    border_color = get_theme_token('borde_normal', '#444444')
-    accent_sec = get_theme_token('acento_secundario', '#1DC038')
-    accent_pri = get_theme_token('acento_primario', '#B9E640')
 
-    btn_mute.setStyleSheet(f"""
+    set_themed_style(btn_mute, lambda: f"""
         QPushButton {{
             background-color: transparent;
             border: none;
@@ -656,18 +789,18 @@ def apply_volume_control_style(btn_mute, slider):
             padding: 0px;
         }}
         QPushButton:hover {{
-            background-color: {bg_hover};
+            background-color: {get_theme_token('seleccion_fondo', '#3d3d3d')};
         }}
     """)
 
-    slider.setStyleSheet(f"""
+    set_themed_style(slider, lambda: f"""
         QSlider::groove:horizontal {{
             border-radius: 2px;
             height: 4px;
-            background: {border_color};
+            background: {get_theme_token('borde_normal', '#444444')};
         }}
         QSlider::sub-page:horizontal {{
-            background: {accent_sec};
+            background: {get_theme_token('acento_secundario', '#1DC038')};
             border-radius: 2px;
         }}
         QSlider::handle:horizontal {{
@@ -678,7 +811,7 @@ def apply_volume_control_style(btn_mute, slider):
             border-radius: 4px;
         }}
         QSlider::handle:horizontal:hover {{
-            background: {accent_pri};
+            background: {get_theme_token('acento_primario', '#B9E640')};
         }}
     """)
 
@@ -720,10 +853,10 @@ def create_viewer_info_chip(parent):
     Nace oculta: quien la use la muestra cuando tiene un tamaño real que poner."""
     from PySide6.QtWidgets import QLabel
     lbl = QLabel(parent)
-    lbl.setStyleSheet(f"""
+    set_themed_style(lbl, lambda: f"""
         QLabel {{
             background-color: rgba(0, 0, 0, 170);
-            color: {get_theme_token('texto_principal', '#ffffff')};
+            color: #ffffff;  /* fijo: va sobre la imagen/vídeo en ambos modos */
             border-radius: 4px;
             padding: 3px 8px;
             font-size: 11px;
