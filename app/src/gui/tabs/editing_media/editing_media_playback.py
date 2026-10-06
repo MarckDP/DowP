@@ -486,7 +486,7 @@ class PlaybackMixin:
         )
 
     def _on_send_to_tool_clicked(self, item_datas, target):
-        """target: 'image' -> Editor de Imagen, 'video' -> Herramientas Multimedia.
+        """target: 'image' -> Herramientas de Imagen, 'video' -> Herramientas Multimedia.
         item_datas ya viene filtrado por tipo desde el menú contextual (ver
         _show_media_context_menu), así que cada llamada es de un solo tipo -- nunca
         hay ambigüedad sobre a qué pestaña cambiar."""
@@ -507,7 +507,7 @@ class PlaybackMixin:
             else:
                 main_win.tab_video.queue_widget.add_files(paths)
                 main_win.tabs.setCurrentWidget(main_win.tab_video)
-            destino = QCoreApplication.translate("PlaybackMixin", "Editor de Imagen") if target == "image" else "Herramientas Multimedia"
+            destino = QCoreApplication.translate("PlaybackMixin", "Herramientas de Imagen") if target == "image" else "Herramientas Multimedia"
             logger.info(f"[EditingMedia] {len(paths)} archivo(s) enviados a {destino}.")
 
         self._resolve_items_then_send(item_datas, on_done=_on_all_resolved)

@@ -378,8 +378,8 @@ Tem certeza?</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1630"/>
-        <source>Aquí verás la miniatura del medio. Puedes guardarla directamente o usar &apos;Enviar a E.I&apos; para mandarla a la pestaña Editor de Imagen y procesarla de distintas formas.</source>
-        <translation>Aqui você vê a miniatura da mídia. Pode salvá-la direto ou usar &apos;Enviar ao E.I&apos; para mandá-la à aba Editor de Imagem e processá-la de várias formas.</translation>
+        <source>Aquí verás la miniatura del medio. Puedes guardarla directamente o usar &apos;Enviar a H.I&apos; para mandarla a la pestaña Herramientas de Imagen y procesarla de distintas formas.</source>
+        <translation>Aqui você verá a miniatura da mídia. Pode salvá-la diretamente ou usar &apos;Enviar ao F.I&apos; para enviá-la para a aba Ferramentas de Imagem e processá-la de diferentes formas.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1634"/>
@@ -4999,11 +4999,6 @@ Todas (inclui experimentais): você recebe também compilações de teste, antes
         <translation>Som ao terminar um processo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="343"/>
-        <source>Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia y Editor de Imagen. Un sonido para cuando todo sale bien y otro si algo falla.</source>
-        <translation>Toca ao terminar no Modo Rápido, Processo Avançado, Ferramentas de Mídia e Editor de Imagem. Um som quando tudo dá certo e outro se algo falhar.</translation>
-    </message>
-    <message>
         <location filename="../../gui/tabs/settings/pages/general_page.py" line="356"/>
         <source>Cuándo sonar</source>
         <translation>Quando tocar</translation>
@@ -5111,6 +5106,11 @@ Ambos: para cada item e também no final.</translation>
         <location filename="../../gui/tabs/settings/pages/general_page.py" line="272"/>
         <source>Permite cambiar la opción seleccionada al pasar la rueda del ratón sobre un menú cerrado. Si está desactivado (recomendado), la rueda desplazará la página normalmente.</source>
         <translation>Permite mudar a opção selecionada ao rolar a roda do mouse sobre um menu fechado. Quando desativado (recomendado), a roda rolará a página normalmente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="343"/>
+        <source>Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia y Herramientas de Imagen. Un sonido para cuando todo sale bien y otro si algo falla.</source>
+        <translation>Toca ao finalizar no Modo Rápido, Processo Avançado, Ferramentas Multimídia e Ferramentas de Imagem. Um som para quando tudo der certo e outro se algo falhar.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/general_page.py" line="459"/>
@@ -5321,32 +5321,6 @@ Ambos: para cada item e também no final.</translation>
 <context>
     <name>GhostscriptCardPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1654"/>
-        <source>Ghostscript es el intérprete de PostScript que permite convertir archivos
-EPS/PS en el Editor de Imagen -- ningún formato más de DowP lo necesita.
-
-Es opcional: si no lo instalas, todo lo demás sigue funcionando igual,
-y al intentar convertir un EPS/PS se te va a avisar cómo instalarlo.
-
-En Windows, DowP lo descarga y gestiona automáticamente. En Mac/Linux no hay
-build oficial para empaquetar: se detecta un Ghostscript ya instalado por ti
-(vía Homebrew en macOS, o el gestor de paquetes de tu distro en Linux).</source>
-        <translation>O Ghostscript é o interpretador de PostScript que permite converter arquivos
-EPS/PS no Editor de Imagem -- nenhum outro formato do DowP precisa dele.
-
-É opcional: se você não instalar, todo o resto continua funcionando igual,
-e ao tentar converter um EPS/PS você será avisado de como instalá-lo.
-
-No Windows, o DowP baixa e gerencia tudo automaticamente. No Mac/Linux não há
-build oficial para empacotar: em vez disso é detectado um Ghostscript já instalado por você
-(via Homebrew no macOS, ou o gerenciador de pacotes da sua distro no Linux).</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1686"/>
-        <source>Ghostscript (EPS/PS del Editor de Imagen)</source>
-        <translation>Ghostscript (EPS/PS do Editor de Imagem)</translation>
-    </message>
-    <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1699"/>
         <source>Chequeando...</source>
         <translation>Verificando...</translation>
@@ -5357,9 +5331,35 @@ build oficial para empacotar: em vez disso é detectado um Ghostscript já insta
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1686"/>
+        <source>Ghostscript (EPS/PS de Herramientas de Imagen)</source>
+        <translation>Ghostscript (EPS/PS para Ferramentas de Imagem)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1654"/>
+        <source>Ghostscript es el intérprete de PostScript que permite convertir archivos
+EPS/PS en Herramientas de Imagen -- ningún formato más de DowP lo necesita.
+
+Es opcional: si no lo instalas, todo lo demás sigue funcionando igual,
+y al intentar convertir un EPS/PS se te va a avisar cómo instalarlo.
+
+En Windows, DowP lo descarga y gestiona automáticamente. En Mac/Linux no hay
+build oficial para empaquetar: se detecta un Ghostscript ya instalado por ti
+(vía Homebrew en macOS, o el gestor de paquetes de tu distro en Linux).</source>
+        <translation>O Ghostscript é o interpretador PostScript que permite converter arquivos
+EPS/PS no Ferramentas de Imagem -- nenhum outro formato do DowP precisa dele.
+
+É opcional: se você não instalá-lo, todo o restante continua funcionando normalmente,
+e ao tentar converter um EPS/PS você será avisado sobre como instalá-lo.
+
+No Windows, o DowP baixa e gerencia automaticamente. No Mac/Linux não há
+build oficial empacotada: detecta-se um Ghostscript já instalado por você
+(via Homebrew no macOS ou gerenciador de pacotes da sua distribuição no Linux).</translation>
+    </message>
+    <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1723"/>
-        <source>Opcional -- solo hace falta para convertir archivos EPS/PS. El resto del Editor de Imagen no lo necesita.</source>
-        <translation>Opcional -- só é necessário para converter arquivos EPS/PS. O resto do Editor de Imagem não precisa dele.</translation>
+        <source>Opcional -- solo hace falta para convertir archivos EPS/PS. El resto de Herramientas de Imagen no lo necesita.</source>
+        <translation>Opcional -- só é necessário para converter arquivos EPS/PS. O restante do Ferramentas de Imagem não precisa dele.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1729"/>
@@ -5472,8 +5472,8 @@ build oficial para empacotar: em vez disso é detectado um Ghostscript já insta
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1916"/>
-        <source>Ghostscript {0} detectado correctamente. Ya puedes convertir archivos EPS/PS en el Editor de Imagen.</source>
-        <translation>Ghostscript {0} detectado corretamente. Agora você já pode converter arquivos EPS/PS no Editor de Imagem.</translation>
+        <source>Ghostscript {0} detectado correctamente. Ya puedes convertir archivos EPS/PS en Herramientas de Imagen.</source>
+        <translation>Ghostscript {0} detectado com sucesso. Agora você pode converter arquivos EPS/PS no Ferramentas de Imagem.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1921"/>
@@ -7118,8 +7118,8 @@ Continuar?</translation>
     </message>
     <message>
         <location filename="../../gui/main_window.py" line="681"/>
-        <source>Editor de Imagen</source>
-        <translation>Editor de Imagem</translation>
+        <source>Herramientas de Imagen</source>
+        <translation>Ferramentas de Imagem</translation>
     </message>
     <message>
         <location filename="../../gui/main_window.py" line="685"/>
@@ -7546,76 +7546,190 @@ Continuar?</translation>
         <translation>Completa</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1445"/>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1923"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1454"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1932"/>
         <source>Vista Previa de Audio</source>
         <translation>Pré-visualização de Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1473"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1482"/>
         <source>Vista Previa y Recorte</source>
         <translation>Pré-visualização e Recorte</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1478"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1487"/>
         <source>Carga o selecciona un medio para previsualizarlo y ajustar sus puntos In / Out</source>
         <translation>Carregue ou selecione uma mídia para pré-visualizá-la e ajustar os pontos In / Out</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1496"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1505"/>
         <source>Resolución de previsualización (no afecta la exportación final)</source>
         <translation>Resolução da pré-visualização (não afeta a exportação final)</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1607"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1616"/>
         <source>Seleccionar pista de audio para previsualización</source>
         <translation>Selecionar a faixa de áudio para pré-visualização</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1633"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1642"/>
         <source>Procesar todas las pistas</source>
         <translation>Processar todas as faixas</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1637"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1646"/>
         <source>Si está marcado, se procesarán y conservarán todas las pistas de audio del archivo. Si se desmarca, solo se procesará la pista seleccionada.</source>
         <translation>Se marcado, todas as faixas de áudio do arquivo serão processadas e mantidas. Se desmarcado, só a faixa selecionada será processada.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1727"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1736"/>
         <source>Establecer punto de entrada (Tecla I)</source>
         <translation>Definir ponto de entrada (Tecla I)</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1769"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1778"/>
         <source>Establecer punto de salida (Tecla O)</source>
         <translation>Definir ponto de saída (Tecla O)</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1923"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="1932"/>
         <source>Pista de Audio</source>
         <translation>Faixa de Áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2391"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2400"/>
         <source>generando…</source>
         <translation>gerando…</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2408"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2417"/>
         <source>no disp.</source>
         <translation>indisp.</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2508"/>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2546"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2517"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2555"/>
         <source>Pista {0} ▾</source>
         <translation>Faixa {0} ▾</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2533"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2542"/>
         <source>Pista {0}</source>
         <translation>Faixa {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2897"/>
+        <source>Exportar fotograma...</source>
+        <translation>Exportar quadro...</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2904"/>
+        <source>Exportar fotograma a Herramientas de Imagen</source>
+        <translation>Exportar quadro para Ferramentas de Imagem</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3156"/>
+        <source>No se encontró la pestaña de Herramientas de Imagen.</source>
+        <translation>A aba Ferramentas de Imagem não foi encontrada.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3161"/>
+        <source>No se pudo enviar el fotograma a Herramientas de Imagen: {0}</source>
+        <translation>Não foi possível enviar o quadro para o Ferramentas de Imagem: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2931"/>
+        <source>Enviar a {0}</source>
+        <translation>Enviar para {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2968"/>
+        <source>FFmpeg no encontrado</source>
+        <translation>FFmpeg não encontrado</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="2969"/>
+        <source>Se necesita FFmpeg para capturar fotogramas a resolución completa.</source>
+        <translation>O FFmpeg é necessário para capturar quadros em resolução total.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3049"/>
+        <source>Imagen PNG (*.png)</source>
+        <translation>Imagem PNG (*.png)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3050"/>
+        <source>Imagen JPEG (*.jpg *.jpeg)</source>
+        <translation>Imagem JPEG (*.jpg *.jpeg)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3051"/>
+        <source>Imagen WEBP (*.webp)</source>
+        <translation>Imagem WEBP (*.webp)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3052"/>
+        <source>Imagen AVIF (*.avif)</source>
+        <translation>Imagem AVIF (*.avif)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3053"/>
+        <source>Imagen TIFF (*.tiff *.tif)</source>
+        <translation>Imagem TIFF (*.tiff *.tif)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3054"/>
+        <source>Documento PDF (*.pdf)</source>
+        <translation>Documento PDF (*.pdf)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3055"/>
+        <source>Imagen BMP (*.bmp)</source>
+        <translation>Imagem BMP (*.bmp)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3056"/>
+        <source>Icono ICO (*.ico)</source>
+        <translation>Ícone ICO (*.ico)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3057"/>
+        <source>Icono ICNS (*.icns)</source>
+        <translation>Ícone ICNS (*.icns)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3063"/>
+        <source>Exportar fotograma</source>
+        <translation>Exportar quadro</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3085"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3094"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3147"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3179"/>
+        <source>No se pudo extraer el fotograma.</source>
+        <translation>Não foi possível extrair o quadro.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3124"/>
+        <source>Error al exportar fotograma</source>
+        <translation>Erro ao exportar quadro</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3125"/>
+        <source>No se pudo exportar el fotograma: {0}</source>
+        <translation>Não foi possível exportar o quadro: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3160"/>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3186"/>
+        <source>Error</source>
+        <translation>Erro</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/media_trim_player_widget.py" line="3187"/>
+        <source>No se pudo enviar el fotograma al editor: {0}</source>
+        <translation>Não foi possível enviar o quadro para o editor: {0}</translation>
     </message>
 </context>
 <context>
@@ -8901,8 +9015,8 @@ Você pode baixá-lo novamente quando quiser.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="510"/>
-        <source>Editor de Imagen</source>
-        <translation>Editor de Imagem</translation>
+        <source>Herramientas de Imagen</source>
+        <translation>Ferramentas de Imagem</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_playback.py" line="890"/>
@@ -10704,8 +10818,8 @@ Você pode baixá-lo de novo quando quiser.</translation>
     <name>Shortcuts</name>
     <message>
         <location filename="../../core/utils/shortcuts.py" line="26"/>
-        <source>Editor de Imagen</source>
-        <translation>Editor de Imagem</translation>
+        <source>Herramientas de Imagen</source>
+        <translation>Ferramentas de Imagem</translation>
     </message>
     <message>
         <location filename="../../core/utils/shortcuts.py" line="43"/>
@@ -11774,13 +11888,13 @@ Adicione itens clicando com o botão direito em qualquer mídia.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="1224"/>
-        <source>Enviar ({0}) a Editor de Imagen</source>
-        <translation>Enviar ({0}) para o Editor de Imagem</translation>
+        <source>Enviar ({0}) a Herramientas de Imagen</source>
+        <translation>Enviar ({0}) para Ferramentas de Imagem</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="1224"/>
-        <source>Enviar a Editor de Imagen</source>
-        <translation>Enviar para o Editor de Imagem</translation>
+        <source>Enviar a Herramientas de Imagen</source>
+        <translation>Enviar para Ferramentas de Imagem</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="1230"/>
@@ -12263,8 +12377,8 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="69"/>
-        <source>Enviar a E.I</source>
-        <translation>Enviar ao E.I</translation>
+        <source>Enviar a H.I</source>
+        <translation>Enviar ao F.I</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="82"/>
@@ -12748,15 +12862,6 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
 <context>
     <name>VtracerCardPanel</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1462"/>
-        <source>vtracer convierte imágenes raster (PNG/JPG/etc.) a vectores SVG.
-Lo usa el Editor de Imagen para el formato de salida SVG -- es opcional,
-solo hace falta si vas a exportar a ese formato.</source>
-        <translation>O vtracer converte imagens raster (PNG/JPG/etc.) em vetores SVG.
-O Editor de Imagem o usa para o formato de saída SVG -- é opcional,
-só é necessário se você for exportar para esse formato.</translation>
-    </message>
-    <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1487"/>
         <source>vtracer (Vectorizado a SVG)</source>
         <translation>vtracer (Vetorizar para SVG)</translation>
@@ -12772,9 +12877,18 @@ só é necessário se você for exportar para esse formato.</translation>
         <translation>Versão: Calculando...</translation>
     </message>
     <message>
+        <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1462"/>
+        <source>vtracer convierte imágenes raster (PNG/JPG/etc.) a vectores SVG.
+Lo usa Herramientas de Imagen para el formato de salida SVG -- es opcional,
+solo hace falta si vas a exportar a ese formato.</source>
+        <translation>O vtracer converte imagens raster (PNG/JPG/etc.) em vetores SVG.
+É usado pelo Ferramentas de Imagem para o formato de saída SVG -- é opcional,
+só é necessário se você for exportar para esse formato.</translation>
+    </message>
+    <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1522"/>
-        <source>Vectoriza imágenes a SVG. Necesario en el Editor de Imagen para exportar a ese formato.</source>
-        <translation>Vetoriza imagens para SVG. Necessário no Editor de Imagem para exportar nesse formato.</translation>
+        <source>Vectoriza imágenes a SVG. Necesario en Herramientas de Imagen para exportar a ese formato.</source>
+        <translation>Vetoriza imagens para SVG. Necessário no Ferramentas de Imagem para exportar para esse formato.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/deps_page.py" line="1528"/>
@@ -12866,6 +12980,11 @@ só é necessário se você for exportar para esse formato.</translation>
         <location filename="../../core/updater/whats_new_content.py" line="111"/>
         <source>Esta es una versión de prueba, previa al lanzamiento oficial de DowP 2.0.0 -- puede tener errores todavía sin detectar. Vas a recibir actualizaciones seguidas mientras se termina de pulir, sin que tengas que reinstalar nada.</source>
         <translation>Esta é uma versão de teste, anterior ao lançamento oficial do DowP 2.0.0 -- ela pode ter erros ainda não detectados. Você vai receber atualizações seguidas enquanto ela é finalizada, sem precisar reinstalar nada.</translation>
+    </message>
+    <message>
+        <location filename="../../core/updater/whats_new_content.py" line="133"/>
+        <source>Herramientas de Imagen mejoradas</source>
+        <translation>Ferramentas de Imagem aprimoradas</translation>
     </message>
     <message>
         <location filename="../../core/updater/whats_new_content.py" line="150"/>
@@ -12983,11 +13102,6 @@ só é necessário se você for exportar para esse formato.</translation>
         <translation>Etiquetas mais compactas</translation>
     </message>
     <message>
-        <location filename="../../core/updater/whats_new_content.py" line="88"/>
-        <source>Los menús de etiquetas ocupan menos espacio, y el Editor de Imagen ahora también tiene etiquetas.</source>
-        <translation>Os menus de etiquetas ocupam menos espaço, e o Editor de Imagem agora também tem etiquetas.</translation>
-    </message>
-    <message>
         <location filename="../../core/updater/whats_new_content.py" line="91"/>
         <source>Búsqueda más precisa</source>
         <translation>Busca mais precisa</translation>
@@ -13049,6 +13163,11 @@ só é necessário se você for exportar para esse formato.</translation>
         <translation>Agora você pode cortar um único fragmento sem pressionar &quot;+&quot;. A miniatura &quot;junto à mídia&quot; é salva em JPG. O console não pula mais para o final enquanto você lê. Adicionar uma mídia a uma coleção não tira mais você de onde estava, e a pré-visualização do Gerenciador de Mídias não cresce mais sem limite.</translation>
     </message>
     <message>
+        <location filename="../../core/updater/whats_new_content.py" line="88"/>
+        <source>Los menús de etiquetas ocupan menos espacio, y Herramientas de Imagen ahora también tiene etiquetas.</source>
+        <translation>Os menus de tags ocupam menos espaço, e o Ferramentas de Imagem agora também possui tags.</translation>
+    </message>
+    <message>
         <location filename="../../core/updater/whats_new_content.py" line="100"/>
         <source>DowP ya no termina con un error al cerrarse (en Mac aparecía el aviso de cierre inesperado), y se corrigió un fallo del Gestor de Medios con los favoritos web.</source>
         <translation>O DowP não termina mais com um erro ao fechar (no Mac aparecia o aviso de encerramento inesperado), e foi corrigida uma falha do Gerenciador de Mídia com os favoritos da web.</translation>
@@ -13077,11 +13196,6 @@ só é necessário se você for exportar para esse formato.</translation>
         <location filename="../../core/updater/whats_new_content.py" line="130"/>
         <source>Proceso único y proceso por lotes ahora viven en una sola pestaña.</source>
         <translation>Processo único e processo em lotes agora ficam numa aba só.</translation>
-    </message>
-    <message>
-        <location filename="../../core/updater/whats_new_content.py" line="133"/>
-        <source>Editor de Imagen mejorado</source>
-        <translation>Editor de Imagem melhorado</translation>
     </message>
     <message>
         <location filename="../../core/updater/whats_new_content.py" line="134"/>
@@ -16690,8 +16804,8 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
     </message>
     <message>
         <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="201"/>
-        <source>MoGe-2 todavía no calcula profundidad en video: úsalo en el Editor de Imagen.</source>
-        <translation>O MoGe-2 ainda não calcula profundidade em vídeo: use-o no Editor de Imagem.</translation>
+        <source>MoGe-2 todavía no calcula profundidad en video: úsalo en Herramientas de Imagen.</source>
+        <translation>O MoGe-2 ainda não calcula profundidade em vídeo: use-o em Ferramentas de Imagem.</translation>
     </message>
     <message>
         <location filename="../../core/tabs/video_tools/video_depth_engine.py" line="203"/>

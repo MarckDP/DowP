@@ -66,7 +66,7 @@ class VideoDetailsWidget(QFrame):
         self.btn_download_thumb.setObjectName("secondaryButton")
         self.btn_download_thumb.setEnabled(False)
         self.btn_download_thumb.clicked.connect(lambda: download_thumbnail(self))
-        self.btn_send_hi = QPushButton(self.tr("Enviar a E.I"))
+        self.btn_send_hi = QPushButton(self.tr("Enviar a H.I"))
         self.btn_send_hi.setObjectName("secondaryButton")
         self.btn_send_hi.setEnabled(False)
         self.btn_send_hi.clicked.connect(lambda: send_thumbnail_to_image_tools(self))

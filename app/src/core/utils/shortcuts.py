@@ -23,7 +23,7 @@ _CTX = "Shortcuts"
 
 SECTION_IMAGE_EDITOR = "image_editor"
 SECTIONS = {
-    SECTION_IMAGE_EDITOR: QT_TRANSLATE_NOOP("Shortcuts", "Editor de Imagen"),
+    SECTION_IMAGE_EDITOR: QT_TRANSLATE_NOOP("Shortcuts", "Herramientas de Imagen"),
 }
 
 

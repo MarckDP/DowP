@@ -85,7 +85,7 @@ def get_whats_new_items(version: str) -> list:
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Etiquetas más compactas"),
-                QCoreApplication.translate("WhatsNewContent", "Los menús de etiquetas ocupan menos espacio, y el Editor de Imagen ahora también tiene etiquetas."),
+                QCoreApplication.translate("WhatsNewContent", "Los menús de etiquetas ocupan menos espacio, y Herramientas de Imagen ahora también tiene etiquetas."),
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Búsqueda más precisa"),
@@ -130,7 +130,7 @@ def get_whats_new_items(version: str) -> list:
                 QCoreApplication.translate("WhatsNewContent", "Proceso único y proceso por lotes ahora viven en una sola pestaña."),
             ),
             (
-                QCoreApplication.translate("WhatsNewContent", "Editor de Imagen mejorado"),
+                QCoreApplication.translate("WhatsNewContent", "Herramientas de Imagen mejoradas"),
                 QCoreApplication.translate("WhatsNewContent", "Interfaz renovada para las herramientas de imagen."),
             ),
             (

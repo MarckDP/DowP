@@ -3,13 +3,14 @@
 import os
 import math
 import array
+import uuid
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
     QFrame, QSizePolicy, QScrollArea, QSlider, QGraphicsView, QGraphicsScene,
-    QToolButton, QMenu, QCheckBox, QGraphicsObject
+    QToolButton, QMenu, QCheckBox, QGraphicsObject, QFileDialog, QMessageBox, QApplication
 )
 from PySide6.QtCore import Qt, QUrl, QSize, QSizeF, QPointF, QTimer, Signal, QEvent, QRectF, QT_TRANSLATE_NOOP
-from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QPixmap, QImage, QFont, QFontMetricsF
+from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath, QPixmap, QImage, QFont, QFontMetricsF, QIcon
 from PySide6.QtMultimedia import (
     QMediaPlayer, QAudioOutput, QMediaMetaData, QAudioBufferOutput, QAudioFormat
 )
@@ -594,6 +595,7 @@ class _TransparentVideoView(QGraphicsView):
     """
 
     video_rect_changed = Signal(QRectF)  # rect (pos+size) del video_item en coords de escena
+    context_menu_requested = Signal(object)  # QPoint (global pos) para el menú contextual
 
     def __init__(self, scene: QGraphicsScene, video_item: QGraphicsVideoItem, parent=None):
         super().__init__(scene, parent)
@@ -717,6 +719,13 @@ class _TransparentVideoView(QGraphicsView):
             event.accept()
             return
         super().mouseDoubleClickEvent(event)
+
+    def contextMenuEvent(self, event):
+        if not self._crop_edit_mode and not self._is_panning:
+            self.context_menu_requested.emit(event.globalPos())
+            event.accept()
+        else:
+            super().contextMenuEvent(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -1416,6 +1425,7 @@ class MediaTrimPlayerWidget(QWidget):
 
         self.video_widget = _TransparentVideoView(self.video_scene, self.video_item)
         self.video_widget.setVisible(False)
+        self.video_widget.context_menu_requested.connect(self._on_video_context_menu)
         prev_layout.addWidget(self.video_widget)
 
         # Rectángulo de recorte interactivo: ítem hermano de video_item en la misma escena,
@@ -2866,3 +2876,322 @@ class MediaTrimPlayerWidget(QWidget):
     def _on_volume_changed(self, value):
         float_val = value if isinstance(value, float) else value / 100.0
         self.audio_output.setVolume(float_val)
+
+    # ------------------------------------------------------------------
+    # Menú contextual de vista previa y exportación de fotogramas
+    # ------------------------------------------------------------------
+    def _on_video_context_menu(self, global_pos):
+        if not self.media_path or not os.path.exists(self.media_path):
+            return
+        if self.media_type not in ("video", "video+audio", "imagen"):
+            return
+
+        # Pausar si se está reproduciendo para congelar el fotograma
+        if self.media_player and self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.media_player.pause()
+
+        menu = QMenu(self)
+
+        # 1. Exportar fotograma...
+        act_export = menu.addAction(
+            get_themed_svg_icon("image.svg"),
+            self.tr("Exportar fotograma...")
+        )
+        act_export.triggered.connect(self._on_export_frame_to_file)
+
+        # 2. Exportar fotograma a Herramientas de Imagen
+        act_to_image = menu.addAction(
+            get_themed_svg_icon("image.svg"),
+            self.tr("Exportar fotograma a Herramientas de Imagen")
+        )
+        act_to_image.triggered.connect(self._on_export_frame_to_image_editor)
+
+        # 3. Enviar al editor si hay uno conectado
+        from core.services.editor_integration_manager import EditorIntegrationManager
+        editor_mgr = EditorIntegrationManager.get_instance()
+        if editor_mgr and editor_mgr.active_editor:
+            active = editor_mgr.active_editor
+            if active == "premiere":
+                e_icon = get_svg_icon("premiere pro.svg")
+                e_name = "Premiere Pro"
+            elif active == "aftereffects":
+                e_icon = get_svg_icon("after effects.svg")
+                e_name = "After Effects"
+            elif active == "davinci":
+                e_icon = get_svg_icon("davinci resolve.svg")
+                e_name = "DaVinci Resolve"
+            elif active == "photoshop":
+                e_icon = get_svg_icon("photoshop.svg")
+                e_name = "Photoshop"
+            else:
+                e_icon = QIcon()
+                e_name = "Editor"
+
+            act_send_editor = menu.addAction(
+                e_icon,
+                self.tr("Enviar a {0}").format(e_name)
+            )
+            act_send_editor.triggered.connect(self._on_send_frame_to_editor)
+
+        menu.exec(global_pos)
+
+    @staticmethod
+    def _format_timestamp_for_filename(pos_sec: float) -> str:
+        h = int(pos_sec // 3600)
+        m = int((pos_sec % 3600) // 60)
+        s = int(pos_sec % 60)
+        ms = int(round((pos_sec - int(pos_sec)) * 1000))
+        if ms >= 1000:
+            s += 1
+            ms = 0
+        if h > 0:
+            return f"{h:02d}-{m:02d}-{s:02d}_{ms:03d}"
+        return f"{m:02d}-{s:02d}_{ms:03d}"
+
+    def _extract_frame_png(self, custom_dest_png: str | None = None) -> str | None:
+        """Extrae el fotograma actual a resolución completa usando FFmpeg a un archivo PNG."""
+        if not self.media_path or not os.path.exists(self.media_path):
+            return None
+
+        # Si el medio ya es una imagen estática, el destino temporal/de exportación
+        # debe contener PNG real: copiar un JPG/WebP y renombrarlo a .png deja un
+        # archivo con extensión engañosa.
+        if self.media_type == "imagen":
+            if custom_dest_png:
+                out_png = custom_dest_png
+                os.makedirs(os.path.dirname(out_png), exist_ok=True)
+                image = QImage(self.media_path)
+                if image.isNull() or not image.save(out_png, "PNG"):
+                    return None
+                return out_png
+            return self.media_path
+
+        from core.setup.ffmpeg_setup import get_ffmpeg_dir, get_platform_info, check_ffmpeg
+        if not check_ffmpeg():
+            QMessageBox.warning(
+                self, self.tr("FFmpeg no encontrado"),
+                self.tr("Se necesita FFmpeg para capturar fotogramas a resolución completa.")
+            )
+            return None
+
+        info = get_platform_info()
+        ffmpeg_exe = os.path.join(get_ffmpeg_dir(), info["binary_name"])
+        if not os.path.exists(ffmpeg_exe):
+            return None
+
+        pos_sec = max(0.0, self.media_player.position() / 1000.0) if self.media_player else 0.0
+
+        if custom_dest_png:
+            out_png = custom_dest_png
+            os.makedirs(os.path.dirname(out_png), exist_ok=True)
+        else:
+            from core.utils.paths import get_cache_dir
+            frames_dir = os.path.join(get_cache_dir(), "frames")
+            os.makedirs(frames_dir, exist_ok=True)
+            stem = os.path.splitext(os.path.basename(self.media_path))[0]
+            # La cola de imágenes conserva rutas, así que dos capturas no pueden
+            # compartir archivo: podrían sobrescribirse o deduplicarse por ruta.
+            unique_id = uuid.uuid4().hex[:8]
+            out_png = os.path.join(frames_dir, f"{stem}_frame_{self._format_timestamp_for_filename(pos_sec)}_{unique_id}.png")
+
+        import subprocess
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        # 1. Búsqueda rápida (-ss antes de -i)
+        cmd = [
+            ffmpeg_exe, "-hide_banner", "-loglevel", "error",
+            "-ss", f"{pos_sec:.3f}",
+            "-i", self.media_path,
+            "-vframes", "1",
+            "-y", out_png
+        ]
+
+        try:
+            proc = subprocess.run(
+                cmd, capture_output=True, startupinfo=startupinfo,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                timeout=15
+            )
+            if proc.returncode == 0 and os.path.exists(out_png) and os.path.getsize(out_png) > 0:
+                return out_png
+
+            # 2. Fallback de decodificación exacta (-ss después de -i)
+            cmd_fallback = [
+                ffmpeg_exe, "-hide_banner", "-loglevel", "error",
+                "-i", self.media_path,
+                "-ss", f"{pos_sec:.3f}",
+                "-vframes", "1",
+                "-y", out_png
+            ]
+            proc = subprocess.run(
+                cmd_fallback, capture_output=True, startupinfo=startupinfo,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                timeout=20
+            )
+            if proc.returncode == 0 and os.path.exists(out_png) and os.path.getsize(out_png) > 0:
+                return out_png
+
+            logger.error(f"MediaTrimPlayerWidget: FFmpeg no pudo extraer el fotograma: {proc.stderr.decode('utf-8', errors='ignore')}")
+            return None
+        except Exception as e:
+            logger.error(f"MediaTrimPlayerWidget: Excepción extrayendo fotograma con FFmpeg: {e}")
+            return None
+
+    def _on_export_frame_to_file(self):
+        if not self.media_path:
+            return
+
+        stem = os.path.splitext(os.path.basename(self.media_path))[0]
+        pos_sec = max(0.0, self.media_player.position() / 1000.0) if self.media_player else 0.0
+        time_str = self._format_timestamp_for_filename(pos_sec)
+
+        default_dir = os.path.dirname(self.media_path)
+        default_filename = f"{stem}_frame_{time_str}.png"
+        default_path = os.path.join(default_dir, default_filename)
+
+        filters = [
+            self.tr("Imagen PNG (*.png)"),
+            self.tr("Imagen JPEG (*.jpg *.jpeg)"),
+            self.tr("Imagen WEBP (*.webp)"),
+            self.tr("Imagen AVIF (*.avif)"),
+            self.tr("Imagen TIFF (*.tiff *.tif)"),
+            self.tr("Documento PDF (*.pdf)"),
+            self.tr("Imagen BMP (*.bmp)"),
+            self.tr("Icono ICO (*.ico)"),
+            self.tr("Icono ICNS (*.icns)"),
+        ]
+        filter_str = ";;".join(filters) + f";;{self.tr('Todos los archivos (*.*)')}"
+
+        dest_path, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Exportar fotograma"),
+            default_path,
+            filter_str
+        )
+        if not dest_path:
+            return
+
+        # Si el usuario no especificó extensión, inferirla del filtro seleccionado
+        if not os.path.splitext(dest_path)[1]:
+            import re
+            m = re.search(r'\*\.([a-zA-Z0-9]+)', selected_filter)
+            if m:
+                dest_path += f".{m.group(1).lower()}"
+            else:
+                dest_path += ".png"
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            ext = os.path.splitext(dest_path)[1].lower()
+            if ext == ".png":
+                res = self._extract_frame_png(dest_path)
+                if not res or not os.path.exists(dest_path):
+                    raise Exception(self.tr("No se pudo extraer el fotograma."))
+            else:
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    temp_png = tmp.name
+
+                try:
+                    extracted = self._extract_frame_png(temp_png)
+                    if not extracted or not os.path.exists(temp_png):
+                        raise Exception(self.tr("No se pudo extraer el fotograma."))
+
+                    ext_to_fmt = {
+                        ".jpg": "JPG", ".jpeg": "JPG", ".webp": "WEBP",
+                        ".avif": "AVIF", ".tiff": "TIFF", ".tif": "TIFF",
+                        ".pdf": "PDF", ".bmp": "BMP", ".ico": "ICO",
+                        ".icns": "ICNS", ".svg": "SVG"
+                    }
+                    fmt = ext_to_fmt.get(ext, "PNG")
+
+                    from core.tabs.image_tools.image_converter import ImageConverter
+                    from core.tabs.image_tools.convert_options import default_options_for_format
+                    options = default_options_for_format(fmt)
+                    options["format"] = fmt
+
+                    converter = ImageConverter()
+                    ok, msg = converter.convert_file(temp_png, dest_path, options)
+                    if not ok:
+                        raise Exception(msg)
+                finally:
+                    try:
+                        if os.path.exists(temp_png):
+                            os.remove(temp_png)
+                    except OSError:
+                        pass
+
+            logger.info(f"MediaTrimPlayerWidget: Fotograma exportado con éxito a {dest_path}")
+        except Exception as e:
+            logger.error(f"MediaTrimPlayerWidget: Fallo exportando fotograma: {e}")
+            QMessageBox.warning(
+                self, self.tr("Error al exportar fotograma"),
+                self.tr("No se pudo exportar el fotograma: {0}").format(e)
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def _get_main_window(self):
+        w = self.window()
+        if hasattr(w, "tab_image"):
+            return w
+        for top in QApplication.topLevelWidgets():
+            if hasattr(top, "tab_image") and hasattr(top, "tab_video"):
+                return top
+        return None
+
+    def _on_export_frame_to_image_editor(self):
+        if not self.media_path:
+            return
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            frame_path = self._extract_frame_png()
+            if not frame_path or not os.path.exists(frame_path):
+                raise Exception(self.tr("No se pudo extraer el fotograma."))
+
+            main_win = self._get_main_window()
+            if main_win and hasattr(main_win, "tab_image") and hasattr(main_win.tab_image, "image_queue"):
+                main_win.tab_image.image_queue.add_files([frame_path])
+                if hasattr(main_win, "tabs"):
+                    main_win.tabs.setCurrentWidget(main_win.tab_image)
+                logger.info(f"MediaTrimPlayerWidget: Fotograma enviado a Herramientas de Imagen: {frame_path}")
+            else:
+                raise Exception(self.tr("No se encontró la pestaña de Herramientas de Imagen."))
+        except Exception as e:
+            logger.error(f"MediaTrimPlayerWidget: Error enviando a Herramientas de Imagen: {e}")
+            QMessageBox.warning(
+                self, self.tr("Error"),
+                self.tr("No se pudo enviar el fotograma a Herramientas de Imagen: {0}").format(e)
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def _on_send_frame_to_editor(self):
+        if not self.media_path:
+            return
+
+        from core.services.editor_integration_manager import EditorIntegrationManager
+        editor_mgr = EditorIntegrationManager.get_instance()
+        if not editor_mgr or not editor_mgr.active_editor:
+            return
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            frame_path = self._extract_frame_png()
+            if not frame_path or not os.path.exists(frame_path):
+                raise Exception(self.tr("No se pudo extraer el fotograma."))
+
+            editor_mgr.process_raw_download(frame_path, {})
+            logger.info(f"MediaTrimPlayerWidget: Fotograma enviado al editor externo ({editor_mgr.active_editor}): {frame_path}")
+        except Exception as e:
+            logger.error(f"MediaTrimPlayerWidget: Error enviando al editor externo: {e}")
+            QMessageBox.warning(
+                self, self.tr("Error"),
+                self.tr("No se pudo enviar el fotograma al editor: {0}").format(e)
+            )
+        finally:
+            QApplication.restoreOverrideCursor()

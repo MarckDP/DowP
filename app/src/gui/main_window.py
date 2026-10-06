@@ -676,9 +676,9 @@ class MainWindow(QMainWindow):
         self.tab_single = AdvancedProcessTab()
         self.tabs.addTab(self.tab_single, self.tr("Proceso Avanzado"))
 
-        # 3. Editor de Imagen
+        # 3. Herramientas de Imagen
         self.tab_image = ImageToolsTab()
-        self.tabs.addTab(self.tab_image, self.tr("Editor de Imagen"))
+        self.tabs.addTab(self.tab_image, self.tr("Herramientas de Imagen"))
 
         # 4. Herramientas Multimedia
         self.tab_video = VideoToolsTab()
@@ -746,7 +746,7 @@ class MainWindow(QMainWindow):
             self.tab_video.load_labels()
 
         if self.tabs.widget(index) == self.tab_image and hasattr(self.tab_image, "load_labels"):
-            logger.info("MainWindow: Recargando etiquetas en Editor de Imagen")
+            logger.info("MainWindow: Recargando etiquetas en Herramientas de Imagen")
             self.tab_image.load_labels()
 
         from core.utils.clipboard_monitor import ClipboardURLMonitor
@@ -800,7 +800,7 @@ class MainWindow(QMainWindow):
             )
         logger.info(
             f"MainWindow: Recibidos de {app_id} -> {added_media} a Herramientas Multimedia, "
-            f"{added_images} al Editor de Imagen."
+            f"{added_images} a Herramientas de Imagen."
         )
 
         if added_media or added_images:

@@ -1627,7 +1627,7 @@ class AdvancedProcessTab(QWidget):
             },
             {
                 "title": self.tr("Vista Previa y Editor"),
-                "desc": self.tr("Aquí verás la miniatura del medio. Puedes guardarla directamente o usar 'Enviar a E.I' para mandarla a la pestaña Editor de Imagen y procesarla de distintas formas."),
+                "desc": self.tr("Aquí verás la miniatura del medio. Puedes guardarla directamente o usar 'Enviar a H.I' para mandarla a la pestaña Herramientas de Imagen y procesarla de distintas formas."),
                 "widgets": [self.video_details.thumb_container]
             },
             {

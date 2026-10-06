@@ -341,7 +341,7 @@ class GeneralPage(QWidget):
         enable_label.setObjectName("settingsLabel")
         enable_desc = QLabel(self.tr(
             "Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia "
-            "y Editor de Imagen. Un sonido para cuando todo sale bien y otro si algo falla."))
+            "y Herramientas de Imagen. Un sonido para cuando todo sale bien y otro si algo falla."))
         set_themed_style(enable_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
         enable_desc.setWordWrap(True)
         enable_vbox.addWidget(enable_label)

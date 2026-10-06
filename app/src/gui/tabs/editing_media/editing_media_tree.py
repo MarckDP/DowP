@@ -1221,7 +1221,7 @@ class TreeListMixin:
 
                 if imagenes:
                     n = len(imagenes)
-                    label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Editor de Imagen").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Editor de Imagen")
+                    label = QCoreApplication.translate("TreeListMixin", "Enviar ({0}) a Herramientas de Imagen").format(n) if n > 1 else QCoreApplication.translate("TreeListMixin", "Enviar a Herramientas de Imagen")
                     act_send_img = menu.addAction(get_themed_svg_icon("image.svg"), label)
                     act_send_img.triggered.connect(lambda checked=False, items=imagenes: self._on_send_to_tool_clicked(items, "image"))
 

@@ -31,7 +31,7 @@ ACKNOWLEDGEMENTS = [
     (QT_TRANSLATE_NOOP("Credits", "Servidor de Buisco Editor"),
      QT_TRANSLATE_NOOP("Credits", "La comunidad: sujetos de prueba en cada versión"),
      "https://discord.gg/enZFNbj5T8"),
-    ("Cry", QT_TRANSLATE_NOOP("Credits", "Por un apoyo enorme al proyecto"), ""),
+    ("Cry", QT_TRANSLATE_NOOP("Credits", "Por un apoyo enorme al proyecto"), "https://www.instagram.com/jhoncart0o"),
     ("JhonV", QT_TRANSLATE_NOOP("Credits", "Ideas y reporte de errores"), "https://x.com/JhonV__"),
     ("Lozada", QT_TRANSLATE_NOOP("Credits", "Pruebas y comentarios"), "https://www.instagram.com/soy_lozada"),
     ("Equinox", QT_TRANSLATE_NOOP("Credits", "Hizo posible DowP en Mac"),

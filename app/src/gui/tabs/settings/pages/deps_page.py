@@ -1462,7 +1462,7 @@ class VtracerCardPanel(QFrame):
     _TOOLTIP_VTRACER = QCoreApplication.translate(
         "VtracerCardPanel",
         "vtracer convierte imágenes raster (PNG/JPG/etc.) a vectores SVG.\n"
-        "Lo usa el Editor de Imagen para el formato de salida SVG -- es opcional,\n"
+        "Lo usa Herramientas de Imagen para el formato de salida SVG -- es opcional,\n"
         "solo hace falta si vas a exportar a ese formato."
     )
 
@@ -1519,7 +1519,7 @@ class VtracerCardPanel(QFrame):
         bottom_row.setSpacing(12)
 
         desc_lbl = QLabel(self.tr(
-            "Vectoriza imágenes a SVG. Necesario en el Editor de Imagen para exportar a ese formato."
+            "Vectoriza imágenes a SVG. Necesario en Herramientas de Imagen para exportar a ese formato."
         ))
         set_themed_style(desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         desc_lbl.setWordWrap(True)
@@ -1654,7 +1654,7 @@ class GhostscriptCardPanel(QFrame):
     _TOOLTIP_GS = QCoreApplication.translate(
         "GhostscriptCardPanel",
         "Ghostscript es el intérprete de PostScript que permite convertir archivos\n"
-        "EPS/PS en el Editor de Imagen -- ningún formato más de DowP lo necesita.\n\n"
+        "EPS/PS en Herramientas de Imagen -- ningún formato más de DowP lo necesita.\n\n"
         "Es opcional: si no lo instalas, todo lo demás sigue funcionando igual,\n"
         "y al intentar convertir un EPS/PS se te va a avisar cómo instalarlo.\n\n"
         "En Windows, DowP lo descarga y gestiona automáticamente. En Mac/Linux no hay\n"
@@ -1683,7 +1683,7 @@ class GhostscriptCardPanel(QFrame):
         top_row = QHBoxLayout()
         top_row.setSpacing(8)
 
-        title_lbl = QLabel(self.tr("Ghostscript (EPS/PS del Editor de Imagen)"))
+        title_lbl = QLabel(self.tr("Ghostscript (EPS/PS de Herramientas de Imagen)"))
         set_themed_style(title_lbl, lambda: f"font-size: 14px; font-weight: bold; color: {get_theme_token('texto_titulo', '#EEEEEE')};")
         top_row.addWidget(title_lbl)
 
@@ -1720,7 +1720,7 @@ class GhostscriptCardPanel(QFrame):
         windows_layout.setSpacing(12)
 
         desc_lbl = QLabel(self.tr(
-            "Opcional -- solo hace falta para convertir archivos EPS/PS. El resto del Editor de Imagen no lo necesita."
+            "Opcional -- solo hace falta para convertir archivos EPS/PS. El resto de Herramientas de Imagen no lo necesita."
         ))
         set_themed_style(desc_lbl, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
         desc_lbl.setWordWrap(True)
@@ -1914,7 +1914,7 @@ class GhostscriptCardPanel(QFrame):
                 QMessageBox.information(
                     self, self.tr("Ghostscript detectado"),
                     self.tr("Ghostscript {0} detectado correctamente. Ya puedes convertir "
-                             "archivos EPS/PS en el Editor de Imagen.").format(self.local_ver or "")
+                             "archivos EPS/PS en Herramientas de Imagen.").format(self.local_ver or "")
                 )
         else:
             QMessageBox.warning(
