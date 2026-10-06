@@ -57,6 +57,8 @@ if sys.platform == "win32":
     _user32 = ctypes.windll.user32
     _user32.MonitorFromWindow.restype = ctypes.c_void_p
     _user32.MonitorFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD]
+    _user32.MonitorFromRect.restype = ctypes.c_void_p
+    _user32.MonitorFromRect.argtypes = [ctypes.POINTER(_RECT), wintypes.DWORD]
     _user32.GetMonitorInfoW.restype = wintypes.BOOL
     _user32.GetMonitorInfoW.argtypes = [ctypes.c_void_p, ctypes.POINTER(_MONITORINFO)]
     _user32.IsZoomed.restype = wintypes.BOOL
@@ -67,6 +69,7 @@ if sys.platform == "win32":
     _HTCLIENT = 1
     _HTCAPTION = 2
     _MONITOR_DEFAULTTONEAREST = 2
+    _WVR_REDRAW = 0x0300
 
 
 def make_led_icon(color_hex: str, size: int = 32, glow: bool = True) -> QIcon:
@@ -869,12 +872,20 @@ class MainWindow(QMainWindow):
         # rompiendo visualmente toda la UI hasta minimizar/restaurar de nuevo.
         # IsZoomed() consulta el estado nativo real en el momento exacto del mensaje.
         if _user32.IsZoomed(msg.hWnd):
-            hmonitor = _user32.MonitorFromWindow(msg.hWnd, _MONITOR_DEFAULTTONEAREST)
+            # En configuraciones multimonitor (en especial al arrastrar para maximizar con
+            # Aero Snap), MonitorFromWindow(msg.hWnd) devuelve el monitor donde estaba la
+            # ventana ANTES de arrastrar porque el HWND aún no ha completado el movimiento.
+            # Por eso se usa MonitorFromRect sobre params.rgrc[0] (el rectángulo propuesto
+            # hacia donde Windows está colocando la ventana maximizada).
+            hmonitor = _user32.MonitorFromRect(ctypes.byref(params.rgrc[0]), _MONITOR_DEFAULTTONEAREST)
+            if not hmonitor:
+                hmonitor = _user32.MonitorFromWindow(msg.hWnd, _MONITOR_DEFAULTTONEAREST)
             if hmonitor:
                 mi = _MONITORINFO()
                 mi.cbSize = ctypes.sizeof(_MONITORINFO)
                 if _user32.GetMonitorInfoW(hmonitor, ctypes.byref(mi)):
                     params.rgrc[0] = mi.rcWork
+            return True, _WVR_REDRAW
         return True, 0
 
     def nativeEvent(self, eventType, message):

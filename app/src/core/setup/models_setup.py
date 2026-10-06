@@ -84,10 +84,56 @@ def is_rembg_model_orphaned(model_info: dict) -> bool:
 
 
 def is_rembg_model_gated(model_info: dict) -> bool:
-    """True si la URL apunta a una página de HuggingFace (no a un archivo directo) --
-    esos modelos necesitan descarga manual con cuenta, no se pueden bajar solos."""
+    """True si la URL apunta a una carpeta de Hugging Face (no a un archivo directo):
+    son modelos con licencia restringida que necesitan la cuenta del usuario (token)
+    o que él los descargue a mano -- ver core/setup/hf_auth.py e install_manual_model."""
     url = model_info.get("url", "")
     return "huggingface.co" in url and "/resolve/" not in url and "?download=" not in url
+
+
+def install_manual_model(model_info: dict, source_path: str, progress_callback=None) -> tuple[bool, str]:
+    """Instala un modelo que el usuario descargó a mano (ej. desde la página de
+    Hugging Face): lo copia a su carpeta con el nombre que espera DowP. Comprueba
+    que pese lo mismo que en el catálogo, para no instalar un archivo equivocado
+    (otra variante, una descarga a medias)."""
+    if not source_path or not os.path.isfile(source_path):
+        return False, QCoreApplication.translate("models_setup", "No se encontró el archivo: {0}").format(source_path)
+    expected = int(model_info.get("size_bytes") or 0)
+    actual = os.path.getsize(source_path)
+    if expected and actual != expected:
+        return False, QCoreApplication.translate(
+            "models_setup",
+            "Ese archivo no es «{0}»: pesa {1:,} bytes y debería pesar {2:,}. "
+            "Revisa que elegiste la variante correcta y que la descarga terminó."
+        ).format(model_info["file"], actual, expected)
+
+    target_path = _model_path(model_info)
+    part_path = target_path + ".part"
+    try:
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        if os.path.abspath(source_path) == os.path.abspath(target_path):
+            return True, QCoreApplication.translate("models_setup", "Modelo instalado correctamente.")
+        done = 0
+        with open(source_path, "rb") as fin, open(part_path, "wb") as fout:
+            while True:
+                chunk = fin.read(8 * 1024 * 1024)
+                if not chunk:
+                    break
+                fout.write(chunk)
+                done += len(chunk)
+                if progress_callback and actual:
+                    progress_callback(int(done * 100 / actual))
+        os.replace(part_path, target_path)
+        logger.info(f"Modelo instalado a mano: {source_path} -> {target_path}")
+        return True, QCoreApplication.translate("models_setup", "Modelo instalado correctamente.")
+    except Exception as e:
+        logger.error(f"No se pudo instalar el modelo a mano: {e}")
+        try:
+            if os.path.exists(part_path):
+                os.remove(part_path)
+        except OSError:
+            pass
+        return False, QCoreApplication.translate("models_setup", "No se pudo copiar el archivo: {0}").format(e)
 
 
 def download_rembg_model(model_info: dict, progress_callback=None) -> tuple[bool, str]:
@@ -99,8 +145,14 @@ def download_rembg_model(model_info: dict, progress_callback=None) -> tuple[bool
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         part_path = target_path + ".part"
 
-        logger.info(f"Descargando modelo rembg desde {model_info['url']}")
-        download_file(model_info["url"], part_path, progress_callback=progress_callback)
+        url, headers = model_info["url"], None
+        if is_rembg_model_gated(model_info):
+            # Licencia restringida: archivo directo con el token de la cuenta del
+            # usuario (Ajustes > Modelos > Cuenta de Hugging Face).
+            from core.setup import hf_auth
+            url, headers = hf_auth.resolve_url(model_info), hf_auth.auth_headers()
+        logger.info(f"Descargando modelo rembg desde {url}")
+        download_file(url, part_path, progress_callback=progress_callback, headers=headers)
 
         if os.path.exists(target_path):
             os.remove(target_path)

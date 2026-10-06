@@ -102,13 +102,47 @@ def get_app_data_dir() -> str:
     os.makedirs(app_dir, exist_ok=True)
     return app_dir
 
+def get_default_models_dir() -> str:
+    """bin/models (junto a bin/dependences): la carpeta de modelos de siempre."""
+    return os.path.join(get_bin_root_dir(), "bin", "models")
+
+
+def get_custom_models_dir() -> str:
+    """Carpeta de modelos elegida por el usuario en Ajustes > Modelos ("" = la de
+    siempre). Ver core/setup/models_location.py."""
+    try:
+        from core.utils.config_manager import get_config
+        return (get_config().get("models_dir") or "").strip()
+    except Exception:
+        return ""
+
+
+_models_dir_warned = set()
+
+
 def get_models_dir() -> str:
-    """Retorna bin/models (junto a bin/dependences), donde se instalan los modelos de
-    IA (rembg, motores de upscaling). A diferencia de las dependencias, los modelos
-    NUNCA se descargan solos al abrir la app -- solo cuando el usuario los pide."""
-    models_dir = os.path.join(get_bin_root_dir(), "bin", "models")
-    os.makedirs(models_dir, exist_ok=True)
+    """Donde se instalan los modelos de IA (fondo, profundidad, normales,
+    reescalado). Todo pasa por aquí, así que elegir otra carpeta en Ajustes >
+    Modelos mueve todo a la vez. A diferencia de las dependencias, los modelos
+    NUNCA se descargan solos al abrir la app -- solo cuando el usuario los pide.
+
+    Nunca lanza: si la carpeta elegida está en un disco que no está conectado, se
+    devuelve igual (los modelos se ven "no descargados" y Ajustes > Modelos avisa).
+    NO se vuelve en silencio a la carpeta de siempre: el usuario acabaría bajando
+    varios GB en el disco que justamente quería evitar."""
+    custom = get_custom_models_dir()
+    models_dir = os.path.abspath(os.path.expanduser(custom)) if custom else get_default_models_dir()
+    try:
+        os.makedirs(models_dir, exist_ok=True)
+    except OSError as e:
+        if models_dir not in _models_dir_warned:
+            _models_dir_warned.add(models_dir)
+            logger.warning(f"Modelos IA: la carpeta de modelos no está disponible ({models_dir}): {e}")
     return models_dir
+
+
+def is_models_dir_available() -> bool:
+    return os.path.isdir(get_models_dir())
 
 def get_cache_dir() -> str:
     """Retorna el directorio principal de caché persistente de disco (ej. AppData/DowP2/cache)."""

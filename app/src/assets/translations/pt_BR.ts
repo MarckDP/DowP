@@ -2116,8 +2116,8 @@ Tem certeza?</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/convert_panel.py" line="123"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="426"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="452"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="454"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="480"/>
         <source>No Convertir</source>
         <translation>Não Converter</translation>
     </message>
@@ -2129,13 +2129,13 @@ Tem certeza?</translation>
     <message>
         <location filename="../../gui/tabs/image_tools/convert_panel.py" line="157"/>
         <location filename="../../gui/tabs/image_tools/convert_panel.py" line="201"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="351"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="379"/>
         <source>Mantener transparencia</source>
         <translation>Manter transparência</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/convert_panel.py" line="162"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="344"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="372"/>
         <source>Compresión:</source>
         <translation>Compressão:</translation>
     </message>
@@ -2167,102 +2167,117 @@ Tem certeza?</translation>
         <translation>Salvar metadados EXIF</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="227"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="230"/>
         <source>Fondo transparente</source>
         <translation>Fundo transparente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="259"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="234"/>
+        <source>Fusionar en un solo PDF</source>
+        <translation>Mesclar em um único PDF</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="244"/>
+        <source>Nombre del archivo:</source>
+        <translation>Nome do arquivo:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="248"/>
+        <source>Por defecto: {nombre}_combined.pdf</source>
+        <translation>Padrão: {nome}_combined.pdf</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="287"/>
         <source>Estilo de vectorizado:</source>
         <translation>Estilo de vetorização:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="262"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="290"/>
         <source>Blanco y Negro -- líneas, logos simples</source>
         <translation>Preto e Branco -- linhas, logos simples</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="263"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="291"/>
         <source>Póster -- colores planos, ilustraciones</source>
         <translation>Pôster -- cores planas, ilustrações</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="264"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="292"/>
         <source>Foto -- fotografías, degradados</source>
         <translation>Foto -- fotografias, degradês</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="274"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="302"/>
         <source>Modo de curvas:</source>
         <translation>Modo de curvas:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="277"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="305"/>
         <source>Píxel -- para pixel art</source>
         <translation>Pixel -- para pixel art</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="278"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="306"/>
         <source>Polígono</source>
         <translation>Polígono</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="279"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="307"/>
         <source>Spline (curvas suaves)</source>
         <translation>Spline (curvas suaves)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="283"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="311"/>
         <source>Agrupación de color:</source>
         <translation>Agrupamento de cor:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="286"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="314"/>
         <source>Por color</source>
         <translation>Por cor</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="287"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="315"/>
         <source>Blanco y negro</source>
         <translation>Preto e branco</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="288"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="316"/>
         <source>Watershed (regiones por forma)</source>
         <translation>Watershed (regiões por forma)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="293"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="321"/>
         <source>Precisión de color (1-8):</source>
         <translation>Precisão de cor (1-8):</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="299"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="327"/>
         <source>Limpieza de ruido:</source>
         <translation>Limpeza de ruído:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="305"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="333"/>
         <source>Suavizado de curvas (0 = desactivado):</source>
         <translation>Suavização de curvas (0 = desativado):</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="316"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="344"/>
         <source>Umbral adaptativo (escaneos con luz despareja)</source>
         <translation>Limiar adaptativo (digitalizações com iluminação irregular)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="319"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="347"/>
         <source>Umbral:</source>
         <translation>Limiar:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="366"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="394"/>
         <source>Mapa de profundidad: 16 bits</source>
         <translation>Mapa de profundidade: 16 bits</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="369"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="397"/>
         <source>Guarda el mapa con 65.536 niveles de gris en vez de 256: evita los escalones al usarlo como desplazamiento en DaVinci o Blender.
 
 No se aplica si el mapa lleva transparencia (por ejemplo, si también se eliminó el fondo) ni si después pasa por Reescalar o Canvas: en esos casos se guarda en 8 bits.</source>
@@ -2271,30 +2286,30 @@ No se aplica si el mapa lleva transparencia (por ejemplo, si también se elimin�
 Não se aplica se o mapa tiver transparência (por exemplo, se o fundo também foi removido) nem se depois passar por Ampliar ou Canvas: nesses casos é salvo em 8 bits.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="388"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="404"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="416"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="432"/>
         <source>Tamaños a incluir:</source>
         <translation>Tamanhos a incluir:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="420"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="448"/>
         <source>Comprimir (RLE)</source>
         <translation>Comprimir (RLE)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="445"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="473"/>
         <source>Convertir</source>
         <translation>Converter</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="446"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="474"/>
         <source>Elige al menos un tamaño de ícono.</source>
         <translation>Escolha pelo menos um tamanho de ícone.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="245"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="332"/>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="472"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="273"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="360"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="500"/>
         <location filename="../../gui/tabs/video_tools/convert_panel.py" line="113"/>
         <location filename="../../gui/tabs/video_tools/convert_panel.py" line="745"/>
         <location filename="../../gui/tabs/video_tools/convert_panel.py" line="752"/>
@@ -2303,7 +2318,7 @@ Não se aplica se o mapa tiver transparência (por exemplo, se o fundo também f
         <translation>Rápido</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="245"/>
+        <location filename="../../gui/tabs/image_tools/convert_panel.py" line="273"/>
         <location filename="../../gui/tabs/video_tools/convert_panel.py" line="113"/>
         <source>Manual</source>
         <translation>Manual</translation>
@@ -4059,22 +4074,22 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
 <context>
     <name>EditorAppWidget</name>
     <message>
-        <location filename="../../gui/main_window.py" line="226"/>
+        <location filename="../../gui/main_window.py" line="229"/>
         <source>{0} (Iniciando...)</source>
         <translation>{0} (Iniciando...)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="228"/>
+        <location filename="../../gui/main_window.py" line="231"/>
         <source>{0} (Conectado y Vinculado)</source>
         <translation>{0} (Conectado e Vinculado)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="230"/>
+        <location filename="../../gui/main_window.py" line="233"/>
         <source>{0} (Abierto - Sin vincular)</source>
         <translation>{0} (Aberto - Sem vínculo)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="232"/>
+        <location filename="../../gui/main_window.py" line="235"/>
         <source>{0} (Cerrado - Clic para abrir)</source>
         <translation>{0} (Fechado - Clique para abrir)</translation>
     </message>
@@ -4082,47 +4097,47 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
 <context>
     <name>EditorStatusCornerWidget</name>
     <message>
-        <location filename="../../gui/main_window.py" line="314"/>
+        <location filename="../../gui/main_window.py" line="317"/>
         <source>Auto-enviar</source>
         <translation>Envio automático</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="321"/>
+        <location filename="../../gui/main_window.py" line="324"/>
         <source>Ajustes</source>
         <translation>Configurações</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="439"/>
+        <location filename="../../gui/main_window.py" line="442"/>
         <source>Auto-enviar: DESACTIVADO / PAUSADO (Clic para activar)</source>
         <translation>Envio automático: DESATIVADO / PAUSADO (Clique para ativar)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="443"/>
+        <location filename="../../gui/main_window.py" line="446"/>
         <source>Auto-enviar a {0}: ACTIVO Y CONECTADO</source>
         <translation>Envio automático para {0}: ATIVO E CONECTADO</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="446"/>
+        <location filename="../../gui/main_window.py" line="449"/>
         <source>Auto-enviar: Editor detectado (sin vincular)</source>
         <translation>Envio automático: Editor detectado (sem vínculo)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="449"/>
+        <location filename="../../gui/main_window.py" line="452"/>
         <source>Auto-enviar: Ningún editor abierto (En espera)</source>
         <translation>Envio automático: Nenhum editor aberto (Aguardando)</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="460"/>
+        <location filename="../../gui/main_window.py" line="463"/>
         <source>Configurar integración</source>
         <translation>Configurar integração</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="498"/>
+        <location filename="../../gui/main_window.py" line="501"/>
         <source>Ruta no encontrada</source>
         <translation>Caminho não encontrado</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="498"/>
+        <location filename="../../gui/main_window.py" line="501"/>
         <source>No se encontró el ejecutable en:
 {0}
 Configura la ruta en Ajustes -&gt; Integraciones.</source>
@@ -4131,7 +4146,7 @@ Configura la ruta en Ajustes -&gt; Integraciones.</source>
 Configure o caminho em Configurações -&gt; Integrações.</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="504"/>
+        <location filename="../../gui/main_window.py" line="507"/>
         <source>La extensión no está respondiendo. Abre el panel de DowP en tu editor para conectar.</source>
         <translation>A extensão não está respondendo. Abra o painel do DowP no seu editor para conectar.</translation>
     </message>
@@ -4958,58 +4973,58 @@ Todas (inclui experimentais): você recebe também compilações de teste, antes
         <translation>Se ativo, pré-seleciona o formato mais compatível (✨). Se não, a melhor qualidade absoluta.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="269"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="289"/>
         <source>Tutoriales interactivos</source>
         <translation>Tutoriais interativos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="272"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="292"/>
         <source>Si deseas volver a ver los tutoriales iniciales de cada pestaña, puedes restablecerlos aquí.</source>
         <translation>Se quiser rever os tutoriais iniciais de cada aba, você pode reiniciá-los aqui.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="279"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="379"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="299"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="400"/>
         <source>Restablecer</source>
         <translation>Restaurar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="312"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="333"/>
         <source>Sonidos</source>
         <translation>Sons</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="319"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="340"/>
         <source>Sonido al terminar un proceso</source>
         <translation>Som ao terminar um processo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="322"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="343"/>
         <source>Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia y Editor de Imagen. Un sonido para cuando todo sale bien y otro si algo falla.</source>
         <translation>Toca ao terminar no Modo Rápido, Processo Avançado, Ferramentas de Mídia e Editor de Imagem. Um som quando tudo dá certo e outro se algo falhar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="335"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="356"/>
         <source>Cuándo sonar</source>
         <translation>Quando tocar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="339"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="360"/>
         <source>Al terminar todo</source>
         <translation>Ao terminar tudo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="340"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="361"/>
         <source>Al terminar cada elemento</source>
         <translation>Ao terminar cada item</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="341"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="362"/>
         <source>Ambos</source>
         <translation>Ambos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="343"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="364"/>
         <source>Al terminar todo: un solo sonido cuando acaba toda la tanda (de error si algo falló).
 Al terminar cada elemento: un sonido por cada descarga, archivo o imagen.
 Ambos: por cada elemento y también al final.</source>
@@ -5018,42 +5033,42 @@ Ao terminar cada item: um som para cada download, arquivo ou imagem.
 Ambos: para cada item e também no final.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="355"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="376"/>
         <source>Sonido de éxito</source>
         <translation>Som de sucesso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="356"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="377"/>
         <source>Sonido de error</source>
         <translation>Som de erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="366"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="387"/>
         <source>Probar</source>
         <translation>Testar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="372"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="393"/>
         <source>Elegir...</source>
         <translation>Escolher...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="376"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="397"/>
         <source>WAV, MP3 u OGG, de hasta 10 segundos y 2 MB.</source>
         <translation>WAV, MP3 ou OGG, de até 10 segundos e 2 MB.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="383"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="404"/>
         <source>Volver al sonido predeterminado de DowP</source>
         <translation>Voltar ao som padrão do DowP</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="438"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="459"/>
         <source>Predeterminado</source>
         <translation>Padrão</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="399"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="420"/>
         <source>Volumen</source>
         <translation>Volume</translation>
     </message>
@@ -5088,207 +5103,217 @@ Ambos: para cada item e também no final.</translation>
         <translation>Se alguma parte não mudou de aparência, reiniciar o DowP a atualiza.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="438"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="269"/>
+        <source>Cambiar opción con la rueda en menús</source>
+        <translation>Mudar opção com a roda do mouse em menus</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="272"/>
+        <source>Permite cambiar la opción seleccionada al pasar la rueda del ratón sobre un menú cerrado. Si está desactivado (recomendado), la rueda desplazará la página normalmente.</source>
+        <translation>Permite mudar a opção selecionada ao rolar a roda do mouse sobre um menu fechado. Quando desativado (recomendado), a roda rolará a página normalmente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="459"/>
         <source>Personalizado</source>
         <translation>Personalizado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="475"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="496"/>
         <source>Elegir sonido</source>
         <translation>Escolher som</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="475"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="496"/>
         <source>Audio (*.wav *.mp3 *.ogg)</source>
         <translation>Áudio (*.wav *.mp3 *.ogg)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="481"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="502"/>
         <source>Formato no admitido. Usa un archivo WAV, MP3 u OGG.</source>
         <translation>Formato não suportado. Use um arquivo WAV, MP3 ou OGG.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="482"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="503"/>
         <source>El archivo pesa más de 2 MB.</source>
         <translation>O arquivo tem mais de 2 MB.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="483"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="504"/>
         <source>El sonido dura más de 10 segundos.</source>
         <translation>O som dura mais de 10 segundos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="484"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="505"/>
         <source>Hace falta FFmpeg para preparar el sonido. Instálalo desde Ajustes &gt; Dependencias.</source>
         <translation>O FFmpeg é necessário para preparar o som. Instale-o em Configurações &gt; Dependências.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="485"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="506"/>
         <source>No se pudo leer el archivo de audio. Prueba con otro.</source>
         <translation>Não foi possível ler o arquivo de áudio. Tente outro.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="487"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="508"/>
         <source>No se pudo usar ese sonido</source>
         <translation>Não foi possível usar esse som</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="504"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="525"/>
         <source>Importar tema…</source>
         <translation>Importar tema…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="505"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="526"/>
         <source>Exportar tema actual…</source>
         <translation>Exportar tema atual…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="506"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="527"/>
         <source>Eliminar este tema</source>
         <translation>Excluir este tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="509"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="530"/>
         <source>Abrir carpeta de temas</source>
         <translation>Abrir pasta de temas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="527"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="537"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="548"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="558"/>
         <source>Importar tema</source>
         <translation>Importar tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="527"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="563"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="548"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="584"/>
         <source>Temas de DowP (*.json)</source>
         <translation>Temas do DowP (*.json)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="533"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="544"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="554"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="565"/>
         <source>No se pudo importar el tema</source>
         <translation>Não foi possível importar o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="538"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="559"/>
         <source>Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?</source>
         <translation>Você já tem um tema chamado “{0}”. Deseja substituí-lo?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="547"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="568"/>
         <source>Se importó el tema «{0}» y ya está aplicado.</source>
         <translation>O tema “{0}” foi importado e já está aplicado.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="549"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="570"/>
         <source>Era un tema de DowP 1: se convirtió al formato nuevo. Lo que no tiene equivalente se toma del tema DowP.</source>
         <translation>Era um tema do DowP 1: foi convertido para o novo formato. O que não tem equivalente é tirado do tema DowP.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="553"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="574"/>
         <source>Se ignoraron {0} colores no válidos: {1}</source>
         <translation>{0} cores inválidas foram ignoradas: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="555"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="576"/>
         <source>Tema importado</source>
         <translation>Tema importado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="563"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="584"/>
         <source>Exportar tema</source>
         <translation>Exportar tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="571"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="592"/>
         <source>No se pudo exportar el tema</source>
         <translation>Não foi possível exportar o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="574"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="595"/>
         <source>Tema exportado</source>
         <translation>Tema exportado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="575"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="596"/>
         <source>Se guardó el tema completo, con sus dos modos, formas y tipografía. Puedes editarlo y volver a importarlo, o compartirlo.</source>
         <translation>O tema completo foi salvo, com os dois modos, formas e tipografia. Você pode editá-lo e importá-lo de novo, ou compartilhá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="584"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="605"/>
         <source>Eliminar tema</source>
         <translation>Excluir tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="585"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="606"/>
         <source>¿Eliminar el tema «{0}»? Se volverá al tema DowP.</source>
         <translation>Excluir o tema “{0}”? O DowP voltará para o tema DowP.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="591"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="612"/>
         <source>No se pudo eliminar el tema</source>
         <translation>Não foi possível excluir o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="623"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="644"/>
         <source>Este tema tiene un solo modo</source>
         <translation>Este tema tem apenas um modo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="629"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="650"/>
         <source>Por defecto del tema</source>
         <translation>Padrão do tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="721"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="745"/>
         <source>Reinicio necesario</source>
         <translation>Reinício necessário</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="722"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="746"/>
         <source>El idioma cambia al reiniciar DowP.</source>
         <translation>O idioma muda ao reiniciar o DowP.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="724"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="748"/>
         <source>La preferencia ya quedó guardada. Si sigues sin reiniciar, la interfaz se queda en el idioma actual hasta la próxima vez que abras la aplicación.</source>
         <translation>A preferência já foi salva. Se você não reiniciar, a interface continua no idioma atual até a próxima vez que abrir o aplicativo.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/general_page.py" line="183"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="727"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="751"/>
         <source>Reiniciar ahora</source>
         <translation>Reiniciar agora</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="728"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="752"/>
         <source>Más tarde</source>
         <translation>Mais tarde</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="748"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="792"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="772"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="816"/>
         <source>No se pudo reiniciar</source>
         <translation>Não foi possível reiniciar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="749"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="773"/>
         <source>Cierra y vuelve a abrir DowP a mano para aplicar el idioma nuevo.</source>
         <translation>Feche e abra o DowP manualmente para aplicar o idioma novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="793"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="817"/>
         <source>Cierra y vuelve a abrir DowP a mano para aplicar el tema por completo.</source>
         <translation>Feche e abra o DowP manualmente para aplicar o tema por completo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="843"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="874"/>
         <source>Tutoriales restablecidos</source>
         <translation>Tutoriais reiniciados</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="844"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="875"/>
         <source>Los tutoriales interactivos volverán a mostrarse la próxima vez que abras sus respectivas pestañas.</source>
         <translation>Os tutoriais interativos vão aparecer de novo na próxima vez que você abrir as respectivas abas.</translation>
     </message>
@@ -5637,39 +5662,52 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
 <context>
     <name>ImageConvertWorker</name>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="69"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="71"/>
         <source>No Convertir</source>
         <translation>Não Converter</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="135"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="165"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="439"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="456"/>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="86"/>
         <source>Cancelado</source>
         <translation>Cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="143"/>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="196"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="173"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="226"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="399"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="436"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="492"/>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="77"/>
         <source>Error: {0}</source>
         <translation>Erro: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="149"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="179"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="407"/>
         <source>Omitido (ya existe)</source>
         <translation>Ignorado (já existe)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="152"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="182"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="430"/>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="76"/>
         <source>Procesando...</source>
         <translation>Processando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="186"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="216"/>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="448"/>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="75"/>
         <source>Completado</source>
         <translation>Concluído</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/image_convert_worker.py" line="458"/>
+        <source>No se creó el PDF</source>
+        <translation>O PDF não foi criado</translation>
     </message>
 </context>
 <context>
@@ -5823,43 +5861,43 @@ Copia una imagen (por ejemplo con una captura de pantalla, o con &quot;Copiar im
 Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar imagem&quot; no navegador) ou copie arquivos de imagem pelo explorador de arquivos, e tente de novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="708"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="720"/>
         <source>PDF inválido</source>
         <translation>PDF inválido</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="709"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="721"/>
         <source>No se pudo abrir &quot;{0}&quot; como PDF: {1}</source>
         <translation>Não foi possível abrir &quot;{0}&quot; como PDF: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="729"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="741"/>
         <source>Error al extraer páginas</source>
         <translation>Erro ao extrair páginas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="730"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="742"/>
         <source>No se pudieron extraer las páginas de &quot;{0}&quot;: {1}</source>
         <translation>Não foi possível extrair as páginas de &quot;{0}&quot;: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="789"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="801"/>
         <source>{0} archivos</source>
         <translation>{0} arquivos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="806"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="818"/>
         <source>Eliminar de la cola</source>
         <translation>Remover da fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="807"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="819"/>
         <source>Abrir ubicación del archivo</source>
         <translation>Abrir o local do arquivo</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="87"/>
-        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="837"/>
+        <location filename="../../gui/tabs/image_tools/image_queue_widget.py" line="849"/>
         <source>Resultado eliminado</source>
         <translation>Resultado removido</translation>
     </message>
@@ -5983,7 +6021,7 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="550"/>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="647"/>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="1326"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2745"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2751"/>
         <source>Redimensionar</source>
         <translation>Redimensionar</translation>
     </message>
@@ -6281,7 +6319,7 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2094"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2594"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2600"/>
         <source>Iniciar Proceso</source>
         <translation>Iniciar Processo</translation>
     </message>
@@ -6323,7 +6361,7 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
     <message>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2291"/>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2356"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2440"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2443"/>
         <source>Cancelar</source>
         <translation>Cancelar</translation>
     </message>
@@ -6363,151 +6401,156 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
 {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2445"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2448"/>
         <source>Cancelar el proceso de conversión actual</source>
         <translation>Cancelar o processo de conversão atual</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2463"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2466"/>
         <source>Iniciando...</source>
         <translation>Iniciando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2465"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2468"/>
         <source>Iniciando 0/{0}...</source>
         <translation>Iniciando 0/{0}...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2473"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2474"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2476"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2477"/>
         <source>Cancelando...</source>
         <translation>Cancelando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2478"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2481"/>
         <source>Cargando</source>
         <translation>Carregando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2479"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2482"/>
         <source>Redimensionando</source>
         <translation>Redimensionando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2480"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2483"/>
         <source>Eliminando fondo</source>
         <translation>Removendo o fundo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2481"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2484"/>
         <source>Calculando profundidad</source>
         <translation>Calculando profundidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2482"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2485"/>
         <source>Calculando normales</source>
         <translation>Calculando normais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2483"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2486"/>
         <source>Reescalando con IA</source>
         <translation>Ampliando com IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2484"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2487"/>
         <source>Ajustando canvas</source>
         <translation>Ajustando o canvas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2485"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2488"/>
         <source>Guardando</source>
         <translation>Salvando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2486"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2488"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2489"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2492"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2529"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2490"/>
+        <source>Fusionando PDF</source>
+        <translation>Mesclando PDF</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2533"/>
         <source>Procesando...</source>
         <translation>Processando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2604"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2610"/>
         <source>Completado: {0}/{1} archivos</source>
         <translation>Concluído: {0}/{1} arquivos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2721"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2727"/>
         <source>Reescalado con Inteligencia Artificial</source>
         <translation>Ampliação com Inteligência Artificial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2722"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2728"/>
         <source>Aumenta la resolución y calidad de tus imágenes utilizando modelos de IA ncnn.</source>
         <translation>Aumente a resolução e a qualidade das suas imagens usando modelos de IA ncnn.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2727"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2733"/>
         <source>Quitar Fondo</source>
         <translation>Remover Fundo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2728"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2734"/>
         <source>Elimina automáticamente el fondo de cualquier imagen. Tienes diferentes modelos IA pesados para objetos, ropa o siluetas.</source>
         <translation>Remove automaticamente o fundo de qualquer imagem. Você tem vários modelos de IA pesados para objetos, roupas ou silhuetas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2733"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2739"/>
         <source>Mapa de Profundidad</source>
         <translation>Mapa de Profundidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2734"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2740"/>
         <source>Genera un mapa en escala de grises con la distancia de cada zona de la imagen (lo cercano en blanco). Sirve para efectos de desenfoque, niebla o desplazamiento en DaVinci Resolve o Blender.</source>
         <translation>Gera um mapa em escala de cinza com a distância de cada área da imagem (o que está perto em branco). Serve para efeitos de desfoque, névoa ou deslocamento no DaVinci Resolve ou no Blender.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2739"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2745"/>
         <source>Mapa de Normales</source>
         <translation>Mapa de Normais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2740"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2746"/>
         <source>Genera un normal map: de una foto o escena con MoGe-2, o de una textura plana para materiales 3D con DeepBump. Sirve para relighting en DaVinci Resolve o para texturas en Blender. Si activas esta herramienta se apaga el Mapa de Profundidad.</source>
         <translation>Gera um normal map: de uma foto ou cena com MoGe-2, ou de uma textura plana para materiais 3D com DeepBump. Serve para relighting no DaVinci Resolve ou para texturas no Blender. Ao ativar esta ferramenta, o Mapa de Profundidade é desligado.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2746"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2752"/>
         <source>Cambia el tamaño de la imagen por porcentaje o píxeles. ¡Especialmente bueno y sin pérdida al trabajar con imágenes vectoriales!</source>
         <translation>Muda o tamanho da imagem por porcentagem ou pixels. Especialmente bom e sem perdas ao trabalhar com imagens vetoriais!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2751"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2757"/>
         <source>Control de Lienzo</source>
         <translation>Controle de Tela</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2752"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2758"/>
         <source>Ajusta los márgenes o recorta la imagen libremente para adaptarla al formato que necesites.</source>
         <translation>Ajuste as margens ou recorte a imagem livremente para adaptá-la ao formato que precisar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2757"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2763"/>
         <source>Panel de Capas y Dibujo</source>
         <translation>Painel de Camadas e Desenho</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2758"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2764"/>
         <source>Aquí puedes gestionar todas las formas, dibujos y fondos que añadas a tu imagen. Veamos sus opciones.</source>
         <translation>Aqui você gerencia todas as formas, desenhos e fundos que adicionar à sua imagem. Vamos ver as opções.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="1165"/>
         <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="1296"/>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2763"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2769"/>
         <source>Borrador</source>
         <translation>Borracha</translation>
     </message>
@@ -6532,77 +6575,77 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
         <translation>Refazer</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2764"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2770"/>
         <source>Marca en Capas la capa que quieres borrar y pasa el borrador por encima. Las formas y los fondos se convierten en píxeles para poder borrarlos. La imagen original nunca se modifica.</source>
         <translation>Marque em Camadas a camada que deseja apagar e passe a borracha por cima. Formas e fundos são convertidos em pixels para poderem ser apagados. A imagem original nunca é modificada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2768"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2774"/>
         <source>Opciones de Dibujo</source>
         <translation>Opções de Desenho</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2769"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2775"/>
         <source>Haz clic derecho en Rectángulo, Elipse, Línea o Pincel para elegir colores, quitar el relleno o el borde y ajustar el grosor. Si tienes una forma seleccionada, los cambios también se aplican a ella.</source>
         <translation>Clique com o botão direito em Retângulo, Elipse, Linha ou Pincel para escolher cores, remover o preenchimento ou a borda e ajustar a espessura. Se houver uma forma selecionada, as alterações também se aplicam a ela.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2773"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2779"/>
         <source>Añadir Fondo</source>
         <translation>Adicionar Fundo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2774"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2780"/>
         <source>Si eliminaste el fondo original o tienes una imagen transparente, usa este botón para colocar un fondo de color sólido detrás de todo.</source>
         <translation>Se você removeu o fundo original ou tem uma imagem transparente, use este botão para colocar um fundo de cor sólida atrás de tudo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2778"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2784"/>
         <source>Vista Previa y Título</source>
         <translation>Pré-visualização e Título</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2779"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2785"/>
         <source>Aquí puedes ver los cambios en tiempo real y renombrar el archivo final. Puedes usar el botón &apos;Comparar&apos; para ver el antes y el después.</source>
         <translation>Aqui você vê as mudanças em tempo real e renomeia o arquivo final. Pode usar o botão &apos;Comparar&apos; para ver o antes e o depois.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2784"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2790"/>
         <source>Copiar Resultado</source>
         <translation>Copiar Resultado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2785"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2791"/>
         <source>¡Si necesitas la imagen ya procesada para usarla rápido en otro programa, simplemente cópiala desde aquí!</source>
         <translation>Se você precisa da imagem já processada para usar rápido em outro programa, é só copiá-la daqui!</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2789"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2795"/>
         <source>Cola de Procesamiento y Pegado</source>
         <translation>Fila de Processamento e Colagem</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2790"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2796"/>
         <source>Arrastra varias imágenes para procesarlas en lote. También puedes usar el botón &apos;Pegar&apos; para importar directamente imágenes desde tu portapapeles.</source>
         <translation>Arraste várias imagens para processá-las em lote. Você também pode usar o botão &apos;Colar&apos; para importar imagens direto da área de transferência.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2795"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2801"/>
         <source>Formato y Calidad</source>
         <translation>Formato e Qualidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2796"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2802"/>
         <source>Define en qué formato quieres guardar tus resultados, su calidad y cualquier otro ajuste final.</source>
         <translation>Defina em que formato quer salvar seus resultados, a qualidade e qualquer outro ajuste final.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2801"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2807"/>
         <source>Exportación</source>
         <translation>Exportação</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2802"/>
+        <location filename="../../gui/tabs/image_tools/image_tools_view.py" line="2808"/>
         <source>Elige la carpeta de destino, la regla para archivos duplicados y haz clic en &apos;Convertir&apos; para procesar todo el lote.</source>
         <translation>Escolha a pasta de destino, a regra para arquivos duplicados e clique em &apos;Converter&apos; para processar o lote inteiro.</translation>
     </message>
@@ -6610,42 +6653,42 @@ Copie uma imagem (por exemplo com uma captura de tela, ou com &quot;Copiar image
 <context>
     <name>ImportOnnxDialog</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="70"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="71"/>
         <source>Importar modelo ONNX</source>
         <translation>Importar modelo ONNX</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="75"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="76"/>
         <source>Archivo: {0}</source>
         <translation>Arquivo: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="83"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="84"/>
         <source>Nombre:</source>
         <translation>Nome:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="90"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="91"/>
         <source>Tamaño de entrada (NxN):</source>
         <translation>Tamanho de entrada (NxN):</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="93"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="94"/>
         <source>Detectando tamaño de entrada...</source>
         <translation>Detectando o tamanho de entrada...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="99"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="100"/>
         <source>Si no se detecta solo, dejalo en 1024 (el más común en modelos modernos de Eliminar Fondo) o revisa la página de donde bajaste el modelo -- los legacy tipo U2Net suelen usar 320.</source>
         <translation>Se não for detectado sozinho, deixe em 1024 (o mais comum nos modelos modernos de Remover Fundo) ou confira a página de onde você baixou o modelo -- os legados tipo U2Net costumam usar 320.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="120"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="121"/>
         <source>Tamaño detectado: {0}x{1}</source>
         <translation>Tamanho detectado: {0}x{1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="123"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="124"/>
         <source>No se pudo detectar el tamaño -- confírmalo a mano.</source>
         <translation>Não foi possível detectar o tamanho -- confirme manualmente.</translation>
     </message>
@@ -7064,27 +7107,27 @@ Continuar?</translation>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../gui/main_window.py" line="670"/>
+        <location filename="../../gui/main_window.py" line="673"/>
         <source>Modo Rápido</source>
         <translation>Modo Rápido</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="674"/>
+        <location filename="../../gui/main_window.py" line="677"/>
         <source>Proceso Avanzado</source>
         <translation>Processo Avançado</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="678"/>
+        <location filename="../../gui/main_window.py" line="681"/>
         <source>Editor de Imagen</source>
         <translation>Editor de Imagem</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="682"/>
+        <location filename="../../gui/main_window.py" line="685"/>
         <source>Herramientas Multimedia</source>
         <translation>Ferramentas de Mídia</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="686"/>
+        <location filename="../../gui/main_window.py" line="689"/>
         <source>Gestor de Medios</source>
         <translation>Gerenciador de Mídias</translation>
     </message>
@@ -7880,49 +7923,69 @@ Se guarda una sola vez: la próxima vez ya estará listo para usar.</source>
 <context>
     <name>ModelRow</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="214"/>
-        <source>Requiere cuenta (próximamente)</source>
-        <translation>Exige conta (em breve)</translation>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="217"/>
+        <source>Abrir página</source>
+        <translation>Abrir página</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="222"/>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="303"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="218"/>
+        <source>Abrir la página de este archivo en Hugging Face, para descargarlo a mano</source>
+        <translation>Abrir a página deste arquivo no Hugging Face para baixá-lo manualmente</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="219"/>
+        <source>Ya lo descargué…</source>
+        <translation>Já baixei…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="220"/>
+        <source>Elegir el archivo que descargaste a mano: DowP lo copia a su carpeta</source>
+        <translation>Escolher o arquivo que você baixou manualmente: o DowP o copia para a pasta dele</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="239"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="319"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="228"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="245"/>
         <source>Abrir carpeta</source>
         <translation>Abrir pasta</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="231"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="248"/>
         <source>Eliminar</source>
         <translation>Excluir</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="275"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="289"/>
         <source>Instalado ({0})</source>
         <translation>Instalado ({0})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="280"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="294"/>
         <source>Instalado (clic para reinstalar)</source>
         <translation>Instalado (clique para reinstalar)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="293"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="307"/>
         <source>Archivo no encontrado — elimínalo de la lista</source>
         <translation>Arquivo não encontrado — remova-o da lista</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="299"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="314"/>
+        <source>No descargado · necesita tu cuenta de Hugging Face o descargarlo a mano</source>
+        <translation>Não baixado · precisa da sua conta do Hugging Face ou baixá-lo manualmente</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="315"/>
         <source>No descargado</source>
         <translation>Não baixado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="315"/>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="317"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="331"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="333"/>
         <source>Descargando...</source>
         <translation>Baixando...</translation>
     </message>
@@ -7930,200 +7993,402 @@ Se guarda una sola vez: la próxima vez ya estará listo para usar.</source>
 <context>
     <name>ModelsPage</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="345"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="481"/>
         <source>Modelos de Inteligencia Artificial</source>
         <translation>Modelos de Inteligência Artificial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="372"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="509"/>
+        <source>Almacenamiento y cuenta</source>
+        <translation>Armazenamento e conta</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="513"/>
         <source>Eliminación de Fondo (Rembg)</source>
         <translation>Remoção de Fundo (Rembg)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="379"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="520"/>
         <source>Modelos Personalizados (Importados)</source>
         <translation>Modelos Personalizados (Importados)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="383"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="524"/>
         <source>Para modelos ONNX de Eliminar Fondo que no están en el catálogo de arriba (por ejemplo, descargados a mano desde HuggingFace).</source>
         <translation>Para modelos ONNX de Remover Fundo que não estão no catálogo acima (por exemplo, baixados à mão do HuggingFace).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="389"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="530"/>
         <source>Importar modelo ONNX...</source>
         <translation>Importar modelo ONNX...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="403"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="544"/>
         <source>Mapas de Profundidad</source>
         <translation>Mapas de Profundidade</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="410"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="551"/>
         <source>Mapas de Normales</source>
         <translation>Mapas de Normais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="417"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="558"/>
         <source>Motores de Reescalado (Upscaling)</source>
         <translation>Motores de Ampliação (Upscaling)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="471"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="592"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="668"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="694"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="704"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="730"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="746"/>
+        <source>Carpeta de modelos</source>
+        <translation>Pasta de modelos</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="619"/>
+        <source>Restablecer</source>
+        <translation>Redefinir</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="622"/>
+        <source>Volver a la carpeta de siempre (en el disco del sistema)</source>
+        <translation>Voltar para a pasta padrão (no disco do sistema)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="669"/>
+        <source>Hay una descarga de modelos en curso. Espera a que termine para cambiar la carpeta.</source>
+        <translation>Há um download de modelos em andamento. Espere terminar para alterar a pasta.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="677"/>
+        <source>Elegir carpeta para los modelos de IA</source>
+        <translation>Escolher pasta para os modelos de IA</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="705"/>
+        <source>Los modelos se guardarán en:
+{0}
+
+¿Qué hacemos con los que ya tienes descargados ({1})?</source>
+        <translation>Os modelos serão salvos em:
+{0}
+
+O que fazemos com os que você já baixou ({1})?</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="707"/>
+        <source>Moverlos ahí</source>
+        <translation>Movê-los para lá</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="708"/>
+        <source>Dejarlos y empezar vacía</source>
+        <translation>Deixá-los e começar vazia</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="709"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="729"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="871"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="889"/>
+        <source>Cancelar</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="729"/>
+        <source>Moviendo modelos…</source>
+        <translation>Movendo modelos…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="777"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="822"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="862"/>
+        <source>Cuenta de Hugging Face</source>
+        <translation>Conta do Hugging Face</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="784"/>
+        <source>Desconectar</source>
+        <translation>Desconectar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="802"/>
+        <source>Conectada como {0}.</source>
+        <translation>Conectada como {0}.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="802"/>
+        <source>Conectada.</source>
+        <translation>Conectada.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="806"/>
+        <source>Sin conectar. Hace falta para descargar desde DowP los modelos con licencia restringida (como RMBG 2.0); también puedes descargarlos a mano.</source>
+        <translation>Não conectada. Necessária para baixar pelo DowP os modelos com licença restrita (como o RMBG 2.0); você também pode baixá-los manualmente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="809"/>
+        <source>Cambiar token…</source>
+        <translation>Alterar token…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="809"/>
+        <source>Conectar…</source>
+        <translation>Conectar…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="823"/>
+        <source>¿Desconectar la cuenta? Se borra el token guardado en DowP. Los modelos ya descargados no se tocan.</source>
+        <translation>Desconectar a conta? O token salvo no DowP será apagado. Os modelos já baixados não são afetados.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="864"/>
+        <source>El token guardado ya no es válido. Conecta tu cuenta de nuevo para descargarlo.</source>
+        <translation>O token salvo não é mais válido. Conecte sua conta novamente para baixá-lo.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="867"/>
+        <source>Este modelo tiene licencia restringida: para descargarlo desde DowP hay que conectar tu cuenta de Hugging Face (gratis). También puedes descargarlo a mano.</source>
+        <translation>Este modelo tem licença restrita: para baixá-lo pelo DowP é preciso conectar sua conta do Hugging Face (grátis). Você também pode baixá-lo manualmente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="869"/>
+        <source>Conectar cuenta</source>
+        <translation>Conectar conta</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="870"/>
+        <source>Descargar a mano</source>
+        <translation>Baixar manualmente</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="883"/>
+        <source>Aceptar la licencia</source>
+        <translation>Aceitar a licença</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="885"/>
+        <source>Tu cuenta{0} todavía no aceptó la licencia de este modelo.
+
+Se abrirá su página en Hugging Face: inicia sesión con esa misma cuenta, acepta las condiciones y vuelve a pulsar Descargar.</source>
+        <translation>Sua conta{0} ainda não aceitou a licença deste modelo.
+
+A página dele no Hugging Face será aberta: entre com essa mesma conta, aceite as condições e pressione Baixar novamente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="888"/>
+        <source>Abrir página</source>
+        <translation>Abrir página</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="895"/>
+        <source>No se pudo conectar con Hugging Face. Revisa tu conexión e inténtalo de nuevo.</source>
+        <translation>Não foi possível conectar ao Hugging Face. Verifique sua conexão e tente novamente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="898"/>
+        <source>Comprobando el acceso en Hugging Face…</source>
+        <translation>Verificando o acesso no Hugging Face…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="912"/>
+        <source>Elegir «{0}» descargado</source>
+        <translation>Escolher o “{0}” baixado</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="916"/>
+        <source>Instalando modelo…</source>
+        <translation>Instalando modelo…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="930"/>
+        <source>No se pudo instalar</source>
+        <translation>Não foi possível instalar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="967"/>
         <source>Mantener los modelos de IA cargados en memoria</source>
         <translation>Manter os modelos de IA carregados na memória</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="487"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="983"/>
         <source>Liberar</source>
         <translation>Liberar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="492"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="988"/>
         <source>Descargar ahora los modelos que queden cargados, estén en la memoria de la GPU o en la RAM, sin cerrar la aplicación</source>
         <translation>Descarregar agora os modelos que ainda estiverem carregados, seja na memória da GPU ou na RAM, sem fechar o aplicativo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="519"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1015"/>
         <source>Cantidad máxima de modelos en memoria</source>
         <translation>Quantidade máxima de modelos na memória</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="524"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1020"/>
         <source>Si usas varios modelos distintos, puedes mantener más de uno cargado para no volver a esperar la carga al alternar entre ellos. Cada modelo ocupa entre 200 MB y 900 MB de memoria.</source>
         <translation>Se você usa vários modelos diferentes, pode manter mais de um carregado para não esperar o carregamento de novo ao alternar entre eles. Cada modelo ocupa entre 200 MB e 900 MB de memória.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="556"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1052"/>
         <source>Encendido: el modelo queda cargado en {0} desde el primer uso, así cada conversión nueva empieza a trabajar de inmediato en vez de volver a cargarlo.</source>
         <translation>Ligado: o modelo fica carregado em {0} desde o primeiro uso, então cada nova conversão começa a trabalhar na hora em vez de carregá-lo de novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="562"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1058"/>
         <source>Apagado: el modelo se carga al empezar cada conversión y se libera de {0} al terminar. Ocupa menos memoria en reposo, pero cada lote vuelve a pagar la carga inicial (varios segundos con los modelos grandes).</source>
         <translation>Desligado: o modelo é carregado no começo de cada conversão e liberado de {0} ao terminar. Ocupa menos memória em repouso, mas cada lote paga de novo o carregamento inicial (vários segundos com os modelos grandes).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="582"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1078"/>
         <source>la memoria del sistema (RAM)</source>
         <translation>a memória do sistema (RAM)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="584"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1080"/>
         <source>la memoria de la {0} ({1})</source>
         <translation>a memória da {0} ({1})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="585"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1081"/>
         <source>la memoria de la GPU ({0})</source>
         <translation>a memória da GPU ({0})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="606"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1102"/>
         <source>Se descargó 1 modelo de la memoria.</source>
         <translation>1 modelo foi descarregado da memória.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="607"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1103"/>
         <source>Se descargaron {0} modelos de la memoria.</source>
         <translation>{0} modelos foram descarregados da memória.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="608"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1104"/>
         <source>Memoria liberada</source>
         <translation>Memória liberada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="611"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1107"/>
         <source>Nada que liberar</source>
         <translation>Nada para liberar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="612"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1108"/>
         <source>No hay ningún modelo cargado en memoria en este momento.</source>
         <translation>Não há nenhum modelo carregado na memória neste momento.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="649"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1147"/>
         <source>{0} · no comercial</source>
         <translation>{0} · não comercial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="683"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1181"/>
         <source>Todavía no importaste ningún modelo.</source>
         <translation>Você ainda não importou nenhum modelo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="700"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1198"/>
         <source>Seleccionar modelo ONNX</source>
         <translation>Selecionar modelo ONNX</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="700"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="913"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1198"/>
         <source>Modelos ONNX (*.onnx)</source>
         <translation>Modelos ONNX (*.onnx)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="711"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="600"/>
+        <source>Escribe o pega una ruta y pulsa Enter, o usa el botón de la carpeta</source>
+        <translation>Digite ou cole um caminho e pressione Enter, ou use o botão da pasta</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="607"/>
+        <source>Elegir otra carpeta para los modelos</source>
+        <translation>Escolher outra pasta para os modelos</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="614"/>
+        <source>Abrir la carpeta de modelos</source>
+        <translation>Abrir a pasta de modelos</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="642"/>
+        <source>No está disponible (¿disco desconectado?). Conéctalo o elige otra carpeta.</source>
+        <translation>Não está disponível (disco desconectado?). Conecte-o ou escolha outra pasta.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="648"/>
+        <source>Ocupan {0} · Libre en ese disco: {1}</source>
+        <translation>Ocupam {0} · Livre nesse disco: {1}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1209"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="711"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1209"/>
         <source>El modelo necesita un nombre.</source>
         <translation>O modelo precisa de um nome.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="716"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1214"/>
         <source>Reemplazar modelo</source>
         <translation>Substituir modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="717"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1215"/>
         <source>Ya existe un modelo importado llamado &apos;{0}&apos;. ¿Reemplazarlo?</source>
         <translation>Já existe um modelo importado chamado &apos;{0}&apos;. Substituir?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="724"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1222"/>
         <source>Modelo importado</source>
         <translation>Modelo importado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="726"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1224"/>
         <source>Error al importar</source>
         <translation>Erro ao importar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="730"/>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="793"/>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="802"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1228"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1294"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1303"/>
         <source>Eliminar modelo</source>
         <translation>Excluir modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="731"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1229"/>
         <source>¿Eliminar el modelo importado &apos;{0}&apos;?</source>
         <translation>Excluir o modelo importado &apos;{0}&apos;?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="788"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="894"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1289"/>
         <source>Error de Descarga</source>
         <translation>Erro de Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="794"/>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="803"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1295"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1304"/>
         <source>¿Eliminar &apos;{0}&apos; del disco?</source>
         <translation>Excluir &apos;{0}&apos; do disco?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="811"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1312"/>
         <source>Eliminar motor</source>
         <translation>Excluir motor</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/models_page.py" line="812"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="1313"/>
         <source>¿Eliminar &apos;{0}&apos; (motor completo) del disco?</source>
         <translation>Excluir &apos;{0}&apos; (o motor inteiro) do disco?</translation>
     </message>
@@ -10052,8 +10317,13 @@ Valores positivos expandem o recorte (recupera bordas cortadas).</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="312"/>
-        <source>Requiere descarga manual con cuenta</source>
-        <translation>Exige download manual com conta</translation>
+        <source>Necesita tu cuenta de Hugging Face o descargarlo a mano</source>
+        <translation>Precisa da sua conta do Hugging Face ou baixá-lo manualmente</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="373"/>
+        <source>Necesita tu cuenta de Hugging Face o descargarlo a mano — haz clic para ir a Ajustes &gt; Modelos.</source>
+        <translation>Precisa da sua conta do Hugging Face ou baixá-lo manualmente — clique para ir a Configurações &gt; Modelos.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="316"/>
@@ -10069,11 +10339,6 @@ Valores positivos expandem o recorte (recupera bordas cortadas).</translation>
         <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="368"/>
         <source>El archivo de este modelo importado ya no está en el disco. Elimínalo de la lista o vuelve a importarlo.</source>
         <translation>O arquivo deste modelo importado não está mais no disco. Remova-o da lista ou importe de novo.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="373"/>
-        <source>Requiere descarga manual con cuenta — ve a Ajustes &gt; Modelos.</source>
-        <translation>Exige download manual com conta — vá em Configurações &gt; Modelos.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/image_tools/rembg_popover.py" line="379"/>
@@ -10313,12 +10578,12 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>SettingsModalOverlay</name>
     <message>
-        <location filename="../../gui/main_window.py" line="552"/>
+        <location filename="../../gui/main_window.py" line="555"/>
         <source>Ajustes</source>
         <translation>Configurações</translation>
     </message>
     <message>
-        <location filename="../../gui/main_window.py" line="564"/>
+        <location filename="../../gui/main_window.py" line="567"/>
         <source>Cerrar (Esc)</source>
         <translation>Fechar (Esc)</translation>
     </message>
@@ -13217,6 +13482,55 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
     </message>
 </context>
 <context>
+    <name>_HfTokenDialog</name>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="367"/>
+        <source>Conectar Hugging Face</source>
+        <translation>Conectar Hugging Face</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="373"/>
+        <source>1. En tu cuenta de Hugging Face, crea un token de acceso de tipo «Read» (solo lectura). Si no tienes cuenta, puedes crearla gratis.</source>
+        <translation>1. Na sua conta do Hugging Face, crie um token de acesso do tipo “Read” (somente leitura). Se não tiver conta, pode criá-la grátis.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="377"/>
+        <source>Abrir página de tokens</source>
+        <translation>Abrir página de tokens</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="382"/>
+        <source>2. Pégalo aquí:</source>
+        <translation>2. Cole-o aqui:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="391"/>
+        <source>Además, cada modelo con licencia restringida pide aceptar sus condiciones una vez en su página; DowP te avisará cuando haga falta. El token se guarda en este equipo.</source>
+        <translation>Além disso, cada modelo com licença restrita pede para aceitar suas condições uma vez na página dele; o DowP avisará quando for necessário. O token fica salvo neste computador.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="405"/>
+        <source>Cancelar</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="407"/>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="427"/>
+        <source>Conectar</source>
+        <translation>Conectar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="421"/>
+        <source>Comprobando…</source>
+        <translation>Verificando…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/models_page.py" line="428"/>
+        <source>No se pudo validar el token.</source>
+        <translation>Não foi possível validar o token.</translation>
+    </message>
+</context>
+<context>
     <name>_PreviewPanel</name>
     <message>
         <location filename="../../gui/dialogs/media_search_dialog.py" line="191"/>
@@ -15347,248 +15661,248 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <translation>Standard (Manual)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="657"/>
-        <source>BnB4 (Recomendado)</source>
-        <translation>BnB4 (Recomendado)</translation>
+        <location filename="../../core/constants.py" line="658"/>
+        <source>Q4F16 (Recomendado)</source>
+        <translation>Q4F16 (Recomendado)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="664"/>
+        <location filename="../../core/constants.py" line="679"/>
         <source>FP16 (Media)</source>
         <translation>FP16 (Média)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="671"/>
+        <location filename="../../core/constants.py" line="686"/>
         <source>Int8 (Rápido)</source>
         <translation>Int8 (Rápido)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="687"/>
+        <location filename="../../core/constants.py" line="702"/>
         <source>InSPyReNet (Ultra High Resolution)</source>
         <translation>InSPyReNet (Ultra High Resolution)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="688"/>
+        <location filename="../../core/constants.py" line="703"/>
         <source>SwinB Plus Ultra (FP32)</source>
         <translation>SwinB Plus Ultra (FP32)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="695"/>
+        <location filename="../../core/constants.py" line="710"/>
         <source>SwinB Plus Ultra (FP16)</source>
         <translation>SwinB Plus Ultra (FP16)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="749"/>
+        <location filename="../../core/constants.py" line="764"/>
         <source>Small (Recomendado)</source>
         <translation>Small (Recomendado)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="760"/>
+        <location filename="../../core/constants.py" line="775"/>
         <source>Small FP16 (Ligero, ideal con GPU)</source>
         <translation>Small FP16 (Leve, ideal com GPU)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="771"/>
+        <location filename="../../core/constants.py" line="786"/>
         <source>Base</source>
         <translation>Base</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="782"/>
+        <location filename="../../core/constants.py" line="797"/>
         <source>Base FP16 (Ligero, ideal con GPU)</source>
         <translation>Base FP16 (Leve, ideal com GPU)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="793"/>
-        <location filename="../../core/constants.py" line="871"/>
+        <location filename="../../core/constants.py" line="808"/>
+        <location filename="../../core/constants.py" line="886"/>
         <source>Large</source>
         <translation>Large</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="804"/>
-        <location filename="../../core/constants.py" line="882"/>
+        <location filename="../../core/constants.py" line="819"/>
+        <location filename="../../core/constants.py" line="897"/>
         <source>Large FP16 (Ligero, ideal con GPU)</source>
         <translation>Large FP16 (Leve, ideal com GPU)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="817"/>
-        <location filename="../../core/constants.py" line="940"/>
+        <location filename="../../core/constants.py" line="832"/>
+        <location filename="../../core/constants.py" line="955"/>
         <source>Small (Rápido)</source>
         <translation>Small (Rápido)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="833"/>
+        <location filename="../../core/constants.py" line="848"/>
         <source>Base (Separa mejor los planos)</source>
         <translation>Base (Separa melhor os planos)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="849"/>
+        <location filename="../../core/constants.py" line="864"/>
         <source>Large (Más potente)</source>
         <translation>Large (Mais potente)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="860"/>
+        <location filename="../../core/constants.py" line="875"/>
         <source>La conversión ONNX indica Apache 2.0, pero deriva del modelo DA3-Large original, que es CC BY-NC 4.0.</source>
         <translation>A conversão ONNX indica Apache 2.0, mas deriva do modelo DA3-Large original, que é CC BY-NC 4.0.</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="895"/>
+        <location filename="../../core/constants.py" line="910"/>
         <source>Base (Más relieve)</source>
         <translation>Base (Mais relevo)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="906"/>
-        <location filename="../../core/constants.py" line="956"/>
+        <location filename="../../core/constants.py" line="921"/>
+        <location filename="../../core/constants.py" line="971"/>
         <source>Large (Máximo detalle)</source>
         <translation>Large (Máximo detalhe)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="939"/>
+        <location filename="../../core/constants.py" line="954"/>
         <source>MoGe-2 (Escenas)</source>
         <translation>MoGe-2 (Cenas)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="948"/>
+        <location filename="../../core/constants.py" line="963"/>
         <source>Base (Recomendado)</source>
         <translation>Base (Recomendado)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="965"/>
+        <location filename="../../core/constants.py" line="980"/>
         <source>DeepBump (Texturas)</source>
         <translation>DeepBump (Texturas)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="966"/>
+        <location filename="../../core/constants.py" line="981"/>
         <source>Estándar</source>
         <translation>Padrão</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1088"/>
+        <location filename="../../core/constants.py" line="1103"/>
         <source>Real-ESRGAN (General / Fotografía)</source>
         <translation>Real-ESRGAN (Geral / Fotografia)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1089"/>
+        <location filename="../../core/constants.py" line="1104"/>
         <source>Real-ESRGAN (Anime / Ilustración)</source>
         <translation>Real-ESRGAN (Anime / Ilustração)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1090"/>
+        <location filename="../../core/constants.py" line="1105"/>
         <source>Anime Video V3 (x4)</source>
         <translation>Anime Video V3 (x4)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1091"/>
+        <location filename="../../core/constants.py" line="1106"/>
         <source>Real-ESRGAN V3 (Ligero y Rápido)</source>
         <translation>Real-ESRGAN V3 (Leve e Rápido)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1092"/>
+        <location filename="../../core/constants.py" line="1107"/>
         <source>Real-ESRGAN V3 WDN (Red Profunda)</source>
         <translation>Real-ESRGAN V3 WDN (Rede Profunda)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1093"/>
+        <location filename="../../core/constants.py" line="1108"/>
         <source>HFA2k (Texturas de Alta Frecuencia)</source>
         <translation>HFA2k (Texturas de Alta Frequência)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1094"/>
+        <location filename="../../core/constants.py" line="1109"/>
         <source>LSDIR (Fotografía Realista)</source>
         <translation>LSDIR (Fotografia Realista)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1095"/>
+        <location filename="../../core/constants.py" line="1110"/>
         <source>LSDIR Compacto (Procesamiento Rápido)</source>
         <translation>LSDIR Compacto (Processamento Rápido)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1096"/>
+        <location filename="../../core/constants.py" line="1111"/>
         <source>LSDIR PlusC (Alta Fidelidad)</source>
         <translation>LSDIR PlusC (Alta Fidelidade)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1097"/>
+        <location filename="../../core/constants.py" line="1112"/>
         <source>Nomos8k (Detalles a Escala 8k)</source>
         <translation>Nomos8k (Detalhes em Escala 8k)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1098"/>
+        <location filename="../../core/constants.py" line="1113"/>
         <source>NMKD Siax (Universal / Calidad JPEG)</source>
         <translation>NMKD Siax (Universal / Qualidade JPEG)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1099"/>
+        <location filename="../../core/constants.py" line="1114"/>
         <source>NMKD Superscale (Fotos sin Artefactos)</source>
         <translation>NMKD Superscale (Fotos sem Artefatos)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1100"/>
+        <location filename="../../core/constants.py" line="1115"/>
         <source>Uniscale Restore (Restauración de Daños)</source>
         <translation>Uniscale Restore (Restauração de Danos)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1101"/>
+        <location filename="../../core/constants.py" line="1116"/>
         <source>The Unknown (Experimental / Nitidez Extrema)</source>
         <translation>The Unknown (Experimental / Nitidez Extrema)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1102"/>
+        <location filename="../../core/constants.py" line="1117"/>
         <source>RealSR (Detalle de Texturas)</source>
         <translation>RealSR (Detalhe de Texturas)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1103"/>
+        <location filename="../../core/constants.py" line="1118"/>
         <source>RealSR JPEG (Reduce Compresión)</source>
         <translation>RealSR JPEG (Reduz Compressão)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1138"/>
-        <location filename="../../core/constants.py" line="1140"/>
+        <location filename="../../core/constants.py" line="1153"/>
+        <location filename="../../core/constants.py" line="1155"/>
         <source>-1 (Ninguna)</source>
         <translation>-1 (Nenhuma)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1138"/>
-        <location filename="../../core/constants.py" line="1140"/>
+        <location filename="../../core/constants.py" line="1153"/>
+        <location filename="../../core/constants.py" line="1155"/>
         <source>0 (Baja)</source>
         <translation>0 (Baixa)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1138"/>
+        <location filename="../../core/constants.py" line="1153"/>
         <source>1 (Media)</source>
         <translation>1 (Média)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1138"/>
+        <location filename="../../core/constants.py" line="1153"/>
         <source>2 (Alta)</source>
         <translation>2 (Alta)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1138"/>
+        <location filename="../../core/constants.py" line="1153"/>
         <source>3 (Máxima)</source>
         <translation>3 (Máxima)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1142"/>
+        <location filename="../../core/constants.py" line="1157"/>
         <source>10 (Máxima)</source>
         <translation>10 (Máxima)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1146"/>
+        <location filename="../../core/constants.py" line="1161"/>
         <source>CU-Net (Alta Calidad)</source>
         <translation>CU-Net (Alta Qualidade)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1150"/>
+        <location filename="../../core/constants.py" line="1165"/>
         <source>Anime Style Art (Clásico)</source>
         <translation>Anime Style Art (Clássico)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1154"/>
+        <location filename="../../core/constants.py" line="1169"/>
         <source>Photo (Fotos Reales)</source>
         <translation>Photo (Fotos Reais)</translation>
     </message>
     <message>
-        <location filename="../../core/constants.py" line="1161"/>
+        <location filename="../../core/constants.py" line="1176"/>
         <source>Estándar (General)</source>
         <translation>Padrão (Geral)</translation>
     </message>
@@ -15699,6 +16013,29 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
         <location filename="../../core/utils/hardware_detector.py" line="454"/>
         <source>DowP 2.0 - Informe Completo de Capacidades de FFmpeg</source>
         <translation>DowP 2.0 - Relatório Completo de Capacidades do FFmpeg</translation>
+    </message>
+</context>
+<context>
+    <name>hf_auth</name>
+    <message>
+        <location filename="../../core/setup/hf_auth.py" line="64"/>
+        <source>Pega tu token de acceso.</source>
+        <translation>Cole seu token de acesso.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/hf_auth.py" line="69"/>
+        <source>No se pudo conectar con Hugging Face. Revisa tu conexión.</source>
+        <translation>Não foi possível conectar ao Hugging Face. Verifique sua conexão.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/hf_auth.py" line="77"/>
+        <source>Hugging Face no reconoce ese token. Revisa que lo copiaste completo.</source>
+        <translation>O Hugging Face não reconhece esse token. Verifique se você o copiou por completo.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/hf_auth.py" line="78"/>
+        <source>Hugging Face respondió con un error ({0}).</source>
+        <translation>O Hugging Face respondeu com um erro ({0}).</translation>
     </message>
 </context>
 <context>
@@ -15879,56 +16216,118 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
     </message>
 </context>
 <context>
+    <name>models_location</name>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="77"/>
+        <source>Elige una carpeta válida.</source>
+        <translation>Escolha uma pasta válida.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="79"/>
+        <source>Esa ya es la carpeta de modelos actual.</source>
+        <translation>Essa já é a pasta de modelos atual.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="81"/>
+        <source>No puede estar dentro de la carpeta donde está instalado DowP: al actualizarse, esa carpeta se reemplaza entera y se perderían los modelos.</source>
+        <translation>Não pode ficar dentro da pasta onde o DowP está instalado: ao atualizar, essa pasta é substituída inteira e os modelos se perderiam.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="84"/>
+        <source>No puede estar dentro de la carpeta de modelos actual.</source>
+        <translation>Não pode ficar dentro da pasta de modelos atual.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="91"/>
+        <source>No se puede escribir en esa carpeta: {0}</source>
+        <translation>Não é possível gravar nessa pasta: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="162"/>
+        <location filename="../../core/setup/models_location.py" line="201"/>
+        <source>Cancelado. Los modelos siguen en la carpeta anterior.</source>
+        <translation>Cancelado. Os modelos continuam na pasta anterior.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="164"/>
+        <source>No se pudieron mover los modelos: {0}. Siguen en la carpeta anterior.</source>
+        <translation>Não foi possível mover os modelos: {0}. Continuam na pasta anterior.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="169"/>
+        <source>No hay espacio suficiente en el destino (hacen falta {0:.1f} GB).</source>
+        <translation>Não há espaço suficiente no destino (são necessários {0:.1f} GB).</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_location.py" line="203"/>
+        <source>No se pudieron copiar los modelos: {0}. Siguen en la carpeta anterior.</source>
+        <translation>Não foi possível copiar os modelos: {0}. Continuam na pasta anterior.</translation>
+    </message>
+</context>
+<context>
     <name>models_setup</name>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="110"/>
-        <location filename="../../core/setup/models_setup.py" line="392"/>
+        <location filename="../../core/setup/models_setup.py" line="162"/>
+        <location filename="../../core/setup/models_setup.py" line="444"/>
         <source>El archivo descargado quedó vacío o incompleto.</source>
         <translation>O arquivo baixado ficou vazio ou incompleto.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="112"/>
-        <location filename="../../core/setup/models_setup.py" line="394"/>
+        <location filename="../../core/setup/models_setup.py" line="164"/>
+        <location filename="../../core/setup/models_setup.py" line="446"/>
         <source>Modelo descargado correctamente.</source>
         <translation>Modelo baixado corretamente.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="207"/>
+        <location filename="../../core/setup/models_setup.py" line="259"/>
         <source>El modelo necesita un nombre.</source>
         <translation>O modelo precisa de um nome.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="209"/>
+        <location filename="../../core/setup/models_setup.py" line="100"/>
+        <location filename="../../core/setup/models_setup.py" line="261"/>
         <source>No se encontró el archivo: {0}</source>
         <translation>Arquivo não encontrado: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="211"/>
+        <location filename="../../core/setup/models_setup.py" line="263"/>
         <source>El archivo elegido no es un .onnx.</source>
         <translation>O arquivo escolhido não é um .onnx.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="233"/>
+        <location filename="../../core/setup/models_setup.py" line="136"/>
+        <location filename="../../core/setup/models_setup.py" line="285"/>
         <source>No se pudo copiar el archivo: {0}</source>
         <translation>Não foi possível copiar o arquivo: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="247"/>
+        <location filename="../../core/setup/models_setup.py" line="104"/>
+        <source>Ese archivo no es «{0}»: pesa {1:,} bytes y debería pesar {2:,}. Revisa que elegiste la variante correcta y que la descarga terminó.</source>
+        <translation>Esse arquivo não é “{0}”: tem {1:,} bytes e deveria ter {2:,}. Verifique se escolheu a variante certa e se o download terminou.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_setup.py" line="115"/>
+        <location filename="../../core/setup/models_setup.py" line="128"/>
+        <source>Modelo instalado correctamente.</source>
+        <translation>Modelo instalado com sucesso.</translation>
+    </message>
+    <message>
+        <location filename="../../core/setup/models_setup.py" line="299"/>
         <source>Modelo importado correctamente.</source>
         <translation>Modelo importado corretamente.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="591"/>
+        <location filename="../../core/setup/models_setup.py" line="643"/>
         <source>&apos;{0}&apos; no tiene una build disponible para este sistema operativo.</source>
         <translation>&apos;{0}&apos; não tem uma build disponível para este sistema operacional.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="611"/>
+        <location filename="../../core/setup/models_setup.py" line="663"/>
         <source>No se encontró {0} tras la instalación.</source>
         <translation>{0} não foi encontrado após a instalação.</translation>
     </message>
     <message>
-        <location filename="../../core/setup/models_setup.py" line="621"/>
+        <location filename="../../core/setup/models_setup.py" line="673"/>
         <source>Motor instalado correctamente.</source>
         <translation>Motor instalado corretamente.</translation>
     </message>
@@ -15949,7 +16348,7 @@ Clique em &apos;...&apos; para selecionar o executável manualmente.</translatio
 <context>
     <name>paths</name>
     <message>
-        <location filename="../../core/utils/paths.py" line="333"/>
+        <location filename="../../core/utils/paths.py" line="367"/>
         <source>Moviendo dependencias a la nueva ubicación...</source>
         <translation>Movendo as dependências para o novo local...</translation>
     </message>

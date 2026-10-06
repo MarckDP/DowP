@@ -309,7 +309,7 @@ class RembgPopoverContent(QFrame):
             elif is_rembg_model_gated(model_info):
                 icon = get_colored_svg_icon(
                     "login.svg", get_theme_token('estado_aviso', '#d8c94a'), size=14)
-                tooltip = self.tr("Requiere descarga manual con cuenta")
+                tooltip = self.tr("Necesita tu cuenta de Hugging Face o descargarlo a mano")
             else:
                 icon = get_colored_svg_icon(
                     "download.svg", get_theme_token('texto_secundario', '#888888'), size=14)
@@ -370,7 +370,7 @@ class RembgPopoverContent(QFrame):
             ))
         elif is_rembg_model_gated(model_info):
             self.status_row.show_locked(self.tr(
-                "Requiere descarga manual con cuenta — ve a Ajustes > Modelos."
+                "Necesita tu cuenta de Hugging Face o descargarlo a mano — haz clic para ir a Ajustes > Modelos."
             ), clickable=True)
         else:
             # Sin repetir el peso: ya está en el nombre del modelo, en el combo

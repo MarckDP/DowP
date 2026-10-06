@@ -262,6 +262,26 @@ class GeneralPage(QWidget):
         self.adobe_row.addWidget(self.adobe_switch)
         self.content_layout.addLayout(self.adobe_row)
 
+        # 5b. Switch: Desplazamiento con rueda en menús desplegables
+        self.combo_wheel_row = QHBoxLayout()
+        self.combo_wheel_vbox = QVBoxLayout()
+
+        self.combo_wheel_label = QLabel(self.tr("Cambiar opción con la rueda en menús"))
+        self.combo_wheel_label.setObjectName("settingsLabel")
+
+        self.combo_wheel_desc = QLabel(self.tr("Permite cambiar la opción seleccionada al pasar la rueda del ratón sobre un menú cerrado. Si está desactivado (recomendado), la rueda desplazará la página normalmente."))
+        self.combo_wheel_desc.setWordWrap(True)
+        set_themed_style(self.combo_wheel_desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+
+        self.combo_wheel_vbox.addWidget(self.combo_wheel_label)
+        self.combo_wheel_vbox.addWidget(self.combo_wheel_desc)
+
+        self.combo_wheel_switch = ToggleSwitch()
+
+        self.combo_wheel_row.addLayout(self.combo_wheel_vbox, 1)
+        self.combo_wheel_row.addWidget(self.combo_wheel_switch)
+        self.content_layout.addLayout(self.combo_wheel_row)
+
         # 6. Botón: Restablecer Tutoriales
         self.tutorials_row = QHBoxLayout()
         self.tutorials_vbox = QVBoxLayout()
@@ -303,6 +323,7 @@ class GeneralPage(QWidget):
         self.auto_switch.toggled.connect(self.on_auto_analyze_toggled)
         self.paste_switch.toggled.connect(self.on_auto_paste_toggled)
         self.adobe_switch.toggled.connect(self.on_adobe_compat_toggled)
+        self.combo_wheel_switch.toggled.connect(self.on_combo_wheel_toggled)
 
 
     # ── SECCIÓN: SONIDOS (ver core/utils/sound_notifier.py) ──────────────────
@@ -639,6 +660,8 @@ class GeneralPage(QWidget):
         self.auto_switch.setTrackColors(off, accent)
         self.paste_switch.setTrackColors(off, accent)
         self.adobe_switch.setTrackColors(off, accent)
+        if hasattr(self, "combo_wheel_switch"):
+            self.combo_wheel_switch.setTrackColors(off, accent)
         if hasattr(self, "sound_switch"):
             self.sound_switch.setTrackColors(off, accent)
 
@@ -682,6 +705,7 @@ class GeneralPage(QWidget):
         self.auto_switch.setChecked(config.get("auto_analyze", True))
         self.paste_switch.setChecked(config.get("auto_paste_url", True))
         self.adobe_switch.setChecked(config.get("adobe_compat_default", True))
+        self.combo_wheel_switch.setChecked(config.get("combobox_wheel_scroll", False))
         self._load_sound_settings()
 
     def _make_radio(self, text, code):
@@ -827,6 +851,13 @@ class GeneralPage(QWidget):
         config["adobe_compat_default"] = checked
         save_config(config)
         logger.info(f"GeneralPage: Selección Adobe por defecto cambiada a: {checked}")
+
+    def on_combo_wheel_toggled(self, checked):
+        if self._is_loading: return
+        config = get_config()
+        config["combobox_wheel_scroll"] = checked
+        save_config(config)
+        logger.info(f"GeneralPage: Scroll de rueda en menús cambiado a: {checked}")
 
     def _on_reset_tutorials_clicked(self):
         config = get_config()

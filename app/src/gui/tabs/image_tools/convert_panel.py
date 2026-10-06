@@ -3,7 +3,7 @@ import os
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QLabel, QComboBox, QCheckBox,
-    QSlider, QScrollArea, QSizePolicy, QStackedWidget,
+    QSlider, QScrollArea, QSizePolicy, QStackedWidget, QLineEdit,
 )
 from PySide6.QtCore import Signal, Qt
 
@@ -224,11 +224,39 @@ class ConvertPanel(QWidget):
     def _build_pdf_page(self, parent) -> QWidget:
         page = QWidget(parent)
         v = QVBoxLayout(page)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(8)
+
         self.chk_pdf_transparency = QCheckBox(self.tr("Fondo transparente"), page)
         self.chk_pdf_transparency.setChecked(False)
         v.addWidget(self.chk_pdf_transparency)
+
+        self.chk_pdf_merge = QCheckBox(self.tr("Fusionar en un solo PDF"), page)
+        self.chk_pdf_merge.setChecked(False)
+        self.chk_pdf_merge.toggled.connect(self._on_pdf_merge_toggled)
+        v.addWidget(self.chk_pdf_merge)
+
+        self.widget_pdf_merge = QWidget(page)
+        merge_layout = QVBoxLayout(self.widget_pdf_merge)
+        merge_layout.setContentsMargins(20, 0, 0, 0)
+        merge_layout.setSpacing(4)
+
+        self.lbl_pdf_merged_name = QLabel(self.tr("Nombre del archivo:"), self.widget_pdf_merge)
+        merge_layout.addWidget(self.lbl_pdf_merged_name)
+
+        self.entry_pdf_merged_name = QLineEdit(self.widget_pdf_merge)
+        self.entry_pdf_merged_name.setPlaceholderText(self.tr("Por defecto: {nombre}_combined.pdf"))
+        merge_layout.addWidget(self.entry_pdf_merged_name)
+
+        self.widget_pdf_merge.setVisible(False)
+        v.addWidget(self.widget_pdf_merge)
+
         v.addStretch()
         return page
+
+    def _on_pdf_merge_toggled(self, checked: bool):
+        self.widget_pdf_merge.setVisible(checked)
+
 
     def _build_svg_page(self, parent) -> QWidget:
         """Vectorizado con vtracer (dependencia opcional -- ver
@@ -491,5 +519,7 @@ class ConvertPanel(QWidget):
             settings["bmp_rle"] = self.chk_bmp_rle.isChecked()
         elif fmt == "PDF":
             settings["pdf_transparency"] = self.chk_pdf_transparency.isChecked()
+            settings["pdf_merge"] = self.chk_pdf_merge.isChecked()
+            settings["pdf_merged_name"] = self.entry_pdf_merged_name.text().strip()
 
         return settings

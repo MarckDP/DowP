@@ -654,7 +654,22 @@ REMBG_MODEL_FAMILIES = {
             "size_bytes": 1024331469,
             "input_size": (1024, 1024)
         },
-        QCoreApplication.translate("constants", "BnB4 (Recomendado)"): {
+        # La más liviana (234 MB) y, probada por el usuario, con resultados excelentes
+        QCoreApplication.translate("constants", "Q4F16 (Recomendado)"): {
+            "file": "model_q4f16.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 233815293,
+            "input_size": (1024, 1024)
+        },
+        "Q4": {
+            "file": "model_q4.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 367451512,
+            "input_size": (1024, 1024)
+        },
+        "BnB4": {
             "file": "model_bnb4.onnx",
             "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
             "folder": "rmbg2",

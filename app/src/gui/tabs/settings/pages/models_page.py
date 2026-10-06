@@ -3,7 +3,7 @@ import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea,
     QPushButton, QMessageBox, QProgressBar, QFileDialog, QDialog,
-    QLineEdit, QSpinBox, QDialogButtonBox, QFormLayout,
+    QLineEdit, QSpinBox, QDialogButtonBox, QFormLayout, QSizePolicy,
 )
 from PySide6.QtCore import Qt, QThread, Signal, QUrl, QSize
 from PySide6.QtGui import QDesktopServices
@@ -36,6 +36,7 @@ from gui.styles import (
     set_button_variant,
     apply_download_action_button_style,
     apply_folder_open_button_style,
+    apply_folder_browse_button_style,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
@@ -136,9 +137,12 @@ class ImportOnnxDialog(QDialog):
 
 
 class ModelRow(QFrame):
-    """Fila para un modelo rembg o un motor de upscaling. `gated=True` lo muestra
-    bloqueado (sin acciones) para variantes que necesitan cuenta/login externo."""
-    download_requested = Signal(str)  # row_id
+    """Fila para un modelo rembg o un motor de upscaling. `gated=True`: modelo con
+    licencia restringida en Hugging Face -- se descarga con la cuenta del usuario
+    (token) o a mano, con "Abrir página" + "Ya lo descargué…"."""
+    download_requested = Signal(str)        # row_id
+    page_requested = Signal(str)            # row_id -- abrir su página en Hugging Face
+    manual_install_requested = Signal(str)  # row_id -- elegir el archivo descargado a mano
 
     def __init__(self, row_id: str, title: str, path_for_size: str, gated: bool = False,
                  no_download: bool = False, installed_check=None, disk_size=None,
@@ -205,16 +209,29 @@ class ModelRow(QFrame):
         layout.addLayout(info_vbox, 1)
 
         if self.gated:
-            # Icono SVG de assets, no un emoji: el emoji no se tiñe con el tema y se
-            # dibuja distinto (o no se dibuja) según la fuente de cada sistema.
-            lbl_locked_icon = QLabel()
-            lbl_locked_icon.setPixmap(
-                get_colored_svg_icon("login.svg", get_theme_token('texto_tenue', '#888888'), size=14).pixmap(14, 14))
-            layout.addWidget(lbl_locked_icon, 0, Qt.AlignVCenter)
-            lbl_locked = QLabel(self.tr("Requiere cuenta (próximamente)"))
-            set_themed_style(lbl_locked, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px; font-style: italic;")
-            layout.addWidget(lbl_locked, 0, Qt.AlignVCenter)
-            return
+            # Debajo del estado, como enlaces: al lado de los otros botones la fila
+            # quedaba más ancha que el panel y empujaba toda la lista.
+            links = QHBoxLayout()
+            links.setContentsMargins(0, 2, 0, 0)
+            links.setSpacing(14)
+            self.btn_page = QPushButton(self.tr("Abrir página"))
+            self.btn_page.setToolTip(self.tr("Abrir la página de este archivo en Hugging Face, para descargarlo a mano"))
+            self.btn_manual = QPushButton(self.tr("Ya lo descargué…"))
+            self.btn_manual.setToolTip(self.tr("Elegir el archivo que descargaste a mano: DowP lo copia a su carpeta"))
+            for btn in (self.btn_page, self.btn_manual):
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setFlat(True)
+                set_themed_style(btn, lambda: f"""
+                    QPushButton {{ background: transparent; border: none; padding: 0px;
+                                   color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px; font-weight: bold; }}
+                    QPushButton:hover {{ text-decoration: underline; }}
+                    QPushButton:disabled {{ color: {get_theme_token('texto_deshabilitado', '#555555')}; }}
+                """)
+                links.addWidget(btn)
+            links.addStretch()
+            info_vbox.addLayout(links)
+            self.btn_page.clicked.connect(lambda: self.page_requested.emit(self.row_id))
+            self.btn_manual.clicked.connect(lambda: self.manual_install_requested.emit(self.row_id))
 
         self.btn_download = QPushButton()
         self.btn_download.setFixedSize(32, 32)
@@ -267,9 +284,6 @@ class ModelRow(QFrame):
         register_theme_callback(self.btn_download, "icono_tema", lambda: self._set_download_icon(name))
 
     def refresh_status(self):
-        if self.gated:
-            return
-
         if self.is_installed():
             size = self._disk_size() if self._disk_size is not None else get_folder_size(self.path_for_size)
             self.lbl_status.setText(self.tr("Instalado ({0})").format(format_bytes(size)))
@@ -296,7 +310,9 @@ class ModelRow(QFrame):
             self.btn_delete.setDisabled(False)
 
         else:
-            self.lbl_status.setText(self.tr("No descargado"))
+            self.lbl_status.setText(
+                self.tr("No descargado · necesita tu cuenta de Hugging Face o descargarlo a mano")
+                if self.gated else self.tr("No descargado"))
             set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
             self._set_download_icon("download.svg")
             self.btn_download.setIconSize(QSize(18, 18))
@@ -305,9 +321,9 @@ class ModelRow(QFrame):
             self.btn_delete.setDisabled(True)
 
     def set_downloading(self, is_downloading: bool):
-        if self.gated:
-            return
         self.btn_download.setDisabled(is_downloading)
+        if self.gated:
+            self.btn_manual.setDisabled(is_downloading)
         self.btn_delete.setDisabled(is_downloading)
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(is_downloading)
@@ -318,6 +334,126 @@ class ModelRow(QFrame):
 
     def set_progress(self, pct: int):
         self.progress_bar.setValue(pct)
+
+
+class _CallWorker(QThread):
+    """Corre una función (petición de red, copia de un archivo grande) fuera del hilo
+    de la interfaz. Con with_progress=True, la función recibe un callback de %."""
+    done = Signal(object)
+    progress = Signal(int)
+
+    def __init__(self, func, parent=None, with_progress: bool = False):
+        super().__init__(parent)
+        self._func, self._with_progress = func, with_progress
+        # NO se borra con deleteLater(): con la función de Python que guarda (y que
+        # apunta al diálogo o a la página), borrarlo hacía que PySide abortara la app
+        # al conectar el token. Lo destruye su padre al cerrarse; pesa unos pocos KB.
+
+    def run(self):
+        try:
+            result = self._func(self.progress.emit) if self._with_progress else self._func()
+        except Exception as e:
+            logger.error(f"Modelos IA: fallo en tarea de fondo: {e}")
+            result = (False, str(e)) if self._with_progress else None
+        self.done.emit(result)
+
+
+class _HfTokenDialog(QDialog):
+    """Pegar un token de acceso de Hugging Face (tipo "Read") y validarlo."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from core.setup import hf_auth
+        self.setWindowTitle(self.tr("Conectar Hugging Face"))
+        self.setMinimumWidth(480)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        step1 = QLabel(self.tr(
+            "1. En tu cuenta de Hugging Face, crea un token de acceso de tipo «Read» "
+            "(solo lectura). Si no tienes cuenta, puedes crearla gratis."))
+        step1.setWordWrap(True)
+        layout.addWidget(step1)
+        btn_tokens = QPushButton(self.tr("Abrir página de tokens"))
+        btn_tokens.setCursor(Qt.PointingHandCursor)
+        btn_tokens.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(hf_auth.TOKENS_URL)))
+        layout.addWidget(btn_tokens, 0, Qt.AlignLeft)
+
+        step2 = QLabel(self.tr("2. Pégalo aquí:"))
+        layout.addWidget(step2)
+        self.edit_token = QLineEdit()
+        self.edit_token.setPlaceholderText("hf_…")
+        self.edit_token.setEchoMode(QLineEdit.Password)
+        self.edit_token.setText(hf_auth.get_token())
+        layout.addWidget(self.edit_token)
+
+        note = QLabel(self.tr(
+            "Además, cada modelo con licencia restringida pide aceptar sus condiciones una vez "
+            "en su página; DowP te avisará cuando haga falta. El token se guarda en este equipo."))
+        note.setWordWrap(True)
+        set_themed_style(note, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        layout.addWidget(note)
+
+        self.lbl_error = QLabel()
+        self.lbl_error.setWordWrap(True)
+        self.lbl_error.hide()
+        set_themed_style(self.lbl_error, lambda: f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px;")
+        layout.addWidget(self.lbl_error)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        btn_cancel = QPushButton(self.tr("Cancelar"))
+        btn_cancel.clicked.connect(self.reject)
+        self.btn_ok = QPushButton(self.tr("Conectar"))
+        set_button_variant(self.btn_ok, "accent-solid")
+        self.btn_ok.setDefault(True)
+        self.btn_ok.clicked.connect(self._on_connect)
+        for b in (btn_cancel, self.btn_ok):
+            b.setFixedHeight(32)
+            b.setCursor(Qt.PointingHandCursor)
+            buttons.addWidget(b)
+        layout.addLayout(buttons)
+
+    def _on_connect(self):
+        from core.setup import hf_auth
+        token = self.edit_token.text().strip()
+        self.btn_ok.setEnabled(False)
+        self.btn_ok.setText(self.tr("Comprobando…"))
+        self.lbl_error.hide()
+        worker = _CallWorker(lambda: hf_auth.validate_token(token), self)
+
+        def finished(result):
+            self.btn_ok.setEnabled(True)
+            self.btn_ok.setText(self.tr("Conectar"))
+            ok, value = result if result else (False, self.tr("No se pudo validar el token."))
+            if ok:
+                hf_auth.save_token(token, value)
+                self.accept()
+            else:
+                self.lbl_error.setText(value)
+                self.lbl_error.show()
+
+        worker.done.connect(finished)
+        self._worker = worker
+        worker.start()
+
+
+class _MoveModelsWorker(QThread):
+    """Mueve los modelos a la carpeta nueva sin congelar la interfaz (pueden ser GB)."""
+    progress = Signal(int)
+    finished_move = Signal(bool, str)
+
+    def __init__(self, src: str, dst: str, cancel_event, parent=None):
+        super().__init__(parent)
+        self.src, self.dst, self.cancel_event = src, dst, cancel_event
+
+    def run(self):
+        from core.setup.models_location import move_models
+        try:
+            ok, msg = move_models(self.src, self.dst, self.progress.emit, self.cancel_event)
+        except Exception as e:
+            ok, msg = False, str(e)
+        self.finished_move.emit(ok, msg)
 
 
 class ModelsPage(QWidget):
@@ -368,6 +504,11 @@ class ModelsPage(QWidget):
         self.content_layout = TopAlignedVBoxLayout(scroll_content)
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(10)
+
+        # Dentro del scroll (no fijas arriba): así la lista de modelos conserva su alto
+        self._add_section_header(self.tr("Almacenamiento y cuenta"))
+        self.content_layout.addWidget(self._build_models_dir_row())
+        self.content_layout.addWidget(self._build_hf_account_row())
 
         self._add_section_header(self.tr("Eliminación de Fondo (Rembg)"))
         for family_name, models in REMBG_MODEL_FAMILIES.items():
@@ -436,6 +577,361 @@ class ModelsPage(QWidget):
                 row.set_downloading(True)
                 row.set_progress(model_downloads().progress(key))
         self._refresh_custom_rows()
+
+    # ── Carpeta de modelos ───────────────────────────────────────────────────
+    def _build_models_dir_row(self) -> QWidget:
+        """Dónde se guardan los modelos (pueden sumar varios GB): por defecto en el
+        disco del sistema; el usuario puede elegir otra carpeta y mover lo que ya
+        tiene descargado (ver core/setup/models_location.py). Mismo formato que el
+        resto de rutas de la app (cookies, carpeta de salida): campo + botón de
+        configurar ruta + botón de abrir carpeta."""
+        container = QWidget()
+        col = QVBoxLayout(container)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(4)
+        lbl = QLabel(self.tr("Carpeta de modelos"))
+        lbl.setObjectName("settingsLabel")
+        col.addWidget(lbl)
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        self.edit_models_dir = QLineEdit()
+        self.edit_models_dir.setFixedHeight(32)
+        self.edit_models_dir.setToolTip(self.tr("Escribe o pega una ruta y pulsa Enter, o usa el botón de la carpeta"))
+        self.edit_models_dir.returnPressed.connect(self._on_models_dir_typed)
+        row.addWidget(self.edit_models_dir, 1)
+
+        self.btn_models_dir_change = QPushButton()
+        self.btn_models_dir_change.setFixedSize(32, 32)
+        self.btn_models_dir_change.setCursor(Qt.PointingHandCursor)
+        apply_folder_browse_button_style(self.btn_models_dir_change, self.tr("Elegir otra carpeta para los modelos"))
+        self.btn_models_dir_change.clicked.connect(self._on_models_dir_change)
+        row.addWidget(self.btn_models_dir_change)
+
+        self.btn_models_dir_open = QPushButton()
+        self.btn_models_dir_open.setFixedSize(32, 32)
+        self.btn_models_dir_open.setCursor(Qt.PointingHandCursor)
+        apply_folder_open_button_style(self.btn_models_dir_open, self.tr("Abrir la carpeta de modelos"))
+        self.btn_models_dir_open.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(get_models_dir())))
+        row.addWidget(self.btn_models_dir_open)
+
+        self.btn_models_dir_reset = QPushButton(self.tr("Restablecer"))
+        self.btn_models_dir_reset.setFixedHeight(32)
+        self.btn_models_dir_reset.setCursor(Qt.PointingHandCursor)
+        self.btn_models_dir_reset.setToolTip(self.tr("Volver a la carpeta de siempre (en el disco del sistema)"))
+        self.btn_models_dir_reset.clicked.connect(self._on_models_dir_reset)
+        row.addWidget(self.btn_models_dir_reset)
+        col.addLayout(row)
+
+        self.lbl_models_dir = QLabel()
+        self.lbl_models_dir.setWordWrap(True)
+        col.addWidget(self.lbl_models_dir)
+        self._refresh_models_dir_row()
+        return container
+
+    def _refresh_models_dir_row(self):
+        from core.setup.models_location import free_space
+        from core.utils.paths import get_custom_models_dir, is_models_dir_available
+        path = get_models_dir()
+        self.btn_models_dir_reset.setVisible(bool(get_custom_models_dir()))
+        self.edit_models_dir.setText(path)
+        self.edit_models_dir.setCursorPosition(0)
+        if not is_models_dir_available():
+            self.lbl_models_dir.setText(self.tr(
+                "No está disponible (¿disco desconectado?). Conéctalo o elige otra carpeta."))
+            set_themed_style(self.lbl_models_dir, lambda: f"color: {get_theme_token('estado_error', '#ff6b5f')}; font-size: 11px;")
+            self.btn_models_dir_open.setEnabled(False)
+            return
+        self.btn_models_dir_open.setEnabled(True)
+        used = get_folder_size(path)
+        self.lbl_models_dir.setText(self.tr("Ocupan {0} · Libre en ese disco: {1}").format(
+            format_bytes(used), format_bytes(free_space(path))))
+        set_themed_style(self.lbl_models_dir, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+
+    def _on_models_dir_typed(self):
+        """Ruta escrita o pegada a mano + Enter: mismo camino que elegirla con el botón."""
+        from core.setup.models_location import resolve_target
+        text = os.path.expanduser(self.edit_models_dir.text().strip().strip('"'))
+        if not text or os.path.normcase(os.path.abspath(text)) == os.path.normcase(get_models_dir()):
+            self._refresh_models_dir_row()
+            return
+        if self._models_busy():
+            self._refresh_models_dir_row()
+            return
+        self._switch_models_dir(resolve_target(text))
+        self._refresh_models_dir_row()  # si se canceló, vuelve a mostrar la actual
+
+    def _models_busy(self) -> bool:
+        """Mover la carpeta con una descarga en curso la dejaría a medias."""
+        if getattr(model_downloads(), "_workers", None):
+            QMessageBox.information(self, self.tr("Carpeta de modelos"), self.tr(
+                "Hay una descarga de modelos en curso. Espera a que termine para cambiar la carpeta."))
+            return True
+        return False
+
+    def _on_models_dir_change(self):
+        from core.setup.models_location import resolve_target
+        if self._models_busy():
+            return
+        chosen = QFileDialog.getExistingDirectory(self, self.tr("Elegir carpeta para los modelos de IA"),
+                                                  os.path.expanduser("~"))
+        if not chosen:
+            return
+        self._switch_models_dir(resolve_target(chosen))
+
+    def _on_models_dir_reset(self):
+        from core.utils.paths import get_default_models_dir
+        if self._models_busy():
+            return
+        self._switch_models_dir(get_default_models_dir())
+
+    def _switch_models_dir(self, target: str):
+        from core.setup.models_location import has_models, validate_target, set_models_dir
+        current = get_models_dir()
+        ok, msg = validate_target(target, current)
+        if not ok:
+            QMessageBox.warning(self, self.tr("Carpeta de modelos"), msg)
+            return
+
+        if not has_models(current) or not os.path.isdir(current):
+            set_models_dir(target)
+            self._after_models_dir_changed()
+            return
+
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(self.tr("Carpeta de modelos"))
+        box.setText(self.tr("Los modelos se guardarán en:\n{0}\n\n¿Qué hacemos con los que ya tienes descargados ({1})?")
+                    .format(target, format_bytes(get_folder_size(current))))
+        btn_move = box.addButton(self.tr("Moverlos ahí"), QMessageBox.AcceptRole)
+        btn_empty = box.addButton(self.tr("Dejarlos y empezar vacía"), QMessageBox.DestructiveRole)
+        box.addButton(self.tr("Cancelar"), QMessageBox.RejectRole)
+        box.setDefaultButton(btn_move)
+        box.exec()
+        if box.clickedButton() is btn_empty:
+            set_models_dir(target)
+            self._after_models_dir_changed()
+            return
+        if box.clickedButton() is not btn_move:
+            return
+        self._move_models_to(current, target)
+
+    def _move_models_to(self, current: str, target: str):
+        import threading
+        from PySide6.QtWidgets import QProgressDialog
+        from core.setup.models_location import move_models, set_models_dir
+        from core.utils import onnx_sessions
+
+        # Un modelo cargado mantiene el archivo abierto: en Windows no se podría mover.
+        onnx_sessions.clear_sessions()
+        cancel_event = threading.Event()
+        dialog = QProgressDialog(self.tr("Moviendo modelos…"), self.tr("Cancelar"), 0, 100, self)
+        dialog.setWindowTitle(self.tr("Carpeta de modelos"))
+        dialog.setWindowModality(Qt.WindowModal)
+        dialog.setMinimumDuration(0)
+        dialog.setAutoClose(False)
+        dialog.setAutoReset(False)
+        dialog.canceled.connect(cancel_event.set)
+
+        worker = _MoveModelsWorker(current, target, cancel_event, self)
+        worker.progress.connect(dialog.setValue)
+
+        def done(ok, msg):
+            dialog.close()
+            if ok:
+                set_models_dir(target)
+                self._after_models_dir_changed()
+            else:
+                QMessageBox.warning(self, self.tr("Carpeta de modelos"), msg)
+                self._refresh_models_dir_row()
+
+        worker.finished_move.connect(done)
+        self._move_worker = worker
+        worker.start()
+        dialog.show()
+
+    def _after_models_dir_changed(self):
+        """Cada fila guardó su ruta al construirse: se recalcula con la carpeta nueva."""
+        for row_id, row in self.rows.items():
+            info, kind = self.row_info[row_id], self.row_kind[row_id]
+            if kind in ("depth", "normals"):
+                row.path_for_size = get_depth_model_path(info)
+            elif kind == "upscaling":
+                row.path_for_size = os.path.join(get_models_dir(), info["folder"])
+            else:
+                row.path_for_size = os.path.join(get_models_dir(), info["folder"], info["file"])
+        self._refresh_models_dir_row()
+        self.refresh_rows()
+
+    # ── Cuenta de Hugging Face (modelos con licencia restringida) ───────────
+    def _build_hf_account_row(self) -> QWidget:
+        """Conectar la cuenta de Hugging Face con un token, para descargar RMBG 2.0 y
+        otros modelos con licencia restringida (ver core/setup/hf_auth.py)."""
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(10)
+        text_col = QVBoxLayout()
+        text_col.setSpacing(2)
+        lbl = QLabel(self.tr("Cuenta de Hugging Face"))
+        lbl.setObjectName("settingsLabel")
+        text_col.addWidget(lbl)
+        self.lbl_hf_status = QLabel()
+        self.lbl_hf_status.setWordWrap(True)
+        text_col.addWidget(self.lbl_hf_status)
+        row.addLayout(text_col, 1)
+        self.btn_hf_disconnect = QPushButton(self.tr("Desconectar"))
+        self.btn_hf_disconnect.clicked.connect(self._on_hf_disconnect)
+        self.btn_hf_connect = QPushButton()
+        set_button_variant(self.btn_hf_connect, "accent-solid")
+        self.btn_hf_connect.clicked.connect(lambda: self._connect_hf_account())
+        for btn in (self.btn_hf_disconnect, self.btn_hf_connect):
+            btn.setFixedHeight(32)
+            btn.setCursor(Qt.PointingHandCursor)
+            row.addWidget(btn, 0, Qt.AlignVCenter)
+        self._refresh_hf_row()
+        return container
+
+    def _refresh_hf_row(self):
+        from core.setup import hf_auth
+        connected = bool(hf_auth.get_token())
+        user = hf_auth.get_username()
+        if connected:
+            self.lbl_hf_status.setText(
+                self.tr("Conectada como {0}.").format(user) if user else self.tr("Conectada."))
+            set_themed_style(self.lbl_hf_status, lambda: f"color: {get_theme_token('estado_exito', '#40d66b')}; font-size: 11px;")
+        else:
+            self.lbl_hf_status.setText(self.tr(
+                "Sin conectar. Hace falta para descargar desde DowP los modelos con licencia "
+                "restringida (como RMBG 2.0); también puedes descargarlos a mano."))
+            set_themed_style(self.lbl_hf_status, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        self.btn_hf_connect.setText(self.tr("Cambiar token…") if connected else self.tr("Conectar…"))
+        self.btn_hf_disconnect.setVisible(connected)
+
+    def _connect_hf_account(self) -> bool:
+        """Diálogo para pegar el token. True si quedó conectada."""
+        dialog = _HfTokenDialog(self)
+        if dialog.exec() != QDialog.Accepted:
+            return False
+        self._refresh_hf_row()
+        return True
+
+    def _on_hf_disconnect(self):
+        from core.setup import hf_auth
+        if QMessageBox.question(self, self.tr("Cuenta de Hugging Face"), self.tr(
+                "¿Desconectar la cuenta? Se borra el token guardado en DowP. Los modelos "
+                "ya descargados no se tocan.")) != QMessageBox.Yes:
+            return
+        hf_auth.save_token("")
+        self._refresh_hf_row()
+
+    def _run_in_background(self, func, on_done, busy_text: str):
+        """Corre `func` (una petición de red) sin congelar la interfaz."""
+        from PySide6.QtWidgets import QProgressDialog
+        dialog = QProgressDialog(busy_text, None, 0, 0, self)
+        dialog.setWindowModality(Qt.WindowModal)
+        dialog.setMinimumDuration(400)
+        dialog.setCancelButton(None)
+        worker = _CallWorker(func, self)
+
+        def finished(result):
+            dialog.close()
+            on_done(result)
+
+        worker.done.connect(finished)
+        self._bg_worker = worker
+        worker.start()
+
+    def _start_gated_download(self, row_id: str):
+        """Antes de descargar un modelo restringido se comprueba el acceso, para dar
+        el paso concreto que falte en vez de un error de descarga."""
+        from core.setup import hf_auth
+        info = self.row_info[row_id]
+
+        def done(access):
+            if access == hf_auth.ACCESS_OK:
+                key = model_download_key(info)
+                self._started_here.add(key)
+                if not model_downloads().start(key, download_rembg_model, info):
+                    self._started_here.discard(key)
+                return
+            if access in (hf_auth.ACCESS_NO_TOKEN, hf_auth.ACCESS_INVALID_TOKEN):
+                box = QMessageBox(self)
+                box.setIcon(QMessageBox.Information)
+                box.setWindowTitle(self.tr("Cuenta de Hugging Face"))
+                if access == hf_auth.ACCESS_INVALID_TOKEN:
+                    box.setText(self.tr("El token guardado ya no es válido. Conecta tu cuenta de nuevo para descargarlo."))
+                else:
+                    box.setText(self.tr(
+                        "Este modelo tiene licencia restringida: para descargarlo desde DowP hay que "
+                        "conectar tu cuenta de Hugging Face (gratis). También puedes descargarlo a mano."))
+                btn_connect = box.addButton(self.tr("Conectar cuenta"), QMessageBox.AcceptRole)
+                btn_manual = box.addButton(self.tr("Descargar a mano"), QMessageBox.ActionRole)
+                box.addButton(self.tr("Cancelar"), QMessageBox.RejectRole)
+                box.exec()
+                if box.clickedButton() is btn_connect:
+                    if self._connect_hf_account():
+                        self._start_gated_download(row_id)
+                elif box.clickedButton() is btn_manual:
+                    self._on_page_requested(row_id)
+                return
+            if access == hf_auth.ACCESS_NEEDS_LICENSE:
+                user = hf_auth.get_username()
+                box = QMessageBox(self)
+                box.setIcon(QMessageBox.Information)
+                box.setWindowTitle(self.tr("Aceptar la licencia"))
+                box.setText(self.tr(
+                    "Tu cuenta{0} todavía no aceptó la licencia de este modelo.\n\n"
+                    "Se abrirá su página en Hugging Face: inicia sesión con esa misma cuenta, "
+                    "acepta las condiciones y vuelve a pulsar Descargar.").format(f" ({user})" if user else ""))
+                btn_open = box.addButton(self.tr("Abrir página"), QMessageBox.AcceptRole)
+                box.addButton(self.tr("Cancelar"), QMessageBox.RejectRole)
+                box.exec()
+                if box.clickedButton() is btn_open:
+                    QDesktopServices.openUrl(QUrl(hf_auth.license_page_url(info)))
+                return
+            QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr(
+                "No se pudo conectar con Hugging Face. Revisa tu conexión e inténtalo de nuevo."))
+
+        self._run_in_background(lambda: hf_auth.check_access(info), done,
+                                self.tr("Comprobando el acceso en Hugging Face…"))
+
+    def _on_page_requested(self, row_id: str):
+        from core.setup import hf_auth
+        info = self.row_info[row_id]
+        QDesktopServices.openUrl(QUrl(hf_auth.file_page_url(info)))
+
+    def _on_manual_install_requested(self, row_id: str):
+        from PySide6.QtWidgets import QProgressDialog
+        from core.setup.models_setup import install_manual_model
+        from PySide6.QtCore import QStandardPaths
+        info = self.row_info[row_id]
+        start = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation) or os.path.expanduser("~")
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Elegir «{0}» descargado").format(info["file"]), start,
+            self.tr("Modelos ONNX (*.onnx)"))
+        if not path:
+            return
+        dialog = QProgressDialog(self.tr("Instalando modelo…"), None, 0, 100, self)
+        dialog.setWindowModality(Qt.WindowModal)
+        dialog.setMinimumDuration(300)
+        dialog.setCancelButton(None)
+        worker = _CallWorker(lambda progress: install_manual_model(info, path, progress), self, with_progress=True)
+        worker.progress.connect(dialog.setValue)
+
+        def finished(result):
+            dialog.close()
+            ok, msg = result
+            row = self.rows.get(row_id)
+            if row:
+                row.refresh_status()
+            if not ok:
+                QMessageBox.warning(self, self.tr("No se pudo instalar"), msg)
+
+        worker.done.connect(finished)
+        self._bg_worker = worker
+        worker.start()
 
     # ── Mantener modelos en memoria ─────────────────────────────────────────
     def _build_persist_sessions_row(self) -> QWidget:
@@ -623,8 +1119,8 @@ class ModelsPage(QWidget):
         self.content_layout.addWidget(lbl)
 
     def _is_gated(self, model_info: dict) -> bool:
-        # Los modelos con URL a una página (no a un archivo directo) necesitan
-        # descarga manual con cuenta -- por ahora se muestran bloqueados sin acción.
+        # Los modelos con URL a una carpeta de Hugging Face (no a un archivo directo)
+        # tienen licencia restringida: se bajan con la cuenta del usuario o a mano.
         return is_rembg_model_gated(model_info)
 
     def _add_rembg_row(self, model_name: str, model_info: dict):
@@ -636,8 +1132,10 @@ class ModelsPage(QWidget):
         row = ModelRow(row_id, format_model_label(model_name, get_rembg_model_size_bytes(model_info)),
                        path, gated=gated)
         row.download_requested.connect(self._on_download_requested)
-        if not gated:
-            row.btn_delete.clicked.connect(lambda: self._on_delete_rembg(row_id, model_name))
+        row.btn_delete.clicked.connect(lambda: self._on_delete_rembg(row_id, model_name))
+        if gated:
+            row.page_requested.connect(self._on_page_requested)
+            row.manual_install_requested.connect(self._on_manual_install_requested)
         self.rows[row_id] = row
         self.row_info[row_id] = model_info
         self.row_kind[row_id] = "rembg"
@@ -750,6 +1248,9 @@ class ModelsPage(QWidget):
     def _on_download_requested(self, row_id: str):
         info = self.row_info[row_id]
         kind = self.row_kind[row_id]
+        if kind == "rembg" and is_rembg_model_gated(info):
+            self._start_gated_download(row_id)
+            return
         download_func = {
             "rembg": download_rembg_model,
             "depth": download_depth_model,

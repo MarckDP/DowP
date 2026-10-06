@@ -15,8 +15,6 @@ from core.logger.logger_manager import logger
 flush_scaling_logs()
 
 
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFontDatabase, QIcon
 from core.utils.i18n import load_language
 from core.utils.config_manager import get_config
 from core.version import APP_VERSION as __version__
@@ -25,8 +23,12 @@ from core.version import APP_VERSION as __version__
 # necesita, en core/tabs/image_tools/image_converter.py -- no hace falta cargarlo
 # aquí al arrancar, ahorrando ~5-10 MB de RAM para quien no use herramientas de imagen.
 
-from PySide6.QtCore import QObject, QEvent, Qt
-from PySide6.QtWidgets import QPushButton, QCheckBox, QRadioButton, QComboBox, QTabBar, QStyledItemDelegate
+from PySide6.QtCore import QObject, QEvent, Qt, QPointF
+from PySide6.QtGui import QFontDatabase, QIcon, QWheelEvent
+from PySide6.QtWidgets import (
+    QApplication, QPushButton, QCheckBox, QRadioButton, QComboBox,
+    QTabBar, QStyledItemDelegate, QWidget
+)
 
 
 from gui.widgets.combo_box import CheckmarkComboDelegate
@@ -71,6 +73,43 @@ class HandCursorInstaller(QObject):
 
     def eventFilter(self, obj, event):
         ev_type = event.type()
+        if ev_type == QEvent.Type.Wheel:
+            combo = None
+            if isinstance(obj, QComboBox):
+                combo = obj
+            elif isinstance(obj, QWidget) and isinstance(obj.parent(), QComboBox):
+                combo = obj.parent()
+
+            if combo is not None:
+                # Si el popup está desplegado, permitir que el usuario scrollee la lista
+                if combo.view() and combo.view().isVisible():
+                    return False
+
+                # Si el usuario activó la opción en Ajustes > General, permitir comportamiento nativo de Qt
+                if get_config().get("combobox_wheel_scroll", False):
+                    return False
+
+                # Menú cerrado y opción desactivada (por defecto): no cambiar la opción del combo
+                # y propagar el evento de rueda hacia los contenedores padre (QScrollArea, etc.)
+                p = combo.parentWidget()
+                while p:
+                    pos = combo.mapTo(p, event.position().toPoint())
+                    ev = QWheelEvent(
+                        QPointF(pos),
+                        event.globalPosition(),
+                        event.pixelDelta(),
+                        event.angleDelta(),
+                        event.buttons(),
+                        event.modifiers(),
+                        event.phase(),
+                        event.inverted()
+                    )
+                    ev.ignore()
+                    if QApplication.sendEvent(p, ev) and ev.isAccepted():
+                        break
+                    p = p.parentWidget()
+                return True
+
         if ev_type == QEvent.Type.ChildAdded:
             child = event.child()
             if isinstance(child, QComboBox):

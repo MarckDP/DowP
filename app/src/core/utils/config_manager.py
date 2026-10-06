@@ -42,6 +42,7 @@ def get_config():
         "use_impersonate": False,
         "adobe_compat_default": True,
         "auto_paste_url": True,
+        "combobox_wheel_scroll": False,
         "labels": [],
         "default_web_download_dir": "",
         "pixabay_api_key": "",

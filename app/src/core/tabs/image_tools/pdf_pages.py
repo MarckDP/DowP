@@ -76,3 +76,37 @@ def extract_pdf_pages(filepath: str, pages: list[int], out_dir: str) -> list[str
     finally:
         src.close()
     return out_paths
+
+
+# ── TIFF de varias páginas ────────────────────────────────────────────────────
+# Mismo flujo que los PDF: al importar se pregunta qué páginas, y cada una entra a
+# la cola como su propio TIFF de 1 página (el resto del pipeline lee solo la
+# primera página de un TIFF).
+
+def get_tiff_page_count(filepath: str) -> int:
+    from PIL import Image
+    with Image.open(filepath) as im:
+        return int(getattr(im, "n_frames", 1))
+
+
+def extract_tiff_pages(filepath: str, pages: list[int], out_dir: str) -> list[str]:
+    """Extrae cada página (1-based) a su propio TIFF de 1 página, sin pérdida
+    (LZW), nombrado "{nombre}_p{N}.tiff". Rutas en el mismo orden que `pages`."""
+    from PIL import Image
+
+    os.makedirs(out_dir, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(filepath))[0]
+    out_paths = []
+    with Image.open(filepath) as im:
+        for page in pages:
+            im.seek(page - 1)
+            frame = im.copy()
+            out_path = os.path.join(out_dir, f"{stem}_p{page}.tiff")
+            kwargs = {"compression": "tiff_lzw"}
+            if "dpi" in im.info:
+                kwargs["dpi"] = im.info["dpi"]
+            if im.info.get("icc_profile"):
+                kwargs["icc_profile"] = im.info["icc_profile"]
+            frame.save(out_path, "TIFF", **kwargs)
+            out_paths.append(out_path)
+    return out_paths

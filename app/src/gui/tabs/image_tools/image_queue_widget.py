@@ -672,7 +672,8 @@ class ImageQueueWidget(QFrame):
         # archivo normal por página, sin saber nada de PDFs multipágina.
         resolved_paths = []
         for p in paths:
-            if os.path.splitext(p)[1].lower() == ".pdf":
+            ext = os.path.splitext(p)[1].lower()
+            if ext in (".pdf", ".ai", ".tif", ".tiff"):
                 resolved_paths.extend(self._resolve_pdf_pages(p))
             else:
                 resolved_paths.append(p)
@@ -698,11 +699,22 @@ class ImageQueueWidget(QFrame):
         juntos); si se confirma, se extrae cada página elegida a su propio PDF de
         1 página bajo un subdirectorio temporal propio (ver __init__ y
         _cleanup_pdf_page_file/clear_queue para el borrado)."""
-        from core.tabs.image_tools.pdf_pages import extract_pdf_pages, get_pdf_page_count
+        from core.tabs.image_tools.pdf_pages import (
+            extract_pdf_pages, extract_tiff_pages, get_pdf_page_count, get_tiff_page_count)
 
+        # También TIFF y AI de varias páginas/mesas de trabajo: mismo diálogo. Los TIFF
+        # se extraen a TIFF de 1 página (sin pérdida); los AI, a PDF de 1 página.
+        ext = os.path.splitext(pdf_path)[1].lower()
+        is_tiff = ext in (".tif", ".tiff")
+        get_count = get_tiff_page_count if is_tiff else get_pdf_page_count
+        extract = extract_tiff_pages if is_tiff else extract_pdf_pages
         try:
-            page_count = get_pdf_page_count(pdf_path)
+            page_count = get_count(pdf_path)
         except Exception as e:
+            if ext != ".pdf":
+                # TIFF dañado o .ai antiguo (PostScript, no PDF): entra tal cual y el
+                # conversor da su propio mensaje si no lo puede leer.
+                return [pdf_path]
             logger.error(f"Editor de Imagen: no se pudo abrir {pdf_path} como PDF: {e}")
             QMessageBox.warning(
                 self, self.tr("PDF inválido"),
@@ -722,7 +734,7 @@ class ImageQueueWidget(QFrame):
             self._pdf_pages_temp_dir = tempfile.mkdtemp(prefix="dowp_pdf_pages_")
         sub_dir = os.path.join(self._pdf_pages_temp_dir, uuid.uuid4().hex[:8])
         try:
-            extracted = extract_pdf_pages(pdf_path, pages, sub_dir)
+            extracted = extract(pdf_path, pages, sub_dir)
         except Exception as e:
             logger.error(f"Editor de Imagen: fallo extrayendo páginas de {pdf_path}: {e}")
             QMessageBox.warning(

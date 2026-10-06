@@ -638,7 +638,7 @@ class ImageConverter:
             save_img = img
         else:
             save_img = self._flatten_to_rgb_white(img)
-        save_img.save(output_path, "PNG", compress_level=options.get("png_compression", 6), optimize=True)
+        save_img.save(output_path, "PNG", compress_level=options.get("png_compression", 6), optimize=options.get("png_optimize", True))
 
     def _save_as_jpg(self, img, output_path, options):
         save_img = self._flatten_to_rgb_white(img)

@@ -2421,6 +2421,9 @@ class ImageToolsTab(QWidget):
         # Para saber, al completarse cada archivo, si ESTE lote usó IA -- ver
         # _on_convert_file_completed/_files_with_ai_edit.
         self._active_convert_settings = settings
+        # Salidas ya enviadas al editor en ESTE lote: al combinar en un PDF, todas las
+        # imágenes terminan en el mismo archivo y no hay que enviarlo una vez por cada una.
+        self._sent_to_editor_outputs = set()
         self._convert_worker = ImageConvertWorker(
             filepaths, settings, titles=titles, source_overrides=source_overrides, parent=self,
         )
@@ -2484,6 +2487,7 @@ class ImageToolsTab(QWidget):
             "canvas": self.tr("Ajustando canvas"),
             "saving": self.tr("Guardando"),
             "processing": self.tr("Procesando"),
+            "merging": self.tr("Fusionando PDF"),
         }
         return stages.get(stage, stage if stage else self.tr("Procesando"))
 
@@ -2568,7 +2572,9 @@ class ImageToolsTab(QWidget):
         # Enviar al editor si corresponde
         from core.services.editor_integration_manager import EditorIntegrationManager
         editor_mgr = EditorIntegrationManager.get_instance()
-        if editor_mgr and editor_mgr.is_auto_send_enabled:
+        sent = getattr(self, "_sent_to_editor_outputs", set())
+        if editor_mgr and editor_mgr.is_auto_send_enabled and output_path not in sent:
+            sent.add(output_path)
             editor_mgr.process_raw_download(output_path, {})
             
         if input_path != self._current_filepath:
