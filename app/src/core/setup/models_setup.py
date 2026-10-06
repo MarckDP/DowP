@@ -339,10 +339,17 @@ def get_depth_families() -> dict:
     descarga para las dos herramientas). Se agregan aquí y no en DEPTH_MODEL_FAMILIES
     para que Ajustes > Modelos no las liste dos veces. Solo sirven en el Editor de
     Imagen: el popover en modo video las oculta."""
-    families = dict(DEPTH_MODEL_FAMILIES)
-    for family_name, models in NORMAL_MODEL_FAMILIES.items():
-        if any(m.get("engine") == "moge" for m in models.values()):
-            families[family_name] = models
+    moge = {name: models for name, models in NORMAL_MODEL_FAMILIES.items()
+            if any(m.get("engine") == "moge" for m in models.values())}
+    # Orden de calidad: Distill-Any-Depth, MoGe-2 y después Depth Anything, del más
+    # nuevo al más antiguo (ese orden ya viene de DEPTH_MODEL_FAMILIES).
+    families = {}
+    for i, (name, models) in enumerate(DEPTH_MODEL_FAMILIES.items()):
+        families[name] = models
+        if i == 0:
+            families.update(moge)
+    for name, models in moge.items():
+        families.setdefault(name, models)
     return families
 
 

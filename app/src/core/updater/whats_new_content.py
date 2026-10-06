@@ -47,6 +47,22 @@ def get_whats_new_items(version: str) -> list:
                 QCoreApplication.translate("WhatsNewContent", "Con el botón junto a Tema visual puedes importar, exportar y eliminar temas. Un tema define colores, esquinas, bordes y tamaño de letra, y los temas de DowP 1 se convierten solos al importarlos."),
             ),
             (
+                QCoreApplication.translate("WhatsNewContent", "Elige dónde guardar los modelos de IA"),
+                QCoreApplication.translate("WhatsNewContent", "Los modelos pueden ocupar varios GB: ahora puedes guardarlos en otro disco desde Ajustes > Modelos, y DowP mueve los que ya tienes descargados."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "RMBG 2.0 con tu cuenta de Hugging Face"),
+                QCoreApplication.translate("WhatsNewContent", "Conecta tu cuenta de Hugging Face para descargar desde DowP los modelos de RMBG 2.0, o descárgalos a mano y DowP los instala. Nuevo modelo recomendado: Q4F16, el más liviano y con resultados excelentes. Además, las listas de modelos ahora van ordenadas de mejor a más antiguo."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Combinar imágenes en un PDF, mucho más rápido"),
+                QCoreApplication.translate("WhatsNewContent", "Combinar fotos en un PDF pasa de casi un minuto a menos de un segundo, sin perder calidad ni congelar la app. Las páginas de PDF conservan el texto seleccionable, y al importar un TIFF o un AI de varias páginas eliges cuáles quieres."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Correcciones"),
+                QCoreApplication.translate("WhatsNewContent", "Ya puedes cortar un solo fragmento sin pulsar \"+\". La miniatura \"junto al medio\" se guarda en JPG. La consola ya no salta al final mientras la lees. Añadir un medio a una colección ya no te saca de donde estabas, y la vista previa del Gestor de Medios ya no crece sin límite."),
+            ),
+            (
                 QCoreApplication.translate("WhatsNewContent", "Problema conocido: subtítulos de YouTube"),
                 QCoreApplication.translate("WhatsNewContent", "Sin cookies, YouTube a veces limita la descarga de subtítulos (error 429) y eso cancela toda la descarga, no solo los subtítulos. Mientras lo solucionamos: espera unos minutos antes de reintentar, usa las cookies de tu navegador (Ajustes > Cookies), o descarga el video sin subtítulos y bájalos después con el botón \"Descargar subtítulos\"."),
             ),

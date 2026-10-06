@@ -488,10 +488,6 @@ class ModelsPage(QWidget):
         line.setFrameShadow(QFrame.Sunken)
         self.main_layout.addWidget(line)
 
-        self.main_layout.addWidget(self._build_persist_sessions_row())
-        self._max_sessions_row = self._build_max_sessions_row()
-        self.main_layout.addWidget(self._max_sessions_row)
-
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
@@ -505,10 +501,17 @@ class ModelsPage(QWidget):
         self.content_layout.setContentsMargins(0, 10, 10, 0)
         self.content_layout.setSpacing(10)
 
-        # Dentro del scroll (no fijas arriba): así la lista de modelos conserva su alto
+        # Todo dentro del scroll (nada fijo arriba): así la lista de modelos conserva su
+        # alto. Secciones con el subtítulo común de Ajustes (settingsSectionTitle, el
+        # mismo de "Aspecto" en General); las familias, en un tono neutro debajo.
         self._add_section_header(self.tr("Almacenamiento y cuenta"))
         self.content_layout.addWidget(self._build_models_dir_row())
         self.content_layout.addWidget(self._build_hf_account_row())
+
+        self._add_section_header(self.tr("Memoria"))
+        self.content_layout.addWidget(self._build_persist_sessions_row())
+        self._max_sessions_row = self._build_max_sessions_row()
+        self.content_layout.addWidget(self._max_sessions_row)
 
         self._add_section_header(self.tr("Eliminación de Fondo (Rembg)"))
         for family_name, models in REMBG_MODEL_FAMILIES.items():
@@ -516,9 +519,23 @@ class ModelsPage(QWidget):
             for model_name, model_info in models.items():
                 self._add_rembg_row(model_name, model_info)
 
-        self.content_layout.addSpacing(8)
-        self._add_section_header(self.tr("Modelos Personalizados (Importados)"))
+        self._add_section_header(self.tr("Mapas de Profundidad"))
+        for family_name, models in DEPTH_MODEL_FAMILIES.items():
+            self._add_family_header(family_name)
+            for model_name, model_info in models.items():
+                self._add_depth_row(model_name, model_info)
 
+        self._add_section_header(self.tr("Mapas de Normales"))
+        for family_name, models in NORMAL_MODEL_FAMILIES.items():
+            self._add_family_header(family_name)
+            for model_name, model_info in models.items():
+                self._add_depth_row(model_name, model_info, kind="normals")
+
+        self._add_section_header(self.tr("Motores de Reescalado (Upscaling)"))
+        for engine_key, tool_info in UPSCALING_TOOLS.items():
+            self._add_upscaling_row(engine_key, tool_info)
+
+        self._add_section_header(self.tr("Modelos Personalizados (Importados)"))
         import_row = QHBoxLayout()
         import_desc = QLabel(self.tr(
             "Para modelos ONNX de Eliminar Fondo que no están en el catálogo de arriba "
@@ -539,25 +556,6 @@ class ModelsPage(QWidget):
         self.custom_rows_container.setSpacing(10)
         self.content_layout.addLayout(self.custom_rows_container)
         self._refresh_custom_rows()
-
-        self.content_layout.addSpacing(8)
-        self._add_section_header(self.tr("Mapas de Profundidad"))
-        for family_name, models in DEPTH_MODEL_FAMILIES.items():
-            self._add_family_header(family_name)
-            for model_name, model_info in models.items():
-                self._add_depth_row(model_name, model_info)
-
-        self.content_layout.addSpacing(8)
-        self._add_section_header(self.tr("Mapas de Normales"))
-        for family_name, models in NORMAL_MODEL_FAMILIES.items():
-            self._add_family_header(family_name)
-            for model_name, model_info in models.items():
-                self._add_depth_row(model_name, model_info, kind="normals")
-
-        self.content_layout.addSpacing(8)
-        self._add_section_header(self.tr("Motores de Reescalado (Upscaling)"))
-        for engine_key, tool_info in UPSCALING_TOOLS.items():
-            self._add_upscaling_row(engine_key, tool_info)
 
         scroll_area.setWidget(scroll_content)
         self.main_layout.addWidget(scroll_area)
@@ -1109,13 +1107,17 @@ class ModelsPage(QWidget):
             )
 
     def _add_section_header(self, text: str):
+        """Subtítulo de sección: el mismo estilo que "Aspecto"/"Comportamiento" en
+        General (QLabel#settingsSectionTitle en _base.qss, color del acento del tema)."""
         lbl = QLabel(text)
-        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_titulo', '#EEEEEE')}; font-size: 14px; font-weight: bold; margin-top: 4px;")
+        lbl.setObjectName("settingsSectionTitle")
         self.content_layout.addWidget(lbl)
 
     def _add_family_header(self, text: str):
+        """Familia de modelos dentro de una sección: tono neutro del tema, para que no
+        compita con el subtítulo."""
         lbl = QLabel(text)
-        set_themed_style(lbl, lambda: f"color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 12px; font-weight: bold; margin-top: 6px;")
+        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 12px; font-weight: bold; margin-top: 4px;")
         self.content_layout.addWidget(lbl)
 
     def _is_gated(self, model_info: dict) -> bool:

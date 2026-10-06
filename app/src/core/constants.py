@@ -530,43 +530,84 @@ GRADIENT_DIRECTIONS = [
 # gated (URL a una página de HuggingFace, no a un archivo) llevan el tamaño que
 # declara la API de HuggingFace para ese archivo.
 REMBG_MODEL_FAMILIES = {
-    QCoreApplication.translate("constants", "Rembg Standard (U2Net)"): {
-        QCoreApplication.translate("constants", "isnet-general-use (Recomendado)"): {
-            "file": "isnet-general-use.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx",
-            "folder": "rembg",
-            "size_bytes": 178648008,
+    QCoreApplication.translate("constants", "InSPyReNet (Ultra High Resolution)"): {
+        QCoreApplication.translate("constants", "SwinB Plus Ultra (FP32)"): {
+            "file": "inspyrenet_ultra.onnx",
+            "url": "https://huggingface.co/OS-Software/InSPyReNet-SwinB-Plus-Ultra-ONNX/resolve/main/onnx/model.onnx?download=true",
+            "folder": "inspyrenet",
+            "size_bytes": 395316574,
             "input_size": (1024, 1024)
         },
-        QCoreApplication.translate("constants", "u2netp (Rápido)"): {
-            "file": "u2netp.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx",
-            "folder": "rembg",
-            "size_bytes": 4574861,
-            "input_size": (320, 320)
-        },
-        QCoreApplication.translate("constants", "u2net (Alta Precisión)"): {
-            "file": "u2net.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
-            "folder": "rembg",
-            "size_bytes": 175997641,
-            "input_size": (320, 320)
-        },
-        QCoreApplication.translate("constants", "u2net_human_seg (Humanos)"): {
-            "file": "u2net_human_seg.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx",
-            "folder": "rembg",
-            "size_bytes": 175997641,
-            "input_size": (320, 320)
-        },
-        QCoreApplication.translate("constants", "isnet-anime (Anime)"): {
-            "file": "isnet-anime.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx",
-            "folder": "rembg",
-            "size_bytes": 176069933,
+        QCoreApplication.translate("constants", "SwinB Plus Ultra (FP16)"): {
+            "file": "inspyrenet_ultra_fp16.onnx",
+            "url": "https://huggingface.co/OS-Software/InSPyReNet-SwinB-Plus-Ultra-ONNX/resolve/main/onnx/model_fp16.onnx?download=true",
+            "folder": "inspyrenet",
+            "size_bytes": 199133027,
             "input_size": (1024, 1024)
         }
     },
+
+    # --- NUEVO BLOQUE: RMBG 2.0 (Descarga Manual) ---
+    QCoreApplication.translate("constants", "RMBG 2.0 (BriaAI)"): {
+        QCoreApplication.translate("constants", "Standard (Automático)"): {
+            "file": "rmbg2_gatis.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/bria-rmbg-2.0.onnx",
+            "folder": "rmbg2",
+            "size_bytes": 1024331469,
+            "input_size": (1024, 1024)
+        },
+        QCoreApplication.translate("constants", "Standard (Manual)"): {
+            "file": "model.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 1024331469,
+            "input_size": (1024, 1024)
+        },
+        # La más liviana (234 MB) y, probada por el usuario, con resultados excelentes
+        QCoreApplication.translate("constants", "Q4F16 (Recomendado)"): {
+            "file": "model_q4f16.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 233815293,
+            "input_size": (1024, 1024)
+        },
+        "Q4": {
+            "file": "model_q4.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 367451512,
+            "input_size": (1024, 1024)
+        },
+        "BnB4": {
+            "file": "model_bnb4.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 355288046,
+            "input_size": (1024, 1024)
+        },
+        QCoreApplication.translate("constants", "FP16 (Media)"): {
+            "file": "model_fp16.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 513576499,
+            "input_size": (1024, 1024)
+        },
+        QCoreApplication.translate("constants", "Int8 (Rápido)"): {
+            "file": "model_int8.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 366087445,
+            "input_size": (1024, 1024)
+        },
+        "Quantized": {
+            "file": "model_quantized.onnx",
+            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
+            "folder": "rmbg2",
+            "size_bytes": 366087549,
+            "input_size": (1024, 1024)
+        }
+    },
+
     QCoreApplication.translate("constants", "BiRefNet (Next-Gen 2024)"): {
         # --- MODELOS GENERALES ---
         QCoreApplication.translate("constants", "General (Estándar)"): {
@@ -638,83 +679,43 @@ REMBG_MODEL_FAMILIES = {
         }
     },
 
-    # --- NUEVO BLOQUE: RMBG 2.0 (Descarga Manual) ---
-    QCoreApplication.translate("constants", "RMBG 2.0 (BriaAI)"): {
-        QCoreApplication.translate("constants", "Standard (Automático)"): {
-            "file": "rmbg2_gatis.onnx",
-            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/bria-rmbg-2.0.onnx",
-            "folder": "rmbg2",
-            "size_bytes": 1024331469,
+    QCoreApplication.translate("constants", "Rembg Standard (U2Net)"): {
+        QCoreApplication.translate("constants", "isnet-general-use"): {
+            "file": "isnet-general-use.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx",
+            "folder": "rembg",
+            "size_bytes": 178648008,
             "input_size": (1024, 1024)
         },
-        QCoreApplication.translate("constants", "Standard (Manual)"): {
-            "file": "model.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 1024331469,
-            "input_size": (1024, 1024)
+        QCoreApplication.translate("constants", "u2netp (Rápido)"): {
+            "file": "u2netp.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx",
+            "folder": "rembg",
+            "size_bytes": 4574861,
+            "input_size": (320, 320)
         },
-        # La más liviana (234 MB) y, probada por el usuario, con resultados excelentes
-        QCoreApplication.translate("constants", "Q4F16 (Recomendado)"): {
-            "file": "model_q4f16.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 233815293,
-            "input_size": (1024, 1024)
+        QCoreApplication.translate("constants", "u2net (Alta Precisión)"): {
+            "file": "u2net.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
+            "folder": "rembg",
+            "size_bytes": 175997641,
+            "input_size": (320, 320)
         },
-        "Q4": {
-            "file": "model_q4.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 367451512,
-            "input_size": (1024, 1024)
+        QCoreApplication.translate("constants", "u2net_human_seg (Humanos)"): {
+            "file": "u2net_human_seg.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx",
+            "folder": "rembg",
+            "size_bytes": 175997641,
+            "input_size": (320, 320)
         },
-        "BnB4": {
-            "file": "model_bnb4.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 355288046,
-            "input_size": (1024, 1024)
-        },
-        QCoreApplication.translate("constants", "FP16 (Media)"): {
-            "file": "model_fp16.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 513576499,
-            "input_size": (1024, 1024)
-        },
-        QCoreApplication.translate("constants", "Int8 (Rápido)"): {
-            "file": "model_int8.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 366087445,
-            "input_size": (1024, 1024)
-        },
-        "Quantized": {
-            "file": "model_quantized.onnx",
-            "url": "https://huggingface.co/briaai/RMBG-2.0/tree/main/onnx",
-            "folder": "rmbg2",
-            "size_bytes": 366087549,
+        QCoreApplication.translate("constants", "isnet-anime (Anime)"): {
+            "file": "isnet-anime.onnx",
+            "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-anime.onnx",
+            "folder": "rembg",
+            "size_bytes": 176069933,
             "input_size": (1024, 1024)
         }
     },
-
-    QCoreApplication.translate("constants", "InSPyReNet (Ultra High Resolution)"): {
-        QCoreApplication.translate("constants", "SwinB Plus Ultra (FP32)"): {
-            "file": "inspyrenet_ultra.onnx",
-            "url": "https://huggingface.co/OS-Software/InSPyReNet-SwinB-Plus-Ultra-ONNX/resolve/main/onnx/model.onnx?download=true",
-            "folder": "inspyrenet",
-            "size_bytes": 395316574,
-            "input_size": (1024, 1024)
-        },
-        QCoreApplication.translate("constants", "SwinB Plus Ultra (FP16)"): {
-            "file": "inspyrenet_ultra_fp16.onnx",
-            "url": "https://huggingface.co/OS-Software/InSPyReNet-SwinB-Plus-Ultra-ONNX/resolve/main/onnx/model_fp16.onnx?download=true",
-            "folder": "inspyrenet",
-            "size_bytes": 199133027,
-            "input_size": (1024, 1024)
-        }
-    }
 }
 
 # Catálogo de modelos de Mapa de Profundidad -- mismo criterio de "perfil
@@ -760,8 +761,88 @@ LICENSE_CC_NC = "CC BY-NC 4.0"
 LICENSE_GPL3 = "GPL 3.0"
 
 DEPTH_MODEL_FAMILIES = {
+    "Distill-Any-Depth": {
+        QCoreApplication.translate("constants", "Base (Recomendado)"): {
+            "file": "model.onnx",
+            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Base-onnx/resolve/main/Distill%20Any%20Depth%20Base/model.onnx",
+            "folder": "depth/dad-base",
+            "size_bytes": 388874697,
+            "license": LICENSE_MIT,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "square",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large (Máximo detalle)"): {
+            "file": "model.onnx",
+            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Large-onnx/resolve/main/Distill%20Any%20Depth%20Large/model.onnx",
+            "folder": "depth/dad-large",
+            "size_bytes": 1336858580,
+            "license": LICENSE_MIT,
+            "input_layout": "4d",
+            "output_kind": "disparity",
+            "process_mode": "square",
+            "process_size": 518,
+        },
+    },
+
+    "Depth Anything 3": {
+        QCoreApplication.translate("constants", "Small (Rápido)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx"),
+            "folder": "depth/da3-small",
+            "size_bytes": 640691,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx_data"),
+                 "size_bytes": 104702464},
+            ],
+            "license": LICENSE_APACHE,
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Base (Separa mejor los planos)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx"),
+            "folder": "depth/da3-base",
+            "size_bytes": 646912,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx_data"),
+                 "size_bytes": 412068352},
+            ],
+            "license": LICENSE_APACHE,
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+        QCoreApplication.translate("constants", "Large (Más potente)"): {
+            "file": "model.onnx",
+            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx"),
+            "folder": "depth/da3-large",
+            "size_bytes": 1093118,
+            "extra_files": [
+                {"file": "model.onnx_data",
+                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx_data"),
+                 "size_bytes": 1381741568},
+            ],
+            "license": LICENSE_CC_NC,
+            "license_note": QCoreApplication.translate(
+                "constants",
+                "La conversión ONNX indica Apache 2.0, pero deriva del modelo DA3-Large "
+                "original, que es CC BY-NC 4.0."),
+            "input_layout": "5d",
+            "output_kind": "depth",
+            "process_mode": "short_side",
+            "process_size": 518,
+        },
+    },
+
     "Depth Anything V2": {
-        QCoreApplication.translate("constants", "Small (Recomendado)"): {
+        QCoreApplication.translate("constants", "Small"): {
             "file": "model.onnx",
             "url": _DEPTH_ANYTHING_URL.format("depth-anything-v2-small", "model.onnx"),
             "folder": "depth/da2-small",
@@ -828,60 +909,7 @@ DEPTH_MODEL_FAMILIES = {
             "process_size": 518,
         },
     },
-    "Depth Anything 3": {
-        QCoreApplication.translate("constants", "Small (Rápido)"): {
-            "file": "model.onnx",
-            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx"),
-            "folder": "depth/da3-small",
-            "size_bytes": 640691,
-            "extra_files": [
-                {"file": "model.onnx_data",
-                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-small", "model.onnx_data"),
-                 "size_bytes": 104702464},
-            ],
-            "license": LICENSE_APACHE,
-            "input_layout": "5d",
-            "output_kind": "depth",
-            "process_mode": "short_side",
-            "process_size": 518,
-        },
-        QCoreApplication.translate("constants", "Base (Separa mejor los planos)"): {
-            "file": "model.onnx",
-            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx"),
-            "folder": "depth/da3-base",
-            "size_bytes": 646912,
-            "extra_files": [
-                {"file": "model.onnx_data",
-                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-base", "model.onnx_data"),
-                 "size_bytes": 412068352},
-            ],
-            "license": LICENSE_APACHE,
-            "input_layout": "5d",
-            "output_kind": "depth",
-            "process_mode": "short_side",
-            "process_size": 518,
-        },
-        QCoreApplication.translate("constants", "Large (Más potente)"): {
-            "file": "model.onnx",
-            "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx"),
-            "folder": "depth/da3-large",
-            "size_bytes": 1093118,
-            "extra_files": [
-                {"file": "model.onnx_data",
-                 "url": _DEPTH_ANYTHING_URL.format("depth-anything-v3-large", "model.onnx_data"),
-                 "size_bytes": 1381741568},
-            ],
-            "license": LICENSE_CC_NC,
-            "license_note": QCoreApplication.translate(
-                "constants",
-                "La conversión ONNX indica Apache 2.0, pero deriva del modelo DA3-Large "
-                "original, que es CC BY-NC 4.0."),
-            "input_layout": "5d",
-            "output_kind": "depth",
-            "process_mode": "short_side",
-            "process_size": 518,
-        },
-    },
+
     "Depth Anything V1": {
         QCoreApplication.translate("constants", "Large"): {
             "file": "model.onnx",
@@ -903,30 +931,6 @@ DEPTH_MODEL_FAMILIES = {
             "input_layout": "4d",
             "output_kind": "disparity",
             "process_mode": "short_side",
-            "process_size": 518,
-        },
-    },
-    "Distill-Any-Depth": {
-        QCoreApplication.translate("constants", "Base (Más relieve)"): {
-            "file": "model.onnx",
-            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Base-onnx/resolve/main/Distill%20Any%20Depth%20Base/model.onnx",
-            "folder": "depth/dad-base",
-            "size_bytes": 388874697,
-            "license": LICENSE_MIT,
-            "input_layout": "4d",
-            "output_kind": "disparity",
-            "process_mode": "square",
-            "process_size": 518,
-        },
-        QCoreApplication.translate("constants", "Large (Máximo detalle)"): {
-            "file": "model.onnx",
-            "url": "https://huggingface.co/FuryTMP/Distill-Any-Depth-Large-onnx/resolve/main/Distill%20Any%20Depth%20Large/model.onnx",
-            "folder": "depth/dad-large",
-            "size_bytes": 1336858580,
-            "license": LICENSE_MIT,
-            "input_layout": "4d",
-            "output_kind": "disparity",
-            "process_mode": "square",
             "process_size": 518,
         },
     },
@@ -990,46 +994,6 @@ NORMAL_MODEL_FAMILIES = {
 }
 
 UPSCALING_TOOLS = {
-    "Waifu2x": {
-        "name": "Waifu2x",
-        "folder": "waifu2x",
-        # exe/url por plataforma -- ver core/setup/models_setup.py:_platform_value().
-        # Mismo release (20250915), un asset .zip distinto por SO en GitHub.
-        "exe": {
-            "windows": "waifu2x-ncnn-vulkan.exe",
-            "macos": "waifu2x-ncnn-vulkan",
-            "linux": "waifu2x-ncnn-vulkan",
-        },
-        "url": {
-            "windows": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-windows.zip",
-            "macos": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-macos.zip",
-            "linux": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-linux.zip",
-        },
-        "size_bytes": {
-            "windows": 35497352,
-            "macos": 41706129,
-            "linux": 36658685,
-        },
-    },
-    "SRMD": {
-        "name": "SRMD",
-        "folder": "srmd",
-        "exe": {
-            "windows": "srmd-ncnn-vulkan.exe",
-            "macos": "srmd-ncnn-vulkan",
-            "linux": "srmd-ncnn-vulkan",
-        },
-        "url": {
-            "windows": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-windows.zip",
-            "macos": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-macos.zip",
-            "linux": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-ubuntu.zip",
-        },
-        "size_bytes": {
-            "windows": 19208707,
-            "macos": 24612116,
-            "linux": 19716383,
-        },
-    },
     "Upscayl": {
         "name": "Upscayl (Global Engine)",
         "folder": "upscayl",
@@ -1051,7 +1015,49 @@ UPSCALING_TOOLS = {
         "models_size_bytes": 319059567,
         # Modelos (custom-models): mismo zip para los tres SO, no cambia.
         "models_url": "https://github.com/upscayl/custom-models/archive/refs/heads/main.zip"
-    }
+    },
+
+    "Waifu2x": {
+        "name": "Waifu2x",
+        "folder": "waifu2x",
+        # exe/url por plataforma -- ver core/setup/models_setup.py:_platform_value().
+        # Mismo release (20250915), un asset .zip distinto por SO en GitHub.
+        "exe": {
+            "windows": "waifu2x-ncnn-vulkan.exe",
+            "macos": "waifu2x-ncnn-vulkan",
+            "linux": "waifu2x-ncnn-vulkan",
+        },
+        "url": {
+            "windows": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-windows.zip",
+            "macos": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-macos.zip",
+            "linux": "https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20250915/waifu2x-ncnn-vulkan-20250915-linux.zip",
+        },
+        "size_bytes": {
+            "windows": 35497352,
+            "macos": 41706129,
+            "linux": 36658685,
+        },
+    },
+
+    "SRMD": {
+        "name": "SRMD",
+        "folder": "srmd",
+        "exe": {
+            "windows": "srmd-ncnn-vulkan.exe",
+            "macos": "srmd-ncnn-vulkan",
+            "linux": "srmd-ncnn-vulkan",
+        },
+        "url": {
+            "windows": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-windows.zip",
+            "macos": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-macos.zip",
+            "linux": "https://github.com/nihui/srmd-ncnn-vulkan/releases/download/20220728/srmd-ncnn-vulkan-20220728-ubuntu.zip",
+        },
+        "size_bytes": {
+            "windows": 19208707,
+            "macos": 24612116,
+            "linux": 19716383,
+        },
+    },
 }
 
 # --- NOTA: soporte EPS/PS en ImageConverter ---
