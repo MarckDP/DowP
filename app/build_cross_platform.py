@@ -284,11 +284,6 @@ args = [
     # lo busca get_bundled_importer_dir() bajo sys._MEIPASS.
     f"--add-data={IMPORTER_DIR}{path_sep}importer_adobe{os.sep}src",
 
-    # ── Extensión nativa de VEGAS Pro ──────────────────────────────────────
-    # get_bundled_vegas_importer_dir() conserva esta misma jerarquía en modo
-    # congelado: _internal/importer_vegas/bin/Release.
-    f"--add-data={VEGAS_IMPORTER_RELEASE_DIR}{path_sep}importer_vegas{os.sep}dist",
-
     # python-engineio resuelve su driver async con importlib.import_module()
     # a partir de un string armado en runtime ('engineio.async_drivers.' +
     # async_mode) — invisible para el análisis estático de PyInstaller, así
@@ -358,6 +353,18 @@ args = [
 
 for mod in UNUSED_QT_MODULES:
     args.append(f"--exclude-module=PySide6.{mod}")
+
+# ── Extensión nativa de VEGAS Pro (Solo Windows) ──────────────────────────
+# get_bundled_vegas_importer_dir() conserva esta misma jerarquía en modo
+# congelado: _internal/importer_vegas/dist. En macOS/Linux no aplica.
+if IS_WINDOWS:
+    vegas_dll = os.path.join(VEGAS_IMPORTER_RELEASE_DIR, "DowPImporter.dll")
+    if not os.path.exists(vegas_dll):
+        print(f"\nERROR: No se encontró la extensión compilada de VEGAS Pro en:\n  {vegas_dll}")
+        print("Debes compilar el proyecto en 'importer_vegas' (con dotnet build) antes de compilar DowP para Windows,")
+        print("ya que DowP necesita incluir 'DowPImporter.dll' dentro del instalador para poder instalar la extensión.\n")
+        sys.exit(1)
+    args.append(f"--add-data={VEGAS_IMPORTER_RELEASE_DIR}{path_sep}importer_vegas{os.sep}dist")
 
 if IS_MACOS:
     args.extend([
