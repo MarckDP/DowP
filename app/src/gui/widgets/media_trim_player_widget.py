@@ -2923,6 +2923,10 @@ class MediaTrimPlayerWidget(QWidget):
             elif active == "photoshop":
                 e_icon = get_svg_icon("photoshop.svg")
                 e_name = "Photoshop"
+            elif active == "vegas":
+                from core.setup.vegas_setup import get_vegas_version_icon
+                e_icon = get_svg_icon(get_vegas_version_icon())
+                e_name = "VEGAS Pro"
             else:
                 e_icon = QIcon()
                 e_name = "Editor"

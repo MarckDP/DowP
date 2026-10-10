@@ -79,8 +79,15 @@ def get_bundled_importer_dir() -> str:
     dos niveles desde src/ y no uno como get_bin_root_dir().
     """
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, "importer")
-    return os.path.join(os.path.dirname(os.path.dirname(get_src_dir())), "importer")
+        return os.path.join(sys._MEIPASS, "importer_adobe", "src")
+    return os.path.join(os.path.dirname(os.path.dirname(get_src_dir())), "importer_adobe", "src")
+
+
+def get_bundled_vegas_importer_dir() -> str:
+    """Carpeta que contiene la DLL y config del DowP Importer para VEGAS Pro."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, "importer_vegas", "dist")
+    return os.path.join(os.path.dirname(os.path.dirname(get_src_dir())), "importer_vegas", "dist")
 
 
 def get_app_data_dir() -> str:

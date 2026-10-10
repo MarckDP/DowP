@@ -1204,6 +1204,10 @@ class TreeListMixin:
                     elif active == "davinci":
                         e_icon = get_svg_icon("davinci resolve.svg")
                         e_name = "DaVinci Resolve"
+                    elif active == "vegas":
+                        from core.setup.vegas_setup import get_vegas_version_icon
+                        e_icon = get_svg_icon(get_vegas_version_icon())
+                        e_name = "VEGAS Pro"
                     else:
                         e_icon = QIcon()
                         e_name = "Editor"

@@ -84,3 +84,12 @@ PRUEBAS_PENDIENTES.md
 # Excepciones de archivos Markdown que SI queremos versionar
 !app/src/gui/themes/TEMAS.md
 !README.md
+!importer_adobe/src/MACOS.md
+!importer_vegas/README.md
+
+# C# Build artifacts
+obj/
+bin/
+importer_vegas/dist/
+importer_vegas/src/obj/
+importer_vegas/src/bin/

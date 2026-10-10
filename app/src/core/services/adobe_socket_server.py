@@ -30,6 +30,7 @@ class AdobeSocketServer(QThread):
     # Signals to communicate with the PySide6 UI if needed
     client_connected = Signal(str)
     client_disconnected = Signal(str)
+    client_registered = Signal(str, str)
     active_target_changed = Signal(object)
     # Medios enviados DESDE el editor con el boton "Enviar a DowP": lista de dicts
     # {path, in, out, has_trim, name} + el identificador de la app que los mando.
@@ -86,6 +87,7 @@ class AdobeSocketServer(QThread):
             panel_version = data.get('extensionVersion') or 'desconocida'
             logger.info(f"[Socket.IO] Client {sid} registered as {app_id} (panel v{panel_version})")
             self.clients[sid] = app_id
+            self.client_registered.emit(sid, app_id)
 
             # Respond with current active target
             active_app = self.clients.get(self.active_target_sid) if self.active_target_sid else None
@@ -305,7 +307,11 @@ class AdobeSocketServer(QThread):
         self._runner = web.AppRunner(self.app, access_log=None)
         self.loop.run_until_complete(self._runner.setup())
         
-        site = web.TCPSite(self._runner, self.host, self.port, reuse_address=True)
+        import platform
+        # En POSIX (Linux/macOS) SO_REUSEADDR evita el bloqueo TIME_WAIT al reiniciar.
+        # En Windows SO_REUSEADDR permite secuestro de socket (dos procesos en el mismo puerto).
+        reuse_addr = (platform.system() != "Windows")
+        site = web.TCPSite(self._runner, self.host, self.port, reuse_address=reuse_addr)
         try:
             self.loop.run_until_complete(site.start())
         except OSError as e:

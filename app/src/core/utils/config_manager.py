@@ -58,8 +58,12 @@ def get_config():
             "premiere_path": "",
             "aftereffects_enabled": False,
             "aftereffects_path": "",
+            "photoshop_enabled": False,
+            "photoshop_path": "",
             "davinci_enabled": False,
-            "davinci_path": ""
+            "davinci_path": "",
+            "vegas_enabled": False,
+            "vegas_path": ""
         },
         "pot_provider": "bgutil",       # "bgutil" | "wpc" | "none"
         "pot_wpc_browser_path": "",     # ruta al ejecutable Chromium; vacío = auto-detect

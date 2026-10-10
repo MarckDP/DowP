@@ -1,0 +1,18 @@
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 240 234" style="enable-background:new 0 0 240 234;" xml:space="preserve">
+<style type="text/css">
+	.bg{fill:#061426;}
+	.accent{fill:#0088FF;}
+	.light{fill:#38B6FF;}
+</style>
+<g id="VegasBackground">
+	<path class="bg" d="M42.5,0h155C221,0,240,19,240,42.5v149c0,23.5-19,42.5-42.5,42.5h-155C19,234,0,215,0,191.5v-149
+		C0,19,19,0,42.5,0z"/>
+</g>
+<g id="VegasVLogo">
+	<!-- Stylized Vegas Pro V Shape -->
+	<path class="accent" d="M60,48 L96,48 L120,132 L144,48 L180,48 L138,186 L102,186 Z" />
+	<!-- Inner 3D facet -->
+	<path class="light" d="M120,132 L144,48 L162,48 L126,170 Z" opacity="0.85" />
+</g>
+</svg>

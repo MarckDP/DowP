@@ -88,6 +88,18 @@ def show_warning(parent, title, text):
     _apply_dialog_styles(msg)
     msg.exec()
 
+def show_error(parent, title, text):
+    """
+    Muestra un diálogo de error con el botón Aceptar (Ok).
+    """
+    msg = QMessageBox(parent)
+    msg.setIcon(QMessageBox.Icon.Critical)
+    msg.setWindowTitle(_translate_dialog_text(parent, title))
+    msg.setText(_translate_dialog_text(parent, text))
+    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+    _apply_dialog_styles(msg)
+    msg.exec()
+
 
 class AddLabelDialog(QDialog):
     def __init__(self, parent=None, edit_data=None):

@@ -365,12 +365,20 @@ class EditorStatusCornerWidget(QWidget):
         config = get_config()
         integrations = config.get('integrations', {})
 
-        apps = [
-            ("premiere", "premiere pro.svg", "Adobe Premiere Pro"),
-            ("aftereffects", "after effects.svg", "Adobe After Effects"),
-            ("photoshop", "photoshop.svg", "Adobe Photoshop"),
-            ("davinci", "davinci resolve.svg", "DaVinci Resolve")
-        ]
+        from core.setup.vegas_setup import get_vegas_version_icon
+        import platform
+        sys_os = platform.system()
+        
+        apps = []
+        if sys_os != "Linux":
+            apps.extend([
+                ("premiere", "premiere pro.svg", "Adobe Premiere Pro"),
+                ("aftereffects", "after effects.svg", "Adobe After Effects"),
+                ("photoshop", "photoshop.svg", "Adobe Photoshop"),
+            ])
+        apps.append(("davinci", "davinci resolve.svg", "DaVinci Resolve"))
+        if sys_os == "Windows":
+            apps.append(("vegas", get_vegas_version_icon(), "VEGAS Pro"))
 
         for app_id, svg_name, app_name in apps:
             is_enabled = integrations.get(f"{app_id}_enabled", False)
@@ -458,10 +466,121 @@ class EditorStatusCornerWidget(QWidget):
             widget.set_app_status(is_active=is_active, is_running=is_running)
 
     def _show_app_icon_context_menu(self, widget, global_pos):
-        from PySide6.QtWidgets import QMenu
+        from PySide6.QtWidgets import QMenu, QWidgetAction, QLabel
+        from PySide6.QtCore import Qt, QUrl
+        from PySide6.QtGui import QDesktopServices
+        from core.utils.config_manager import get_config, save_config
+        from gui.styles import get_theme_token
+        from gui.dialogs.dialogs import show_info, show_warning, show_warning_confirm
+        
         menu = QMenu(self)
-        act_configure = menu.addAction(self.tr("Configurar integración"))
-        act_configure.triggered.connect(lambda: self._open_integration_settings())
+        app_id = widget.app_id
+        
+        # 1. Título
+        title_action = QWidgetAction(menu)
+        title_label = QLabel(widget.app_name)
+        title_label.setContentsMargins(10, 5, 10, 5)
+        title_label.setStyleSheet(f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold;")
+        title_action.setDefaultWidget(title_label)
+        menu.addAction(title_action)
+        
+        # 2. Estado
+        state_action = QWidgetAction(menu)
+        state_label = QLabel()
+        state_label.setContentsMargins(10, 0, 10, 5)
+        
+        state_text = {
+            3: self.tr("Estado: Conectado"),
+            2: self.tr("Estado: Abierto (sin vincular)"),
+            1: self.tr("Estado: Desconectado")
+        }.get(widget._state, self.tr("Estado: Desconocido"))
+        
+        state_color = {
+            3: get_theme_token('estado_exito', '#55d17c'),
+            2: get_theme_token('estado_alerta', '#ffa500'),
+            1: get_theme_token('estado_error', '#ff5555')
+        }.get(widget._state, get_theme_token('texto_gris', '#aaaaaa'))
+        
+        state_label.setText(state_text)
+        state_label.setStyleSheet(f"color: {state_color}; font-size: 11px;")
+        state_action.setDefaultWidget(state_label)
+        menu.addAction(state_action)
+        menu.addSeparator()
+        
+        # 3. Acciones Específicas
+        config = get_config()
+        integrations = config.setdefault('integrations', {})
+        
+        def toggle_setting(key, default_val):
+            val = not integrations.get(key, default_val)
+            integrations[key] = val
+            save_config(config)
+            
+        def do_install(module, name):
+            ok, msg = module.install() if hasattr(module, 'install') else module.install_vegas_extension()
+            (show_info if ok else show_warning)(self, self.tr("Instalación"), msg)
+            
+        def do_uninstall(module, name):
+            if not show_warning_confirm(self, self.tr("Desinstalar extensión"), self.tr("¿Seguro que deseas desinstalar la extensión de {0}?\nPodrás volver a instalarla luego.").format(name)):
+                return
+            ok, msg = module.uninstall() if hasattr(module, 'uninstall') else module.uninstall_vegas_extension()
+            (show_info if ok else show_warning)(self, self.tr("Desinstalación"), msg)
+            
+        def open_location(module):
+            path = module.get_install_dir() if hasattr(module, 'get_install_dir') else module.get_vegas_extensions_dir()
+            if path and __import__("os").path.exists(path):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+        if app_id == "vegas":
+            act_tl = menu.addAction(self.tr("Importar a la línea de tiempo"))
+            act_tl.setCheckable(True)
+            act_tl.setChecked(integrations.get('vegas_import_timeline', True))
+            act_tl.triggered.connect(lambda checked=False: toggle_setting('vegas_import_timeline', True))
+            
+            act_img = menu.addAction(self.tr("Importar también imágenes"))
+            act_img.setCheckable(True)
+            act_img.setChecked(integrations.get('vegas_import_images_timeline', True))
+            act_img.triggered.connect(lambda checked=False: toggle_setting('vegas_import_images_timeline', True))
+            
+            act_bin = menu.addAction(self.tr("Organizar en bin 'DowP'"))
+            act_bin.setCheckable(True)
+            act_bin.setChecked(integrations.get('vegas_organize_bin', True))
+            act_bin.triggered.connect(lambda checked=False: toggle_setting('vegas_organize_bin', True))
+            menu.addSeparator()
+            
+            import core.setup.vegas_setup as vegas_setup
+            menu.addAction(self.tr("Reinstalar extensión")).triggered.connect(lambda checked=False: do_install(vegas_setup, "VEGAS"))
+            menu.addAction(self.tr("Desinstalar extensión")).triggered.connect(lambda checked=False: do_uninstall(vegas_setup, "VEGAS"))
+            menu.addAction(self.tr("Abrir ubicación")).triggered.connect(lambda checked=False: open_location(vegas_setup))
+            menu.addSeparator()
+            
+        elif app_id == "davinci":
+            act_tl = menu.addAction(self.tr("Importar a la línea de tiempo"))
+            act_tl.setCheckable(True)
+            act_tl.setChecked(integrations.get('davinci_import_timeline', True))
+            act_tl.triggered.connect(lambda checked=False: toggle_setting('davinci_import_timeline', True))
+            
+            act_img = menu.addAction(self.tr("Importar también imágenes"))
+            act_img.setCheckable(True)
+            act_img.setChecked(integrations.get('davinci_import_images_timeline', False))
+            act_img.triggered.connect(lambda checked=False: toggle_setting('davinci_import_images_timeline', False))
+            
+            act_bin = menu.addAction(self.tr("Crear estructura de carpetas"))
+            act_bin.setCheckable(True)
+            act_bin.setChecked(integrations.get('davinci_create_folders', True))
+            act_bin.triggered.connect(lambda checked=False: toggle_setting('davinci_create_folders', True))
+            menu.addSeparator()
+            
+        elif app_id in ["premiere", "aftereffects", "photoshop"]:
+            import core.setup.importer_setup as adobe_setup
+            menu.addAction(self.tr("Reinstalar extensión")).triggered.connect(lambda checked=False: do_install(adobe_setup, "Adobe"))
+            menu.addAction(self.tr("Desinstalar extensión")).triggered.connect(lambda checked=False: do_uninstall(adobe_setup, "Adobe"))
+            menu.addAction(self.tr("Abrir ubicación")).triggered.connect(lambda checked=False: open_location(adobe_setup))
+            menu.addSeparator()
+            
+        # 4. Ajustes
+        act_configure = menu.addAction(self.tr("Ir a más ajustes..."))
+        act_configure.triggered.connect(lambda checked=False: self._open_integration_settings())
         menu.exec(global_pos)
 
     def _open_integration_settings(self):

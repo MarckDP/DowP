@@ -21,7 +21,9 @@ MAIN_SCRIPT = os.path.join(SCRIPT_DIR, "main.py")
 HELPER_SCRIPT = os.path.join(SCRIPT_DIR, "updater_helper.py")
 SRC_DIR = os.path.join(SCRIPT_DIR, "src")
 # El importer es hermano de app/, no hijo: <repo>/importer
-IMPORTER_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "importer")
+IMPORTER_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "importer_adobe", "src")
+# La extensión nativa de VEGAS viaja como binario compilado, separado del panel CEP.
+VEGAS_IMPORTER_RELEASE_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "importer_vegas", "dist")
 
 # Firma ad-hoc de macOS consolidada en core/updater/ (la necesita tambien el
 # helper de swap para volver a firmar el bundle tras aplicar una actualizacion).
@@ -280,7 +282,12 @@ args = [
     # lo que hace que el panel no necesite descarga, ni release propio, ni version
     # propia: se actualiza junto con la app. Destino "importer" a secas, que es donde
     # lo busca get_bundled_importer_dir() bajo sys._MEIPASS.
-    f"--add-data={IMPORTER_DIR}{path_sep}importer",
+    f"--add-data={IMPORTER_DIR}{path_sep}importer_adobe{os.sep}src",
+
+    # ── Extensión nativa de VEGAS Pro ──────────────────────────────────────
+    # get_bundled_vegas_importer_dir() conserva esta misma jerarquía en modo
+    # congelado: _internal/importer_vegas/bin/Release.
+    f"--add-data={VEGAS_IMPORTER_RELEASE_DIR}{path_sep}importer_vegas{os.sep}dist",
 
     # python-engineio resuelve su driver async con importlib.import_module()
     # a partir de un string armado en runtime ('engineio.async_drivers.' +

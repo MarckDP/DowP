@@ -12,7 +12,7 @@ from core.utils.download_history import download_history
 from core.utils.preset_manager import (
     build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
 )
-from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file
+from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file, sanitize_filename
 from core.utils.file_conflict_manager import quarantine_for_recode, commit_backup, rollback_backup, predict_final_extension
 from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
 from core.utils.queue_manager import ORIGIN_ADVANCED
@@ -260,22 +260,26 @@ class DownloadController(QObject):
                     # arrastrar el resultado. Con recodificación, el botón se habilita
                     # recién cuando el/los job(s) RECODE resuelven (ver
                     # _on_recode_job_status y _finalize_group).
+                    fragment_paths = self._resolve_fragment_download_paths(resolved_request_data)
                     tracker = self._init_solo_artifacts()
-                    tracker.add([p for p, _suffix in self._resolve_fragment_download_paths(resolved_request_data)])
+                    tracker.add([p for p, _suffix in fragment_paths])
                     tracker.add([actual_path])
                     self._set_solo_drag_ready(True)
-                    self._send_to_editor_if_enabled(actual_path or self.last_downloaded_filepath, self.solo_request_data)
+                    if fragment_paths:
+                        for p, _suffix in fragment_paths:
+                            self._send_to_editor_if_enabled(p, resolved_request_data)
+                    else:
+                        self._send_to_editor_if_enabled(actual_path or self.last_downloaded_filepath, resolved_request_data)
                 self._history_sync(_SOLO_RECODE_KEY)
             else:
                 self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error: {0}").format(message), "wait")
                 logger.error(f"AdvancedProcessTab: Error en descarga directa SOLO: {message}")
                 if not self.cancellation_event.is_set():
                     get_sound_notifier().single_finished(SOURCE_ADVANCED_SOLO, False)
-                
-            self.solo_worker = None
 
         self.solo_worker.progress.connect(on_solo_progress)
-        self.solo_worker.finished.connect(on_solo_finished)
+        self.solo_worker.job_finished.connect(on_solo_finished)
+        self.solo_worker.finished.connect(self.solo_worker.deleteLater)
         self.solo_worker.start()
 
     def pause_solo_download(self):
@@ -529,7 +533,11 @@ class DownloadController(QObject):
                         )
                 else:
                     # Archivos sin recodificar en modo lotes (o playlist): se envían al editor
-                    if job.final_filepath:
+                    fragment_paths = self._resolve_fragment_download_paths(job.request_data)
+                    if fragment_paths:
+                        for p, _suffix in fragment_paths:
+                            self._send_to_editor_if_enabled(p, job.request_data)
+                    elif job.final_filepath:
                         actual_path = self._find_actual_downloaded_file(job.final_filepath)
                         self._send_to_editor_if_enabled(actual_path or job.final_filepath, job.request_data)
         elif status in ("FAILED", "CANCELLED"):
@@ -1162,22 +1170,43 @@ class DownloadController(QObject):
 
         import glob
         skip_exts = (".jpg", ".jpeg", ".png", ".webp", ".dbak", ".part", ".ytdl", ".temp")
+        title = request_data.get("title")
         results = []
         for i, frag in enumerate(fragments):
             suffix = frag[2] if len(frag) > 2 else f"fragment{i+1:02d}"
-            pattern = os.path.join(glob.escape(output_path), f"*_{suffix}{predicted_ext}")
-            candidates = [p for p in glob.glob(pattern) if os.path.isfile(p)]
+            candidates = []
+            if title:
+                for t in (title, sanitize_filename(title)):
+                    exact = os.path.join(output_path, f"{t}_{suffix}{predicted_ext}")
+                    if os.path.isfile(exact):
+                        candidates = [exact]
+                        break
+                    pat_title = os.path.join(glob.escape(output_path), f"{glob.escape(t)}_{suffix}.*")
+                    matches = [
+                        p for p in glob.glob(pat_title)
+                        if os.path.isfile(p) and not p.lower().endswith(skip_exts)
+                    ]
+                    if matches:
+                        matches.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                        candidates = matches
+                        break
+
             if not candidates:
-                # Contenedor final distinto al previsto (ej. remux) - se amplía la
-                # búsqueda a cualquier extensión con ese sufijo, evitando igual
-                # miniaturas/backups/temporales que puedan compartir el mismo sufijo.
-                pattern_any = os.path.join(glob.escape(output_path), f"*_{suffix}.*")
-                candidates = [
-                    p for p in glob.glob(pattern_any)
-                    if os.path.isfile(p) and not p.lower().endswith(skip_exts)
-                ]
+                pattern = os.path.join(glob.escape(output_path), f"*_{suffix}{predicted_ext}")
+                candidates = [p for p in glob.glob(pattern) if os.path.isfile(p)]
+                if not candidates:
+                    # Contenedor final distinto al previsto (ej. remux) - se amplía la
+                    # búsqueda a cualquier extensión con ese sufijo, evitando igual
+                    # miniaturas/backups/temporales que puedan compartir el mismo sufijo.
+                    pattern_any = os.path.join(glob.escape(output_path), f"*_{suffix}.*")
+                    candidates = [
+                        p for p in glob.glob(pattern_any)
+                        if os.path.isfile(p) and not p.lower().endswith(skip_exts)
+                    ]
+                if candidates:
+                    candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+
             if candidates:
-                candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
                 results.append((candidates[0], suffix))
         return results
 

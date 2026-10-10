@@ -361,6 +361,7 @@ class QueueWorker(QThread):
                     
                     worker = SingleJobWorker(job, self)
                     worker.finished_job.connect(self._on_single_job_finished)
+                    worker.finished.connect(worker.deleteLater)
                     with QMutexLocker(self._workers_mutex):
                         self._active_workers[job.job_id] = worker
                     worker.start()
@@ -381,7 +382,9 @@ class QueueWorker(QThread):
         with QMutexLocker(self._workers_mutex):
             if job_id in self._active_workers:
                 worker = self._active_workers.pop(job_id)
-                worker.deleteLater()
+                # No llamar a deleteLater aquí, porque el hilo aún no ha salido
+                # del todo de run() (lo hace después de emitir finished_job).
+                # Se limpia automáticamente vía worker.finished.connect(worker.deleteLater)
 
     def cancel_current_job(self):
         with QMutexLocker(self._workers_mutex):

@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                  QFrame, QScrollArea, QPushButton, QSizePolicy, QCheckBox, QLineEdit, QFileDialog,
                                  QApplication)
-from PySide6.QtCore import Qt, QSize, Signal, QThread
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Qt, QSize, Signal, QThread, QUrl
+from PySide6.QtGui import QIcon, QPixmap, QDesktopServices
 from core.services.editor_integration_manager import EditorIntegrationManager
 from core.setup import importer_setup
+from core.setup import vegas_setup
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_src_dir
 from gui.styles import apply_folder_browse_button_style, set_button_variant
@@ -42,12 +43,14 @@ class IntegrationsPage(QWidget):
 
     def __init__(self):
         super().__init__()
+        # Conectar al EditorIntegrationManager antes de construir la UI
+        self.editor_mgr = EditorIntegrationManager.get_instance()
         self.init_ui()
         
-        # Conectar al EditorIntegrationManager
-        self.editor_mgr = EditorIntegrationManager.get_instance()
         if self.editor_mgr:
             self.editor_mgr.active_editor_changed.connect(self.update_adobe_status)
+            self.editor_mgr.active_editor_changed.connect(lambda target: self._on_vegas_process_status_changed(self.editor_mgr.process_status if self.editor_mgr else {}))
+            self.editor_mgr.process_status_changed.connect(lambda _: self.update_adobe_status(self.editor_mgr.active_editor))
             self.update_adobe_status(self.editor_mgr.active_editor)
 
     def init_ui(self):
@@ -85,13 +88,15 @@ class IntegrationsPage(QWidget):
 
         # --- SECCIÓN ADOBE (Premiere Pro / After Effects no existen en Linux) ---
         if platform.system() != "Linux":
-            self.create_adobe_section()
-            # Va después de la tarjeta de Adobe a propósito: solo tiene sentido leerla
-            # habiendo visto antes qué aplicaciones hay configuradas.
-            self.create_importer_section()
+            adobe_layout = self.create_adobe_section()
+            self.create_importer_section(adobe_layout)
 
         # --- SECCIÓN DAVINCI (Windows, Mac y Linux) ---
         self.create_davinci_section()
+
+        # --- SECCIÓN VEGAS PRO (Solo Windows) ---
+        if platform.system() == "Windows":
+            self.create_vegas_section()
 
         self.content_layout.addStretch(1)
 
@@ -190,9 +195,9 @@ class IntegrationsPage(QWidget):
         card_layout.addLayout(ps_layout)
         
         # Description
-        desc = QLabel(self.tr("Instala la extensión DowP Importer en Premiere, After Effects o Photoshop. Activa los interruptores arriba y configura la ruta para lanzar las aplicaciones desde DowP. A Photoshop solo se le envían imágenes."))
+        desc = QLabel(self.tr("Activa los interruptores arriba para lanzar las aplicaciones desde DowP. A Photoshop solo se le envían imágenes."))
         desc.setWordWrap(True)
-        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; margin-top: 10px;")
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; margin-top: 5px;")
         card_layout.addWidget(desc)
         
         # Mantener referencias para estado visual (compatibilidad anterior por ahora)
@@ -201,23 +206,23 @@ class IntegrationsPage(QWidget):
         self.lbl_icon_ps = ps_layout.icon_lbl
         
         self.content_layout.addWidget(self.adobe_card)
+        
+        return card_layout
 
     # ─────────────────────────────────────────────────────────────────────
     # DowP Importer (panel CEP de Adobe)
     # ─────────────────────────────────────────────────────────────────────
 
-    def create_importer_section(self):
-        """Tarjeta de instalación del DowP Importer.
-
-        El panel viaja dentro de la app, así que instalarlo es copiar una carpeta al
-        perfil del usuario: sin descarga, sin release aparte y sin permisos de
-        administrador. Es opt-in a propósito, porque mucha gente usa DowP sin tocar
-        Adobe; pero una vez instalado, la app lo mantiene al día sola en cada
-        actualización (ver importer_setup.sync_if_installed())."""
-        self.importer_card = self.create_card_frame()
-        card_layout = QVBoxLayout(self.importer_card)
-        card_layout.setContentsMargins(15, 15, 15, 15)
-        card_layout.setSpacing(12)
+    def create_importer_section(self, parent_layout):
+        """Tarjeta de instalación del DowP Importer (Adobe)."""
+        # Divider line
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        parent_layout.addWidget(line)
+        
+        # We don't create a new card, we use the parent layout
+        card_layout = parent_layout
 
         header_layout = QHBoxLayout()
         title = QLabel(self.tr("DowP Importer"))
@@ -234,16 +239,28 @@ class IntegrationsPage(QWidget):
         self.importer_desc_lbl.setWordWrap(True)
         set_themed_style(self.importer_desc_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')};")
         card_layout.addWidget(self.importer_desc_lbl)
+        
+        self.importer_instruction_lbl = QLabel(self.tr("Nota: Para abrir el panel dentro de Adobe, ve al menú superior: Ventana > Extensiones > DowP Importer."))
+        self.importer_instruction_lbl.setWordWrap(True)
+        set_themed_style(self.importer_instruction_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-style: italic; margin-top: 2px; margin-bottom: 5px;")
+        card_layout.addWidget(self.importer_instruction_lbl)
 
         actions = QHBoxLayout()
         actions.setSpacing(10)
         self.btn_importer_install = QPushButton()
         self.btn_importer_install.clicked.connect(self._on_install_importer)
+        
         self.btn_importer_uninstall = QPushButton(self.tr("Desinstalar"))
         set_button_variant(self.btn_importer_uninstall, "secondary")
         self.btn_importer_uninstall.clicked.connect(self._on_uninstall_importer)
+        
+        self.btn_importer_open = QPushButton(self.tr("Abrir ubicación"))
+        set_button_variant(self.btn_importer_open, "secondary")
+        self.btn_importer_open.clicked.connect(lambda: self._open_dir(importer_setup.get_install_dir()))
+        
         actions.addWidget(self.btn_importer_install)
         actions.addWidget(self.btn_importer_uninstall)
+        actions.addWidget(self.btn_importer_open)
         actions.addStretch()
         card_layout.addLayout(actions)
 
@@ -277,8 +294,7 @@ class IntegrationsPage(QWidget):
         conflict_layout.addLayout(conflict_actions)
 
         card_layout.addWidget(self.importer_conflict_frame)
-
-        self.content_layout.addWidget(self.importer_card)
+        self.refresh_importer_card()
         self.refresh_importer_card()
 
     def refresh_importer_card(self):
@@ -286,7 +302,7 @@ class IntegrationsPage(QWidget):
 
         Toda la lógica de decisión vive en importer_setup.get_status(); aquí solo se
         traduce a texto y botones."""
-        if not hasattr(self, "importer_card"):
+        if not hasattr(self, "importer_status_lbl"):
             return
 
         status = importer_setup.get_status()
@@ -301,6 +317,7 @@ class IntegrationsPage(QWidget):
                 self.tr("Las extensiones de Adobe no existen en este sistema."))
             self.btn_importer_install.setVisible(False)
             self.btn_importer_uninstall.setVisible(False)
+            self.btn_importer_open.setVisible(False)
             self.importer_conflict_frame.setVisible(False)
             return
 
@@ -314,6 +331,7 @@ class IntegrationsPage(QWidget):
             self.importer_status_lbl.setText(self.tr("No instalado"))
             set_themed_style(self.importer_status_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold;")
             self.btn_importer_uninstall.setVisible(False)
+            self.btn_importer_open.setVisible(False)
             if no_adobe:
                 # Sin Adobe en la máquina el panel no sirve de nada: se deja disponible
                 # pero sin empujar, que es justo lo contrario de un aviso insistente.
@@ -334,6 +352,7 @@ class IntegrationsPage(QWidget):
             self.btn_importer_install.setText(self.tr("Reinstalar"))
             set_button_variant(self.btn_importer_install, "secondary")
             self.btn_importer_uninstall.setVisible(True)
+            self.btn_importer_open.setVisible(True)
             desc = base_desc + "\n\n" + self.tr("Instalado en: {0}").format(status["install_dir"])
 
         else:  # outdated
@@ -343,6 +362,7 @@ class IntegrationsPage(QWidget):
             self.btn_importer_install.setText(self.tr("Actualizar a v{0}").format(bundled))
             set_button_variant(self.btn_importer_install, "primary")
             self.btn_importer_uninstall.setVisible(True)
+            self.btn_importer_open.setVisible(True)
             desc = base_desc + "\n\n" + self.tr(
                 "El panel instalado es la v{0} y DowP trae la v{1}.").format(installed_ver, bundled)
 
@@ -453,6 +473,29 @@ class IntegrationsPage(QWidget):
         una actualización de DowP o porque el usuario borró la carpeta a mano."""
         super().showEvent(event)
         self.refresh_importer_card()
+        if hasattr(self, 'refresh_vegas_importer_ui'):
+            self.refresh_vegas_importer_ui()
+        self.refresh_integration_toggles()
+
+    def refresh_integration_toggles(self):
+        config = get_config()
+        integrations = config.get('integrations', {})
+        
+        # Helper para actualizar un checkbox sin disparar su señal 'toggled' que volvería a guardar el config
+        def update_cb(cb_name, config_key, default_val):
+            if hasattr(self, cb_name):
+                cb = getattr(self, cb_name)
+                cb.blockSignals(True)
+                cb.setChecked(integrations.get(config_key, default_val))
+                cb.blockSignals(False)
+
+        update_cb('cb_dv_timeline', 'davinci_import_timeline', True)
+        update_cb('cb_dv_images_timeline', 'davinci_import_images_timeline', False)
+        update_cb('cb_dv_folders', 'davinci_create_folders', True)
+        
+        update_cb('cb_vegas_timeline', 'vegas_import_timeline', True)
+        update_cb('cb_vegas_images', 'vegas_import_images_timeline', True)
+        update_cb('cb_vegas_bin', 'vegas_organize_bin', True)
 
     def create_davinci_section(self):
         self.davinci_card = self.create_card_frame()
@@ -718,10 +761,20 @@ class IntegrationsPage(QWidget):
         path_input = QLineEdit()
         placeholder = default_path or placeholder_hint or self.tr("Seleccionar ruta...")
         path_input.setPlaceholderText(placeholder)
+        
+        # Si la ruta guardada ya no existe (ej. se desinstaló el programa), la descartamos
+        if current_path and not os.path.exists(current_path):
+            current_path = ""
+            self._save_integration_setting(app_id, "path", "")
+            
         path_input.setText(current_path)
         
         # Autodetect if empty and enabled and default_path exists on disk
-        if is_enabled and not current_path and default_path and os.path.exists(default_path):
+        if not current_path and default_path and os.path.exists(default_path):
+            if not is_enabled:
+                is_enabled = True
+                checkbox.setChecked(True)
+                self._save_integration_setting(app_id, "enabled", True)
             path_input.setText(default_path)
             self._save_integration_setting(app_id, "path", default_path)
             
@@ -819,8 +872,18 @@ class IntegrationsPage(QWidget):
             self.adobe_status_lbl.setText(self.tr("Conectado ({0})").format(info[0]))
             self.adobe_status_lbl.setStyleSheet("color: #55ff55; font-weight: bold;")
         else:
-            self.adobe_status_lbl.setText(self.tr("Desconectado"))
-            set_themed_style(self.adobe_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
+            is_running = False
+            if self.editor_mgr:
+                for app_id in self.ADOBE_STATUS_APPS.keys():
+                    if self.editor_mgr.process_status.get(app_id, False):
+                        is_running = True
+                        break
+            if is_running:
+                self.adobe_status_lbl.setText(self.tr("En ejecución (Desvinculado)"))
+                set_themed_style(self.adobe_status_lbl, lambda: f"color: {get_theme_token('estado_alerta', '#ffaa00')}; font-weight: bold;")
+            else:
+                self.adobe_status_lbl.setText(self.tr("Desconectado"))
+                set_themed_style(self.adobe_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
 
         for app_id, (_label, attr, svg) in self.ADOBE_STATUS_APPS.items():
             label = getattr(self, attr, None)
@@ -834,3 +897,175 @@ class IntegrationsPage(QWidget):
             if not success:
                 show_info(self, self.tr("DowP Importer"), self.tr("No se detecta conexión con {0}. Asegúrate de tener la extensión abierta.").format(target_app))
 
+    def create_vegas_section(self):
+        self.vegas_card = self.create_card_frame()
+        card_layout = QVBoxLayout(self.vegas_card)
+        card_layout.setContentsMargins(15, 15, 15, 15)
+        card_layout.setSpacing(15)
+
+        # Header (Título + Estado)
+        header_layout = QHBoxLayout()
+        title = QLabel(self.tr("VEGAS Pro (Boris FX & MAGIX)"))
+        title.setObjectName("settingsSectionTitle")
+        title.setStyleSheet(apply_shapes("font-size: 16px; font-weight: bold;"))
+
+        self.vegas_status_lbl = QLabel(self.tr("Desconectado"))
+        set_themed_style(self.vegas_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        header_layout.addWidget(self.vegas_status_lbl)
+        card_layout.addLayout(header_layout)
+
+        # Configuración de ruta y acceso directo
+        config = get_config()
+        integrations = config.get('integrations', {})
+        
+        # Detectar ruta por defecto
+        installations = vegas_setup.find_vegas_installations()
+        default_vegas_path = installations[0] if installations else r"C:\Program Files\VEGAS\VEGAS Pro 21.0\vegas210.exe"
+        
+        from core.setup.vegas_setup import get_vegas_version_icon
+        vegas_layout = self.create_app_setting(
+            app_id="vegas",
+            app_name="VEGAS Pro",
+            icon_name=get_vegas_version_icon(),
+            default_path=default_vegas_path,
+            placeholder_hint=r"C:\Program Files\VEGAS\VEGAS Pro 21.0\vegas210.exe",
+            is_enabled=integrations.get('vegas_enabled', False),
+            current_path=integrations.get('vegas_path', '')
+        )
+        card_layout.addLayout(vegas_layout)
+        self.lbl_icon_vegas = vegas_layout.icon_lbl
+
+        # Divider line
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        card_layout.addWidget(line)
+
+        # Header DowP Importer
+        importer_header = QHBoxLayout()
+        importer_title = QLabel(self.tr("DowP Importer"))
+        importer_title.setObjectName("settingsSectionTitle")
+        importer_title.setStyleSheet(apply_shapes("font-size: 16px; font-weight: bold;"))
+        self.vegas_ext_lbl = QLabel()
+        self.vegas_ext_lbl.setStyleSheet("font-weight: bold;")
+        importer_header.addWidget(importer_title)
+        importer_header.addStretch()
+        importer_header.addWidget(self.vegas_ext_lbl)
+        card_layout.addLayout(importer_header)
+
+        # Description
+        self.vegas_importer_desc = QLabel(self.tr(
+            "Extensión nativa para VEGAS Pro. Se instala en tu perfil de usuario "
+            "y permite controlar DowP directamente desde dentro del editor."
+        ))
+        self.vegas_importer_desc.setWordWrap(True)
+        set_themed_style(self.vegas_importer_desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')};")
+        card_layout.addWidget(self.vegas_importer_desc)
+
+        # Buttons
+        actions = QHBoxLayout()
+        actions.setSpacing(10)
+        self.btn_install_vegas_ext = QPushButton()
+        self.btn_install_vegas_ext.clicked.connect(self._on_install_vegas_extension)
+        
+        self.btn_uninstall_vegas_ext = QPushButton(self.tr("Desinstalar"))
+        set_button_variant(self.btn_uninstall_vegas_ext, "secondary")
+        self.btn_uninstall_vegas_ext.clicked.connect(self._on_uninstall_vegas_extension)
+        
+        self.btn_open_vegas_ext = QPushButton(self.tr("Abrir ubicación"))
+        set_button_variant(self.btn_open_vegas_ext, "secondary")
+        self.btn_open_vegas_ext.clicked.connect(lambda: self._open_dir(vegas_setup.get_vegas_extensions_dir()))
+        
+        actions.addWidget(self.btn_install_vegas_ext)
+        actions.addWidget(self.btn_uninstall_vegas_ext)
+        actions.addWidget(self.btn_open_vegas_ext)
+        actions.addStretch()
+        card_layout.addLayout(actions)
+
+        self.refresh_vegas_importer_ui()
+
+
+
+        desc = QLabel(self.tr("La integración con VEGAS Pro usa la extensión nativa DowP Importer. Abre VEGAS Pro y accede al panel desde Ver > Extensiones > DowP Importer."))
+        desc.setWordWrap(True)
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; margin-top: 5px;")
+        card_layout.addWidget(desc)
+
+        self.content_layout.addWidget(self.vegas_card)
+
+        # Conectar actualización de estado si el servicio existe
+        if self.editor_mgr:
+            if hasattr(self.editor_mgr, 'vegas_service') and self.editor_mgr.vegas_service:
+                self.editor_mgr.vegas_service.connection_changed.connect(self._on_vegas_connection_changed)
+                self._on_vegas_connection_changed(self.editor_mgr.vegas_service.is_connected)
+            self.editor_mgr.process_status_changed.connect(self._on_vegas_process_status_changed)
+
+    def _on_vegas_connection_changed(self, connected: bool):
+        pass
+
+    def _on_vegas_process_status_changed(self, status_dict: dict):
+        if not hasattr(self, 'vegas_status_lbl'):
+            return
+            
+        is_conn = (self.editor_mgr and self.editor_mgr.active_editor == 'vegas')
+        
+        if is_conn:
+            self.vegas_status_lbl.setText(self.tr("Conectado"))
+            set_themed_style(self.vegas_status_lbl, lambda: f"color: {get_theme_token('estado_exito', '#55ff55')}; font-weight: bold;")
+        else:
+            is_running = status_dict.get('vegas', False)
+            if is_running:
+                self.vegas_status_lbl.setText(self.tr("En ejecución (Desvinculado)"))
+                set_themed_style(self.vegas_status_lbl, lambda: f"color: {get_theme_token('estado_alerta', '#ffaa00')}; font-weight: bold;")
+            else:
+                self.vegas_status_lbl.setText(self.tr("Desconectado"))
+                set_themed_style(self.vegas_status_lbl, lambda: f"color: {get_theme_token('estado_error', '#ff5555')}; font-weight: bold;")
+
+    def refresh_vegas_importer_ui(self):
+        if not hasattr(self, 'vegas_ext_lbl'):
+            return
+        ext_installed = vegas_setup.is_extension_installed()
+        if ext_installed:
+            self.vegas_ext_lbl.setText(self.tr("Instalado"))
+            self.vegas_ext_lbl.setStyleSheet("color: #55d17c; font-weight: bold;")
+            self.btn_install_vegas_ext.setText(self.tr("Reinstalar"))
+            set_button_variant(self.btn_install_vegas_ext, "secondary")
+            self.btn_uninstall_vegas_ext.setVisible(True)
+            self.btn_open_vegas_ext.setVisible(True)
+        else:
+            self.vegas_ext_lbl.setText(self.tr("No instalado"))
+            set_themed_style(self.vegas_ext_lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-weight: bold;")
+            self.btn_install_vegas_ext.setText(self.tr("Instalar DowP Importer"))
+            set_button_variant(self.btn_install_vegas_ext, "primary")
+            self.btn_uninstall_vegas_ext.setVisible(False)
+            self.btn_open_vegas_ext.setVisible(False)
+
+    def _on_install_vegas_extension(self):
+        from gui.dialogs.dialogs import show_info, show_error
+        ok, msg = vegas_setup.install_vegas_extension()
+        self.refresh_vegas_importer_ui()
+        if ok:
+            show_info(self, self.tr("DowP Importer"), msg)
+        else:
+            show_error(self, self.tr("Error de instalación"), msg)
+
+    def _on_uninstall_vegas_extension(self):
+        from gui.dialogs.dialogs import show_info, show_error, show_warning_confirm
+        if not show_warning_confirm(
+            self, self.tr("Desinstalar DowP Importer"),
+            self.tr("Se eliminará la extensión de VEGAS Pro. Podrás volver a instalarla desde aquí "
+                    "cuando quieras.\n\n¿Continuar?")
+        ):
+            return
+        ok, msg = vegas_setup.remove_vegas_extension()
+        self.refresh_vegas_importer_ui()
+        if ok:
+            show_info(self, self.tr("DowP Importer"), msg)
+        else:
+            show_error(self, self.tr("Error al desinstalar"), msg)
+
+    def _open_dir(self, path):
+        if path and os.path.exists(path):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(path))

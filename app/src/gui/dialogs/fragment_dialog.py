@@ -815,7 +815,7 @@ class FragmentDialog(QDialog):
                 proxy = build_proxy_url(self.stream_url, self.source_url)
                 if proxy:
                     playback_url = proxy
-                    logger.debug(f"FragmentDialog: Usando proxy local → {proxy[:60]}...")
+                    logger.debug(f"FragmentDialog: Usando proxy local -> {proxy[:60]}...")
             except Exception as _e:
                 logger.warning(f"FragmentDialog: Proxy no disponible, usando URL directa: {_e}")
 
@@ -838,25 +838,34 @@ class FragmentDialog(QDialog):
     # ──────────────────────────────────────────────────────────
     def cleanup_media_player(self):
         """Libera los recursos del reproductor para evitar bloqueos del hilo principal,
-        y reactiva la ventana principal - sin esto (ver conversación: quedaba en un
-        bloque de código muerto que nunca se ejecutaba) la ventana principal podía
-        quedar en un estado de activación/foco raro al cerrar este diálogo.
+        corta streams activos del proxy y reactiva la ventana principal.
+        """
+        if getattr(self, "_cleaned_up", False):
+            return
+        self._cleaned_up = True
 
-        Desacopla explícitamente las salidas de video/audio (no solo detener y vaciar la
-        fuente): el medio es un stream remoto servido por el proxy local, y sin este
-        desacople el backend de QtMultimedia puede quedarse esperando sincronizar con el
-        hilo interno de decodificación al cerrar el diálogo mientras la conexión de red
-        sigue activa, colgando el hilo de UI. trim_player.cleanup() (compartido con
-        SubclipDialog, que SÍ necesita conservar las salidas para reutilizar el mismo
-        reproductor entre archivos) no lo hace — se completa aquí, específico de este
-        diálogo, que sí termina de una vez con el reproductor al cerrar."""
+        from core.logger.logger_manager import logger
+
+        # 1. Abortar inmediatamente cualquier streaming activo en el proxy local
+        # para que los sockets del servidor se cierren y el demuxer de Qt/FFmpeg no se bloquee en lectura.
+        try:
+            from core.utils.stream_proxy import abort_active_streams
+            abort_active_streams()
+        except Exception as _e:
+            logger.debug(f"FragmentDialog: Error abortando streams de proxy: {_e}")
+
+        # 2. Desconectar señales de estado para no disparar handlers durante el desmontaje
+        try:
+            self.trim_player.media_player.mediaStatusChanged.disconnect(self._on_media_status_changed)
+        except Exception:
+            pass
+
+        # 3. Detener y vaciar fuente de forma segura
         try:
             self.trim_player.cleanup()
+            self.trim_player.media_player.pause()
             self.trim_player.media_player.setSource(QUrl())
-            self.trim_player.media_player.setVideoOutput(None)
-            self.trim_player.media_player.setAudioOutput(None)
         except Exception as e:
-            from core.logger.logger_manager import logger
             logger.warning(f"Error limpiando QMediaPlayer en FragmentDialog: {e}")
 
         win = self.parent().window() if self.parent() else None

@@ -125,11 +125,10 @@ class SubtitleController(QObject):
                 logger.error(f"AdvancedProcessTab: Error en descarga de subtítulos: {message}")
                 self._subtitle_target_path = None
                 self._subtitle_request_data = None
-                
-            self._subtitle_worker = None
 
         self._subtitle_worker.progress.connect(on_sub_progress)
-        self._subtitle_worker.finished.connect(on_sub_finished)
+        self._subtitle_worker.job_finished.connect(on_sub_finished)
+        self._subtitle_worker.finished.connect(self._subtitle_worker.deleteLater)
         self._subtitle_worker.start()
 
     def on_fragments_changed(self):

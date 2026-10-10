@@ -157,7 +157,7 @@ class AdvancedProcessTab(QWidget):
 
         # Botón circular sobre la miniatura → abre el diálogo de fragmentos
         self.video_details.thumb_container.clicked_cut.connect(
-            lambda: self.video_details.open_fragments_dialog()
+            self._open_fragments_dialog
         )
         self.video_details.fragments_changed.connect(self.subtitle_controller.on_fragments_changed)
         
@@ -931,6 +931,10 @@ class AdvancedProcessTab(QWidget):
         self.queue_panel.adjust_width(self.width())
         super().resizeEvent(event)
 
+    def _open_fragments_dialog(self):
+        self.video_details.open_fragments_dialog()
+        self._save_current_job_options()
+
     def open_media_search(self, query=""):
         """Ventana de búsqueda (lupa). SOLO: un resultado, que se pone en el campo de URL y
         se analiza como si se hubiera pegado. LOTES: varios, cada uno entra a la cola igual
@@ -1043,7 +1047,8 @@ class AdvancedProcessTab(QWidget):
                     self.output_options.set_progress(0, self.tr("En espera"), "wait")
                 self._batch_workers.pop("solo", None)
 
-            worker.finished.connect(handler)
+            worker.job_finished.connect(handler)
+            worker.finished.connect(worker.deleteLater)
             worker.start()
             return
 
@@ -1137,7 +1142,8 @@ class AdvancedProcessTab(QWidget):
                 self._batch_workers.pop(j_id, None)
             return handler
             
-        worker.finished.connect(create_handler(job_id))
+        worker.job_finished.connect(create_handler(job_id))
+        worker.finished.connect(worker.deleteLater)
         worker.start()
 
     def _save_current_job_options(self):

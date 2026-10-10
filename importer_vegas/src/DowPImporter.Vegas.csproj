@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>DowPImporter</AssemblyName>
+    <RootNamespace>DowPImporter</RootNamespace>
+    <OutputType>Library</OutputType>
+    <LangVersion>latest</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>..\dist\</OutputPath>
+    <!-- Build against the oldest VEGAS version that we support.  Newer hosts
+         already load ScriptPortal.Vegas and the extension's AssemblyResolve
+         handler reuses that host assembly.  Override with
+         /p:VegasApiPath=... when producing a compatibility build. -->
+    <VegasApiPath Condition="'$(VegasApiPath)' == ''">$(VEGAS_API_PATH)</VegasApiPath>
+    <VegasApiPath Condition="'$(VegasApiPath)' == ''">C:\Program Files\VEGAS\VEGAS Pro 16.0\ScriptPortal.Vegas.dll</VegasApiPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="ScriptPortal.Vegas">
+      <HintPath>$(VegasApiPath)</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+
+</Project>

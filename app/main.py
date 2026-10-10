@@ -135,6 +135,47 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Estilo base multiplataforma que previene bugs de QComboBox en Windows
 
+    # ── Candado de Instancia Única Multiplataforma (Windows / macOS / Linux) ──
+    from PySide6.QtNetwork import QLocalSocket, QLocalServer
+
+    SINGLE_INSTANCE_KEY = "com.dowp.app.single_instance"
+    local_socket = QLocalSocket()
+    local_socket.connectToServer(SINGLE_INSTANCE_KEY)
+    if local_socket.waitForConnected(500):
+        # Ya existe una instancia activa en este equipo (sea Windows, macOS o Linux)
+        logger.info("Otra instancia de DowP ya está en ejecución. Activando la ventana existente...")
+        local_socket.write(b"ACTIVATE\n")
+        local_socket.flush()
+        local_socket.disconnectFromServer()
+        sys.exit(0)
+
+    # Si no conectó, somos la primera instancia: limpiamos cualquier residuo huérfano y escuchamos
+    QLocalServer.removeServer(SINGLE_INSTANCE_KEY)
+    instance_server = QLocalServer(app)
+    if not instance_server.listen(SINGLE_INSTANCE_KEY):
+        logger.warning(f"No se pudo iniciar el servidor de instancia única: {instance_server.errorString()}")
+    else:
+        def _on_new_instance_connection():
+            client = instance_server.nextPendingConnection()
+            if not client:
+                return
+            def _on_client_ready_read():
+                try:
+                    data = client.readAll().data().decode("utf-8", errors="ignore")
+                    if "ACTIVATE" in data:
+                        logger.info("Petición de activación recibida de otra instancia.")
+                        main_win = window_holder[0]
+                        if main_win:
+                            if main_win.isMinimized():
+                                main_win.showNormal()
+                            main_win.show()
+                            main_win.raise_()
+                            main_win.activateWindow()
+                except Exception as e:
+                    logger.debug(f"Error procesando activación de instancia: {e}")
+            client.readyRead.connect(_on_client_ready_read)
+        instance_server.newConnection.connect(_on_new_instance_connection)
+
     # Arrancar la captura de la consola en vivo desde el boot
     from core.logger.console_log_handler import get_console_log_handler
     get_console_log_handler()
@@ -237,6 +278,12 @@ def main():
             editor_manager.stop_all_services()
         except BaseException as e:
             logger.debug(f"Error deteniendo Editor Manager en salida: {e}")
+        try:
+            if instance_server and instance_server.isListening():
+                instance_server.close()
+            QLocalServer.removeServer(SINGLE_INSTANCE_KEY)
+        except Exception as e:
+            logger.debug(f"Error cerrando servidor de instancia única: {e}")
 
     app.aboutToQuit.connect(on_app_exit)
 

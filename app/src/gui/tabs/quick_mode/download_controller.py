@@ -130,8 +130,6 @@ class QuickDownloadController(QObject):
         self.analysis_worker = AnalysisWorker(url, analyze_playlist=True, fast_mode=True)
 
         def on_finished(data, error):
-            if self.analysis_worker:
-                self.analysis_worker.deleteLater()
             self.analysis_worker = None
 
             if error:
@@ -206,7 +204,8 @@ class QuickDownloadController(QObject):
             if on_done:
                 on_done()
 
-        self.analysis_worker.finished.connect(on_finished)
+        self.analysis_worker.job_finished.connect(on_finished)
+        self.analysis_worker.finished.connect(self.analysis_worker.deleteLater)
         self.analysis_worker.start()
 
     def start_cut_analysis(self, url, mode, quality, output_path,
@@ -220,8 +219,6 @@ class QuickDownloadController(QObject):
         self.analysis_worker = AnalysisWorker(url, analyze_playlist=False, fast_mode=True)
 
         def on_finished(data, error):
-            if self.analysis_worker:
-                self.analysis_worker.deleteLater()
             self.analysis_worker = None
             try:
                 if error:
@@ -249,7 +246,8 @@ class QuickDownloadController(QObject):
                 if on_done:
                     on_done()
 
-        self.analysis_worker.finished.connect(on_finished)
+        self.analysis_worker.job_finished.connect(on_finished)
+        self.analysis_worker.finished.connect(self.analysis_worker.deleteLater)
         self.analysis_worker.start()
 
     def start_search_downloads(self, items, mode, quality, output_path,
@@ -369,6 +367,10 @@ class QuickDownloadController(QObject):
         if main_win:
             main_win.activateWindow()
             main_win.raise_()
+        try:
+            dialog.deleteLater()
+        except Exception:
+            pass
 
         if result:
             frag_data = dialog.get_fragments_data()
@@ -569,7 +571,8 @@ class QuickDownloadController(QObject):
         self.download_worker = worker
 
         worker.progress.connect(lambda d, task=task_data: self._on_task_progress(d, task))
-        worker.finished.connect(lambda success, msg, task=task_data: self._on_task_finished(success, msg, task))
+        worker.job_finished.connect(lambda success, msg, task=task_data: self._on_task_finished(success, msg, task))
+        worker.finished.connect(worker.deleteLater)
 
         self.active_workers.append(task_data)
         self.is_downloading = True
@@ -769,9 +772,6 @@ class QuickDownloadController(QObject):
 
         if task_data in self.active_workers:
             self.active_workers.remove(task_data)
-
-        if task_data.get("worker"):
-            task_data["worker"].deleteLater()
 
         from core.services.editor_integration_manager import EditorIntegrationManager
         editor_mgr = EditorIntegrationManager.get_instance()

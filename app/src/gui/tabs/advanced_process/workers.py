@@ -7,7 +7,7 @@ import time
 
 class AnalysisWorker(QThread):
     """Worker thread for running yt-dlp analysis in background."""
-    finished = Signal(dict, str)
+    job_finished = Signal(dict, str)
     progress = Signal(int, int)
 
     def __init__(self, url, analyze_playlist=True, fast_mode=True):
@@ -39,11 +39,11 @@ class AnalysisWorker(QThread):
             progress_callback=on_progress,
             cancellation_event=self._cancel_event,
         )
-        self.finished.emit(data if data else {}, error if error else "")
+        self.job_finished.emit(data if data else {}, error if error else "")
 
 class DownloadWorker(QThread):
     """Hilo encargado de la descarga y reporte de progreso."""
-    finished = Signal(bool, str)
+    job_finished = Signal(bool, str)
     progress = Signal(dict)
 
     def __init__(self, request_data, cancellation_event=None):
@@ -60,7 +60,7 @@ class DownloadWorker(QThread):
             self.cancellation_event,
             conflict_ask_callback=self._ask_conflict,
         )
-        self.finished.emit(success, message)
+        self.job_finished.emit(success, message)
 
     def _ask_conflict(self, filename):
         """

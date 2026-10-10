@@ -7,6 +7,7 @@ from core.logger.logger_manager import logger
 
 from core.services.adobe_socket_server import AdobeSocketServer
 from core.services.davinci_integration_service import DaVinciIntegrationService
+from core.services.vegas_integration_service import VegasIntegrationService
 
 class ProcessMonitorThread(QThread):
     processes_updated = Signal(dict)
@@ -18,7 +19,12 @@ class ProcessMonitorThread(QThread):
             "premiere": "Adobe Premiere Pro.exe",
             "aftereffects": "AfterFX.exe",
             "photoshop": "Photoshop.exe",
-            "davinci": "Resolve.exe"
+            "davinci": "Resolve.exe",
+            "vegas": [
+                "vegas2026.exe", "vegas220.exe", "vegas210.exe", "vegas200.exe",
+                "vegas190.exe", "vegas180.exe", "vegas170.exe", "vegas160.exe",
+                "vegas150.exe", "vegas140.exe", "vegas.exe"
+            ]
         }
         
     def run(self):
@@ -27,28 +33,6 @@ class ProcessMonitorThread(QThread):
         while self.is_running:
             try:
                 if is_windows:
-                    import ctypes
-                    EnumWindows = ctypes.windll.user32.EnumWindows
-                    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
-                    GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
-                    IsWindowVisible = ctypes.windll.user32.IsWindowVisible
-
-                    GetWindowTextLengthW = ctypes.windll.user32.GetWindowTextLengthW
-
-                    visible_pids = set()
-
-                    def foreach_window(hwnd, lParam):
-                        if IsWindowVisible(hwnd):
-                            length = GetWindowTextLengthW(hwnd)
-                            if length > 0:
-                                pid = ctypes.c_ulong()
-                                GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-                                if pid.value > 0:
-                                    visible_pids.add(pid.value)
-                        return True
-
-                    EnumWindows(EnumWindowsProc(foreach_window), 0)
-
                     import csv, io
                     creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
                     output = subprocess.check_output(['tasklist', '/fo', 'csv', '/nh'], creationflags=creationflags).decode('utf-8', errors='ignore')
@@ -56,15 +40,15 @@ class ProcessMonitorThread(QThread):
                     
                     running_exes = set()
                     for row in reader:
-                        if len(row) > 1:
-                            exe_name = row[0]
-                            pid = int(row[1])
-                            if pid in visible_pids:
-                                running_exes.add(exe_name)
+                        if len(row) > 0 and row[0]:
+                            running_exes.add(row[0].strip())
                                 
                     status = {}
-                    for app_id, exe_name in self.targets.items():
-                        status[app_id] = (exe_name in running_exes)
+                    for app_id, target in self.targets.items():
+                        if isinstance(target, (list, tuple)):
+                            status[app_id] = any(t in running_exes for t in target)
+                        else:
+                            status[app_id] = (target in running_exes)
                         
                     self.processes_updated.emit(status)
                 else:
@@ -74,6 +58,7 @@ class ProcessMonitorThread(QThread):
                         "aftereffects": ("After Effects" in output or "AfterFX" in output),
                         "photoshop": "Photoshop" in output,
                         "davinci": bool(re.search(r'(?:^|/|\s)Resolve(?:\.app)?(?:\s|$)', output, re.MULTILINE)),
+                        "vegas": False
                     }
                     self.processes_updated.emit(status)
             except Exception as e:
@@ -110,13 +95,16 @@ class EditorIntegrationManager(QObject):
         # Servicios
         self.adobe_service = AdobeSocketServer()
         self.davinci_service = DaVinciIntegrationService.get_instance()
+        self.vegas_service = VegasIntegrationService.get_instance()
         
         # Conectar señales del servicio Adobe
         self.adobe_service.active_target_changed.connect(self._on_adobe_target_changed)
         self.adobe_service.files_pushed.connect(self.media_pushed_from_editor)
+        self.adobe_service.client_registered.connect(self._on_adobe_client_registered)
         
-        # Futuros servicios irán aquí:
-        # self.vegas_service = VegasIntegrationService()
+        # Conectar señales de VEGAS y registrar sus rutas HTTP en el servidor aiohttp común
+        self.vegas_service.files_pushed.connect(self.media_pushed_from_editor)
+        self.vegas_service.attach_routes(self.adobe_service.app)
 
         EditorIntegrationManager._instance = self
         
@@ -127,17 +115,33 @@ class EditorIntegrationManager(QObject):
     @classmethod
     def get_instance(cls):
         return cls._instance
+
+    def _on_adobe_client_registered(self, sid, app_id):
+        if app_id in ('premiere', 'aftereffects', 'photoshop'):
+            self.process_status[app_id] = True
+            self.process_status_changed.emit(self.process_status)
         
     def _on_processes_updated(self, status_dict):
+        # Si un cliente Adobe ya está registrado y conectado por Socket.IO, garantizar que cuente como en ejecución
+        if hasattr(self, 'adobe_service') and self.adobe_service:
+            connected_adobe = set(self.adobe_service.clients.values())
+            for app_id in ('premiere', 'aftereffects', 'photoshop'):
+                if app_id in connected_adobe:
+                    status_dict[app_id] = True
+
         self.process_status = status_dict
         self.process_status_changed.emit(status_dict)
+        
+        # Auto-desvincular si Vegas se cierra y era el editor activo
+        if self.active_editor == 'vegas' and not status_dict.get('vegas', False):
+            logger.info("[EditorManager] VEGAS Pro se ha cerrado. Desvinculando editor activo.")
+            self.force_adobe_target(None)
 
     def start_all_services(self):
         """Inicia todos los servidores de comunicación en segundo plano."""
         logger.info("[EditorManager] Iniciando servicios de integración...")
         self.adobe_service.start()
         self.process_monitor.start()
-        # self.vegas_service.start()
 
     def stop_all_services(self):
         """Detiene todos los servicios al cerrar la aplicación."""
@@ -153,13 +157,16 @@ class EditorIntegrationManager(QObject):
 
     def _on_adobe_target_changed(self, target_app):
         """Callback cuando Premiere o After Effects cambian de estado."""
+        prev = self.active_editor
         if target_app:
             self.active_editor = target_app
             logger.info(f"[EditorManager] Editor activo establecido a: {self.active_editor}")
+            if prev == "vegas" and hasattr(self, 'vegas_service') and self.vegas_service:
+                self.vegas_service.notify_linked(False)
         else:
-            # Si Adobe se desconectó, revisamos si otro está activo o lo dejamos en None
-            self.active_editor = None
-            logger.info("[EditorManager] Ningún editor activo conectado.")
+            if self.active_editor in ('premiere', 'aftereffects', 'photoshop'):
+                self.active_editor = None
+                logger.info("[EditorManager] Ningún editor activo conectado.")
             
         self.active_editor_changed.emit(self.active_editor)
 
@@ -168,22 +175,41 @@ class EditorIntegrationManager(QObject):
         self._on_adobe_target_changed(None)
 
     def force_adobe_target(self, target_app):
-        """Intenta forzar el objetivo activo. Soporta Adobe y DaVinci."""
+        """Intenta forzar el objetivo activo. Soporta Adobe, DaVinci y VEGAS Pro."""
+        prev_editor = self.active_editor
         if target_app is None:
             self.active_editor = None
             logger.info("[EditorManager] Editor activo desvinculado (None).")
             self.active_editor_changed.emit(None)
             if hasattr(self, 'adobe_service') and self.adobe_service:
                 self.adobe_service.force_active_target(None)
+            if prev_editor == "vegas" and hasattr(self, 'vegas_service') and self.vegas_service:
+                self.vegas_service.notify_linked(False)
             return True
             
         if target_app == "davinci":
             self.active_editor = "davinci"
             logger.info(f"[EditorManager] Editor activo establecido a: {self.active_editor}")
             self.active_editor_changed.emit(self.active_editor)
+            if prev_editor == "vegas" and hasattr(self, 'vegas_service') and self.vegas_service:
+                self.vegas_service.notify_linked(False)
+            if hasattr(self, 'adobe_service') and self.adobe_service:
+                self.adobe_service.force_active_target(None)
+            return True
+
+        if target_app == "vegas":
+            self.active_editor = "vegas"
+            logger.info(f"[EditorManager] Editor activo establecido a: {self.active_editor}")
+            self.active_editor_changed.emit(self.active_editor)
+            if hasattr(self, 'vegas_service') and self.vegas_service:
+                self.vegas_service.notify_linked(True)
+            if hasattr(self, 'adobe_service') and self.adobe_service:
+                self.adobe_service.force_active_target(None)
             return True
             
         if self.adobe_service:
+            if prev_editor == "vegas" and hasattr(self, 'vegas_service') and self.vegas_service:
+                self.vegas_service.notify_linked(False)
             return self.adobe_service.force_active_target(target_app)
         return False
 
@@ -200,8 +226,7 @@ class EditorIntegrationManager(QObject):
         elif self.active_editor == 'davinci':
             return self.davinci_service.send_files_to_davinci([file_package])
         elif self.active_editor == 'vegas':
-            # return self.vegas_service.send_file(file_package)
-            pass
+            return self.vegas_service.send_files_to_vegas([file_package])
         else:
             logger.error(f"[EditorManager] Editor desconocido: {self.active_editor}")
             return False
@@ -219,8 +244,7 @@ class EditorIntegrationManager(QObject):
         elif self.active_editor == 'davinci':
             return self.davinci_service.send_files_to_davinci(files)
         elif self.active_editor == 'vegas':
-            # return self.vegas_service.send_batch(files)
-            pass
+            return self.vegas_service.send_files_to_vegas(files)
         else:
             logger.error(f"[EditorManager] Editor desconocido: {self.active_editor}")
             return False
@@ -238,6 +262,8 @@ class EditorIntegrationManager(QObject):
             return self.adobe_service.send_subclips_to_adobe(payload)
         elif self.active_editor == 'davinci':
             return self.davinci_service.send_subclips_to_davinci(payload)
+        elif self.active_editor == 'vegas':
+            return self.vegas_service.send_subclips_to_vegas(payload)
         return False
 
     def connect_to_queue(self, queue_mgr):
@@ -334,6 +360,20 @@ class EditorIntegrationManager(QObject):
         del seen[:-64]  # memoria acotada: solo importan los envíos recientes
         return False
 
+    def _batch_already_sent(self, batch_key):
+        """Evita reenviar el mismo lote de fragmentos si process_raw_download se invoca
+        más de una vez para los archivos de una misma tanda."""
+        if not batch_key:
+            return False
+        seen = getattr(self, "_sent_fragment_batches", None)
+        if seen is None:
+            seen = self._sent_fragment_batches = []
+        if batch_key in seen:
+            return True
+        seen.append(batch_key)
+        del seen[:-32]
+        return False
+
     def process_raw_download(self, final_filepath, request_data):
         """Empaqueta y envía un archivo descargado al editor activo."""
         if not final_filepath:
@@ -380,13 +420,13 @@ class EditorIntegrationManager(QObject):
 
         # Determinar el nombre base limpio de forma 100% precisa
         if is_fragmented:
-            last_frag = selected_fragments[-1]
-            last_suffix = last_frag[2] if len(last_frag) > 2 else "fragment"
-            target_suffix = f"_{last_suffix}"
-            if raw_base_name.endswith(target_suffix):
-                clean_base_name = raw_base_name[:-len(target_suffix)]
-            else:
-                clean_base_name = raw_base_name
+            clean_base_name = raw_base_name
+            for i, frag in enumerate(selected_fragments):
+                suf = frag[2] if len(frag) > 2 else f"fragment{i+1:02d}"
+                target_suffix = f"_{suf}"
+                if raw_base_name.endswith(target_suffix):
+                    clean_base_name = raw_base_name[:-len(target_suffix)]
+                    break
         else:
             clean_base_name = strip_recode_affixes(raw_base_name)
 
@@ -531,6 +571,11 @@ class EditorIntegrationManager(QObject):
                 thumb = pkg.get("thumbnail")
                 if thumb and self._thumbnail_already_sent(thumb):
                     pkg["thumbnail"] = None
+
+        if is_fragmented and len(file_packages) > 1:
+            batch_key = tuple(sorted(pkg.get("video") or "" for pkg in file_packages))
+            if self._batch_already_sent(batch_key):
+                return
 
         if len(file_packages) == 1:
             logger.info(f"[EditorManager] Paquete listo para enviar: {file_packages[0]}")

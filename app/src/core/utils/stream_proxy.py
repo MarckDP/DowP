@@ -48,6 +48,17 @@ def get_or_start_proxy():
         return _proxy_instance
 
 
+def abort_active_streams():
+    """
+    Aborta de inmediato cualquier streaming activo en el proxy local.
+    Thread-safe.
+    """
+    global _proxy_instance
+    with _proxy_lock:
+        if _proxy_instance is not None and _proxy_instance.is_running():
+            _proxy_instance.abort_active_streams()
+
+
 def build_proxy_url(cdn_url: str, source_page_url: str) -> str:
     """
     Construye la URL local del proxy lista para pasar a QMediaPlayer.
@@ -139,6 +150,29 @@ class ProxyRequestHandler(http.server.BaseHTTPRequestHandler):
 
     CHUNK_SIZE = 1024 * 64  # 64 KB por chunk
 
+    def __init__(self, *args, **kwargs):
+        self._aborted = False
+        self._current_resp = None
+        super().__init__(*args, **kwargs)
+
+    def abort(self):
+        """Corta la transmisión inmediatamente y cierra la conexión del cliente."""
+        self._aborted = True
+        resp = self._current_resp
+        if resp is not None:
+            try:
+                resp.close()
+            except Exception:
+                pass
+        try:
+            self.connection.shutdown(socket.SHUT_RDWR)
+        except Exception:
+            pass
+        try:
+            self.connection.close()
+        except Exception:
+            pass
+
     # ── Silenciar los logs de acceso del servidor (muy verbosos con un player) ──
     def log_message(self, format, *args):
         pass
@@ -148,55 +182,76 @@ class ProxyRequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(500, "requests no disponible")
             return
 
-        # Parsear ruta y parámetros
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/stream":
-            self._send_error(404, "Not found")
-            return
+        server_instance = getattr(self.server, 'proxy_parent', None)
+        if server_instance:
+            server_instance.register_handler(self)
 
-        params = urllib.parse.parse_qs(parsed.query)
-        cdn_url = params.get("url", [""])[0]
-        referer = params.get("referer", [""])[0]
-
-        if not cdn_url:
-            self._send_error(400, "Falta parámetro 'url'")
-            return
-
-        logger.debug(f"StreamProxy: Proxeando → {cdn_url[:80]}...")
-
-        # Construir headers para el CDN
-        headers = self._build_headers(referer)
-
-        # Pasar Range header si QMediaPlayer lo envió (para seek)
-        range_header = self.headers.get("Range")
-        if range_header:
-            headers["Range"] = range_header
-            logger.debug(f"StreamProxy: Range request: {range_header}")
-
-        # Cargar solo las cookies que apliquen al dominio del CDN
-        cookies = _load_cookies_for_url(cdn_url)
-
-        # Hacer la petición al CDN
         try:
-            resp = _requests.get(
-                cdn_url,
-                headers=headers,
-                cookies=cookies if cookies else None,
-                stream=True,
-                timeout=20,
-                allow_redirects=True,
-            )
-        except _requests.exceptions.Timeout:
-            logger.error("StreamProxy: Timeout conectando al CDN")
-            self._send_error(504, "Gateway Timeout")
-            return
-        except Exception as e:
-            logger.error(f"StreamProxy: Error al conectar al CDN: {e}")
-            self._send_error(502, f"Bad Gateway: {e}")
-            return
+            # Parsear ruta y parámetros
+            parsed = urllib.parse.urlparse(self.path)
+            if parsed.path != "/stream":
+                self._send_error(404, "Not found")
+                return
 
-        # Transmitir respuesta
-        self._relay_response(resp)
+            params = urllib.parse.parse_qs(parsed.query)
+            cdn_url = params.get("url", [""])[0]
+            referer = params.get("referer", [""])[0]
+
+            if not cdn_url:
+                self._send_error(400, "Falta parámetro 'url'")
+                return
+
+            if self._aborted:
+                return
+
+            logger.debug(f"StreamProxy: Proxeando -> {cdn_url[:80]}...")
+
+            # Construir headers para el CDN
+            headers = self._build_headers(referer)
+
+            # Pasar Range header si QMediaPlayer lo envió (para seek)
+            range_header = self.headers.get("Range")
+            if range_header:
+                headers["Range"] = range_header
+                logger.debug(f"StreamProxy: Range request: {range_header}")
+
+            # Cargar solo las cookies que apliquen al dominio del CDN
+            cookies = _load_cookies_for_url(cdn_url)
+
+            # Hacer la petición al CDN
+            try:
+                resp = _requests.get(
+                    cdn_url,
+                    headers=headers,
+                    cookies=cookies if cookies else None,
+                    stream=True,
+                    timeout=20,
+                    allow_redirects=True,
+                )
+                self._current_resp = resp
+            except _requests.exceptions.Timeout:
+                if not self._aborted:
+                    logger.error("StreamProxy: Timeout conectando al CDN")
+                    self._send_error(504, "Gateway Timeout")
+                return
+            except Exception as e:
+                if not self._aborted:
+                    logger.error(f"StreamProxy: Error al conectar al CDN: {e}")
+                    self._send_error(502, f"Bad Gateway: {e}")
+                return
+
+            if self._aborted:
+                try:
+                    resp.close()
+                except Exception:
+                    pass
+                return
+
+            # Transmitir respuesta
+            self._relay_response(resp)
+        finally:
+            if server_instance:
+                server_instance.unregister_handler(self)
 
     # ── Helpers privados ──────────────────────────────────────────────────────
 
@@ -243,28 +298,43 @@ class ProxyRequestHandler(http.server.BaseHTTPRequestHandler):
         if "Content-Type" not in forward_headers:
             forward_headers["Content-Type"] = "video/mp4"
 
+        # Cerrar conexión de forma limpia en cada Range request
+        if "Connection" not in forward_headers:
+            forward_headers["Connection"] = "close"
+
         # Enviar encabezados de respuesta
-        self.send_response(status)
-        for k, v in forward_headers.items():
-            self.send_header(k, v)
-        self.end_headers()
+        try:
+            self.send_response(status)
+            for k, v in forward_headers.items():
+                self.send_header(k, v)
+            self.end_headers()
+        except Exception:
+            return
 
         # Streaming del cuerpo
         try:
             for chunk in resp.iter_content(chunk_size=self.CHUNK_SIZE):
+                if self._aborted:
+                    break
                 if chunk:
                     self.wfile.write(chunk)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, OSError):
             # QMediaPlayer cerró la conexión (seek, pausa, cierre del diálogo)
             pass
         except Exception as e:
-            logger.debug(f"StreamProxy: Streaming interrumpido: {e}")
+            if not self._aborted:
+                logger.debug(f"StreamProxy: Streaming interrumpido: {e}")
+        finally:
+            try:
+                resp.close()
+            except Exception:
+                pass
 
     def _send_error(self, code: int, message: str):
-        self.send_response(code)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
         try:
+            self.send_response(code)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
             self.wfile.write(message.encode())
         except Exception:
             pass
@@ -288,6 +358,27 @@ class StreamProxyServer:
         self._server = None
         self._thread = None
         self._running = False
+        self._active_handlers = set()
+        self._handlers_lock = threading.Lock()
+
+    def register_handler(self, handler):
+        with self._handlers_lock:
+            self._active_handlers.add(handler)
+
+    def unregister_handler(self, handler):
+        with self._handlers_lock:
+            self._active_handlers.discard(handler)
+
+    def abort_active_streams(self):
+        """Interrumpe inmediatamente todas las transmisiones activas y cierra sus sockets."""
+        with self._handlers_lock:
+            handlers = list(self._active_handlers)
+            self._active_handlers.clear()
+        for h in handlers:
+            try:
+                h.abort()
+            except Exception:
+                pass
 
     def _find_free_port(self) -> int:
         """Busca el primer puerto libre en el rango definido."""
@@ -313,6 +404,7 @@ class StreamProxyServer:
                 ("127.0.0.1", self.port),
                 ProxyRequestHandler,
             )
+            self._server.proxy_parent = self
             self._thread = threading.Thread(
                 target=self._server.serve_forever,
                 daemon=True,
@@ -328,6 +420,7 @@ class StreamProxyServer:
     def stop(self):
         """Detiene el servidor (libera el puerto)."""
         if self._server and self._running:
+            self.abort_active_streams()
             self._server.shutdown()
             self._running = False
             logger.info("StreamProxy: Servidor detenido")

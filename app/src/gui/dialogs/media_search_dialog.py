@@ -1509,7 +1509,6 @@ class MediaSearchDialog(QDialog):
         def on_finished(data, error):
             self._pending_resolvers.pop(url, None)
             _RUNNING_WORKERS.discard(worker)
-            worker.deleteLater()
             resolved, message = None, error or ""
             if not error and data:
                 resolved = self._extract_preview_stream(data)
@@ -1526,7 +1525,8 @@ class MediaSearchDialog(QDialog):
                 elif error_cb:
                     error_cb(message)
 
-        worker.finished.connect(on_finished)
+        worker.job_finished.connect(on_finished)
+        worker.finished.connect(worker.deleteLater)
         worker.start()
 
     def _show_preview(self, item):

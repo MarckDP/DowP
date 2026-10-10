@@ -612,6 +612,9 @@ class SubclipEditorDialog(QDialog):
             icon_file = "premiere pro.svg"
         elif active == "aftereffects":
             icon_file = "after effects.svg"
+        elif active == "vegas":
+            from core.setup.vegas_setup import get_vegas_version_icon
+            icon_file = get_vegas_version_icon()
         else:
             icon_file = "davinci resolve.svg"
 

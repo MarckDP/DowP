@@ -728,6 +728,10 @@ class VideoDetailsWidget(QFrame):
             # Si no hay nada y canceló, vuelve a rojo (o se mantiene)
             if not dialog.fragments:
                 self.thumb_container.set_cut_status("normal")
+        try:
+            dialog.deleteLater()
+        except Exception:
+            pass
 
     def reset_ui(self):
         """Limpia todos los datos de la UI."""

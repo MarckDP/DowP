@@ -35,6 +35,10 @@ def get_whats_new_items(version: str) -> list:
         # del problema conocido, que conviene dejar al final.
         return [
             (
+                QCoreApplication.translate("WhatsNewContent", "Integración con VEGAS Pro"),
+                QCoreApplication.translate("WhatsNewContent", "Nueva extensión acoplable para VEGAS Pro (versiones 14 a 22). Envía tus descargas, fragmentos y subclips directamente a la línea de tiempo o al depósito de medios de Vegas con un solo clic. Configúrala desde Ajustes > Integraciones."),
+            ),
+            (
                 QCoreApplication.translate("WhatsNewContent", "Temas con modo claro y oscuro"),
                 QCoreApplication.translate("WhatsNewContent", "Cada tema trae su modo claro y su modo oscuro: elige Oscuro, Claro o Según el sistema en Ajustes > General. El modo claro se revisó en toda la app y el cambio se aplica al momento, sin reiniciar."),
             ),

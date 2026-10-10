@@ -66,7 +66,7 @@ _active_shapes = None  # formas del tema aplicado (ver set_active_shapes)
 # (textos cortados en alturas fijas, esquinas más grandes que el propio botón).
 DEFAULT_SHAPES = {"radio": 6, "radio_chico": 4, "radio_grande": 8, "borde": 1, "tamano_fuente": 13}
 SHAPE_LIMITS = {"radio": (0, 14), "radio_chico": (0, 8), "radio_grande": (0, 20),
-                "borde": (0, 3), "tamano_fuente": (11, 14)}
+                "borde": (0, 3), "tamano_fuente": (8, 22)}
 
 
 def _builtin_dir() -> str:
@@ -266,6 +266,15 @@ def resolve_shapes(theme_id: str, _depth: int = 0) -> dict:
     for key in ("tamano", "tamaño"):
         if key in tipografia:
             raw["tamano_fuente"] = tipografia[key]
+
+    try:
+        from core.utils.config_manager import get_config
+        font_size_override = get_config().get("font_size_override", "default")
+        if font_size_override != "default" and isinstance(font_size_override, int):
+            raw["tamano_fuente"] = font_size_override
+    except Exception:
+        pass
+
     for key, value in raw.items():
         if key not in SHAPE_LIMITS:
             _warn_once((theme_id, "formas", key), f"Temas: '{theme_id}' -> formas: '{key}' no existe; se ignora")

@@ -153,6 +153,10 @@ class PlaybackMixin:
         elif active == "davinci":
             icon = get_svg_icon("davinci resolve.svg")
             name = "DaVinci Resolve"
+        elif active == "vegas":
+            from core.setup.vegas_setup import get_vegas_version_icon
+            icon = get_svg_icon(get_vegas_version_icon())
+            name = "VEGAS Pro"
         else:
             icon = QIcon()
             name = "Editor"

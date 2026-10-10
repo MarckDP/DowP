@@ -9,7 +9,7 @@ from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_user_themes_dir, get_user_fonts_dir
 from core.utils.font_manager import get_available_fonts, init_fonts
 from core.version import IS_BETA
-from gui.styles import get_available_themes, apply_folder_open_button_style, get_theme_token
+from gui.styles import get_available_themes, apply_folder_open_button_style, get_theme_token, set_button_variant
 from core.utils.theme_loader import sync_legacy_theme_key
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.combo_box import AutoPopupComboBox
@@ -171,21 +171,6 @@ class GeneralPage(QWidget):
         self.mode_row.addSpacing(30 + self.theme_row.spacing())
         self.content_layout.addLayout(self.mode_row)
 
-        # Aviso tras cambiar tema o modo: la mayor parte se actualiza en vivo, pero algunos
-        # estilos se calculan al crear cada widget y solo cambian del todo al reiniciar.
-        # Sin diálogo (a diferencia del idioma) para no interrumpir mientras se prueban modos.
-        self.theme_restart_hint = QWidget()
-        hint_row = QHBoxLayout(self.theme_restart_hint)
-        hint_row.setContentsMargins(0, 0, 0, 0)
-        self.theme_restart_label = QLabel(self.tr("Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza."))
-        self.theme_restart_label.setWordWrap(True)
-        set_themed_style(self.theme_restart_label, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
-        self.btn_theme_restart = QPushButton(self.tr("Reiniciar ahora"))
-        self.btn_theme_restart.clicked.connect(self._restart_for_theme)
-        hint_row.addWidget(self.theme_restart_label, 1)
-        hint_row.addWidget(self.btn_theme_restart)
-        self.theme_restart_hint.hide()
-        self.content_layout.addWidget(self.theme_restart_hint)
 
         # 3. Tipografía / Fuente
         self.font_row = QHBoxLayout()
@@ -205,6 +190,57 @@ class GeneralPage(QWidget):
         self.font_row.addWidget(self.font_combo)
         self.font_row.addWidget(self.btn_open_fonts)
         self.content_layout.addLayout(self.font_row)
+
+        # 3b. Tamaño de texto
+        self.font_size_row = QHBoxLayout()
+        self.font_size_label = QLabel(self.tr("Tamaño de texto (requiere reinicio para ver todo)"))
+        self.font_size_label.setObjectName("settingsLabel")
+        
+        from PySide6.QtWidgets import QSpinBox
+        self.font_size_spin = QSpinBox()
+        self.font_size_spin.setFixedWidth(80)
+        self.font_size_spin.setRange(8, 22)
+        self.font_size_spin.setSuffix(" px")
+        
+        self.btn_apply_font_size = QPushButton(self.tr("Aplicar"))
+        self.btn_apply_font_size.setFixedWidth(80)
+        self.btn_apply_font_size.setFixedHeight(30)
+        self.btn_apply_font_size.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self.btn_apply_font_size, "secondary")
+        self.btn_apply_font_size.clicked.connect(lambda: self.on_font_size_selection(self.font_size_spin.value()))
+        
+        self.font_size_row.addWidget(self.font_size_label)
+        self.font_size_row.addStretch()
+        self.font_size_row.addWidget(self.font_size_spin)
+        self.font_size_row.addWidget(self.btn_apply_font_size)
+        # Mismo ancho que el botón de carpeta de la fila de Fuente, para alinear los controles.
+        self.font_size_row.addSpacing(30 + self.font_row.spacing())
+        self.content_layout.addLayout(self.font_size_row)
+
+        self.font_size_warning = QLabel(self.tr("⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados."))
+        set_themed_style(self.font_size_warning, lambda: f"color: {get_theme_token('estado_alerta', '#ffa500')}; font-size: 11px;")
+        self.font_size_warning.setWordWrap(True)
+        self.font_size_warning.hide()
+        self.content_layout.addWidget(self.font_size_warning)
+        
+        self.font_size_spin.valueChanged.connect(lambda v: self.font_size_warning.setVisible(v > 18))
+
+        # Aviso tras cambiar tema o modo: la mayor parte se actualiza en vivo, pero algunos
+        # estilos se calculan al crear cada widget y solo cambian del todo al reiniciar.
+        # Sin diálogo (a diferencia del idioma) para no interrumpir mientras se prueban modos.
+        self.theme_restart_hint = QWidget()
+        hint_row = QHBoxLayout(self.theme_restart_hint)
+        hint_row.setContentsMargins(0, 0, 0, 0)
+        self.theme_restart_label = QLabel(self.tr("Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza."))
+        self.theme_restart_label.setWordWrap(True)
+        set_themed_style(self.theme_restart_label, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
+        self.btn_theme_restart = QPushButton(self.tr("Reiniciar ahora"))
+        set_button_variant(self.btn_theme_restart, "accent-solid")
+        self.btn_theme_restart.clicked.connect(self._restart_for_theme)
+        hint_row.addWidget(self.theme_restart_label, 1)
+        hint_row.addWidget(self.btn_theme_restart)
+        self.theme_restart_hint.hide()
+        self.content_layout.addWidget(self.theme_restart_hint)
 
         # --- SECCIÓN: COMPORTAMIENTO ---
         self.comp_label = QLabel(self.tr("Comportamiento"))
@@ -701,6 +737,15 @@ class GeneralPage(QWidget):
         else:
             self.font_combo.setCurrentIndex(0) # fallback a por defecto
             
+        # Load Font Size
+        font_size_override = config.get("font_size_override", "default")
+        if font_size_override == "default":
+            self.font_size_spin.setValue(13)
+        elif isinstance(font_size_override, int):
+            self.font_size_spin.setValue(font_size_override)
+        else:
+            self.font_size_spin.setValue(13)
+            
         # Load Switches
         self.auto_switch.setChecked(config.get("auto_analyze", True))
         self.paste_switch.setChecked(config.get("auto_paste_url", True))
@@ -827,6 +872,16 @@ class GeneralPage(QWidget):
             save_config(config)
             logger.info(f"GeneralPage: Tipografía cambiada a {font_code}")
             self.font_changed.emit(font_code)
+
+    def on_font_size_selection(self, value):
+        if self._is_loading: return
+        config = get_config()
+        if config.get("font_size_override") != value:
+            config["font_size_override"] = value
+            save_config(config)
+            logger.info(f"GeneralPage: Tamaño de texto cambiado a {value}")
+            self.theme_changed.emit(config.get("theme_id", "dowp"))
+            self.theme_restart_hint.show()
 
     def on_auto_analyze_toggled(self, checked):
         if self._is_loading: return
