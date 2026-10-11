@@ -390,6 +390,51 @@ pre {
 
 .under-construction { color: var(--warn); }
 
+/* ── Botón 88x31 copiable y toast ─────────────────── */
+.btn-badge-copy {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+.btn-badge-copy:hover img {
+    filter: drop-shadow(0 0 5px var(--lime));
+    transform: scale(1.04);
+}
+.btn-badge-copy:active img {
+    transform: scale(0.96);
+}
+.btn-badge-copy img {
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.badge-copied-toast {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #000;
+    color: var(--lime);
+    border: 1px solid var(--lime);
+    box-shadow: 2px 2px 0 var(--deep);
+    font-family: "Silkscreen", monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 30;
+}
+.badge-copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* ── Visor de capturas ────────────────────────────── */
 .viewer {
     padding: 0;

@@ -391,3 +391,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state === 'connecting') { retryCount = 0; setUI('playing'); }
     });
 });
+
+// ── Botón 88x31: Copiar código HTML al portapapeles ───────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const copyBtn = document.getElementById('btn-copy-badge');
+    const copyToast = document.getElementById('badge-copied-toast');
+    if (!copyBtn || !copyToast) return;
+
+    let toastTimer = null;
+    const embedSnippet = '<a href="https://marckdp.github.io/DowP/"><img src="https://marckdp.github.io/DowP/img/dowp-88x31.gif" width="88" height="31" alt="DowP"></a>';
+
+    copyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const showToast = () => {
+            copyToast.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                copyToast.classList.remove('show');
+            }, 2000);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(embedSnippet).then(showToast).catch(() => {
+                fallbackCopy(embedSnippet, showToast);
+            });
+        } else {
+            fallbackCopy(embedSnippet, showToast);
+        }
+    });
+
+    function fallbackCopy(text, callback) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            document.execCommand('copy');
+            callback();
+        } catch (err) {
+            console.error('Error al copiar:', err);
+        }
+        document.body.removeChild(ta);
+    }
+});

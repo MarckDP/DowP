@@ -3,9 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DowP — descarga, convierte y organiza</title>
-    <meta name="description" content="DowP: descarga videos y audio, edita imágenes, recodifica y organiza tus medios, y mándalos directo a Premiere, After Effects o DaVinci.">
+    <title>DowP — descarga, organiza y procesa</title>
+    <meta name="description" content="DowP: descarga videos y audio, edita imágenes, recodifica y organiza tus medios, y mándalos directo a Premiere, After Effects, DaVinci y VEGAS Pro.">
     <link rel="icon" type="image/png" href="img/logo32.png">
+
+    <!-- Open Graph / Redes Sociales (WhatsApp, Discord, Facebook, Telegram) -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://marckdp.github.io/DowP/">
+    <meta property="og:title" content="DowP — descarga, organiza y procesa">
+    <meta property="og:description" content="DowP: descarga videos y audio, edita imágenes, recodifica y organiza tus medios, y mándalos directo a Premiere, After Effects, DaVinci y VEGAS Pro.">
+    <meta property="og:image" content="https://marckdp.github.io/DowP/img/DowP_portada.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="DowP — descarga, organiza y procesa">
+    <meta name="twitter:description" content="DowP: descarga videos y audio, edita imágenes, recodifica y organiza tus medios, y mándalos directo a Premiere, After Effects, DaVinci y VEGAS Pro.">
+    <meta name="twitter:image" content="https://marckdp.github.io/DowP/img/DowP_portada.jpg">
+
+    <!-- Color de tema para Discord y navegadores móviles -->
+    <meta name="theme-color" content="#b8e640">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
@@ -19,7 +39,7 @@
         <img src="img/logo128.png" alt="" class="masthead-logo" width="96" height="96">
         <div>
             <h1 class="masthead-title">DowP</h1>
-            <p class="masthead-sub" data-i18n="masthead_sub">descarga · convierte · <span class="nowrap">organiza · <span class="blink">_</span></span></p>
+            <p class="masthead-sub" data-i18n="masthead_sub">descarga · organiza · <span class="nowrap">procesa · <span class="blink">_</span></span></p>
         </div>
         <div class="lang-selector">
             <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
@@ -258,7 +278,10 @@
             <section class="win">
                 <div class="win-bar"><span data-i18n="link_title">Enlázame</span></div>
                 <div class="win-body center">
-                    <a href="https://marckdp.github.io/DowP/"><img src="img/dowp-88x31.gif" width="88" height="31" alt="Botón de DowP" class="pixel"></a>
+                    <button type="button" class="btn-badge-copy" id="btn-copy-badge" title="Haz clic para copiar el código HTML" aria-label="Copiar botón de DowP">
+                        <img src="img/dowp-88x31.gif" width="88" height="31" alt="Botón de DowP" class="pixel">
+                        <span class="badge-copied-toast" id="badge-copied-toast" data-i18n="copied_toast">¡Copiado!</span>
+                    </button>
                     <p class="tiny" data-i18n="link_desc">¿Tienes web? Copia el botón y enlázanos, como en los viejos tiempos.</p>
                 </div>
             </section>

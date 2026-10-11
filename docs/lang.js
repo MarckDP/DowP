@@ -11,7 +11,7 @@ const translations = {
         "menu_title": "Menu",
         
         // Cabecera
-        "masthead_sub": "download · convert · <span class=\"nowrap\">organize · <span class=\"blink\">_</span></span>",
+        "masthead_sub": "download · organize · <span class=\"nowrap\">process · <span class=\"blink\">_</span></span>",
         
         // Ticker
         "ticker_text": "★ DowP <span class=\"js-version\">1.9.1</span> IS OUT! ★ new interface ★ quick mode ★ integrated search ★ AI for image and video ★ now in english and portuguese ★ self-updating ★",
@@ -98,6 +98,7 @@ const translations = {
         "chat_title": "Live Chat",
         "link_title": "Link me",
         "link_desc": "Have a website? Copy the button and link us, like in the old days.",
+        "copied_toast": "Copied!",
         
         // Footer
         "foot_made": "made with",
@@ -143,7 +144,7 @@ const translations = {
         "menu_title": "Menu",
         
         // Cabecera
-        "masthead_sub": "baixa · converte · <span class=\"nowrap\">organiza · <span class=\"blink\">_</span></span>",
+        "masthead_sub": "baixa · organiza · <span class=\"nowrap\">processa · <span class=\"blink\">_</span></span>",
         
         // Ticker
         "ticker_text": "★ DowP <span class=\"js-version\">1.9.1</span> JÁ SAIU! ★ interface nova ★ modo rápido ★ busca integrada ★ IA para imagem e vídeo ★ agora em inglês e português ★ atualiza sozinho ★",
@@ -230,6 +231,7 @@ const translations = {
         "chat_title": "Chat ao Vivo",
         "link_title": "Me linke",
         "link_desc": "Tem um site? Copie o botão e nos linke, como nos velhos tempos.",
+        "copied_toast": "Copiado!",
         
         // Footer
         "foot_made": "feito com",
