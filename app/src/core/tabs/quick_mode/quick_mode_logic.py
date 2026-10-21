@@ -74,6 +74,12 @@ def build_quick_request_data(url, title, mode, quality, output_path,
         "force_audio_extract": mode_selector == "audio_only",
         "audio_ext": "mp3" if mode_selector == "audio_only" and quality in ("320", "192", "128") else None,
         "video_ext": "mp4" if mode_selector != "audio_only" else None,
+        # Unir video y audio siempre en MP4, también cuando no hay título para predecir
+        # la ruta (playlists, o si falla la consulta del título): sin esto yt-dlp elegía
+        # solo el contenedor, y "Máxima calidad" con VP9 + Opus terminaba en .webm, donde
+        # no se puede incrustar la carátula. MP4 admite AV1/VP9/H.264 y Opus/AAC sin
+        # recodificar, y es lo que ya declara video_ext (el filtro de la carátula lo usa).
+        "merge_output_format": "mp4" if mode_selector == "video+audio" else None,
         "selected_fragments": [],
         "fragment_mode": None,
     }

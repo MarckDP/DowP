@@ -572,7 +572,10 @@ class ImageToolsTab(QWidget):
 
         self._update_convert_button_state()
 
-        QApplication.instance().installEventFilter(self)
+        # Clic afuera cierra los popovers (ver _on_app_mouse_press), por el filtro global
+        # compartido de gui/app_event_filters.py.
+        from gui.app_event_filters import OutsideClickHub
+        OutsideClickHub.register(self, self._on_app_mouse_press)
 
     def _close_other_popovers(self, opened_btn):
         """Solo un popover de la franja superior abierto a la vez -- si se abre uno,
@@ -1679,14 +1682,14 @@ class ImageToolsTab(QWidget):
         self._history_remove_layer(layer)
         self._push_history(RemoveLayerCommand(self, self.tr("Borrar capa"), layer, index))
 
-    def eventFilter(self, obj, event):
+    def _on_app_mouse_press(self, obj, event):
         """Cierra cualquier popover de la franja superior (Reescalar IA, Eliminar
         Fondo IA, ...) al clickear afuera de su botón y de su contenido -- mismo
         patrón que quick_mode_view.py para su popover de "Recodificar".
 
         Dos clases de clic NO cuentan como "afuera", y las dos hay que dejarlas
-        pasar porque este filtro está puesto sobre QApplication y por lo tanto ve
-        los clics de toda la app, no solo los de esta pestaña:
+        pasar porque esto recibe los clics de toda la app (OutsideClickHub, un
+        filtro sobre QApplication), no solo los de esta pestaña:
           - Los de un popup interno (el desplegable de un combo): activePopupWidget.
           - Los de un diálogo modal encima (ej. "¿descargar este modelo?", ver
             gui/widgets/model_download_prompt.py): activeModalWidget. Caen en otra
@@ -1695,8 +1698,7 @@ class ImageToolsTab(QWidget):
             popover -- cerrarlo por ese clic es puro efecto colateral. Sin esta
             guarda, apretar Descargar/Cancelar cerraba el popover y escondía justo
             el porcentaje de la descarga recién lanzada."""
-        if (event.type() == QEvent.MouseButtonPress
-                and QApplication.activePopupWidget() is None
+        if (QApplication.activePopupWidget() is None
                 and QApplication.activeModalWidget() is None):
             pos = event.globalPos()
             for btn in getattr(self, "_popover_buttons", []):
@@ -1705,7 +1707,6 @@ class ImageToolsTab(QWidget):
                 btn_rect, content_rect = btn.global_rects()
                 if not btn_rect.contains(pos) and not content_rect.contains(pos):
                     btn.set_open(False)
-        return super().eventFilter(obj, event)
 
     def _on_file_selected(self, filepath: str):
         # Un texto a medio escribir se cierra (y registra) antes de guardar las capas

@@ -1,7 +1,8 @@
 # src/gui/main_window.py
 import sys
 import os
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QTabWidget, 
+import time
+from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QTabWidget,
                              QApplication, QHBoxLayout, QPushButton, QFrame, QLabel)
 from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QIcon
@@ -14,6 +15,9 @@ from gui.widgets.tab_drag_hover import TabBarDragHoverSwitcher
 from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
 from core.utils.i18n import load_language
 from core.utils.config_manager import get_config
+from core.utils import startup_timer
+from gui.app_event_filters import seconds_since_user_input
+from gui.widgets.lazy_tab_widget import LazyTabWidget
 
 # Import Tab Views
 from gui.tabs.advanced_process.advanced_process_view import AdvancedProcessTab
@@ -23,7 +27,7 @@ from gui.tabs.video_tools.video_tools_view import VideoToolsTab
 from gui.tabs.editing_media.editing_media_view import EditingMediaTab
 from gui.tabs.settings.settings_view import SettingsTab
 
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QRadialGradient, QCursor
 from PySide6.QtCore import Qt, QPointF, QSize, QTimer
 
 # ── Estructuras/constantes Win32 para el chrome nativo sin bordes (ver nativeEvent
@@ -784,35 +788,37 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.title_bar)
 
         # ── Pestañas ──────────────────────────────────────────────────────────
-        self.tabs = QTabWidget()
+        self.tabs = LazyTabWidget()
         self.tabs.setObjectName("mainTabs")
 
         # 1. Modo Rápido
         self.tab_quick = QuickModeTab()
         self.tabs.addTab(self.tab_quick, self.tr("Modo Rápido"))
+        startup_timer.mark("pestaña construida: Modo Rápido")
 
         # 2. Proceso Avanzado
         self.tab_single = AdvancedProcessTab()
         self.tabs.addTab(self.tab_single, self.tr("Proceso Avanzado"))
+        startup_timer.mark("pestaña construida: Proceso Avanzado")
 
-        # 3. Herramientas de Imagen
-        self.tab_image = ImageToolsTab()
-        self.tabs.addTab(self.tab_image, self.tr("Herramientas de Imagen"))
-
-        # 4. Herramientas Multimedia
-        self.tab_video = VideoToolsTab()
-        self.tabs.addTab(self.tab_video, self.tr("Herramientas Multimedia"))
-
-        # 5. Gestor de Medios
-        self.tab_editing = EditingMediaTab()
-        self.tabs.addTab(self.tab_editing, self.tr("Gestor de Medios"))
+        # 3-5. Las pesadas se construyen después de mostrar la ventana (ver
+        # LazyTabWidget y _build_next_deferred), o antes si alguien las pide:
+        # self.tab_image/tab_video/tab_editing son propiedades que las construyen.
+        # El Gestor se construye ya con su marcador como padre (ahorra re-aplicar los
+        # estilos a todo su árbol al meterlo); las otras dos no ganan nada con eso.
+        self._page_image = self.tabs.add_lazy_tab(
+            lambda _parent: ImageToolsTab(), self.tr("Herramientas de Imagen"), "Herramientas de Imagen")
+        self._page_video = self.tabs.add_lazy_tab(
+            lambda _parent: VideoToolsTab(), self.tr("Herramientas Multimedia"), "Herramientas Multimedia")
+        self._page_editing = self.tabs.add_lazy_tab(
+            EditingMediaTab, self.tr("Gestor de Medios"), "Gestor de Medios")
 
         # Permite que arrastrar archivos desde Gestor de Medios y sostenerlos sobre la
         # cabecera de Editor de Imagen / Herramientas Multimedia cambie de pestaña solo,
         # ya que un QTabWidget solo muestra una pestaña a la vez (ver tab_drag_hover.py).
         self._tab_drag_hover = TabBarDragHoverSwitcher(
             self.tabs,
-            hoverable_indices={self.tabs.indexOf(self.tab_image), self.tabs.indexOf(self.tab_video)},
+            hoverable_indices={self.tabs.indexOf(self._page_image), self.tabs.indexOf(self._page_video)},
         )
 
         # Corner Widget (Editor Status & Ajustes)
@@ -825,6 +831,7 @@ class MainWindow(QMainWindow):
 
         # ── Modal Overlay de Ajustes ──────────────────────────────────────────
         self.tab_settings = SettingsTab()
+        startup_timer.mark("Ajustes construidos (solo el armazón)")
         self.settings_overlay = SettingsModalOverlay(self, self.tab_settings, parent=central_widget)
 
         # ── Conexiones ────────────────────────────────────────────────────────
@@ -834,6 +841,7 @@ class MainWindow(QMainWindow):
         self.tab_settings.labels_changed.connect(self.refresh_labels)
         self.tab_settings.update_status_changed.connect(self.editor_status_widget.set_update_badge_visible)
         self.tabs.currentChanged.connect(self.on_tab_changed)
+        self._deferred_builds_started = False
 
         # Chequeo de actualizaciones: diferido al siguiente ciclo del event loop
         # (no bloquea, y evita competir con el resto de la construccion de la
@@ -842,37 +850,112 @@ class MainWindow(QMainWindow):
 
         logger.info("MainWindow: Sistema de pestañas inicializado")
 
+    # ── Pestañas diferidas ────────────────────────────────────────────────────
+    # Pedirlas por aquí las construye si todavía no existen, así que todo el código que
+    # ya hacía main_win.tab_image.image_queue... sigue funcionando. Para solo avisarle
+    # algo a una pestaña SI existe (sin construirla) está _built_tab().
+
+    @property
+    def tab_image(self):
+        return self.tabs.ensure_built(self._page_image)
+
+    @property
+    def tab_video(self):
+        return self.tabs.ensure_built(self._page_video)
+
+    @property
+    def tab_editing(self):
+        return self.tabs.ensure_built(self._page_editing)
+
+    def _built_tab(self, name: str):
+        page = {"image": self._page_image, "video": self._page_video,
+                "editing": self._page_editing}[name]
+        return self.tabs.built_tab(page)
+
+    # Cuánto tiempo sin tocar la app (mouse, teclado) hace falta antes de construir la
+    # siguiente pieza diferida. Cada construcción congela la interfaz entre 0,1 y ~1 s:
+    # así ocurre cuando el usuario no está haciendo nada, no en medio de un clic.
+    _DEFERRED_IDLE_SECONDS = 1.5
+
+    def _start_deferred_builds(self):
+        if self._deferred_builds_started:
+            return
+        self._deferred_builds_started = True
+        self._idle_cursor_pos = QCursor.pos()
+        self._idle_cursor_moved_at = time.monotonic()
+        # Margen para que la ventana termine de pintarse y quede usable antes de
+        # empezar; después, una pieza por vuelta del bucle de eventos para que entre
+        # una y otra la app siga respondiendo.
+        QTimer.singleShot(1500, self._build_next_deferred)
+
+    def _user_is_idle(self) -> bool:
+        # Ventana sin foco (minimizada, o el usuario está en otro programa): nadie está
+        # mirando DowP, se puede construir aunque el mouse se mueva en otra parte.
+        if QApplication.activeWindow() is None:
+            return True
+        # El cursor quieto también cuenta: pasar el mouse por encima de la ventana sin
+        # clics no siempre genera eventos que vea el filtro global.
+        pos = QCursor.pos()
+        if pos != self._idle_cursor_pos:
+            self._idle_cursor_pos = pos
+            self._idle_cursor_moved_at = time.monotonic()
+        idle = min(seconds_since_user_input(), time.monotonic() - self._idle_cursor_moved_at)
+        return idle >= self._DEFERRED_IDLE_SECONDS
+
+    def _build_next_deferred(self):
+        if not self._user_is_idle():
+            # El usuario está usando la app: volver a mirar en un rato. Si mientras
+            # tanto abre una pestaña sin construir, se construye en ese momento igual.
+            QTimer.singleShot(400, self._build_next_deferred)
+            return
+        # Solo las pestañas: las páginas de Ajustes se construyen recién al abrirlas
+        # (ver SettingsTab._ensure_page). Pre-construirlas eran ~3 s de pequeños
+        # congelones para un panel que casi nunca se abre justo al arrancar.
+        pending_tabs = self.tabs.pending_tabs()
+        if not pending_tabs:
+            startup_timer.mark("pestañas diferidas construidas")
+            return
+        self.tabs.ensure_built(pending_tabs[0])
+        QTimer.singleShot(50, self._build_next_deferred)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, 'settings_overlay') and self.settings_overlay:
             self.settings_overlay.setGeometry(0, 0, self.centralWidget().width(), self.centralWidget().height())
 
     def on_tab_changed(self, index):
-        """Se ejecuta al cambiar de pestaña."""
-        if hasattr(self, "tab_editing") and self.tab_editing and hasattr(self.tab_editing, "pause_playback"):
-            self.tab_editing.pause_playback()
+        """Se ejecuta al cambiar de pestaña. Para entonces la pestaña elegida ya está
+        construida (LazyTabWidget lo hace antes); las demás diferidas se miran con
+        _built_tab() para no construirlas solo por comparar."""
+        tab_editing = self._built_tab("editing")
+        if tab_editing is not None and hasattr(tab_editing, "pause_playback"):
+            tab_editing.pause_playback()
 
-        if self.tabs.widget(index) == self.tab_single:
+        current = self.tabs.widget(index)
+        if current is self.tab_single:
             logger.info("MainWindow: Recargando etiquetas en Proceso Avanzado")
             self.tab_single.video_details.load_labels()
 
-        if self.tabs.widget(index) == self.tab_quick and hasattr(self.tab_quick, "load_labels"):
+        if current is self.tab_quick and hasattr(self.tab_quick, "load_labels"):
             logger.info("MainWindow: Recargando etiquetas en Modo Rápido")
             self.tab_quick.load_labels()
 
-        if self.tabs.widget(index) == self.tab_video and hasattr(self.tab_video, "load_labels"):
+        tab_video = self._built_tab("video")
+        if tab_video is not None and current is tab_video and hasattr(tab_video, "load_labels"):
             logger.info("MainWindow: Recargando etiquetas en Herramientas Multimedia")
-            self.tab_video.load_labels()
+            tab_video.load_labels()
 
-        if self.tabs.widget(index) == self.tab_image and hasattr(self.tab_image, "load_labels"):
+        tab_image = self._built_tab("image")
+        if tab_image is not None and current is tab_image and hasattr(tab_image, "load_labels"):
             logger.info("MainWindow: Recargando etiquetas en Herramientas de Imagen")
-            self.tab_image.load_labels()
+            tab_image.load_labels()
 
         from core.utils.clipboard_monitor import ClipboardURLMonitor
         ClipboardURLMonitor.instance().check_clipboard(force=True)
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._start_deferred_builds()
         from core.utils.clipboard_monitor import ClipboardURLMonitor
         ClipboardURLMonitor.instance().check_clipboard(force=True)
         # Conectar el corner widget al EditorManager (que ya fue inicializado en main.py)
@@ -942,8 +1025,6 @@ class MainWindow(QMainWindow):
         """Desde "+ Crear preajuste..." de Posprocesar (Modo Rápido / Proceso Avanzado):
         abre Herramientas Multimedia en la pestaña donde se crea ese tipo de preajuste --
         "recode" -> Avanzado (Recodificación), "ia" -> Herramientas IA."""
-        if not hasattr(self, "tab_video") or self.tab_video is None:
-            return
         self.tabs.setCurrentWidget(self.tab_video)
         options = getattr(self.tab_video, "options_widget", None)
         if options is None:
@@ -966,10 +1047,13 @@ class MainWindow(QMainWindow):
             self.tab_single.video_details.load_labels()
         if hasattr(self, "tab_quick") and self.tab_quick and hasattr(self.tab_quick, "load_labels"):
             self.tab_quick.load_labels()
-        if hasattr(self, "tab_video") and self.tab_video and hasattr(self.tab_video, "load_labels"):
-            self.tab_video.load_labels()
-        if hasattr(self, "tab_image") and self.tab_image and hasattr(self.tab_image, "load_labels"):
-            self.tab_image.load_labels()
+        # Las diferidas que todavía no existen cargan las etiquetas al construirse.
+        tab_video = self._built_tab("video")
+        if tab_video is not None and hasattr(tab_video, "load_labels"):
+            tab_video.load_labels()
+        tab_image = self._built_tab("image")
+        if tab_image is not None and hasattr(tab_image, "load_labels"):
+            tab_image.load_labels()
 
     def _handle_nccalcsize(self, msg):
         """WM_NCCALCSIZE: el área de cliente pasa a ocupar toda la ventana (si no,

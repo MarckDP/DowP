@@ -22,8 +22,8 @@ Detalles de diseño:
     la URL guardada -- en sitios cuyos enlaces caducan ya no se podrá, y la tarjeta
     queda con el marcador genérico.
   - Archivos: se guardan las MISMAS dos listas que el arrastre de las pestañas
-    (OutputArtifactTracker / fila de Modo Rápido): todas las rutas conocidas y cuáles
-    sirven como nombre base para encontrar los hermanos (sidecars). "¿Sigue en disco?",
+    (OutputArtifactTracker / fila de Modo Rápido): todas las rutas conocidas (medio,
+    procesados y sidecars, con su ruta exacta) y cuáles son lo descargado. "¿Sigue en disco?",
     "cuál es el medio principal" y "qué se arrastra" se resuelven igual que en la cola,
     con find_actual_downloaded_file / collect_output_artifacts, y nunca al dibujar: ver
     resolve_disk_files y el chequeo en segundo plano del panel.
@@ -153,8 +153,8 @@ class DownloadHistory(QObject):
                 updated_at REAL NOT NULL
             )""")
         self._db.execute("CREATE INDEX IF NOT EXISTS idx_entries_updated ON entries(updated_at DESC)")
-        # Archivos de cada tarjeta. is_stem = 1: su nombre base sirve para barrer hermanos
-        # (el medio descargado); 0: no (la salida recodificada, sidecars sueltos).
+        # Archivos de cada tarjeta. is_stem = 1: lo descargado (candidato a medio
+        # principal); 0: lo procesado (recodificado) y los sidecars.
         self._db.execute("""
             CREATE TABLE IF NOT EXISTS entry_files (
                 key TEXT NOT NULL,
@@ -515,7 +515,7 @@ def resolve_disk_files(known_paths, stem_paths):
                 break
     if primary is None:
         return None, []
-    drag = collect_output_artifacts(known_paths, stem_paths=stem_paths)
+    drag = collect_output_artifacts(known_paths)
     first = os.path.normcase(primary)
     drag = [primary] + [p for p in drag if os.path.normcase(p) != first]
     return primary, drag

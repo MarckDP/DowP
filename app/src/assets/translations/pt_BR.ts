@@ -3443,6 +3443,11 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>DownloaderMaster</name>
     <message>
+        <location filename="../../core/ytdlp_logic/downloader_master.py" line="414" />
+        <source>YouTube bloqueó la máxima calidad: se descargó en {0}p en lugar de {1}p</source>
+        <translation>O YouTube bloqueou a qualidade máxima: baixado em {0}p em vez de {1}p</translation>
+    </message>
+    <message>
         <location filename="../../core/ytdlp_logic/downloader_master.py" line="128" />
         <location filename="../../core/ytdlp_logic/downloader_master.py" line="1292" />
         <source>Descarga cancelada por el usuario</source>
@@ -11235,6 +11240,11 @@ Você pode baixá-lo de novo quando quiser.</translation>
         <translation>Erro ao instalar {0}: {1}</translation>
     </message>
     <message>
+        <location filename="../../gui/splash_screen.py" line="144" />
+        <source>Analizando el hardware...</source>
+        <translation>Analisando o hardware...</translation>
+    </message>
+    <message>
         <location filename="../../gui/splash_screen.py" line="163" />
         <source>Todo listo</source>
         <translation>Tudo pronto</translation>
@@ -11874,6 +11884,11 @@ Verifique sua conexão com a internet e abra o DowP novamente.</translation>
 Añade elementos haciendo clic derecho sobre cualquier medio.</source>
         <translation>A coleção '{0}' está vazia.
 Adicione itens clicando com o botão direito em qualquer mídia.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="418" />
+        <source>Cargando carpeta...</source>
+        <translation>Carregando pasta...</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="609" />

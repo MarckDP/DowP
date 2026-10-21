@@ -35,6 +35,24 @@ def is_youtube_access_error(url: str, error_msg: object) -> bool:
     return any(marker in lowered for marker in YOUTUBE_ACCESS_MARKERS)
 
 
+CDN_FORBIDDEN_MARKERS = (
+    "http error 403",
+    "403: forbidden",
+    "403 forbidden",
+    "server returned 403",
+)
+
+
+def is_cdn_forbidden_error(error_msg: object) -> bool:
+    """403 al bajar el medio (no un 429 ni un aviso de bot). Con PO token, el cliente
+    mweb es el que ofrece la máxima calidad (4K, AV1...) y su 403 es intermitente:
+    una extracción nueva trae URLs y token nuevos y suele funcionar. El cliente
+    alternativo, en cambio, a menudo solo tiene formatos combinados de menor calidad
+    (SABR). Ante un 429 o un aviso de bot no conviene insistir con el mismo cliente."""
+    lowered = str(error_msg or "").lower()
+    return any(marker in lowered for marker in CDN_FORBIDDEN_MARKERS)
+
+
 def make_fallback_ydl_opts(ydl_opts: dict) -> dict:
     """
     Crea opciones de fallback usando el cliente 'web_embedded' (patrón Xomacito).

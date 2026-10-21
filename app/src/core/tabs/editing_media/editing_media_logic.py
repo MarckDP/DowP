@@ -605,6 +605,27 @@ class EditingMediaController(QObject):
         if not hasattr(self, "_media_cache"):
             self._media_cache = {}
         self._media_cache.clear()
+        self._media_cache_generation = self.media_cache_generation() + 1
+
+    def media_cache_generation(self) -> int:
+        """Cambia cada vez que se invalida la cache: un escaneo hecho en otro hilo solo se
+        guarda si la generación sigue siendo la del momento en que empezó (ver
+        cache_folder_scan), si no podría guardar el contenido de antes de un cambio."""
+        return getattr(self, "_media_cache_generation", 0)
+
+    def is_folder_cached(self, folder_path: str, recursive: bool = True) -> bool:
+        return f"folder:{folder_path}:{recursive}" in getattr(self, "_media_cache", {})
+
+    def cache_folder_scan(self, folder_path: str, files: list, generation: int,
+                          recursive: bool = True) -> bool:
+        """Guarda en la cache un _scan_folder_fast() hecho en otro hilo (la precarga del
+        Gestor de Medios al construirse). False si la cache se invalidó mientras tanto."""
+        if generation != self.media_cache_generation():
+            return False
+        if not hasattr(self, "_media_cache"):
+            self._media_cache = {}
+        self._media_cache[f"folder:{folder_path}:{recursive}"] = files
+        return True
 
     def _build_file_entry(self, path: str, name: str, ext: str, st=None) -> dict:
         """Construye un diccionario de archivo multimedia SIN llamar a mutagen (duración diferida)."""

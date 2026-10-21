@@ -2,6 +2,7 @@
 import os
 import platform
 import subprocess
+import threading
 import time
 from core.logger.logger_manager import logger
 from core.setup.setup_manager import get_dependency_env
@@ -492,6 +493,44 @@ def _generate_ffmpeg_log_files(ffmpeg_exe: str, codec_support: dict, codec_statu
 # con "Re-escanear" en Ajustes, o al reiniciar DowP.
 _failed_scan_memo: tuple | None = None
 
+# El escaneo puede correr en el hilo del splash (ver SplashScreen) y también pedirse
+# desde la interfaz: sin este candado, dos hilos que lleguen a la vez sin caché
+# lanzarían dos escaneos completos de varios segundos en paralelo.
+_scan_lock = threading.Lock()
+
+
+def _encoders_log_path() -> str:
+    from core.utils.paths import get_app_data_dir
+    return os.path.join(get_app_data_dir(), "ffmpeg_encoders_log.json")
+
+
+def _reusable_scan(fingerprint: dict | None) -> dict | None:
+    """Lo ya escaneado si sigue valiendo para este ffmpeg (ver detect_hardware), o None
+    si hace falta escanear."""
+    cached_info = get_config().get("hardware_info", {})
+    if (
+        cached_info
+        and cached_info.get("cpu_name")
+        and cached_info.get("ram_size")
+        and cached_info.get("codec_support")
+        and cached_info.get("ffmpeg_fingerprint") == fingerprint
+        and fingerprint is not None
+        and os.path.exists(_encoders_log_path())
+    ):
+        return cached_info
+    if _failed_scan_memo is not None and _failed_scan_memo[0] == fingerprint:
+        return _failed_scan_memo[1]
+    return None
+
+
+def needs_hardware_scan() -> bool:
+    """True si la próxima detect_hardware() va a lanzar un escaneo completo (primer
+    arranque, ffmpeg nuevo o un escaneo fallido en un arranque anterior). Lo usa el
+    splash para hacer ese escaneo en su hilo y no en el principal mientras se
+    construye la ventana: el panel de Compresión y el de Recodificación lo piden al
+    construirse."""
+    return _reusable_scan(_ffmpeg_fingerprint(_get_ffmpeg_exe())) is None
+
 
 def detect_hardware(force_refresh: bool = False) -> dict:
     """
@@ -502,28 +541,26 @@ def detect_hardware(force_refresh: bool = False) -> dict:
     este cambio no trae huella, así que se vuelve a escanear una vez -- eso corrige
     solo los equipos que quedaron con el escaneo roto de [WinError 2].
     """
-    global _failed_scan_memo
-    config = get_config()
-    cached_info = config.get("hardware_info", {})
-    from core.utils.paths import get_app_data_dir
-    log_path = os.path.join(get_app_data_dir(), "ffmpeg_encoders_log.json")
-
     ffmpeg_exe = _get_ffmpeg_exe()
     fingerprint = _ffmpeg_fingerprint(ffmpeg_exe)
 
     if not force_refresh:
-        if (
-            cached_info
-            and cached_info.get("cpu_name")
-            and cached_info.get("ram_size")
-            and cached_info.get("codec_support")
-            and cached_info.get("ffmpeg_fingerprint") == fingerprint
-            and fingerprint is not None
-            and os.path.exists(log_path)
-        ):
-            return cached_info
-        if _failed_scan_memo is not None and _failed_scan_memo[0] == fingerprint:
-            return _failed_scan_memo[1]
+        reusable = _reusable_scan(fingerprint)
+        if reusable is not None:
+            return reusable
+
+    with _scan_lock:
+        # Mientras se esperaba el candado, otro hilo pudo terminar este mismo escaneo.
+        if not force_refresh:
+            reusable = _reusable_scan(fingerprint)
+            if reusable is not None:
+                return reusable
+        return _scan_hardware(ffmpeg_exe, fingerprint)
+
+
+def _scan_hardware(ffmpeg_exe: str, fingerprint: dict | None) -> dict:
+    global _failed_scan_memo
+    config = get_config()
 
     logger.info(f"HardwareDetector: Iniciando escaneo de hardware del sistema (ffmpeg: {ffmpeg_exe})...")
     start_time = time.time()

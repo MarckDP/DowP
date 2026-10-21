@@ -5,6 +5,9 @@ import os
 # Add 'src' to path to import modules
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+# Primero que nada: el reloj de las marcas "Arranque: ..." del log empieza aquí.
+from core.utils import startup_timer
+
 # ═══ Escalado ANTES de QApplication (obligatorio) ═══
 from core.utils.scaling import apply_ui_scaling, flush_scaling_logs
 ui_scale_factor = apply_ui_scaling()
@@ -23,103 +26,11 @@ from core.version import APP_VERSION as __version__
 # necesita, en core/tabs/image_tools/image_converter.py -- no hace falta cargarlo
 # aquí al arrancar, ahorrando ~5-10 MB de RAM para quien no use herramientas de imagen.
 
-from PySide6.QtCore import QObject, QEvent, Qt, QPointF
-from PySide6.QtGui import QFontDatabase, QIcon, QWheelEvent
-from PySide6.QtWidgets import (
-    QApplication, QPushButton, QCheckBox, QRadioButton, QComboBox,
-    QTabBar, QStyledItemDelegate, QWidget
-)
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
 
+startup_timer.mark("imports base listos")
 
-from gui.widgets.combo_box import CheckmarkComboDelegate
-
-
-class _ComboPopupMaskFilter(QObject):
-    """Mantiene la máscara del contenedor del popup (QComboBoxPrivateContainer) sincronizada
-    con su tamaño en cada resize o show.
-
-    Qt solo pinta el panel nativo opaco de menú (QStyle::PE_PanelMenu, reservado para los
-    indicadores de scroll arriba/abajo) cuando `mask().isEmpty()` es verdadero.
-    Asignarle cualquier máscara no vacía (su propio rect) hace que Qt se salte ese dibujado por completo."""
-
-    def eventFilter(self, obj, event):
-        if event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
-            obj.setMask(obj.rect())
-        return False
-
-
-_DEFAULT_COMBO_DELEGATE_TYPE = None
-
-class HandCursorInstaller(QObject):
-    """Instala cursor pointer en widgets interactivos y garantiza CheckmarkComboDelegate
-    y máscara de recorte sin bordes nativos en QComboBoxes para soporte de hover y selección visual vía QSS."""
-    _TARGET_TYPES = (QPushButton, QCheckBox, QRadioButton, QComboBox, QTabBar)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        global _DEFAULT_COMBO_DELEGATE_TYPE
-        if _DEFAULT_COMBO_DELEGATE_TYPE is None:
-            _DEFAULT_COMBO_DELEGATE_TYPE = type(QComboBox().itemDelegate())
-        self._mask_filter = _ComboPopupMaskFilter(self)
-
-    def _setup_combo(self, combo: QComboBox):
-        if type(combo.itemDelegate()) is _DEFAULT_COMBO_DELEGATE_TYPE or type(combo.itemDelegate()) is QStyledItemDelegate:
-            combo.setItemDelegate(CheckmarkComboDelegate(combo))
-        if combo.view() and combo.view().window():
-            container = combo.view().window()
-            container.setAttribute(Qt.WA_TranslucentBackground, True)
-            container.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
-            container.installEventFilter(self._mask_filter)
-
-    def eventFilter(self, obj, event):
-        ev_type = event.type()
-        if ev_type == QEvent.Type.Wheel:
-            combo = None
-            if isinstance(obj, QComboBox):
-                combo = obj
-            elif isinstance(obj, QWidget) and isinstance(obj.parent(), QComboBox):
-                combo = obj.parent()
-
-            if combo is not None:
-                # Si el popup está desplegado, permitir que el usuario scrollee la lista
-                if combo.view() and combo.view().isVisible():
-                    return False
-
-                # Si el usuario activó la opción en Ajustes > General, permitir comportamiento nativo de Qt
-                if get_config().get("combobox_wheel_scroll", False):
-                    return False
-
-                # Menú cerrado y opción desactivada (por defecto): no cambiar la opción del combo
-                # y propagar el evento de rueda hacia los contenedores padre (QScrollArea, etc.)
-                p = combo.parentWidget()
-                while p:
-                    pos = combo.mapTo(p, event.position().toPoint())
-                    ev = QWheelEvent(
-                        QPointF(pos),
-                        event.globalPosition(),
-                        event.pixelDelta(),
-                        event.angleDelta(),
-                        event.buttons(),
-                        event.modifiers(),
-                        event.phase(),
-                        event.inverted()
-                    )
-                    ev.ignore()
-                    if QApplication.sendEvent(p, ev) and ev.isAccepted():
-                        break
-                    p = p.parentWidget()
-                return True
-
-        if ev_type == QEvent.Type.ChildAdded:
-            child = event.child()
-            if isinstance(child, QComboBox):
-                self._setup_combo(child)
-            if isinstance(child, self._TARGET_TYPES):
-                child.setCursor(Qt.PointingHandCursor)
-        elif ev_type in (QEvent.Type.Show, QEvent.Type.Polish):
-            if isinstance(obj, QComboBox):
-                self._setup_combo(obj)
-        return False
 
 def main():
     # 0. Reanudar un swap de actualizacion que quedo a medias por un corte de
@@ -134,6 +45,7 @@ def main():
     # 1. Setup App y base
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Estilo base multiplataforma que previene bugs de QComboBox en Windows
+    startup_timer.mark("QApplication creada")
 
     # ── Candado de Instancia Única Multiplataforma (Windows / macOS / Linux) ──
     from PySide6.QtNetwork import QLocalSocket, QLocalServer
@@ -180,8 +92,11 @@ def main():
     from core.logger.console_log_handler import get_console_log_handler
     get_console_log_handler()
 
-    # Instalar cursor pointer en widgets interactivos (ChildAdded, no Enter — más eficiente)
-    app.installEventFilter(HandCursorInstaller(app))
+    # Filtros globales: cursor pointer en widgets interactivos (ChildAdded, no Enter — más
+    # eficiente) y el filtro compartido de "clic afuera cierra el popover". La ventana
+    # principal se construye con ellos quitados (ver gui/app_event_filters.py).
+    from gui.app_event_filters import install_app_filters
+    install_app_filters(app)
     
     # Calculate absolute base directory
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -218,6 +133,11 @@ def main():
         main_window.show()
         splash.cleanup()
         logger.info("Application main window shown")
+        startup_timer.mark("ventana principal visible")
+        # Lo que queda tras el show() (primer pintado, layouts diferidos) se ve en la
+        # marca siguiente, que llega cuando el bucle de eventos vuelve a estar libre.
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, lambda: startup_timer.finish("ventana principal pintada"))
 
         # Novedades de la version: se muestran UNA sola vez por version instalada
         # (no en cada arranque). __version__ es APP_VERSION -- ver core/version.py.
@@ -242,6 +162,7 @@ def main():
     splash.ready.connect(on_splash_ready)
     splash.failed.connect(on_splash_failed)
     splash.start()
+    startup_timer.mark("splash visible")
 
     # ── Tareas de fondo mientras el Splash Screen ya es visible al usuario ──
 
@@ -266,6 +187,7 @@ def main():
     editor_manager = EditorIntegrationManager()
     editor_manager.start_all_services()
     editor_manager.connect_to_queue(get_queue_manager())
+    startup_timer.mark("servicios de editores iniciados")
 
     def on_app_exit():
         logger.info("Cerrando servicios en segundo plano...")
@@ -292,8 +214,8 @@ def main():
 
     # Salida directa, sin la limpieza final del interprete. En el build congelado,
     # al finalizar Python PySide6 destruye los widgets que siguen vivos y Qt todavia
-    # llama a los eventFilter de Python instalados sobre QApplication (HandCursorInstaller,
-    # quick_mode_view, image_tools_view, history_panel) con el interprete a medio
+    # llama a los eventFilter de Python instalados sobre QApplication (HandCursorInstaller
+    # y OutsideClickHub, ver gui/app_event_filters.py) con el interprete a medio
     # apagar: crash en cada cierre (0xC0000005 en Windows, SIGSEGV y el aviso de
     # "se cerro inesperadamente" en macOS). Para este punto on_app_exit (aboutToQuit)
     # ya detuvo los servicios; solo queda volcar logs y salidas.

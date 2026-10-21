@@ -162,6 +162,12 @@ class DownloadController(QObject):
         def on_solo_progress(d):
             from core.ytdlp_logic.analyzer import strip_ansi_codes
 
+            if d.get("status") == "artifact":
+                # Archivo creado por la descarga, con su ruta exacta (ver
+                # DownloaderMaster._note_artifact).
+                self._init_solo_artifacts().add([d.get("path")], is_stem_source=False)
+                return
+
             if d.get("status") == "fragment_progress":
                 idx = d.get("fragment_index")
                 total = d.get("fragment_count")
@@ -196,8 +202,8 @@ class DownloadController(QObject):
                 if d.get("filename"):
                     self.last_downloaded_filepath = d.get("filename")
                     # Nombre DERIVADO (stream sin fusionar, o un fragmento ya cortado):
-                    # se registra igual porque de él cuelga el nombre base del que se
-                    # barren los hermanos al arrastrar (ver output_artifacts).
+                    # se registra igual; si yt-dlp lo borra al fusionar, el arrastre lo
+                    # descarta al filtrar por existencia (ver output_artifacts).
                     self._init_solo_artifacts().add([d.get("filename")])
                 self.tab.output_options.set_progress(100, QCoreApplication.translate("AdvancedProcessTab", "Procesando descarga..."), "downloading")
 
@@ -493,8 +499,8 @@ class DownloadController(QObject):
             if job and job.request_data:
                 # Rutas reales del resultado, para poder arrastrar la tarjeta terminada
                 # a otra aplicación (ver queue_panel.py::_on_card_file_drag). Los
-                # sidecars (miniatura, subtítulos) no hace falta registrarlos: se barren
-                # por nombre base al arrastrar.
+                # sidecars (miniatura, subtítulos) llegan aparte, por el manifiesto del
+                # descargador (eventos 'artifact').
                 job.add_output_files(
                     [path for path, _suffix in self._resolve_fragment_download_paths(job.request_data)]
                 )
@@ -622,7 +628,9 @@ class DownloadController(QObject):
             card = self.tab.queue_panel.cards.get(download_key)
             if card:
                 text = QCoreApplication.translate("AdvancedProcessTab", "Completado") if results["all_ok"] else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")
-                card.update_progress(100, speed_text="", status_text=text)
+                # Mismo criterio que una recodificación suelta: los fragmentos se
+                # descargaron, así que un fallo de recodificación es parcial (naranja).
+                card.update_progress(100, speed_text="", status_text=text, partial=not results["all_ok"])
 
     def _notify_sound_after_recode(self, download_key, ok):
         """Sonido al terminar el posprocesado de una descarga: en SOLO es el final del
@@ -633,10 +641,9 @@ class DownloadController(QObject):
             get_sound_notifier().item_finished(SOURCE_ADVANCED, ok)
 
     def _register_recode_outputs(self, download_key, paths, succeeded=True):
-        """Suma al arrastre lo que dejó la recodificación. La salida recodificada NO
-        sirve como nombre base para barrer hermanos (lleva el prefijo/sufijo elegido por
-        el usuario y podría reclamar archivos de otra descarga); el archivo restaurado
-        tras un fallo, en cambio, ES el medio original y sí sirve."""
+        """Suma al arrastre lo que dejó la recodificación. La salida recodificada cuenta
+        como procesada (no es el medio principal del historial); el archivo restaurado
+        tras un fallo, en cambio, ES el medio original."""
         paths = [p for p in (paths or []) if p]
         if not paths:
             return
@@ -1072,7 +1079,15 @@ class DownloadController(QObject):
                 text = QCoreApplication.translate("AdvancedProcessTab", "Completado") if status == "COMPLETED" else (
                     QCoreApplication.translate("AdvancedProcessTab", "Recodificación cancelada") if status == "CANCELLED" else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")
                 )
-                card.update_progress(100, speed_text="", status_text=text)
+                # Fallo o cancelación de la recodificación: la descarga sí terminó y el
+                # original quedó restaurado, así que va en naranja (parcial) y con el
+                # motivo del error en la línea de info.
+                partial = status != "COMPLETED"
+                info = ""
+                if status == "FAILED" and recode_job and recode_job.error_message:
+                    info = recode_job.error_message
+                    card.status_lbl.setToolTip(info)
+                card.update_progress(100, speed_text=info, status_text=text, partial=partial)
             
             if status == "COMPLETED" and final_path:
                 self._send_to_editor_if_enabled(final_path, request_data)

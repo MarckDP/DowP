@@ -8,7 +8,6 @@ from PySide6.QtCore import QThread, Signal
 
 from core.logger.logger_manager import logger
 from core.updater.downloader import download_update
-from core.updater.manifest_client import fetch_and_verify_manifest
 from core.updater.update_checker import UpdateInfo, compute_diff
 from core.version import UPDATE_REPO
 
@@ -28,6 +27,9 @@ class UpdateCheckWorker(QThread):
 
     def run(self):
         from core.utils.config_manager import get_config
+        # Diferido: manifest_client arrastra Cryptodome (firma del manifiesto), que no
+        # hace falta cargar al arrancar -- este módulo lo importa Ajustes al construirse.
+        from core.updater.manifest_client import fetch_and_verify_manifest
         channel = get_config().get("update_channel", "stable")
         try:
             manifest = fetch_and_verify_manifest(UPDATE_REPO, channel=channel)

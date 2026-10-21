@@ -161,9 +161,9 @@ class QuickDownloadRow(QFrame):
         # lo que decide si la barra debe ir intermitente.
         self._has_real_progress = False
         # Rutas que esta fila produjo. _known_paths son las que la app conoce con
-        # certeza (medio bajado, cada fragmento, salida recodificada); _stem_paths es el
-        # subconjunto cuyo nombre base sirve para barrer sidecars (miniatura,
-        # subtítulos) al armar el arrastre -- ver core/utils/output_artifacts.py. Nunca
+        # certeza (medio bajado, cada fragmento, sidecars del manifiesto, salida
+        # recodificada); _stem_paths es el subconjunto de lo DESCARGADO (el historial
+        # elige de ahí el medio principal) -- ver core/utils/output_artifacts.py. Nunca
         # se filtran aquí por existencia: eso se hace al arrastrar, porque entre medio
         # el pipeline puede borrar el original (no marcar "mantener medios originales")
         # o el usuario puede mover los archivos.
@@ -307,9 +307,9 @@ class QuickDownloadRow(QFrame):
     # Resultados en disco y arrastre nativo hacia otras aplicaciones
     # ------------------------------------------------------------------
     def add_output_files(self, paths, is_stem_source=True):
-        """Registra rutas producidas por esta fila. is_stem_source=False para la salida
-        recodificada: su nombre lleva el prefijo/sufijo elegido por el usuario, así que
-        usarlo para barrer hermanos podría arrastrar archivos de otra descarga."""
+        """Registra rutas producidas por esta fila. is_stem_source=True para lo
+        DESCARGADO (el historial elige de ahí el medio principal); False para lo
+        procesado (recodificado) y los sidecars del manifiesto."""
         for path in paths or []:
             if not path:
                 continue
@@ -323,19 +323,17 @@ class QuickDownloadRow(QFrame):
         return list(self._known_paths)
 
     def output_stems(self):
-        """Rutas cuyo nombre base identifica a ESTA fila, para que otra fila de la lista
-        no reclame sus archivos (ver collect_output_artifacts)."""
+        """Rutas de lo descargado por esta fila (ver download_history.record_outputs)."""
         return list(self._stem_paths)
 
-    def collect_drag_files(self, foreign_stems=None):
+    def collect_drag_files(self):
         """Todo lo que HOY sigue existiendo en disco como resultado de esta fila: medio
         (o fragmentos), completo conservado, miniatura, subtítulos y recodificado, según
-        lo que el usuario haya elegido conservar. Se resuelve en el momento del
-        arrastre, nunca antes. foreign_stems son las rutas de las demás filas de la
-        lista, para no llevarse lo que es de ellas."""
+        lo que el usuario haya elegido conservar. Solo rutas que la fila registró (ver
+        DownloaderMaster._note_artifact), nunca archivos de nombre parecido. Se resuelve
+        en el momento del arrastre, nunca antes."""
         try:
-            return collect_output_artifacts(self._known_paths, stem_paths=self._stem_paths,
-                                            foreign_stems=foreign_stems)
+            return collect_output_artifacts(self._known_paths)
         except Exception as e:
             logger.error(f"QuickDownloadRow: No se pudieron reunir los archivos para arrastrar: {e}")
             return []

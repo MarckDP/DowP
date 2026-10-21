@@ -2,13 +2,10 @@
 import os
 import threading
 import tempfile
-import img2pdf
 
 from PySide6.QtCore import QThread, Signal
 
 from core.logger.logger_manager import logger
-from core.tabs.image_tools import depth_engine, normal_engine, rembg_engine
-from core.tabs.image_tools.image_converter import ImageConverter
 from core.utils import onnx_sessions
 from core.utils.config_manager import get_config
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup
@@ -60,6 +57,9 @@ class ImageConvertWorker(QThread):
         # archivo original sin pasar por aquí.
         self.source_overrides = source_overrides or {}
         self.cancellation_event = threading.Event()
+        # Imports diferidos: este módulo se importa al arrancar (lo usa ImageToolsTab), y
+        # los motores arrastran PIL, numpy y pillow_heif -- se cargan recién al convertir.
+        from core.tabs.image_tools.image_converter import ImageConverter
         self._converter = ImageConverter()
 
     def cancel(self):
@@ -135,6 +135,7 @@ class ImageConvertWorker(QThread):
         # a la vez durante el lote -- con el límite por defecto de 1, cada imagen
         # cargaría y tiraría ambos (ver onnx_sessions.set_min_capacity).
         # (Profundidad y Normales son excluyentes: cuentan como un solo motor.)
+        from core.tabs.image_tools import depth_engine, normal_engine, rembg_engine
         onnx_sessions.set_min_capacity(
             int(bool(self.options.get("rembg_enabled")))
             + int(bool(self.options.get("depth_enabled") or self.options.get("normals_enabled"))))
@@ -322,6 +323,8 @@ class ImageConvertWorker(QThread):
 
         Imágenes a 96 ppp, como antes: los JPEG originales traen su propia resolución
         (72, 300...) y sin esto cada página saldría de un tamaño físico distinto."""
+        # Diferido: img2pdf arrastra pikepdf y PIL, y solo hace falta al unir en un PDF.
+        import img2pdf
         layout = img2pdf.get_fixed_dpi_layout_fun((96, 96))
         try:
             if all(e["kind"] == "image" for e in entries):

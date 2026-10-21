@@ -647,6 +647,9 @@ class QuickDownloadController(QObject):
 
     def _on_task_progress(self, data, task_data):
         has_fragments = bool(task_data["request_data"].get("selected_fragments"))
+        if data.get("status") == "artifact":
+            self._on_task_artifact(data, task_data, has_fragments)
+            return
         self._history_note_info(task_data, data.get("info_dict"))
 
         if data.get("status") == "fragment_progress":
@@ -738,6 +741,22 @@ class QuickDownloadController(QObject):
                 info = data.get("info_dict")
                 if info:
                     row.update_metadata_from_dict(info)
+
+    def _on_task_artifact(self, data, task_data, has_fragments):
+        """Archivo que la descarga creó (ver DownloaderMaster._note_artifact): se anota
+        en la fila dueña con su ruta exacta. is_stem_source=False: no es lo descargado
+        principal (el medio final ya llega por el hook 'finished')."""
+        path = data.get("path")
+        if not path:
+            return
+        if has_fragments:
+            rows = task_data["item_rows"]
+        else:
+            index = data.get("playlist_index")
+            routing = {"info_dict": {"playlist_index": index}} if index is not None else {}
+            rows = self._resolve_target_rows(routing, task_data)
+        for row in rows:
+            row.add_output_files([path], is_stem_source=False)
 
     def _resolve_target_rows(self, data, task_data):
         """

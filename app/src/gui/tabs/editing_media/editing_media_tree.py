@@ -411,6 +411,12 @@ class TreeListMixin:
 
             if tipo in ["folder", "subfolder"]:
                 ruta = data.get("ruta")
+                if ruta and ruta == getattr(self, "_prewarm_folder", None):
+                    # Se está leyendo en otro hilo (ver EditingMediaTab._start_folder_prewarm):
+                    # al terminar se refresca la lista. Leerla aquí congelaría la interfaz.
+                    self._applied_display_paths = None
+                    self.media_model.set_data([{"nombre": QCoreApplication.translate("TreeListMixin", "Cargando carpeta..."), "tipo": "empty"}])
+                    return
                 media_items = self.controller.get_media_files_in_folder(ruta)
             elif tipo == "collection":
                 nombre = data.get("nombre")

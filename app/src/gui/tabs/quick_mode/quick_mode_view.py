@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, QEvent, QPoint, QRect, QSize
+from PySide6.QtCore import Qt, QPoint, QRect, QSize
 from PySide6.QtGui import QIcon
 
 from gui.styles import get_theme_token, apply_cut_button_style, register_theme_callback
@@ -126,11 +126,14 @@ class QuickModeTab(QWidget):
         self._reposition_recode_popover()
 
         # Cerrar el popover de "Posprocesar" al hacer clic afuera (de recode_bar y del
-        # propio cuerpo flotante) - filtro global porque el cuerpo no usa Qt.Popup (ver
-        # _reposition_recode_popover: vive como hijo normal posicionado a mano, no como
-        # ventana top-level), así que Qt no lo cierra solo. Se ignora mientras haya un
-        # popup interno abierto (ej. el combo de presets) para no comerle el clic.
-        QApplication.instance().installEventFilter(self)
+        # propio cuerpo flotante) - mira los clics de toda la app porque el cuerpo no usa
+        # Qt.Popup (ver _reposition_recode_popover: vive como hijo normal posicionado a
+        # mano, no como ventana top-level), así que Qt no lo cierra solo. Se ignora
+        # mientras haya un popup interno abierto (ej. el combo de presets) para no
+        # comerle el clic. Va por el filtro compartido (ver gui/app_event_filters.py),
+        # no por uno propio sobre QApplication.
+        from gui.app_event_filters import OutsideClickHub
+        OutsideClickHub.register(self, self._on_app_mouse_press)
 
         self._on_mode_changed(self.mode_combo.currentIndex())
         self.load_labels()
@@ -170,22 +173,21 @@ class QuickModeTab(QWidget):
         else:
             self.lbl_recode_toggle.setStyleSheet("font-weight: bold;")
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseButtonPress and self.recode_options.is_expanded:
+    def _on_app_mouse_press(self, obj, event):
+        if self.recode_options.is_expanded:
             # No competir con un popup interno abierto (ej. el combo de presets):
             # mientras haya uno activo, dejarle su propio clic. Mismo criterio con un
             # diálogo modal encima: sus clics caen en otra ventana (este filtro está
             # sobre QApplication y ve toda la app), pero mientras está arriba el
             # usuario no puede tocar este panel, así que colapsarlo por ese clic es
             # un efecto colateral -- ver la nota larga en
-            # gui/tabs/image_tools/image_tools_view.py::eventFilter.
+            # gui/tabs/image_tools/image_tools_view.py::_on_app_mouse_press.
             if QApplication.activePopupWidget() is None and QApplication.activeModalWidget() is None:
                 pos = event.globalPos()
                 bar_rect = QRect(self.recode_bar.mapToGlobal(QPoint(0, 0)), self.recode_bar.size())
                 popup_rect = QRect(self.recode_options.mapToGlobal(QPoint(0, 0)), self.recode_options.size())
                 if not bar_rect.contains(pos) and not popup_rect.contains(pos):
                     self.recode_options.toggle_collapse()
-        return super().eventFilter(obj, event)
 
     def _build_url_panel(self):
         panel = QWidget()

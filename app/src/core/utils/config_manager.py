@@ -1,6 +1,7 @@
 # src/core/utils/config_manager.py
 import os
 import json
+import threading
 from core.logger.logger_manager import logger
 from core.utils.paths import get_config_path
 from core.version import IS_BETA
@@ -8,6 +9,11 @@ from core.version import IS_BETA
 CONFIG_FILE = get_config_path()
 
 _cached_config = None
+
+# Varios hilos guardan la config (el del splash mientras el principal construye la
+# ventana, los workers de la cola...): sin el candado, dos escrituras simultáneas al
+# mismo archivo podían intercalarse y dejar un config.json ilegible.
+_save_lock = threading.Lock()
 
 def get_config():
     """Lee el archivo de configuración y lo mantiene en memoria."""
@@ -115,20 +121,26 @@ def save_config(config):
     global _cached_config
     _cached_config = config
 
-    # Filtrar las opciones transitorias de la AdvancedProcessTab
-    save_dict = config.copy()
     transient_keys = [
         "batch_thumbnail_mode",
         "global_download_mode",
         "global_download_quality"
     ]
-    for key in transient_keys:
-        save_dict.pop(key, None)
 
     os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
     try:
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(save_dict, f, indent=4, ensure_ascii=False)
+        # Copiar y serializar dentro del candado (el último en escribir es el que tomó
+        # la foto más nueva) y ANTES de abrir el archivo: si el volcado falla, p. ej.
+        # porque otro hilo cambió un diccionario anidado a mitad, el config.json
+        # anterior queda intacto en vez de truncado.
+        with _save_lock:
+            # Filtrar las opciones transitorias de la AdvancedProcessTab
+            save_dict = config.copy()
+            for key in transient_keys:
+                save_dict.pop(key, None)
+            content = json.dumps(save_dict, indent=4, ensure_ascii=False)
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                f.write(content)
     except Exception as e:
         logger.error(f"ConfigManager: Error guardando config: {e}")
 

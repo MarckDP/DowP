@@ -26,6 +26,7 @@ from gui.styles import get_theme_token
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from core.utils.font_manager import get_active_font_family
+from core.utils import startup_timer
 from core.version import get_display_version
 from gui.styles import set_themed_style
 from gui.styles import apply_shapes
@@ -42,6 +43,7 @@ class DependencyCheckWorker(QThread):
     dependency_started = Signal(str, str)         # dep_id, nombre legible
     dependency_progress = Signal(str, int)        # dep_id, porcentaje
     dependency_finished = Signal(str, bool, str)  # dep_id, éxito, versión/msg
+    local_ready = Signal()                        # Todo lo local listo (falta solo la red)
     all_ready = Signal()                          # Todo listo
     failed = Signal(str)                          # Mensaje de error
 
@@ -74,14 +76,15 @@ class DependencyCheckWorker(QThread):
 
             self.status_update.emit("Comprobando entorno...")
 
-            # bin/ (dependencias gestionadas + modelos de IA, hasta varios GB) dejó de
-            # vivir junto al ejecutable y pasó al perfil de datos local del usuario.
-            # Va antes de verify_all_dependencies() a propósito: los check_*() miran la
-            # ubicación nueva, así que si el bin/ viejo no se movió primero la app daría
-            # todo por faltante y volvería a descargarlo entero.
-            migrate_bin_to_local_appdata(status_callback=self.status_update.emit)
+            with startup_timer.measure("comprobación local de dependencias (hilo del splash)"):
+                # bin/ (dependencias gestionadas + modelos de IA, hasta varios GB) dejó de
+                # vivir junto al ejecutable y pasó al perfil de datos local del usuario.
+                # Va antes de verify_all_dependencies() a propósito: los check_*() miran la
+                # ubicación nueva, así que si el bin/ viejo no se movió primero la app daría
+                # todo por faltante y volvería a descargarlo entero.
+                migrate_bin_to_local_appdata(status_callback=self.status_update.emit)
 
-            status = verify_all_dependencies()
+                status = verify_all_dependencies()
 
             # 1. Si faltan dependencias, mostrarlas todas de una vez y descargar las faltantes
             if not all(status.values()):
@@ -130,35 +133,54 @@ class DependencyCheckWorker(QThread):
             except Exception as e:
                 logger.debug(f"SplashScreen: no se pudo comprobar ffprobe ({e})")
 
-            # 2. Auto-actualización transparente de yt-dlp si hay nueva versión en el canal activo
+            # Primer arranque, ffmpeg nuevo o un escaneo que falló en el arranque anterior:
+            # el escaneo de hardware (varios segundos, decenas de procesos de ffmpeg) se
+            # hace aquí, en este hilo, y no en el principal en medio de la construcción de
+            # la ventana -- los paneles de Compresión y Recodificación lo piden al
+            # construirse y con la caché lista lo encuentran al instante.
             try:
-                cfg = get_config()
-                channel = cfg.get("ytdlp_channel", "stable")
-                self.status_update.emit("Comprobando yt-dlp...")
+                from core.utils.hardware_detector import needs_hardware_scan, detect_hardware
+                if needs_hardware_scan():
+                    self.status_update.emit(QCoreApplication.translate("SplashScreen", "Analizando el hardware..."))
+                    with startup_timer.measure("escaneo de hardware (hilo del splash)"):
+                        detect_hardware()
+            except Exception as e:
+                logger.warning(f"SplashScreen: no se pudo escanear el hardware ({e})")
+
+            # Todo lo local está listo: la ventana ya se puede construir mientras este
+            # hilo sigue con la comprobación de yt-dlp por red.
+            self.local_ready.emit()
+
+            # 2. Auto-actualización transparente de yt-dlp si hay nueva versión en el canal activo
+            with startup_timer.measure("comprobación de yt-dlp por red (hilo del splash)"):
+                try:
+                    cfg = get_config()
+                    channel = cfg.get("ytdlp_channel", "stable")
+                    self.status_update.emit("Comprobando yt-dlp...")
+
+                    remote_ver = get_ytdlp_remote_version(channel=channel)
+                    local_ver = get_ytdlp_version()
                 
-                remote_ver = get_ytdlp_remote_version(channel=channel)
-                local_ver = get_ytdlp_version()
-                
-                if remote_ver and local_ver:
-                    r_clean = str(remote_ver).strip().lstrip('v')
-                    l_clean = str(local_ver).strip().lstrip('v')
+                    if remote_ver and local_ver:
+                        r_clean = str(remote_ver).strip().lstrip('v')
+                        l_clean = str(local_ver).strip().lstrip('v')
                     
-                    if r_clean != l_clean and r_clean not in l_clean:
-                        logger.info(f"SplashScreen: Auto-actualizando yt-dlp ({channel}): {local_ver} -> {remote_ver}")
-                        self.status_update.emit(f"Actualizando yt-dlp a {remote_ver}...")
-                        self.dependency_started.emit("ytdlp", "yt-dlp")
+                        if r_clean != l_clean and r_clean not in l_clean:
+                            logger.info(f"SplashScreen: Auto-actualizando yt-dlp ({channel}): {local_ver} -> {remote_ver}")
+                            self.status_update.emit(f"Actualizando yt-dlp a {remote_ver}...")
+                            self.dependency_started.emit("ytdlp", "yt-dlp")
                         
-                        def ytdlp_cb(pct):
-                            self.dependency_progress.emit("ytdlp", pct)
+                            def ytdlp_cb(pct):
+                                self.dependency_progress.emit("ytdlp", pct)
                         
-                        success, msg = download_ytdlp(channel=channel, progress_callback=ytdlp_cb)
-                        if success:
-                            self.dependency_finished.emit("ytdlp", True, remote_ver)
-                            logger.info(f"SplashScreen: yt-dlp auto-actualizado a {remote_ver}")
-                        else:
-                            logger.warning(f"SplashScreen: No se pudo auto-actualizar yt-dlp: {msg}")
-            except Exception as update_err:
-                logger.debug(f"SplashScreen: Verificación de actualización de yt-dlp omitida ({update_err})")
+                            success, msg = download_ytdlp(channel=channel, progress_callback=ytdlp_cb)
+                            if success:
+                                self.dependency_finished.emit("ytdlp", True, remote_ver)
+                                logger.info(f"SplashScreen: yt-dlp auto-actualizado a {remote_ver}")
+                            else:
+                                logger.warning(f"SplashScreen: No se pudo auto-actualizar yt-dlp: {msg}")
+                except Exception as update_err:
+                    logger.debug(f"SplashScreen: Verificación de actualización de yt-dlp omitida ({update_err})")
 
             self.status_update.emit(QCoreApplication.translate("SplashScreen", "Todo listo"))
             self.all_ready.emit()
@@ -191,6 +213,9 @@ class SplashScreen(QWidget):
         self._fail_message = ""
         self.dep_rows = {}
         self._main_window = None  # Pre-construida durante el splash
+        self._building_main_window = False
+        self._deps_ready = False   # El worker terminó (incluida la comprobación por red)
+        self._finishing = False
         self._drag_active = False
         self._drag_start_pos = None
 
@@ -537,8 +562,10 @@ class SplashScreen(QWidget):
             """))
 
     @Slot()
-    def _on_all_ready(self):
-        """Dependencias listas → construir MainWindow ANTES de desvanecer."""
+    def _on_local_ready(self):
+        """Dependencias locales listas → construir MainWindow ya, mientras el worker sigue
+        con la comprobación de yt-dlp por red (hasta 10 s con una red lenta). Antes se
+        esperaba a que terminara también eso para empezar a construir."""
         self.status_label.setText(self.tr("Iniciando aplicación..."))
         self.status_label.setStyleSheet(apply_shapes(f"""
             color: {self._colors['text_sec']};
@@ -551,16 +578,41 @@ class SplashScreen(QWidget):
         # Dar un frame para que el label se actualice
         QApplication.processEvents()
 
-        # Pre-construir MainWindow mientras el splash sigue visible
-        logger.debug("SplashScreen: Pre-construyendo MainWindow...")
-        from gui.main_window import MainWindow
-        self._main_window = MainWindow()
-        logger.debug("SplashScreen: MainWindow construida.")
+        self._build_main_window()
+        if self._deps_ready:
+            self._finish()
 
-        # Ahora desvanecer el splash
-        self.loading_bar.setRange(0, 100)
-        self.loading_bar.setValue(100)
+    @Slot()
+    def _on_all_ready(self):
+        """El worker terminó del todo. Si la ventana todavía se está construyendo (llegó
+        por un processEvents() de en medio), _on_local_ready desvanece al terminar."""
+        self._deps_ready = True
+        if self._building_main_window:
+            return
+        if self._main_window is None:
+            # local_ready siempre llega antes; esto es solo por si acaso.
+            self._build_main_window()
         self._finish()
+
+    def _build_main_window(self):
+        # Pre-construir MainWindow mientras el splash sigue visible. Sin los filtros
+        # globales de la app: cada evento de construcción pasaba por ellos y se iba casi
+        # la mitad del arranque en eso (ver gui/app_event_filters.py).
+        # Ya construida: all_ready pudo colarse en el processEvents() de _on_local_ready.
+        if self._main_window is not None or self._building_main_window:
+            return
+        self._building_main_window = True
+        try:
+            logger.debug("SplashScreen: Pre-construyendo MainWindow...")
+            startup_timer.mark("dependencias locales listas")
+            from gui.main_window import MainWindow
+            from gui.app_event_filters import build_without_app_filters
+            startup_timer.mark("módulos de la ventana importados")
+            self._main_window = build_without_app_filters(MainWindow)
+            startup_timer.mark("ventana principal construida")
+            logger.debug("SplashScreen: MainWindow construida.")
+        finally:
+            self._building_main_window = False
 
     @Slot(str)
     def _on_failed(self, msg):
@@ -581,6 +633,12 @@ class SplashScreen(QWidget):
 
     def _finish(self):
         """Fade out y emitir ready con la MainWindow ya construida."""
+        if self._finishing:
+            return
+        self._finishing = True
+        self.loading_bar.setRange(0, 100)
+        self.loading_bar.setValue(100)
+
         self.effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self.effect)
 
@@ -611,6 +669,7 @@ class SplashScreen(QWidget):
         self.worker.dependency_started.connect(self._on_dep_started, Qt.QueuedConnection)
         self.worker.dependency_progress.connect(self._on_dep_progress, Qt.QueuedConnection)
         self.worker.dependency_finished.connect(self._on_dep_finished, Qt.QueuedConnection)
+        self.worker.local_ready.connect(self._on_local_ready, Qt.QueuedConnection)
         self.worker.all_ready.connect(self._on_all_ready, Qt.QueuedConnection)
         self.worker.failed.connect(self._on_failed, Qt.QueuedConnection)
         self.worker.start()

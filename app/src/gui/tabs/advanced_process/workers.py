@@ -90,7 +90,9 @@ class DownloadWorker(QThread):
         # dispara un ciclo de repintado en la fila -- ver
         # QuickDownloadRow._refresh_card_style).
         current_time = time.time()
-        if current_time - self._last_emit_time < 0.5 and d.get('status') not in ('finished', 'fragment_progress'):
+        # 'artifact' (archivo producido, ver DownloaderMaster._note_artifact) tampoco se
+        # puede perder: es la única fuente de los sidecars para el arrastre.
+        if current_time - self._last_emit_time < 0.5 and d.get('status') not in ('finished', 'fragment_progress', 'artifact'):
             return
 
         self._last_emit_time = current_time

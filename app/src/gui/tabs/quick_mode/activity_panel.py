@@ -331,12 +331,7 @@ class ActivityPanel(QFrame):
 
         files, seen = [], set()
         for candidate in rows:
-            # Las demás filas de la lista pueden haber bajado a la misma carpeta con
-            # nombres emparentados ('Cancion' y 'Cancion_2' en una playlist): sus rutas
-            # se pasan para que cada archivo quede con su dueño.
-            foreign = [p for other in self.item_rows if other is not candidate
-                       for p in other.output_stems()]
-            for path in candidate.collect_drag_files(foreign_stems=foreign):
+            for path in candidate.collect_drag_files():
                 key = os.path.normcase(path)
                 if key not in seen:
                     seen.add(key)

@@ -30,6 +30,10 @@ class DownloaderMaster:
         # Ver request_pause. No se reinicia en download(): una pausa pedida justo antes
         # de que arranque la siguiente llamada tiene que seguir valiendo.
         self._pause_requested = False
+        # Manifiesto de salidas (ver _note_artifact). Se reinicia en cada download().
+        self._artifacts = []
+        self._artifact_keys = set()
+        self._artifact_callback = None
 
     def request_pause(self):
         """La próxima cancelación es una pausa: la limpieza conserva lo ya bajado
@@ -62,6 +66,13 @@ class DownloaderMaster:
         # de progreso (ej. un 403), _touched_streams queda vacío y no habría de dónde
         # deducir su nombre.
         self._touched_thumbs = set()
+        # Manifiesto: rutas EXACTAS que esta descarga creó (ver _note_artifact).
+        self._artifacts = []
+        self._artifact_keys = set()
+        self._artifact_callback = progress_callback
+        # Aviso para la fila si YouTube obligó a bajar menos calidad de la pedida (ver
+        # _recover_from_youtube_block).
+        self._quality_warning = None
         self._download_started_at = time.time()
         url = request_data.get("url")
         if not url:
@@ -245,15 +256,11 @@ class DownloaderMaster:
                 try:
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         info = ydl.extract_info(url, download=True)
+                except DownloadCancelledError:
+                    raise
                 except Exception as dl_err:
                     if is_youtube_access_error(url, dl_err):
-                        logger.warning(
-                            f"DownloaderMaster: YouTube bloqueó el intento inicial ({dl_err}). "
-                            f"Reintentando descarga con cliente alternativo (web_embedded)..."
-                        )
-                        fallback_opts = make_fallback_ydl_opts(ydl_opts)
-                        with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
-                            info = ydl_fallback.extract_info(url, download=True)
+                        info, ydl = self._recover_from_youtube_block(yt_dlp, url, ydl_opts, dl_err, request_data)
                     else:
                         raise dl_err
 
@@ -327,6 +334,8 @@ class DownloaderMaster:
                     except Exception as summary_err:
                         logger.debug(f"DownloaderMaster: No se pudo armar el resumen de playlist: {summary_err}")
 
+                if self._quality_warning:
+                    return True, f"{self.POSTPROCESS_WARNING_PREFIX}{self._quality_warning}"
                 return True, "Download finished successfully"
 
         except DownloadCancelledError as e:
@@ -354,6 +363,91 @@ class DownloaderMaster:
             # deja borrar un archivo abierto. Aquí ya se soltó todo -- incluidos los
             # hilos de fragmentos concurrentes, que yt-dlp espera al salir.
             self._cleanup_temp_artifacts(keep_thumbnails, keep_partials)
+            existing = [p for p in self._artifacts if os.path.isfile(p)]
+            logger.info(f"DownloaderMaster: Manifiesto de salidas ({len(existing)} en disco): "
+                        f"{[os.path.basename(p) for p in existing]}")
+
+    # Pausa antes de repetir con el mismo cliente tras un 403: lo justo para que la
+    # extracción nueva no caiga en la misma ventana del bloqueo.
+    _SAME_CLIENT_RETRY_DELAY_S = 3
+
+    def _recover_from_youtube_block(self, yt_dlp, url, ydl_opts, first_err, request_data):
+        """Recupera una descarga que YouTube bloqueó. Devuelve (info, ydl).
+
+        1. Si fue un 403 del CDN, se repite UNA vez con los mismos clientes: con PO token
+           el cliente mweb es el único que ofrece la máxima calidad (4K, AV1) y su 403 es
+           intermitente -- una extracción nueva trae URLs y token nuevos.
+        2. Si no (o si vuelve a fallar), cliente alternativo (web_embedded). Ese cliente
+           suele recibir solo formatos combinados de menor calidad (SABR), y antes eso
+           pasaba en silencio: "Máxima calidad" terminaba bajando un 1080p H.264. Ahora
+           se compara la resolución obtenida con la que se iba a bajar y, si es menor,
+           queda en self._quality_warning para avisar en la fila."""
+        from core.ytdlp_logic.resilient_downloader import (
+            is_cdn_forbidden_error, is_youtube_access_error, make_fallback_ydl_opts)
+
+        err = first_err
+        if is_cdn_forbidden_error(err):
+            logger.warning(
+                f"DownloaderMaster: YouTube bloqueó el intento inicial ({err}). "
+                f"Reintentando con el mismo cliente (URLs y token nuevos)...")
+            self._wait_cancellable(self._SAME_CLIENT_RETRY_DELAY_S)
+            try:
+                ydl = yt_dlp.YoutubeDL(ydl_opts)
+                with ydl:
+                    info = ydl.extract_info(url, download=True)
+                logger.info("DownloaderMaster: El reintento con el mismo cliente funcionó.")
+                return info, ydl
+            except DownloadCancelledError:
+                raise
+            except Exception as retry_err:
+                if not is_youtube_access_error(url, retry_err):
+                    raise
+                err = retry_err
+
+        logger.warning(
+            f"DownloaderMaster: YouTube bloqueó la descarga ({err}). "
+            f"Reintentando descarga con cliente alternativo (web_embedded)...")
+        expected_height = None
+        if not request_data.get("is_playlist") and request_data.get("mode") in ("video+audio", "video_only"):
+            expected_height = self._probe_selected_height(yt_dlp, url, ydl_opts)
+
+        ydl = yt_dlp.YoutubeDL(make_fallback_ydl_opts(ydl_opts))
+        with ydl:
+            info = ydl.extract_info(url, download=True)
+
+        got_height = info.get("height") if isinstance(info, dict) else None
+        if expected_height and got_height and got_height < expected_height:
+            logger.warning(
+                f"DownloaderMaster: El cliente alternativo solo ofrecía {got_height}p "
+                f"(se iba a bajar {expected_height}p). Calidad reducida por YouTube.")
+            self._quality_warning = QCoreApplication.translate(
+                "DownloaderMaster",
+                "YouTube bloqueó la máxima calidad: se descargó en {0}p en lugar de {1}p"
+            ).format(got_height, expected_height)
+        return info, ydl
+
+    def _probe_selected_height(self, yt_dlp, url, ydl_opts):
+        """Resolución que elegirían los clientes originales, sin descargar nada (una
+        extracción liviana). None si no se puede saber: entonces no se compara."""
+        probe_opts = dict(ydl_opts)
+        probe_opts.pop("progress_hooks", None)
+        probe_opts.pop("postprocessor_hooks", None)
+        probe_opts.pop("postprocessors", None)
+        probe_opts["skip_download"] = True
+        try:
+            with yt_dlp.YoutubeDL(probe_opts) as ydl:
+                probe = ydl.extract_info(url, download=False)
+            return probe.get("height") if isinstance(probe, dict) else None
+        except Exception as e:
+            logger.debug(f"DownloaderMaster: No se pudo consultar la calidad original: {e}")
+            return None
+
+    def _wait_cancellable(self, seconds):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if self.cancellation_event and self.cancellation_event.is_set():
+                raise DownloadCancelledError(QCoreApplication.translate("DownloaderMaster", "Descarga cancelada por el usuario"))
+            time.sleep(0.2)
 
     def _resolve_title_from_metadata(self, request_data, url):
         """
@@ -372,6 +466,7 @@ class DownloaderMaster:
             probe_opts['skip_download'] = True
             probe_opts['quiet'] = True
             probe_opts.pop('progress_hooks', None)
+            probe_opts.pop('postprocessor_hooks', None)
             # Solo se quiere el título: nada de escribir en disco. skip_download no
             # alcanza -- con la URL de una playlist, yt-dlp escribía igual la miniatura de
             # la playlist en la carpeta de salida y quedaba de basura.
@@ -499,6 +594,10 @@ class DownloaderMaster:
         ydl_opts.update({
             'outtmpl': filename_tpl,
             'progress_hooks': [self._make_hook(progress_callback)],
+            # Función y no método ligado: make_fallback_ydl_opts hace deepcopy de estas
+            # opciones, y deepcopy de un método copia también su objeto (el hook
+            # anotaría en una copia del manifiesto). Las funciones se conservan tal cual.
+            'postprocessor_hooks': [lambda d: self._pp_artifact_hook(d)],
             'noplaylist': not is_playlist,
             'quiet': False,
             'noprogress': True,
@@ -986,16 +1085,34 @@ class DownloaderMaster:
         if not output_path or not os.path.isdir(output_path):
             return
 
+        # Solo miniaturas de ESTA descarga: las del manifiesto (rutas que yt-dlp escribió,
+        # ver _pp_artifact_hook) y, de respaldo, las escritas durante la descarga. Antes
+        # se buscaba '*_{sufijo}.jpg' en toda la carpeta: con miniaturas de fragmentos
+        # de OTROS videos ahí (el sufijo suele ser el mismo, 'fragment'), una de ellas
+        # podía quedar como la del medio y las demás se borraban.
+        own = [p for p in self._artifacts
+               if p.lower().endswith(self._THUMBNAIL_EXTS) and os.path.isfile(p)]
+        own_keys = {os.path.normcase(p) for p in own}
+
         found = []  # (ruta, nombre_base_del_medio)
         for i, frag in enumerate(fragments):
             suffix = frag[2] if len(frag) > 2 else f"fragment{i+1:02d}"
+            candidates = list(own)
             for ext in self._THUMBNAIL_EXTS:
                 pattern = os.path.join(glob.escape(output_path), f"*_{suffix}{ext}")
-                for path in glob.glob(pattern):
-                    if os.path.isfile(path):
-                        stem = os.path.splitext(os.path.basename(path))[0]
-                        found.append((path, stem[: -len(f"_{suffix}")]))
+                candidates += [p for p in glob.glob(pattern)
+                               if os.path.normcase(p) not in own_keys and self._produced_since_start(p)]
+            for path in candidates:
+                stem = os.path.splitext(os.path.basename(path))[0]
+                if os.path.isfile(path) and stem.endswith(f"_{suffix}"):
+                    found.append((path, stem[: -len(f"_{suffix}")]))
 
+        unique, seen = [], set()
+        for path, base in found:
+            if os.path.normcase(path) not in seen:
+                seen.add(os.path.normcase(path))
+                unique.append((path, base))
+        found = unique
         if not found:
             return
 
@@ -1004,11 +1121,19 @@ class DownloaderMaster:
 
         try:
             if os.path.normcase(keeper) != os.path.normcase(target):
-                if os.path.exists(target):
-                    os.remove(keeper)
-                else:
+                if not os.path.exists(target):
                     os.replace(keeper, target)
                     logger.info(f"DownloaderMaster: Miniatura de fragmentos unificada en {target}")
+                elif self._produced_since_start(target):
+                    # Ya la escribió esta misma descarga: la del fragmento sobra.
+                    os.remove(keeper)
+                else:
+                    # 'Título.jpg' es de OTRA descarga (u otra pestaña): no se pisa ni
+                    # se adopta. La del fragmento queda con su propio nombre.
+                    logger.info(f"DownloaderMaster: '{os.path.basename(target)}' ya existía y no es de "
+                                f"esta descarga; la miniatura queda como {os.path.basename(keeper)}")
+                    target = keeper
+            self._note_artifact(target)
         except OSError as e:
             logger.warning(f"DownloaderMaster: No se pudo unificar la miniatura de los fragmentos: {e}")
             return
@@ -1077,6 +1202,7 @@ class DownloaderMaster:
                 # Usamos utf-8 con reemplazo de errores para evitar fallos si ffmpeg imprime caracteres especiales/emojis
                 subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='replace')
                 logger.info(f"DownloaderMaster: Corte {i+1} completado exitosamente.")
+                self._note_artifact(output_file)
                 if progress_callback:
                     # Sin este aviso, el resto de la app (row.downloaded_filepath en
                     # Modo Rápido, last_downloaded_filepath en SOLO) nunca se entera de
@@ -1096,6 +1222,7 @@ class DownloaderMaster:
                 logger.error(f"DownloaderMaster: No se pudo eliminar el original: {e}")
         else:
             logger.info(f"DownloaderMaster: Archivo original conservado ({input_file})")
+            self._note_artifact(input_file)
 
     def _handle_subtitle_cuts_for_fragment(self, outtmpl_pattern, fragment_data, request_data):
         """
@@ -1106,11 +1233,22 @@ class DownloaderMaster:
         
         # En lugar de usar outtmpl_pattern (que puede tener %(title)s), buscamos por directorio y sufijo
         # yt-dlp suele guardar el archivo como 'Título_Sufijo.idioma.ext'
-        search_pattern = os.path.join(output_path, f"*_{suffix}.*")
-        matches = glob.glob(search_pattern)
-        
         sub_extensions = ('.srt', '.vtt', '.ass', '.ssa', '.ttml', '.srv1', '.srv2', '.srv3', '.json3')
-        found_subs = [m for m in matches if m.lower().endswith(sub_extensions)]
+
+        def belongs_to_fragment(path):
+            # 'Título_Sufijo.idioma.ext': el nombre, sin idioma ni extensión, termina en el sufijo.
+            name = os.path.basename(path)
+            return name.lower().endswith(sub_extensions) and f"_{suffix}." in name
+
+        # Solo subtítulos de ESTA descarga (manifiesto, ver _pp_artifact_hook; de
+        # respaldo, los escritos durante la descarga). El glob '*_{sufijo}.*' en toda la
+        # carpeta recortaba y SOBRESCRIBÍA los subtítulos de otros videos con el mismo
+        # sufijo de fragmento.
+        found_subs = [p for p in self._artifacts if belongs_to_fragment(p) and os.path.isfile(p)]
+        if not found_subs:
+            search_pattern = os.path.join(glob.escape(output_path), f"*_{glob.escape(suffix)}.*")
+            found_subs = [m for m in glob.glob(search_pattern)
+                          if belongs_to_fragment(m) and self._produced_since_start(m)]
         
         if not found_subs:
             logger.warning(f"DownloaderMaster: No se encontraron subtítulos para el fragmento con sufijo: {suffix}")
@@ -1182,6 +1320,7 @@ class DownloaderMaster:
             result = SubtitleProcessor.cut_subtitle(full_sub_path, start_ms, end_ms, output_sub)
             if result:
                 success_count += 1
+                self._note_artifact(result if isinstance(result, str) else output_sub)
         
         # 2. Limpieza del original si se generaron fragmentos y no se requiere conservar el completo
         # (En DowP 2.0, si el switch de recorte está activo, se asume que queremos los fragmentos)
@@ -1228,7 +1367,10 @@ class DownloaderMaster:
     def _prepare_subtitle_for_cutting(self, sub_path, request_data, force_standard=False):
         """Prepara el subtítulo (estandariza si es necesario) antes del recorte."""
         if force_standard or request_data.get("standardize_srt"):
-            return SubtitleProcessor.standardize_to_srt(sub_path)
+            standardized = SubtitleProcessor.standardize_to_srt(sub_path)
+            # La estandarización puede escribir un archivo nuevo (.vtt -> .srt).
+            self._note_artifact(standardized)
+            return standardized
         return sub_path
 
     def _find_subtitle_files(self, output_path, title="", lang=None, request_data=None):
@@ -1306,6 +1448,64 @@ class DownloaderMaster:
             if external_callback:
                 external_callback(d)
         return hook
+
+    # ------------------------------------------------------------------
+    # Manifiesto de salidas: lo que ESTA descarga creó, con su ruta exacta
+    # ------------------------------------------------------------------
+    def _note_artifact(self, path, playlist_index=None):
+        """Registra un archivo creado por esta descarga y lo avisa por el callback de
+        progreso como {'status': 'artifact', 'path': ..., 'playlist_index': ...}.
+
+        Es la alternativa a deducir los archivos barriendo la carpeta por nombre, que
+        se llevaba los de otras descargas con nombre parecido (el fragmento del Modo
+        Rápido aparecía en el arrastre del Proceso Avanzado y al revés). Se registra
+        también lo que después se borra (la miniatura tras incrustarla, el completo
+        cuando no se conserva): quien lo consume filtra por existencia al usarlo, así
+        que eso respeta solo las casillas de "conservar"."""
+        if not path or not isinstance(path, str):
+            return
+        path = os.path.abspath(path)
+        key = os.path.normcase(path)
+        if key in self._artifact_keys:
+            return
+        self._artifact_keys.add(key)
+        self._artifacts.append(path)
+        callback = self._artifact_callback
+        if callback:
+            try:
+                callback({"status": "artifact", "path": path, "playlist_index": playlist_index})
+            except DownloadCancelledError:
+                raise
+            except Exception as e:
+                logger.debug(f"DownloaderMaster: no se pudo avisar el archivo producido '{path}': {e}")
+
+    def _pp_artifact_hook(self, d):
+        """postprocessor_hooks de yt-dlp: cada posprocesador (incluido el MoveFiles final,
+        que corre siempre) recibe el info_dict con las rutas que yt-dlp escribió de
+        verdad: el medio ('filepath'), las miniaturas y los subtítulos. Son las únicas
+        fuentes exactas de los sidecars, que nunca pasan por el hook de progreso."""
+        info = d.get("info_dict") or {}
+        index = info.get("playlist_index")
+        paths = [info.get("filepath")]
+        paths += [t.get("filepath") for t in (info.get("thumbnails") or []) if isinstance(t, dict)]
+        subs = info.get("requested_subtitles") or {}
+        if isinstance(subs, dict):
+            paths += [s.get("filepath") for s in subs.values() if isinstance(s, dict)]
+        for path in paths:
+            self._note_artifact(path, index)
+
+    def produced_files(self):
+        """Rutas que la última download() registró en el manifiesto, en orden."""
+        return list(self._artifacts)
+
+    def _produced_since_start(self, path):
+        """Respaldo cuando el manifiesto no trae lo que se busca: True si el archivo se
+        escribió durante esta descarga (2 s de margen por la resolución de fecha de
+        algunos sistemas de archivos). Nunca reclama un archivo anterior."""
+        try:
+            return os.path.getmtime(path) >= self._download_started_at - 2
+        except OSError:
+            return False
 
     def _requested_playlist_items(self, ydl_opts, info):
         """Índices que se pidieron descargar, tal y como los numera yt-dlp.

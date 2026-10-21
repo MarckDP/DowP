@@ -3444,6 +3444,11 @@ You can download it again whenever you want.</translation>
 <context>
     <name>DownloaderMaster</name>
     <message>
+        <location filename="../../core/ytdlp_logic/downloader_master.py" line="414" />
+        <source>YouTube bloqueó la máxima calidad: se descargó en {0}p en lugar de {1}p</source>
+        <translation>YouTube blocked the highest quality: downloaded at {0}p instead of {1}p</translation>
+    </message>
+    <message>
         <location filename="../../core/ytdlp_logic/downloader_master.py" line="128" />
         <location filename="../../core/ytdlp_logic/downloader_master.py" line="1292" />
         <source>Descarga cancelada por el usuario</source>
@@ -11237,6 +11242,11 @@ You can download it again whenever you want.</translation>
         <translation>Error installing {0}: {1}</translation>
     </message>
     <message>
+        <location filename="../../gui/splash_screen.py" line="144" />
+        <source>Analizando el hardware...</source>
+        <translation>Analyzing hardware...</translation>
+    </message>
+    <message>
         <location filename="../../gui/splash_screen.py" line="163" />
         <source>Todo listo</source>
         <translation>All set</translation>
@@ -11839,6 +11849,11 @@ Check your internet connection and open DowP again.</translation>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="604" />
         <source>Aquí puedes guardar tus medios locales o web para acceder más rápido a ellos ⭐</source>
         <translation>Here you can save your local or web media for quicker access ⭐</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="418" />
+        <source>Cargando carpeta...</source>
+        <translation>Loading folder...</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/editing_media/editing_media_tree.py" line="609" />

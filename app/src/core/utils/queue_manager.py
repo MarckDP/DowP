@@ -247,8 +247,8 @@ class Job:
         self.final_filepath = None
         # Todo lo que este trabajo dejó en disco (medio, fragmentos, recodificado...),
         # para poder arrastrar la tarjeta terminada a otra aplicación con TODO su
-        # resultado -- los sidecars (miniatura, subtítulos) se barren por nombre base al
-        # arrastrar, no hace falta registrarlos. Ver core/utils/output_artifacts.py.
+        # resultado -- los sidecars (miniatura, subtítulos) llegan por el manifiesto del
+        # descargador con su ruta exacta. Ver core/utils/output_artifacts.py.
         self.artifacts = OutputArtifactTracker()
         self.created_at = time.time()
         # Ítems de una playlist (índices en analysis_data["entries"]) que ya terminaron
@@ -577,6 +577,11 @@ class QueueWorker(QThread):
 
         # Generar un progress callback que emita la señal Qt de progreso
         def progress_callback(d):
+            if d.get("status") == "artifact":
+                # Archivo creado por la descarga, con su ruta exacta (ver
+                # DownloaderMaster._note_artifact).
+                job.add_output_files([d.get("path")], is_stem_source=False)
+                return
             if d.get("status") == "downloading":
                 from core.ytdlp_logic.analyzer import strip_ansi_codes
                 p_str = strip_ansi_codes(d.get('_percent_str', '0%')).replace('%','').strip()
@@ -595,8 +600,8 @@ class QueueWorker(QThread):
                 if d.get("filename"):
                     job.final_filepath = d.get("filename")
                     # Nombre DERIVADO (stream sin fusionar, o un fragmento ya cortado):
-                    # se registra igual porque de él cuelga el nombre base del que se
-                    # barren los hermanos al arrastrar (ver output_artifacts).
+                    # se registra igual; si yt-dlp lo borra al fusionar, el arrastre lo
+                    # descarta al filtrar por existencia (ver output_artifacts).
                     job.add_output_files([d.get("filename")])
                 self.job_progress_changed.emit(job.job_id, 100.0, "", self.tr("Procesando final..."))
             elif d.get("status") == "fragment_progress":
@@ -657,9 +662,16 @@ class QueueWorker(QThread):
         # La limpieza de residuos (DownloaderMaster._cleanup_temp_artifacts) necesita
         # saber si el usuario quiere conservar miniaturas sueltas, y el flag de abajo ya
         # no lo dice: se le pasa aparte, con el mismo criterio del modo en lote.
-        config_to_use["_keep_thumbnail_files"] = (
+        keep_thumbnail_files = (
             batch_thumb_mode == "with_media" or bool(config_to_use.get("download_thumbnail_file", False)))
+        config_to_use["_keep_thumbnail_files"] = keep_thumbnail_files
         config_to_use["download_thumbnail_file"] = False
+        # El envío al editor recibe job.request_data (no esta copia) y solo adjunta una
+        # miniatura si el trabajo la pidió (ver process_raw_download). Con el modo en lote
+        # "Con medio", download_thumbnail_file puede venir en False aunque la miniatura sí
+        # se descargue, así que se le deja anotada la decisión real.
+        if isinstance(job.request_data, dict):
+            job.request_data["_keep_thumbnail_files"] = keep_thumbnail_files
 
         # GUARDIA DE MEMORIA: Proteger miniatura existente para evitar que yt-dlp la borre (al incrustar)
         output_dir_guard = config_to_use.get("output_path") or self._default_output_path()
@@ -717,7 +729,13 @@ class QueueWorker(QThread):
                     mode_final, bool(config_to_use.get("video_is_combined")),
                 )
                 predicted_path = os.path.join(output_path_final, f"{title}{predicted_ext}")
-                if os.path.exists(predicted_path):
+                # Solo si ESTA descarga lo creó (manifiesto, ver DownloaderMaster.
+                # _note_artifact): con fragmentos, 'Título.mp4' no es de este trabajo y,
+                # si existía (otra pestaña, otra descarga del mismo video), se adoptaba
+                # como resultado y viajaba en el arrastre de la tarjeta.
+                produced = {os.path.normcase(p) for p in downloader.produced_files()}
+                if (os.path.exists(predicted_path)
+                        and os.path.normcase(os.path.abspath(predicted_path)) in produced):
                     job.final_filepath = predicted_path
                     job.add_output_files([predicted_path])
 
@@ -794,6 +812,12 @@ class QueueWorker(QThread):
 
         from core.utils.config_manager import get_config
         batch_thumb_mode = get_config().get("batch_thumbnail_mode", "manual")
+        # Igual que en una descarga suelta: el envío al editor solo adjunta miniaturas si
+        # el trabajo las pidió (ver process_raw_download).
+        if isinstance(job.request_data, dict):
+            job.request_data["_keep_thumbnail_files"] = (
+                batch_thumb_mode == "with_media"
+                or (batch_thumb_mode == "manual" and bool(job.config.get("download_thumbnail_file", False))))
 
         numbering = get_config().get("playlist_numbering", True)
 
@@ -829,7 +853,12 @@ class QueueWorker(QThread):
                     job.job_id, total_percent, f"[{pos}/{total}] Descargando miniatura", ""
                 )
                 try:
-                    self._download_best_thumb(entry, playlist_output, f"{prefix}{item_title}")
+                    thumb_path = self._download_best_thumb(entry, playlist_output, f"{prefix}{item_title}")
+                    # Sin registrarla, la tarjeta de la playlist no tenía nada que arrastrar.
+                    # En este modo la miniatura ES el resultado (lo descargado), igual que
+                    # en la descarga suelta de solo miniatura.
+                    if thumb_path:
+                        job.add_output_files([thumb_path])
                 except Exception as e:
                     logger.warning(f"QueueWorker: Falló miniatura de playlist {item_title}: {e}")
                 continue
@@ -861,6 +890,9 @@ class QueueWorker(QThread):
             child_final_path = [None]
 
             def progress_callback(d, item_pos=pos, item_name=item_title):
+                if d.get("status") == "artifact":
+                    job.add_output_files([d.get("path")], is_stem_source=False)
+                    return
                 if d.get("status") == "downloading":
                     from core.ytdlp_logic.analyzer import strip_ansi_codes
                     p_str = strip_ansi_codes(d.get('_percent_str', '0%')).replace('%', '').strip()
@@ -1201,6 +1233,12 @@ class QueueWorker(QThread):
                 cmd.extend(["-c:v", "copy"])
             else:
                 v_args = adapt_video_args_for_alpha(settings.get("video_args", []), source_alpha["has_alpha"], keep_alpha)
+                if conservar_caratula:
+                    # "-tag:v" (ej. hvc1 en los perfiles H.265) se aplica a TODOS los
+                    # videos de salida, también a la carátula copiada (v:1): ffmpeg no
+                    # puede etiquetar un JPEG como HEVC y aborta con "Tag hvc1
+                    # incompatible ... Could not write header". Se limita al principal.
+                    v_args = ["-tag:v:0" if a == "-tag:v" else a for a in v_args]
                 if v_args:
                     cmd.extend(v_args)
                 else:

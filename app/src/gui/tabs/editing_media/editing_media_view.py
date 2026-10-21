@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from PySide6.QtCore import Qt, QSize, QEvent, QPoint, QTimer
+from PySide6.QtCore import Qt, QSize, QEvent, QPoint, QTimer, QThread, Signal
 from PySide6.QtGui import QIcon, QPixmap
 
 # Importar QtMultimedia de forma segura para reproducción de audio
@@ -155,6 +155,28 @@ class _MediaListView(_DragCleanupMixin, QListView):
     pass
 
 
+class _FolderPrewarmThread(QThread):
+    """Lee en segundo plano la carpeta que estaba seleccionada al cerrar la app (ver
+    EditingMediaTab._start_folder_prewarm). Mismo _scan_folder_fast que ya usa
+    AsyncIndexerThread desde un hilo: solo lee el disco, no toca el controlador."""
+    scanned = Signal(str, list, int)  # carpeta, archivos, generación de la cache al empezar
+
+    def __init__(self, scan_fn, folder: str, generation: int, parent=None):
+        super().__init__(parent)
+        self._scan_fn = scan_fn
+        self._folder = folder
+        self._generation = generation
+
+    def run(self):
+        try:
+            files, generation = self._scan_fn(self._folder), self._generation
+        except Exception as e:
+            # Generación -1: cache_folder_scan la rechaza y la lista se lee como siempre.
+            logger.debug(f"EditingMediaTab: precarga de '{self._folder}' fallida: {e}")
+            files, generation = [], -1
+        self.scanned.emit(self._folder, files, generation)
+
+
 class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
     """Pestaña 'Medios de Edición' con una distribución visual de tres paneles de 20/40/40."""
     
@@ -272,7 +294,11 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         # Detener el Watchdog y la música cuando se destruya el widget
         self.destroyed.connect(self._cleanup)
 
-        # Cargar los datos en el árbol por primera vez
+        # Cargar los datos en el árbol por primera vez. Antes, la carpeta que quedó
+        # seleccionada se lee en otro hilo: restaurar la selección la leía aquí mismo y
+        # era casi todo el costo de construir esta pestaña (~1 s con carpetas grandes),
+        # con la interfaz congelada.
+        self._start_folder_prewarm()
         self._update_tree_view()
         from PySide6.QtCore import QTimer
         QTimer.singleShot(150, self._update_media_list)
@@ -281,6 +307,36 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         super().hideEvent(event)
         if hasattr(self, "pause_playback"):
             self.pause_playback()
+
+    def _start_folder_prewarm(self):
+        """Si al cerrar la app quedó seleccionada una carpeta (no una colección ni una
+        raíz, que ya se indexan en segundo plano), leerla en un hilo. Mientras tanto
+        _update_media_list muestra "Cargando carpeta..." en vez de leerla en el hilo
+        principal, y _on_folder_prewarmed refresca la lista cuando termina."""
+        self._prewarm_folder = None
+        node = getattr(self.controller, "last_selected_tree_node", None)
+        if not isinstance(node, dict) or node.get("tipo") not in ("folder", "subfolder"):
+            return
+        folder = node.get("ruta")
+        if not folder or self.controller.is_folder_cached(folder):
+            return
+        self._prewarm_folder = folder
+        self._prewarm_thread = _FolderPrewarmThread(
+            self.controller._scan_folder_fast, folder, self.controller.media_cache_generation(), self)
+        self._prewarm_thread.scanned.connect(self._on_folder_prewarmed)
+        self._prewarm_thread.start()
+
+    def _on_folder_prewarmed(self, folder: str, files: list, generation: int):
+        if folder != getattr(self, "_prewarm_folder", None):
+            return
+        self._prewarm_folder = None
+        # Si la cache se invalidó mientras se leía (o la lectura falló), no se guarda:
+        # _update_media_list la vuelve a leer como siempre.
+        self.controller.cache_folder_scan(folder, files, generation)
+        current = self.tree_folders.currentItem() if hasattr(self, "tree_folders") else None
+        data = current.data(0, Qt.UserRole) if current else None
+        if isinstance(data, dict) and data.get("tipo") in ("folder", "subfolder") and data.get("ruta") == folder:
+            self._update_media_list()
 
     def init_ui(self):
         # Layout principal

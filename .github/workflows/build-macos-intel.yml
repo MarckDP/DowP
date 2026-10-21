@@ -1,0 +1,142 @@
+name: Build macOS x64 (manual)
+
+# Disparo manual a proposito: el repo es publico, y macOS consume la bolsa de
+# minutos gratis de Actions a 10x contra Linux/Windows -- mejor gastarla solo
+# cuando de verdad hace falta, no en cada push.
+#
+# SOLO x64 (Intel). Es el gemelo de build-macos.yml (arm64): mismo flujo, pero
+# en el runner Intel de GitHub (macos-15-intel) y con la plataforma macos-x64.
+# GitHub dejara de ofrecer runners Intel cuando retire la imagen macOS 15
+# (otono 2027); desde entonces el x64 vuelve a tener que salir de la VM local.
+#
+# Con "publish" activado (por defecto), ademas de compilar:
+#   1. publica los chunks de macos-x64 en el release v<APP_VERSION> con
+#      tools/updater/publish.py (crea el release si no existe; si ya existe,
+#      agrega/reemplaza solo la plataforma macos-x64 del manifiesto),
+#   2. arma DowP-<version>-x64.dmg y lo sube a ese mismo release.
+#
+# Requiere el secret UPDATER_PRIVATE_KEY (contenido completo de
+# tools/updater/secrets/private_key.pem). El token para subir lo pone GitHub
+# solo (GITHUB_TOKEN, con el permiso contents: write de abajo).
+#
+# NUNCA lanzarlo mientras corre otro publish.py (Windows, la VM o el workflow
+# de arm64): cada publicador baja manifest.json, agrega su plataforma y lo
+# vuelve a subir, y si dos lo hacen a la vez el ultimo borra la plataforma
+# del otro.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publicar chunks de macos-x64 y subir el .dmg al release (si no, solo compila)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# Nunca dos corridas a la vez. IMPORTANTE: este grupo debe ser el MISMO en
+# build-macos.yml (arm64) y en este, asi los dos workflows se encolan entre si
+# en vez de pisarse el manifiesto.
+concurrency:
+  group: publish-macos
+  cancel-in-progress: false
+
+jobs:
+  build-macos-x64:
+    runs-on: macos-15-intel   # Intel x86_64 (ultimo runner Intel de GitHub)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements.txt
+          pip install pyinstaller==6.22.2
+
+      - name: Compilar DowP (DowP.app + helper de swap, firma ad-hoc incluida)
+        working-directory: app
+        run: python build_cross_platform.py
+
+      - name: "Leer version de la app (unica fuente: core/version.py)"
+        id: appver
+        working-directory: app
+        run: |
+          VERSION=$(python -c "import sys; sys.path.insert(0,'src'); from core.version import APP_VERSION; print(APP_VERSION)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Comprobar el bundle (arquitectura, helper y firma)
+        run: |
+          file app/dist/DowP.app/Contents/MacOS/DowP | grep -q x86_64
+          test -f app/dist/DowP.app/Contents/MacOS/DowP_Updater
+          codesign --verify --deep --strict app/dist/DowP.app
+          echo "Bundle OK"
+
+      - name: Empaquetar el .app preservando firma/atributos (ditto, no zip normal)
+        # ditto (no un zip generico) preserva la firma ad-hoc y los symlinks del
+        # bundle. Queda como artifact para poder bajarlo y probarlo a mano.
+        working-directory: app/dist
+        run: ditto -c -k --keepParent DowP.app DowP-${{ steps.appver.outputs.version }}-x64-app.zip
+
+      - name: Subir el .app como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DowP-${{ steps.appver.outputs.version }}-x64-app
+          path: app/dist/DowP-${{ steps.appver.outputs.version }}-x64-app.zip
+          retention-days: 5
+
+      - name: Escribir la clave privada de firma
+        if: ${{ inputs.publish }}
+        env:
+          UPDATER_PRIVATE_KEY: ${{ secrets.UPDATER_PRIVATE_KEY }}
+        run: |
+          if [ -z "$UPDATER_PRIVATE_KEY" ]; then
+            echo "Falta el secret UPDATER_PRIVATE_KEY (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          mkdir -p tools/updater/secrets
+          printf '%s\n' "$UPDATER_PRIVATE_KEY" > tools/updater/secrets/private_key.pem
+          chmod 600 tools/updater/secrets/private_key.pem
+
+      - name: Publicar chunks de macos-x64
+        if: ${{ inputs.publish }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python tools/updater/publish.py \
+            --dist app/dist/DowP.app \
+            --platform macos-x64 \
+            --repo "${{ github.repository }}" \
+            --private-key tools/updater/secrets/private_key.pem
+
+      - name: Borrar la clave privada del runner
+        if: ${{ always() }}
+        run: rm -f tools/updater/secrets/private_key.pem
+
+      - name: Armar el .dmg (con acceso directo a Aplicaciones)
+        if: ${{ inputs.publish }}
+        run: |
+          DMG_DIR="$RUNNER_TEMP/dmg-x64"
+          rm -rf "$DMG_DIR" && mkdir -p "$DMG_DIR"
+          ditto app/dist/DowP.app "$DMG_DIR/DowP.app"
+          ln -s /Applications "$DMG_DIR/Applications"
+          hdiutil create -volname "DowP" -srcfolder "$DMG_DIR" -ov -format UDZO \
+            "app/dist/DowP-${{ steps.appver.outputs.version }}-x64.dmg"
+
+      - name: Subir el .dmg al release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ steps.appver.outputs.version }}" \
+            "app/dist/DowP-${{ steps.appver.outputs.version }}-x64.dmg" \
+            --clobber --repo "${{ github.repository }}"
+
+      - name: Comprobar el manifiesto publicado
+        if: ${{ inputs.publish }}
+        run: |
+          curl -sL "https://github.com/${{ github.repository }}/releases/download/v${{ steps.appver.outputs.version }}/manifest.json" \
+            | python -c "import json,sys; m=json.load(sys.stdin); p=sorted(m['platforms']); print(m['app_version'], p); sys.exit(0 if 'macos-x64' in p else 1)"

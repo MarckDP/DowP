@@ -22,7 +22,6 @@ from core.setup.models_setup import (
     delete_custom_rembg_model, probe_onnx_input_size,
     get_rembg_model_size_bytes, get_upscaling_engine_size_bytes,
 )
-from core.tabs.image_tools import rembg_engine
 from core.utils.onnx_providers import get_gpu_adapter_name, get_gpu_provider_label
 from core.utils.hardware_detector import get_cached_gpu_name
 from gui.widgets.toggle_switch import ToggleSwitch
@@ -459,6 +458,10 @@ class _MoveModelsWorker(QThread):
 class ModelsPage(QWidget):
     """Pestaña de Ajustes para descargar/gestionar modelos de IA (rembg, upscaling).
     Los modelos nunca se descargan solos -- solo cuando el usuario aprieta Descargar."""
+
+    # (etiqueta del provider de GPU o None, nombre de la tarjeta o None) -- ver
+    # _start_gpu_detection.
+    _gpu_info_ready = Signal(object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -988,16 +991,47 @@ class ModelsPage(QWidget):
         self.btn_free_memory.clicked.connect(self._on_free_memory_clicked)
         row.addWidget(self.btn_free_memory, 0, Qt.AlignVCenter)
 
-        self._gpu_label = get_gpu_provider_label()
-        # El adaptador elegido antes que el nombre cacheado del escaneo: en un equipo
-        # con dos tarjetas, get_cached_gpu_name() las une con " / " ("NVIDIA ... /
-        # Intel ...") y deja sin responder cuál se está usando, que es justo lo que
-        # esta frase tiene que decir. Se conserva como respaldo para macOS y Linux,
-        # donde no hay un adaptador DXGI que nombrar.
-        self._gpu_name = get_gpu_adapter_name() or get_cached_gpu_name()
+        # Se sabe recién cuando termina _start_gpu_detection; hasta entonces la
+        # descripción queda vacía (es cuestión de una fracción de segundo).
+        self._gpu_label = None
+        self._gpu_name = None
+        self._gpu_known = False
         self.switch_persist.setChecked(bool(get_config().get("rembg_persist_sessions", False)))
         self._refresh_persist_row()
+        self._start_gpu_detection()
         return container
+
+    def _start_gpu_detection(self):
+        """Pregunta en otro hilo qué GPU va a usar la inferencia. Hacerlo aquí mismo
+        importaba onnxruntime y enumeraba las tarjetas en el hilo principal: ~1 s con la
+        interfaz congelada en el compilado, solo para redactar una frase."""
+        import threading
+
+        def detect():
+            label = name = None
+            try:
+                label = get_gpu_provider_label()
+                # El adaptador elegido antes que el nombre cacheado del escaneo: en un
+                # equipo con dos tarjetas, get_cached_gpu_name() las une con " / "
+                # ("NVIDIA ... / Intel ...") y deja sin responder cuál se está usando,
+                # que es justo lo que esta frase tiene que decir. Se conserva como
+                # respaldo para macOS y Linux, donde no hay un adaptador DXGI que nombrar.
+                name = get_gpu_adapter_name() or get_cached_gpu_name()
+            except Exception as e:
+                logger.warning(f"Modelos IA: no se pudo detectar la GPU: {e}")
+            try:
+                self._gpu_info_ready.emit(label, name)
+            except RuntimeError:
+                pass  # La página ya no existe
+
+        self._gpu_info_ready.connect(self._on_gpu_info_ready)
+        threading.Thread(target=detect, name="ModelsPageGpuInfo", daemon=True).start()
+
+    def _on_gpu_info_ready(self, label, name):
+        self._gpu_label = label
+        self._gpu_name = name
+        self._gpu_known = True
+        self._refresh_persist_row()
 
     def _build_max_sessions_row(self) -> QWidget:
         """Fila de "Cantidad máxima de modelos en memoria": QSpinBox 1-5 (defecto 1).
@@ -1045,7 +1079,9 @@ class ModelsPage(QWidget):
         lo que el usuario necesita saber para decidir si le sobra esa memoria."""
         on = self.switch_persist.isChecked()
 
-        if on:
+        if not self._gpu_known:
+            self.lbl_persist_desc.setText("")
+        elif on:
             self.lbl_persist_desc.setText(self.tr(
                 "Encendido: el modelo queda cargado en {0} desde el primer uso, así "
                 "cada conversión nueva empieza a trabajar de inmediato en vez de "
@@ -1088,6 +1124,7 @@ class ModelsPage(QWidget):
             # recién en la próxima conversión -- si no, el usuario apaga la
             # opción pensando que ya liberó memoria y en realidad sigue cargada
             # hasta el próximo lote.
+            from core.tabs.image_tools import rembg_engine  # diferido: arrastra PIL
             rembg_engine.clear_sessions()
         self._refresh_persist_row()
 
@@ -1095,6 +1132,7 @@ class ModelsPage(QWidget):
         """Libera a mano lo que haya cargado, sin tener que apagar la opción ni
         cerrar la app. Se dice cuántas sesiones eran: "no había nada" es información
         útil, y sin ella el botón no da ninguna señal de haber hecho algo."""
+        from core.tabs.image_tools import rembg_engine  # diferido: arrastra PIL
         freed = rembg_engine.clear_sessions()
         if freed:
             texto = (self.tr("Se descargó 1 modelo de la memoria.") if freed == 1

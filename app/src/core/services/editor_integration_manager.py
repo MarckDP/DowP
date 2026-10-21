@@ -332,6 +332,24 @@ class EditorIntegrationManager(QObject):
                 return candidate.replace(chr(92), "/")
         return None
 
+    @staticmethod
+    def _find_sidecar_subtitle(output_dir, base_name):
+        """Subtítulo .srt de `base_name` en output_dir: 'base.srt' o 'base.<idioma>.srt'.
+        Coincidencia exacta del nombre base: con 'startswith' entraba también el de otro
+        medio cuyo nombre empezara igual ('clip 2.es.srt' para 'clip').
+        Devuelve la ruta con separadores "/" o None."""
+        if not output_dir or not base_name:
+            return None
+        pattern = re.compile(rf"^{re.escape(base_name)}(\.[^.]+)?\.srt$", re.IGNORECASE)
+        try:
+            names = sorted(os.listdir(output_dir))
+        except OSError:
+            return None
+        for name in names:
+            if pattern.match(name):
+                return os.path.join(output_dir, name).replace(chr(92), "/")
+        return None
+
     def _thumbnail_already_sent(self, thumb_path):
         """True si esta MISMA imagen ya viajó en un envío anterior de la misma tanda de
         fragmentos. Con cortes + recodificación, cada fragmento se envía por separado al
@@ -399,6 +417,17 @@ class EditorIntegrationManager(QObject):
         
         selected_fragments = request_data.get("selected_fragments", []) if request_data else []
         is_fragmented = bool(selected_fragments)
+
+        # Miniatura y subtítulos se buscan por nombre en la carpeta de salida, así que solo
+        # se adjuntan si ESTE trabajo los pidió. Si no, se colaba cualquier archivo previo
+        # con el mismo nombre base: un fragmento del Modo Rápido sin miniatura viajaba con
+        # 'Título.jpg' de una descarga anterior del Proceso Avanzado. La carátula
+        # incrustada no cuenta: yt-dlp borra su archivo tras incrustarla.
+        # '_keep_thumbnail_files' lo anota la cola cuando el modo en lote "Con medio"
+        # descarga la miniatura aunque download_thumbnail_file venga en False.
+        rd = request_data or {}
+        wants_thumbnail = bool(rd.get("download_thumbnail_file") or rd.get("_keep_thumbnail_files"))
+        wants_subtitles = mode == "subtitle_only" or bool(rd.get("embed_subtitles"))
         
         # Prefijo/sufijo que la tarjeta "Recodificar" le puso al archivo de salida (ver
         # preset_manager.build_recode_output_path: "{prefijo}{base}{sufijo}"). Hay que
@@ -450,7 +479,7 @@ class EditorIntegrationManager(QObject):
                 thumb_base_candidates.append(sidecar_base_name[: -len(frag_suffix) - 1])
 
         expected_thumb_path = None
-        for candidate_base in thumb_base_candidates:
+        for candidate_base in (thumb_base_candidates if wants_thumbnail else []):
             expected_thumb_path = self._find_sidecar_image(output_dir, candidate_base)
             if expected_thumb_path:
                 break
@@ -477,14 +506,10 @@ class EditorIntegrationManager(QObject):
                             
                     if vid_path:
                         # Buscar subtítulo exacto para este fragmento
-                        sub_path = None
-                        for s in os.listdir(output_dir):
-                            if s.startswith(frag_base) and s.lower().endswith('.srt'):
-                                sub_path = os.path.join(output_dir, s).replace('\\', '/')
-                                break
-                                
+                        sub_path = self._find_sidecar_subtitle(output_dir, frag_base) if wants_subtitles else None
+
                         # Buscar miniatura específica de este fragmento
-                        frag_thumb_path = self._find_sidecar_image(output_dir, frag_base)
+                        frag_thumb_path = self._find_sidecar_image(output_dir, frag_base) if wants_thumbnail else None
                         if not frag_thumb_path:
                             frag_thumb_path = expected_thumb_path  # respaldo: la del nombre base
                                 
@@ -529,14 +554,8 @@ class EditorIntegrationManager(QObject):
         if not file_packages and allow_single_fallback:
             # Archivo único normal (o el fragmento suelto del fallback de arriba)
             vid_path = final_filepath.replace('\\', '/') if os.path.exists(final_filepath) else None
-            sub_path = None
-            try:
-                for s in os.listdir(output_dir):
-                    if s.startswith(sidecar_base_name) and s.lower().endswith('.srt'):
-                        sub_path = os.path.join(output_dir, s).replace('\\', '/')
-                        break
-            except Exception: pass
-            
+            sub_path = self._find_sidecar_subtitle(output_dir, sidecar_base_name) if wants_subtitles else None
+
             if final_filepath.lower().endswith(self._IMAGE_PAYLOAD_EXTENSIONS) and os.path.exists(final_filepath):
                 file_packages.append({
                     "video": None,

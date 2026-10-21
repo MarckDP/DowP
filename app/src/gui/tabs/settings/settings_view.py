@@ -157,56 +157,81 @@ class SettingsTab(QWidget):
         content_layout.setContentsMargins(22, 16, 22, 16)
 
         self.stacked_widget = QStackedWidget()
-        
-        # Pages
-        self.page_general = GeneralPage()
-        self.page_memory_cache = MemoryCachePage()
-        self.page_downloads = DownloadsPage()
-        self.page_cookies = CookiesPage()
-        self.page_deps = DependenciesPage()
-        self.page_labels = LabelsPage()
-        self.page_integrations = IntegrationsPage()
-        self.page_system = SystemPage()
-        self.page_models = ModelsPage()
-        self.page_console = ConsolePage()
 
-        self.stacked_widget.addWidget(self.page_general)            # 0
-        self.stacked_widget.addWidget(self.page_memory_cache)       # 1
-        self.stacked_widget.addWidget(self.page_downloads)          # 2
-        self.stacked_widget.addWidget(self.page_cookies)            # 3
-        self.stacked_widget.addWidget(self.page_deps)               # 4
-        self.stacked_widget.addWidget(self.page_labels)             # 5
-        self.stacked_widget.addWidget(self.page_integrations)       # 6
-        self.stacked_widget.addWidget(self.page_system)             # 7
-        self.stacked_widget.addWidget(self.page_models)             # 8
-        self.stacked_widget.addWidget(self.page_console)            # 9
-        self.page_shortcuts = ShortcutsPage()
-        self.stacked_widget.addWidget(self.page_shortcuts)          # 10
+        # Pages. Cada una entra como un marcador vacío y se construye la primera vez que
+        # se abre (_ensure_page): construirlas todas de entrada era casi 2 s del arranque
+        # para un panel que está oculto. self.page_<nombre> existe recién desde que su
+        # página se construye. La tarjeta de Ajustes mide lo mismo con una página
+        # construida que con todas (su tamaño máximo manda), así que no cambia nada visible.
+        self._page_specs = [
+            ("page_general", GeneralPage),              # 0
+            ("page_memory_cache", MemoryCachePage),     # 1
+            ("page_downloads", DownloadsPage),          # 2
+            ("page_cookies", CookiesPage),              # 3
+            ("page_deps", DependenciesPage),            # 4
+            ("page_labels", LabelsPage),                # 5
+            ("page_integrations", IntegrationsPage),    # 6
+            ("page_system", SystemPage),                # 7
+            ("page_models", ModelsPage),                # 8
+            ("page_console", ConsolePage),              # 9
+            ("page_shortcuts", ShortcutsPage),          # 10
+        ]
+        self._page_built = [False] * len(self._page_specs)
+        for _ in self._page_specs:
+            placeholder = QWidget()
+            placeholder_layout = QVBoxLayout(placeholder)
+            placeholder_layout.setContentsMargins(0, 0, 0, 0)
+            placeholder_layout.setSpacing(0)
+            self.stacked_widget.addWidget(placeholder)
 
         content_layout.addWidget(self.stacked_widget)
         self.main_layout.addWidget(self.content_area, 1)
 
         # Connections
         self.btn_group.idClicked.connect(self._on_tab_changed)
-        
-        # Pass signals from general page
-        self.page_general.language_changed.connect(self.language_changed.emit)
-        self.page_general.theme_changed.connect(self.theme_changed.emit)
-        self.page_general.font_changed.connect(self.font_changed.emit)
-        self.page_general.update_channel_changed.connect(self._on_update_channel_changed)
-
-        # Pass signal from labels page
-        self.page_labels.labels_changed.connect(self.labels_changed.emit)
-
-        # Pass signal from integrations page
-        self.page_integrations.integration_toggled.connect(lambda app_id, checked: self.integrations_changed.emit())
 
         # Default selection
         self.btn_general.setChecked(True)
         self.stacked_widget.setCurrentIndex(0)
 
+    def _ensure_page(self, index: int):
+        """Construye la página `index` si todavía no existe y la devuelve."""
+        attr, page_class = self._page_specs[index]
+        if self._page_built[index]:
+            return getattr(self, attr)
+        from core.utils import startup_timer
+        from gui.app_event_filters import build_without_app_filters
+        with startup_timer.measure(f"página de Ajustes construida: {page_class.__name__}"):
+            page = build_without_app_filters(page_class)
+        setattr(self, attr, page)
+        self._page_built[index] = True
+        self.stacked_widget.widget(index).layout().addWidget(page)
+        self._connect_page(attr, page)
+        return page
+
+    def _connect_page(self, attr: str, page):
+        if attr == "page_general":
+            # Pass signals from general page
+            page.language_changed.connect(self.language_changed.emit)
+            page.theme_changed.connect(self.theme_changed.emit)
+            page.font_changed.connect(self.font_changed.emit)
+            page.update_channel_changed.connect(self._on_update_channel_changed)
+        elif attr == "page_labels":
+            # Pass signal from labels page
+            page.labels_changed.connect(self.labels_changed.emit)
+        elif attr == "page_integrations":
+            # Pass signal from integrations page
+            page.integration_toggled.connect(lambda app_id, checked: self.integrations_changed.emit())
+
+    def showEvent(self, event):
+        # Red de seguridad: cualquier camino que muestre Ajustes ve su página construida
+        # (open_page ya pasa por _on_tab_changed, que también lo hace).
+        self._ensure_page(self.stacked_widget.currentIndex())
+        super().showEvent(event)
+
 
     def _on_tab_changed(self, index: int):
+        self._ensure_page(index)
         self.stacked_widget.setCurrentIndex(index)
         if index == 1:
             self.page_memory_cache.refresh_stats()

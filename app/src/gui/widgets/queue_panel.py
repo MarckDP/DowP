@@ -388,8 +388,14 @@ class QueueItemCard(QFrame):
         self._update_elided_title()
         self._update_elided_info()
 
-    def update_progress(self, percent, speed_text=None, status_text=None):
-        """Actualiza el progreso y la información de la descarga."""
+    def update_progress(self, percent, speed_text=None, status_text=None, partial=False):
+        """Actualiza el progreso y la información de la descarga.
+
+        partial=True: el medio se descargó pero falló o se canceló un paso posterior
+        (ej. la recodificación, con el original conservado). Va en naranja y con los
+        mismos botones que un estado terminado, sea cual sea el texto: el estilo se
+        elige comparando textos exactos, y "Error al recodificar" no coincidía con
+        ninguno, así que la tarjeta seguía en verde y sin restaurar ni carpeta."""
         self.progress_bar.setValue(int(percent))
         self.percent_lbl.setText(f"{int(percent)}%")
         if speed_text is not None:
@@ -403,7 +409,10 @@ class QueueItemCard(QFrame):
             # Cambiar colores según estado. Se guardan TOKENS, no colores: las hojas se
             # registran con set_themed_style y se recalculan al cambiar de tema.
             border_token = None
-            if status_text == self.tr("Completado"):
+            if partial:
+                self._set_status_style("estado_parcial", "#ff9a3c", bold=True, percent=True)
+                border_token = ("estado_parcial", "#ff9a3c")
+            elif status_text == self.tr("Completado"):
                 self._set_status_style("estado_exito", "#40d66b", bold=True, percent=True)
                 border_token = ("estado_exito", "#40d66b")
             elif status_text in (self.tr("Error"), self.tr("Cancelado")):
@@ -429,7 +438,7 @@ class QueueItemCard(QFrame):
                 self.info_lbl.setToolTip("")
                 self.status_lbl.setToolTip("")
 
-            if status_text in (self.tr("Completado"), self.tr("Error"), self.tr("Cancelado"), self.tr("Omitido")):
+            if partial or status_text in (self.tr("Completado"), self.tr("Error"), self.tr("Cancelado"), self.tr("Omitido")):
                 self.btn_reset.show()
                 self.btn_up.hide()
                 self.btn_down.hide()
@@ -438,7 +447,8 @@ class QueueItemCard(QFrame):
                 self.btn_up.show()
                 self.btn_down.show()
 
-            if status_text == self.tr("Completado"):
+            # Con partial el original quedó en la carpeta: se puede abrir igual.
+            if partial or status_text == self.tr("Completado"):
                 self.btn_folder.show()
             else:
                 self.btn_folder.hide()
@@ -854,17 +864,8 @@ class QueuePanel(QWidget):
         if not job or not card:
             return
 
-        # Las demás tarjetas pueden haber bajado a la misma carpeta con nombres
-        # emparentados ('Cancion' y 'Cancion_2'): sus rutas se pasan para que cada
-        # archivo se quede con su dueño más directo.
-        foreign = [
-            path
-            for other in self.queue_mgr.get_all_jobs()
-            if other.job_id != job_id and other.job_type in ("DOWNLOAD", "PLAYLIST")
-            for path in other.artifacts.stems()
-        ]
         try:
-            files = job.artifacts.collect(foreign_stems=foreign)
+            files = job.artifacts.collect()
         except Exception as e:
             logger.error(f"QueuePanel: No se pudieron reunir los archivos para arrastrar: {e}")
             return

@@ -340,22 +340,32 @@ def install_wpc(progress_callback=None) -> tuple:
 # ─── Navegador ────────────────────────────────────────────────────────────────
 
 def _build_search_paths():
-    """Construye las rutas de búsqueda según el SO actual."""
+    """Construye las rutas de búsqueda según el SO actual.
+
+    Solo navegadores Chromium probados con WPC (nodriver los lanza con un perfil
+    temporal y los controla por el protocolo de depuración). Varios se instalan
+    por usuario en LOCALAPPDATA en vez de Program Files."""
+    local = os.environ.get("LOCALAPPDATA", "")
     return {
         "Windows": [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(local, "Google", "Chrome", "Application", "chrome.exe"),
             r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
             r"C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
+            os.path.join(local, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
             r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            # Helium (imput) se instala por usuario y su ejecutable también se llama chrome.exe
+            os.path.join(local, "imput", "Helium", "Application", "chrome.exe"),
             r"C:\Program Files\Chromium\Application\chrome.exe",
+            os.path.join(local, "Chromium", "Application", "chrome.exe"),
         ],
         "Darwin": [
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
             "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Helium.app/Contents/MacOS/Helium",
             "/Applications/Chromium.app/Contents/MacOS/Chromium",
         ],
         "Linux": [
@@ -370,13 +380,23 @@ def _build_search_paths():
     }
 
 
+# Se compara contra la ruta completa (no solo el ejecutable): Helium y Chromium
+# también usan chrome.exe, así que las claves más específicas van primero.
 _NAME_MAP = {
-    "chrome": "Google Chrome",
+    "helium": "Helium",
+    "chromium": "Chromium",
     "brave": "Brave",
     "msedge": "Microsoft Edge",
-    "chromium": "Chromium",
     "edge": "Microsoft Edge",
+    "chrome": "Google Chrome",
 }
+
+
+def _browser_name(path: str) -> str:
+    # Solo los últimos componentes (ej. "imput/helium/application/chrome.exe"),
+    # para que un nombre de usuario como "Edgar" no se lea como Edge.
+    lowered = "/".join(path.replace("\\", "/").lower().split("/")[-4:])
+    return next((v for k, v in _NAME_MAP.items() if k in lowered), os.path.basename(path))
 
 
 def detect_system_browser():
@@ -390,8 +410,7 @@ def detect_system_browser():
 
     for path in paths:
         if path and os.path.isfile(path):
-            exe_lower = os.path.basename(path).lower()
-            name = next((v for k, v in _NAME_MAP.items() if k in exe_lower), "Chromium")
+            name = _browser_name(path)
             logger.debug(f"WPC: Navegador detectado → {name} ({path})")
             return path, name
 
@@ -399,7 +418,7 @@ def detect_system_browser():
     for cmd in ("google-chrome", "chromium", "chromium-browser", "brave-browser", "microsoft-edge"):
         found = shutil.which(cmd)
         if found:
-            name = next((v for k, v in _NAME_MAP.items() if k in cmd), "Chromium")
+            name = _browser_name(cmd)
             logger.debug(f"WPC: Navegador en PATH → {name} ({found})")
             return found, name
 
@@ -424,7 +443,6 @@ def get_browser_display_name() -> str:
     from core.utils.config_manager import get_config
     configured = get_config().get("pot_wpc_browser_path", "").strip()
     if configured and os.path.isfile(configured):
-        exe = os.path.basename(configured).lower()
-        return next((v for k, v in _NAME_MAP.items() if k in exe), os.path.basename(configured))
+        return _browser_name(configured)
     _, name = detect_system_browser()
     return name or "No detectado"

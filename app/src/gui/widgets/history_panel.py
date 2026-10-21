@@ -619,7 +619,10 @@ class HistoryDrawer(QObject):
         self.content.url_selected.connect(self._on_url_selected)
 
         host.installEventFilter(self)
-        QApplication.instance().installEventFilter(self)
+        # Clic afuera cierra el cajón: por el filtro global compartido (ver
+        # gui/app_event_filters.py), no por uno propio sobre QApplication.
+        from gui.app_event_filters import OutsideClickHub
+        OutsideClickHub.register(self, self._on_app_mouse_press)
 
     def _on_url_selected(self, url: str):
         # Reemplaza lo que hubiera: setText (no insert). No emite textEdited, así que no
@@ -643,9 +646,12 @@ class HistoryDrawer(QObject):
                 self.panel.edge_tab.raise_()
             elif etype == QEvent.Hide:
                 self.panel.close_overlay()
-            return False
+        return False
 
-        if etype == QEvent.MouseButtonPress and self.panel.is_overlay_open() and isinstance(obj, QWidget):
+    def _on_app_mouse_press(self, obj, event):
+        if obj is self._host:
+            return False
+        if self.panel.is_overlay_open() and isinstance(obj, QWidget):
             # Menús/combos desplegados y diálogos (ej. confirmar "Borrar historial") son
             # otras ventanas: un clic ahí no es "fuera del panel".
             if QApplication.activePopupWidget() is not None:

@@ -72,6 +72,7 @@
         "estado_espera": ["#777777", "#aaaaaa"],
         "estado_exito": ["#168f41", "#40d66b"],
         "estado_aviso": ["#9a7a00", "#d8c94a"],
+        "estado_parcial": ["#c45f00", "#ff9a3c"],
         "estado_error": ["#bf2f29", "#ff6b5f"],
         "estado_progreso": "#3498db",
         "boton_fragmentos_inicio": ["#e85b50", "#ff6b5f"],
