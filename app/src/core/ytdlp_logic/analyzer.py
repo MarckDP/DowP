@@ -95,10 +95,13 @@ class YTDLLogger:
         logger.error(f"[yt-dlp] {strip_ansi_codes(msg)}")
         self.errors.append(msg)
 
-def get_base_ydl_opts(extra_opts=None):
+def get_base_ydl_opts(extra_opts=None, profile=None):
     """
     Genera el diccionario de opciones base (cookies, impersonate, deno, etc.)
     que deben compartir tanto el analizador como el descargador.
+
+    profile: perfil de clientes de YouTube (ver client_profiles). None = el primero
+    de la cadena.
     """
     config = get_config()
     
@@ -159,75 +162,15 @@ def get_base_ydl_opts(extra_opts=None):
     ydl_opts['js_runtimes'] = {'deno': {'path': deno_path}}
     ydl_opts['remote_components'] = ['ejs:github']
 
-    # --- EXTRACTOR ARGS (solo con cookies) ---
-    # Sin cookies: NO forzar extractor_args. yt-dlp usará sus defaults
-    # internos que se actualizan con cada release para adaptarse a YouTube.
-    # Forzar clientes como web_safari o android sin autenticación provoca
-    # que YouTube restrinja los formatos a calidades bajas (SABR / tokens).
-    # Con cookies: excluimos clientes problemáticos conocidos.
-    if use_cookies:
-        ydl_opts['extractor_args'] = {
-            'youtube': {
-                'player_client': ['default', '-tv_simply', '-android_sdkless'],
-                'n_client': ['default'],
-                'skip': []
-            }
-        }
-        
-    # --- PO TOKEN PROVIDER (multi-provider) ---
-    # Lee el provider activo de config.json y aplica los extractor_args correctos.
-    # Ambos providers comparten la misma lista de player_client.
-    _pot_provider = get_config().get("pot_provider", "bgutil")
-
-    _pot_active = False
-
-    if _pot_provider == "bgutil":
-        from core.setup.potprovider_setup import check_all as pot_ready, get_binary_path
-        if pot_ready():
-            binary_path = get_binary_path()
-            if 'extractor_args' not in ydl_opts:
-                ydl_opts['extractor_args'] = {'youtube': {}}
-            ydl_opts['extractor_args'].setdefault('youtube', {})
-            # Arg oficial del provider CLI (v0.8.1+, reemplaza el deprecado getpot_bgutil_script)
-            # Pasar script_path e inyectar cli_path para que bgutil:http sepa que el modo CLI está activo y no espere timeout en puerto 4416
-            ydl_opts['extractor_args']['youtubepot-bgutilcli'] = {'cli_path': [binary_path]}
-            ydl_opts['extractor_args']['youtubepot-bgutilscript'] = {'script_path': [binary_path]}
-            _pot_active = True
-            logger.info(f"Analyzer: POT provider=bgutil activo -> {binary_path}")
-        else:
-            logger.warning("Analyzer: bgutil no disponible - puede haber 429/bot-check")
-
-    elif _pot_provider == "wpc":
-        from core.setup.wpc_setup import check_wpc, get_browser_path, get_browser_display_name
-        if check_wpc():
-            if 'extractor_args' not in ydl_opts:
-                ydl_opts['extractor_args'] = {'youtube': {}}
-            ydl_opts['extractor_args'].setdefault('youtube', {})
-            browser = get_browser_path()
-            if browser:
-                ydl_opts['extractor_args']['youtubepot-wpc'] = {'browser_path': [browser]}
-                logger.info(f"Analyzer: POT provider=wpc activo -> {get_browser_display_name()} ({browser})")
-            else:
-                # Sin ruta explícita nodriver elige el navegador por su cuenta
-                logger.info("Analyzer: POT provider=wpc activo -> nodriver auto-detecta navegador")
-            _pot_active = True
-        else:
-            logger.warning("Analyzer: WPC no instalado - puede haber 429/bot-check")
-
-    else:  # "none" o desconocido
-        logger.info("Analyzer: POT provider=none - sin PO Token")
-
-    if _pot_active:
-        # Clientes óptimos con PO Token activo (cualquier provider):
-        # - mweb: extrae sin visitor_data pre-fetched
-        # - web:  GVS tokens más confiables para el stream real
-        # Exclusiones: clientes que fallan con GVS o requieren visitor_data externo
-        existing_clients = ydl_opts['extractor_args']['youtube'].get('player_client', [])
-        clients = ['mweb', 'web'] + [c for c in existing_clients if c not in ('mweb', 'web')]
-        exclusions = ['-web_safari', '-tv_simply', '-android_sdkless', '-android_vr']
-        clients += [x for x in exclusions if x not in clients]
-        ydl_opts['extractor_args']['youtube']['player_client'] = clients
-        logger.debug(f"Analyzer: player_client -> {clients}")
+    # --- CLIENTES DE YOUTUBE + PO TOKEN ---
+    # Los decide el perfil (client_profiles): primero web_embedded sin token, y los
+    # perfiles con token (WPC, bgutil) solo como respaldo. Los otros sitios ignoran
+    # extractor_args['youtube'].
+    from core.ytdlp_logic import client_profiles
+    profile = profile or client_profiles.profile_chain()[0]
+    client_profiles.apply_profile(ydl_opts, profile)
+    logger.debug(f"Analyzer: perfil de clientes '{profile}' (cookies: {use_cookies}) -> "
+                 f"{ydl_opts['extractor_args']['youtube'].get('player_client')}")
 
     return ydl_opts
 
@@ -268,6 +211,57 @@ def load_ytdlp_module():
     return yt_dlp
 
 
+def _logged_errors(yt_logger):
+    err_msg = ""
+    if yt_logger and hasattr(yt_logger, "errors") and yt_logger.errors:
+        err_msg = "\n".join(yt_logger.errors)
+    return strip_ansi_codes(err_msg) or QCoreApplication.translate("analyzer", "No se pudo obtener información de la URL.")
+
+
+def _extract_with_profile_chain(yt_dlp, url, build_opts, cancel_exception, cancellation_event):
+    """Análisis de YouTube probando los perfiles de clientes en orden (ver
+    client_profiles). Pasa al siguiente solo ante errores que otro perfil puede
+    resolver (inserción desactivada, 403, aviso de bot...); un 429 o la verificación
+    de edad sin cookies se devuelven tal cual. El perfil que funciona se recuerda para
+    que la descarga use los mismos clientes."""
+    from core.ytdlp_logic import client_profiles
+
+    chain = client_profiles.chain_for(url)
+    for attempt, profile in enumerate(chain):
+        ydl_opts = build_opts(profile)
+        yt_logger = ydl_opts.get('logger')
+        if attempt == 0:
+            logger.debug(f"Analyzer: ydl_opts finales: { {k:v for k,v in ydl_opts.items() if k != 'logger'} }")
+        has_next = attempt + 1 < len(chain)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.info(f"Analyzer: Iniciando extracción (perfil '{profile}')...")
+                info_dict = ydl.extract_info(url, download=False)
+        except cancel_exception:
+            raise
+        except Exception as extract_err:
+            if cancellation_event is not None and cancellation_event.is_set():
+                raise cancel_exception("Análisis cancelado por el usuario")
+            if has_next and client_profiles.should_try_next_profile(extract_err):
+                logger.warning(f"Analyzer: El perfil '{profile}' falló ({extract_err}). "
+                               f"Reintentando con el perfil '{chain[attempt + 1]}'...")
+                continue
+            raise
+
+        if info_dict is None:
+            # Con ignoreerrors (análisis de la cola) yt-dlp no lanza: el error queda en el logger.
+            err_msg = _logged_errors(yt_logger)
+            if has_next and client_profiles.should_try_next_profile(err_msg):
+                logger.warning(f"Analyzer: El perfil '{profile}' falló ({err_msg}). "
+                               f"Reintentando con el perfil '{chain[attempt + 1]}'...")
+                continue
+            return None, err_msg
+
+        logger.info(f"Analyzer: Extracción completada (perfil '{profile}').")
+        client_profiles.remember(url, profile, info_dict)
+        return info_dict, None
+
+
 def get_video_info(url, extra_opts=None, progress_callback=None, cancellation_event=None):
     """
     Análisis de video usando la lógica del DowP viejo (ZIP + API Nativa)
@@ -289,10 +283,15 @@ def get_video_info(url, extra_opts=None, progress_callback=None, cancellation_ev
     if cancellation_event is not None and cancellation_event.is_set():
         return None, cancelled_msg
 
-    ydl_opts = get_base_ydl_opts(extra_opts)
-    if progress_callback or cancellation_event is not None:
-        ydl_opts['logger'] = YTDLLogger(progress_callback, cancellation_event, cancel_exception)
-    ydl_opts['skip_download'] = True
+    from core.ytdlp_logic import client_profiles
+    from core.ytdlp_logic.format_selectors import is_youtube_url
+
+    def build_opts(profile=None):
+        opts = get_base_ydl_opts(extra_opts, profile=profile)
+        if progress_callback or cancellation_event is not None:
+            opts['logger'] = YTDLLogger(progress_callback, cancellation_event, cancel_exception)
+        opts['skip_download'] = True
+        return opts
 
     # Inyectar entorno (PATH) para dependencias internas
     env = get_dependency_env()
@@ -301,11 +300,16 @@ def get_video_info(url, extra_opts=None, progress_callback=None, cancellation_ev
 
     try:
         logger.info(f"Analyzing URL: {url}")
+
+        if is_youtube_url(url):
+            return _extract_with_profile_chain(yt_dlp, url, build_opts, cancel_exception, cancellation_event)
+
+        ydl_opts = build_opts()
         logger.debug(f"Analyzer: ydl_opts finales: { {k:v for k,v in ydl_opts.items() if k != 'logger'} }")
-        
+
         # Guardar referencia al logger para extraer errores
         yt_logger = ydl_opts.get('logger')
-        
+
         from core.ytdlp_logic.resilient_downloader import is_youtube_access_error, make_fallback_ydl_opts
 
         try:
@@ -319,20 +323,17 @@ def get_video_info(url, extra_opts=None, progress_callback=None, cancellation_ev
             if cancellation_event is not None and cancellation_event.is_set():
                 raise cancel_exception("Análisis cancelado por el usuario")
             if is_youtube_access_error(url, extract_err):
-                logger.warning(f"Analyzer: YouTube bloqueó el primer cliente ({extract_err}). Reintentando análisis con cliente alternativo (web_embedded)...")
+                logger.warning(f"Analyzer: El sitio bloqueó el primer intento ({extract_err}). Reintentando análisis con opciones alternativas...")
                 fallback_opts = make_fallback_ydl_opts(ydl_opts)
                 with yt_dlp.YoutubeDL(fallback_opts) as ydl_fb:
                     info_dict = ydl_fb.extract_info(url, download=False)
-                    logger.info("Analyzer: Extracción completada con cliente alternativo.")
+                    logger.info("Analyzer: Extracción completada con opciones alternativas.")
             else:
                 raise extract_err
-            
+
         if info_dict is None:
-            err_msg = ""
-            if yt_logger and hasattr(yt_logger, "errors") and yt_logger.errors:
-                err_msg = "\n".join(yt_logger.errors)
-            return None, strip_ansi_codes(err_msg) or QCoreApplication.translate("analyzer", "No se pudo obtener información de la URL.")
-            
+            return None, _logged_errors(yt_logger)
+
         return info_dict, None
 
     except cancel_exception:

@@ -709,11 +709,12 @@ class YTDLPAndPOTPanel(QFrame):
 
     _TOOLTIP_POT = QCoreApplication.translate(
         "YTDLPAndPOTPanel",
-        "El PO Token es requerido por YouTube para autenticar descargas y prevenir bloqueos anti-bot.\n"
-        "DowP permite elegir entre:\n\n"
-        "  • bgutil-pot (Recomendado): Binario nativo en Rust, rápido y automático.\n"
-        "  • WPC (WebPoClient): Usa tu navegador Chromium (Chrome/Brave/Edge) para generar tokens.\n"
-        "  • Ninguno: Sin token (puede fallar con error HTTP 429 / bot-check en YouTube)."
+        "DowP descarga de YouTube primero con un cliente que no necesita PO Token.\n"
+        "El proveedor elegido aquí solo se usa como respaldo, cuando ese cliente no puede\n"
+        "reproducir un video (por ejemplo, si el autor desactivó la inserción):\n\n"
+        "  • WPC (Recomendado): Usa tu navegador Chromium (Chrome/Brave/Edge/Helium) para generar tokens.\n"
+        "  • bgutil-pot: Binario nativo en Rust. Desde julio de 2026 YouTube rechaza a menudo sus tokens.\n"
+        "  • Ninguno: Sin respaldo con token."
     )
 
     _TOOLTIP_WPC_BROWSER = QCoreApplication.translate(
@@ -723,6 +724,7 @@ class YTDLPAndPOTPanel(QFrame):
         "  •  Google Chrome\n"
         "  •  Brave Browser\n"
         "  •  Microsoft Edge\n"
+        "  •  Helium\n"
         "  •  Chromium\n\n"
         "Si dejas el campo vacío, WPC intentará detectar tu navegador automáticamente.\n"
         "Haz clic en '...' para seleccionar el ejecutable manualmente."
@@ -860,8 +862,8 @@ class YTDLPAndPOTPanel(QFrame):
         root.addLayout(pot_title_row)
 
         self._btn_group = QButtonGroup(self)
-        self._radio_bgutil = self._make_radio(self.tr("bgutil-pot (recomendado)"), "bgutil")
-        self._radio_wpc    = self._make_radio(self.tr("WPC – WebPoClient"), "wpc")
+        self._radio_bgutil = self._make_radio(self.tr("bgutil-pot"), "bgutil")
+        self._radio_wpc    = self._make_radio(self.tr("WPC – WebPoClient (recomendado)"), "wpc")
         self._radio_none   = self._make_radio(self.tr("Ninguno"), "none")
 
         self._btn_group.addButton(self._radio_bgutil, 0)
@@ -967,7 +969,7 @@ class YTDLPAndPOTPanel(QFrame):
         else:
             self._radio_ytdlp_stable.setChecked(True)
 
-        provider = cfg.get("pot_provider", "bgutil")
+        provider = cfg.get("pot_provider", "wpc")
         browser_path = cfg.get("pot_wpc_browser_path", "")
 
         if provider == "bgutil":
@@ -1148,7 +1150,7 @@ class YTDLPAndPOTPanel(QFrame):
 
     def _on_radio_changed(self, btn_id):
         mapping = {0: "bgutil", 1: "wpc", 2: "none"}
-        provider = mapping.get(btn_id, "bgutil")
+        provider = mapping.get(btn_id, "wpc")
         cfg = get_config()
         cfg["pot_provider"] = provider
         save_config(cfg)

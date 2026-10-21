@@ -155,3 +155,34 @@ def playlist_format_selector(mode, quality, url=""):
 def quick_format_selector(mode, quality, url=""):
     return get_site_specific_format_selector(mode, quality, url)
 
+
+# Los combinados HLS de YouTube (91-96, 300, 301) llegan hasta 1080p.
+_COMBINED_FRAGMENT_MAX_RES = 1080
+
+
+def quick_fragment_format_selector(mode, quality, url=""):
+    """Selector del Modo Rápido cuando se descargan fragmentos. Devuelve
+    (selector, format_sort o None).
+
+    En YouTube, con video+audio y "Mejor compatible" o una calidad de 1080p o menos,
+    prefiere el combinado HLS en H.264 + AAC: yt-dlp baja solo los segmentos del
+    rango pedido, varios a la vez, en vez del stream separado (más lento y limitado
+    en velocidad), y el resultado es un MP4 compatible. Si no hay combinado HLS cae
+    al selector normal de esa calidad. Con "Máxima calidad" o 2K/4K no se toca: ahí
+    importa la calidad, no la velocidad.
+
+    format_sort res:N en vez de un filtro [height<=N]: res es el lado corto, así un
+    Short vertical 1080x1920 cuenta como 1080p (con height<=1080 bajaba a 854p).
+    yt-dlp ya prefiere el audio original entre los combinados de cada idioma."""
+    base = quick_format_selector(mode, quality, url)
+    if mode != "video+audio" or not is_youtube_url(url):
+        return base, None
+    if quality == "best_compatible":
+        max_res = _COMBINED_FRAGMENT_MAX_RES
+    elif str(quality).isdigit() and int(quality) <= _COMBINED_FRAGMENT_MAX_RES:
+        max_res = int(quality)
+    else:
+        return base, None
+    combined = "best[vcodec^=avc1][acodec^=mp4a][protocol^=m3u8]"
+    return f"{combined}/{base}", [f"res:{max_res}"]
+

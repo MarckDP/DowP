@@ -8,6 +8,7 @@ from .potprovider_setup import (
     download_potprovider,
     get_potprovider_dir,
 )
+from .wpc_setup import check_wpc, install_wpc
 from core.logger.logger_manager import logger
 
 def get_ytdlp_base_args():
@@ -52,6 +53,9 @@ def verify_all_dependencies():
         "ffmpeg": check_ffmpeg(),
         "deno": check_deno(),
         "potprovider": check_potprovider(),
+        # Respaldo con token del navegador (ver client_profiles). Opcional: si no se
+        # puede instalar, DowP arranca igual.
+        "wpc": check_wpc(),
     }
     for dep, exists in status.items():
         logger.info(f"Dependency {dep}: {'Found' if exists else 'Missing'}")
@@ -79,6 +83,10 @@ def download_missing_dependencies():
     if not check_potprovider():
         logger.info("PO Token Provider is missing. Downloading...")
         results.append(("potprovider", download_potprovider()))
+
+    if not check_wpc():
+        logger.info("WPC is missing. Downloading...")
+        results.append(("wpc", install_wpc()))
 
     return results
 

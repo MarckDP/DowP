@@ -390,6 +390,9 @@ class QuickDownloadController(QObject):
             )
             req["selected_fragments"] = selected_fragments
             req["fragment_mode"] = fragment_mode
+            if selected_fragments and not chk_thumb_only_checked:
+                from core.ytdlp_logic.format_selectors import quick_fragment_format_selector
+                req["format_selector"], req["format_sort"] = quick_fragment_format_selector(mode, quality, url=url)
             if recode_data:
                 req.update(recode_data)
 

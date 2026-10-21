@@ -221,8 +221,11 @@ class DepthPopoverContent(QFrame):
         # Malla 3D (.obj) -- solo en el Editor de Imagen (ver relief_mesh.py).
         self.check_relief = QCheckBox(self.tr("Exportar malla 3D (.obj)"))
         self.check_relief.setToolTip(_RELIEF_TOOLTIP)
-        self.check_relief.setVisible(not video_mode)
         layout.addWidget(self.check_relief)
+        # setVisible después de addWidget: sin padre, setVisible(True) lo abría un
+        # instante como ventana suelta al construir Herramientas de Imagen (mismo caso
+        # que layers_panel.py).
+        self.check_relief.setVisible(not video_mode)
 
         self.relief_options = QWidget()
         relief_layout = QVBoxLayout(self.relief_options)
@@ -274,8 +277,8 @@ class DepthPopoverContent(QFrame):
             "en Formato de salida."))
         lbl_bits.setWordWrap(True)
         set_themed_style(lbl_bits, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
-        lbl_bits.setVisible(not video_mode)
         layout.addWidget(lbl_bits)
+        lbl_bits.setVisible(not video_mode)
 
     def showEvent(self, event):
         super().showEvent(event)

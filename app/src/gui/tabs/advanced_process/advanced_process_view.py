@@ -1285,7 +1285,9 @@ class AdvancedProcessTab(QWidget):
             "subtitle_format": None,
             "subtitle_output_ext": None,
             "embed_subtitles": False,
-            "standardize_srt": False,
+            # Mismo valor por defecto que la casilla: al abrir este ítem en la cola se
+            # restaura desde aquí, y False le quitaba la limpieza a quien no la tocó.
+            "standardize_srt": self.subtitle_options.default_clean_checked(),
             "cut_subtitles": False,
             "selected_fragments": [],
             "fragment_mode": None,

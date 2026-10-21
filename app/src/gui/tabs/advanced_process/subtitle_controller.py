@@ -266,6 +266,10 @@ class SubtitleController(QObject):
     def populate_subtitles(self, data):
         sub_combo = self.tab.subtitle_options.combo_subtitle_language
         sub_combo.clear()
+        # Valor por defecto para este medio; si ya tenía opciones guardadas en la cola,
+        # restore_subtitles_to_ui (que corre después) las repone encima.
+        self.tab.subtitle_options.chk_standardize_srt["switch"].setChecked(
+            self.tab.subtitle_options.default_clean_checked())
         
         subs = data.get('subtitles') or {}
         auto_subs = data.get('automatic_captions') or {}

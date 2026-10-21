@@ -71,6 +71,10 @@ class DependencyCheckWorker(QThread):
                 download_potprovider,
                 get_local_version as get_potprovider_version,
             )
+            from core.setup.wpc_setup import (
+                check_wpc, install_wpc,
+                get_local_version as get_wpc_version,
+            )
             from core.utils.config_manager import get_config
             from core.utils.paths import migrate_bin_to_local_appdata
 
@@ -93,7 +97,11 @@ class DependencyCheckWorker(QThread):
                     ("ffmpeg",       "FFmpeg",       check_ffmpeg,      download_ffmpeg,      get_ffmpeg_version),
                     ("deno",         "Deno",         check_deno,        download_deno,        get_deno_version),
                     ("potprovider",  "PO Provider",  check_potprovider, download_potprovider, get_potprovider_version),
+                    ("wpc",          "WPC",          check_wpc,         install_wpc,          get_wpc_version),
                 ]
+                # Respaldos: si fallan (sin red, PyPI caído...) se marca el error en su fila
+                # y la app arranca igual; YouTube sigue funcionando con el cliente sin token.
+                optional_deps = {"wpc"}
 
                 # Pre-cargar estado inicial de todas las dependencias para mostrarlas juntas
                 initial_states = []
@@ -118,6 +126,10 @@ class DependencyCheckWorker(QThread):
 
                     success, msg = download_fn(progress_callback=make_callback(dep_id))
 
+                    if not success and dep_id in optional_deps:
+                        logger.warning(f"SplashScreen: no se pudo instalar {name} (opcional): {msg}")
+                        self.dependency_finished.emit(dep_id, False, msg)
+                        continue
                     if not success:
                         self.dependency_finished.emit(dep_id, False, msg)
                         self.failed.emit(QCoreApplication.translate("SplashScreen", "Error al instalar {0}: {1}").format(name, msg))
@@ -536,6 +548,7 @@ class SplashScreen(QWidget):
                 "ffmpeg": "FFmpeg",
                 "deno": "Deno",
                 "potprovider": "PO Provider",
+                "wpc": "WPC",
             }
             self._ensure_dep_row(dep_id, names.get(dep_id, dep_id))
 

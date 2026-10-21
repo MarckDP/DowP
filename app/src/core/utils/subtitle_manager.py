@@ -28,11 +28,25 @@ class SubtitleProcessor:
         # Detectar y eliminar marcas de tiempo embebidas en el texto
         return re.sub(r'<\d{2}:\d{2}:\d{2}\.\d{3}>', '', content)
 
+    # Caracteres invisibles con los que algunos subtítulos con estilo rellenan cada línea
+    # (espacio de ancho cero, unión/no unión, palabra-unión y BOM). En un editor de video
+    # aparecen como espacios raros o cuadros.
+    _INVISIBLE_CHARS_RE = re.compile('[​‌‍⁠﻿]')
+
     @staticmethod
-    def standardize_to_srt(input_path, output_path=None):
+    def standardize_to_srt(input_path, output_path=None, is_auto=False):
         """
         Versión fiel a la lógica del DowP viejo:
         Lee línea a línea, limpia etiquetas y reconstruye el SRT desde cero.
+
+        Limpieza de duplicados:
+        - Siempre: un bloque con el mismo tiempo y el mismo texto que el anterior. Los
+          subtítulos con estilo (contorno, sombra) repiten cada línea una vez por capa, y
+          al convertirlos a SRT/VTT YouTube las aplana en bloques idénticos.
+        - Solo en subtítulos automáticos (is_auto): las líneas que ya estaban en el
+          bloque anterior. Los automáticos de YouTube "ruedan": cada bloque repite la
+          línea previa y agrega una nueva. En los manuales esa regla se comía diálogo
+          real (un "No." seguido de otro "No.").
         """
         if not os.path.exists(input_path):
             return None
@@ -85,7 +99,8 @@ class SubtitleProcessor:
                 # Limpiar texto (Remover etiquetas HTML/VTT y marcas de karaoke <00:00:00.000>)
                 l = re.sub(r'<[^>]+>', '', l)
                 l = re.sub(r'<\d{1,2}:?\d{0,2}:?\d{2}[\.,]\d{3}>', '', l)
-                l = l.strip()
+                l = SubtitleProcessor._INVISIBLE_CHARS_RE.sub('', l)
+                l = re.sub(r'[ \t]{2,}', ' ', l).strip()
                 if l:
                     cleaned_lines.append(l)
 
@@ -120,24 +135,22 @@ class SubtitleProcessor:
                     if not block_text_lines:
                         continue
 
-                    # --- Lógica de Deduplicación de Líneas Acumulativas ---
+                    # Capa repetida de un subtítulo con estilo: mismo tiempo y mismo texto.
+                    if times == last_times and block_text_lines == last_text_lines:
+                        continue
+
+                    # --- Deduplicación de líneas acumulativas (solo automáticos) ---
                     # Si las líneas de este bloque ya estaban en el anterior, las quitamos
-                    filtered_lines = []
-                    for l in block_text_lines:
-                        if l not in last_text_lines:
-                            filtered_lines.append(l)
-                    
+                    if is_auto:
+                        filtered_lines = [l for l in block_text_lines if l not in last_text_lines]
+                    else:
+                        filtered_lines = block_text_lines
+
                     # Si después de filtrar no queda nada, es un bloque redundante (ej: micro-transiciones)
                     if not filtered_lines:
                         continue
-                    
-                    # Verificar micro-bloques (duración < 100ms)
-                    # Si es un micro-bloque y el texto es muy corto, podríamos saltarlo
-                    # Pero por ahora priorizamos la limpieza de texto
-                    
+
                     text = '\n'.join(filtered_lines).strip()
-                    if times == last_times: # Evitar duplicados exactos de tiempo
-                        continue
                     
                     # Bloque SRT estándar con saltos de línea Windows
                     final_srt_blocks.append(f"{counter}\r\n{times}\r\n{text}\r\n")

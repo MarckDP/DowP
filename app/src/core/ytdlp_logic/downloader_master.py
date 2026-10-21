@@ -124,7 +124,7 @@ class DownloaderMaster:
             sys.path.insert(0, plugin_dir)
             logger.debug(f"DownloaderMaster: plugin dir inyectado en sys.path -> {plugin_dir}")
 
-        from core.ytdlp_logic.resilient_downloader import is_youtube_access_error, make_fallback_ydl_opts
+        from core.ytdlp_logic.resilient_downloader import is_youtube_access_error
 
         try:
             import yt_dlp
@@ -163,6 +163,7 @@ class DownloaderMaster:
                     logger.debug(f"DownloaderMaster: ydl_opts['outtmpl'] = {ydl_opts.get('outtmpl')}")
                     
                     gpu_encoder_used = self._last_gpu_encoder_used
+                    artifacts_before = len(self._artifacts)
                     try:
                         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                             ydl.download([url])
@@ -171,22 +172,24 @@ class DownloaderMaster:
                     except Exception as frag_err:
                         if is_youtube_access_error(url, frag_err):
                             logger.warning(
-                                f"DownloaderMaster: YouTube/FFmpeg bloqueó el fragmento ({frag_err}). "
-                                f"Reintentando fragmento con cliente alternativo (web_embedded)"
-                                f"{f' [encoder: {gpu_encoder_used}]' if gpu_encoder_used else ''}..."
+                                f"DownloaderMaster: YouTube/FFmpeg bloqueó el fragmento ({frag_err})"
+                                f"{f' [encoder: {gpu_encoder_used}]' if gpu_encoder_used else ''}."
                             )
-                            fallback_opts = make_fallback_ydl_opts(ydl_opts)
-                            try:
-                                with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
+
+                            def download_with(opts):
+                                with yt_dlp.YoutubeDL(opts) as ydl_fallback:
                                     ydl_fallback.download([url])
+
+                            try:
+                                self._run_fallbacks(url, ydl_opts, frag_err, download_with)
                             except DownloadCancelledError:
                                 raise
                             except Exception as fallback_err:
                                 # "ffmpeg exited with code" cuenta como bloqueo de YouTube
                                 # (ver resilient_downloader), así que un fallo real del
                                 # encoder de GPU entra siempre por esta rama y nunca llegaba
-                                # al reintento con CPU de abajo. Último intento: mismo
-                                # cliente alternativo, pero con libx264.
+                                # al reintento con CPU de abajo. Último intento: clientes
+                                # alternativos, pero con libx264.
                                 if not gpu_encoder_used:
                                     raise
                                 logger.warning(
@@ -194,10 +197,15 @@ class DownloaderMaster:
                                     f"({gpu_encoder_used}) en el fragmento {i+1} ({fallback_err}). "
                                     f"Reintentando con CPU (libx264)..."
                                 )
-                                cpu_opts = make_fallback_ydl_opts(
-                                    self._prepare_opts(frag_data, progress_callback, force_cpu_encoder=True))
-                                with yt_dlp.YoutubeDL(cpu_opts) as ydl_cpu:
-                                    ydl_cpu.download([url])
+                                cpu_opts = self._prepare_opts(frag_data, progress_callback, force_cpu_encoder=True)
+                                try:
+                                    download_with(cpu_opts)
+                                except DownloadCancelledError:
+                                    raise
+                                except Exception as cpu_err:
+                                    if not is_youtube_access_error(url, cpu_err):
+                                        raise
+                                    self._run_fallbacks(url, cpu_opts, cpu_err, download_with)
                         elif gpu_encoder_used:
                             # El encoder de GPU (NVENC/QSV) puede fallar en ciertos casos -
                             # resoluciones muy bajas, drivers desactualizados, límite de
@@ -215,7 +223,9 @@ class DownloaderMaster:
                                 ydl_cpu.download([url])
                         else:
                             raise frag_err
-                        
+
+                    self._reject_empty_fragment(artifacts_before, i + 1)
+
                     # Recortar subtítulos si es necesario
                     if request_data.get("cut_subtitles") and frag_data.get("subtitle_lang"):
                         self._handle_subtitle_cuts_for_fragment(ydl_opts.get('outtmpl'), frag, request_data)
@@ -377,13 +387,13 @@ class DownloaderMaster:
         1. Si fue un 403 del CDN, se repite UNA vez con los mismos clientes: con PO token
            el cliente mweb es el único que ofrece la máxima calidad (4K, AV1) y su 403 es
            intermitente -- una extracción nueva trae URLs y token nuevos.
-        2. Si no (o si vuelve a fallar), cliente alternativo (web_embedded). Ese cliente
-           suele recibir solo formatos combinados de menor calidad (SABR), y antes eso
+        2. Si no (o si vuelve a fallar), los otros perfiles de clientes (ver
+           _run_fallbacks), salvo ante un 429 o la verificación de edad. Un cliente
+           alternativo puede recibir solo formatos de menor calidad (SABR), y antes eso
            pasaba en silencio: "Máxima calidad" terminaba bajando un 1080p H.264. Ahora
            se compara la resolución obtenida con la que se iba a bajar y, si es menor,
            queda en self._quality_warning para avisar en la fila."""
-        from core.ytdlp_logic.resilient_downloader import (
-            is_cdn_forbidden_error, is_youtube_access_error, make_fallback_ydl_opts)
+        from core.ytdlp_logic.resilient_downloader import is_cdn_forbidden_error, is_youtube_access_error
 
         err = first_err
         if is_cdn_forbidden_error(err):
@@ -404,16 +414,23 @@ class DownloaderMaster:
                     raise
                 err = retry_err
 
-        logger.warning(
-            f"DownloaderMaster: YouTube bloqueó la descarga ({err}). "
-            f"Reintentando descarga con cliente alternativo (web_embedded)...")
+        from core.ytdlp_logic import client_profiles
+        from core.ytdlp_logic.format_selectors import is_youtube_url
+        if is_youtube_url(url) and not client_profiles.should_try_next_profile(err):
+            # 429 / verificación de edad: otro cliente no lo evita.
+            raise err
+
+        logger.warning(f"DownloaderMaster: YouTube bloqueó la descarga ({err}).")
         expected_height = None
         if not request_data.get("is_playlist") and request_data.get("mode") in ("video+audio", "video_only"):
             expected_height = self._probe_selected_height(yt_dlp, url, ydl_opts)
 
-        ydl = yt_dlp.YoutubeDL(make_fallback_ydl_opts(ydl_opts))
-        with ydl:
-            info = ydl.extract_info(url, download=True)
+        def download_with(opts):
+            ydl_fb = yt_dlp.YoutubeDL(opts)
+            with ydl_fb:
+                return ydl_fb.extract_info(url, download=True), ydl_fb
+
+        info, ydl = self._run_fallbacks(url, ydl_opts, err, download_with)
 
         got_height = info.get("height") if isinstance(info, dict) else None
         if expected_height and got_height and got_height < expected_height:
@@ -425,6 +442,80 @@ class DownloaderMaster:
                 "YouTube bloqueó la máxima calidad: se descargó en {0}p en lugar de {1}p"
             ).format(got_height, expected_height)
         return info, ydl
+
+    # Por debajo de esto un "fragmento" es solo la cabecera del contenedor, sin medio.
+    _EMPTY_FRAGMENT_MAX_BYTES = 2048
+    _FRAGMENT_MEDIA_EXTS = (".mp4", ".mkv", ".webm", ".mov", ".ts", ".m4a", ".mp3",
+                            ".opus", ".ogg", ".aac", ".flac", ".wav")
+
+    def _reject_empty_fragment(self, artifacts_before, fragment_number):
+        """Un rango que empieza después del final del medio no da error en yt-dlp: deja
+        un archivo de unos cientos de bytes y la tarea terminaba como completada. Pasa
+        cuando el sitio no informa la duración (el diálogo de fragmentos asume 3 min) y
+        el corte cae fuera del clip. Se borra ese archivo y se avisa del error."""
+        new_media = [p for p in self._artifacts[artifacts_before:]
+                     if p.lower().endswith(self._FRAGMENT_MEDIA_EXTS) and os.path.isfile(p)]
+        if not new_media or any(os.path.getsize(p) > self._EMPTY_FRAGMENT_MAX_BYTES for p in new_media):
+            return
+        for path in new_media:
+            try:
+                os.remove(path)
+            except OSError as e:
+                logger.debug(f"DownloaderMaster: no se pudo borrar el fragmento vacío {path}: {e}")
+        logger.error(f"DownloaderMaster: el fragmento {fragment_number} quedó vacío: "
+                     f"{[os.path.basename(p) for p in new_media]}")
+        raise RuntimeError(QCoreApplication.translate(
+            "DownloaderMaster",
+            "El fragmento {0} quedó vacío: el rango elegido puede estar fuera de la duración del video."
+        ).format(fragment_number))
+
+    def _iter_fallback_opts(self, url, ydl_opts):
+        """Opciones de respaldo, en orden, como (perfil, opciones). En YouTube son los
+        otros perfiles de la cadena (client_profiles); en otros sitios, el respaldo de
+        siempre (make_fallback_ydl_opts)."""
+        from core.ytdlp_logic import client_profiles
+        from core.ytdlp_logic.format_selectors import is_youtube_url
+        from core.ytdlp_logic.resilient_downloader import make_fallback_ydl_opts, make_profile_fallback_opts
+        if not is_youtube_url(url):
+            yield None, make_fallback_ydl_opts(ydl_opts)
+            return
+        current = getattr(self, "_client_profile", None)
+        for profile in client_profiles.profile_chain():
+            if profile != current:
+                yield profile, make_profile_fallback_opts(ydl_opts, profile)
+
+    def _run_fallbacks(self, url, ydl_opts, first_err, run):
+        """Reintenta con las opciones de respaldo hasta que run(opts) funcione. Devuelve
+        lo que devuelva run y relanza el último error si ninguna sirve.
+
+        En YouTube no se cambia de cliente ante un 429 ni ante la verificación de edad
+        (should_try_next_profile): otro cliente no lo evita y solo suma peticiones. El
+        perfil que funciona se recuerda para las descargas siguientes de ese video."""
+        from core.ytdlp_logic import client_profiles
+        from core.ytdlp_logic.format_selectors import is_youtube_url
+        youtube = is_youtube_url(url)
+        if youtube and not client_profiles.should_try_next_profile(first_err):
+            raise first_err
+
+        last_err = first_err
+        for profile, opts in self._iter_fallback_opts(url, ydl_opts):
+            logger.warning(f"DownloaderMaster: Reintentando con "
+                           f"{f'el perfil de clientes {profile!r}' if profile else 'opciones alternativas'} "
+                           f"(falló: {last_err})")
+            try:
+                result = run(opts)
+            except DownloadCancelledError:
+                raise
+            except Exception as err:
+                last_err = err
+                if youtube and client_profiles.should_try_next_profile(err):
+                    continue
+                raise
+            if profile:
+                client_profiles.remember(url, profile)
+                self._client_profile = profile
+            return result
+        raise last_err
 
     def _probe_selected_height(self, yt_dlp, url, ydl_opts):
         """Resolución que elegirían los clientes originales, sin descargar nada (una
@@ -575,8 +666,13 @@ class DownloaderMaster:
         """
         self._last_gpu_encoder_used = None
 
-        # Obtener opciones base (cookies, impersonate, etc.)
-        ydl_opts = get_base_ydl_opts()
+        # Obtener opciones base (cookies, impersonate, etc.). El perfil de clientes es el
+        # que funcionó en el análisis de este video: los IDs de formato elegidos solo
+        # existen con esos mismos clientes.
+        from core.ytdlp_logic import client_profiles
+        self._client_profile = (client_profiles.recall(data.get("url", ""))
+                                or client_profiles.profile_chain()[0])
+        ydl_opts = get_base_ydl_opts(profile=self._client_profile)
         ydl_opts['logger'] = YTDLLogger(message_callback=self._on_ytdlp_message)
         
         output_path = data.get("output_path", os.getcwd())
@@ -751,6 +847,11 @@ class DownloaderMaster:
         
         if format_selector:
             ydl_opts['format'] = format_selector
+            # Orden de preferencia propio de algunos selectores (ver
+            # quick_fragment_format_selector): res:N mide el lado corto, así un Short
+            # vertical 1080x1920 cuenta como 1080p.
+            if data.get("format_sort"):
+                ydl_opts['format_sort'] = list(data["format_sort"])
         elif mode == "video+audio":
             # 1. Caso Multi-idioma combinado (Legacy Wisdom: la selección de audio ES el formato completo)
             if v_is_multi and a_has_video and a_id:
@@ -1367,7 +1468,8 @@ class DownloaderMaster:
     def _prepare_subtitle_for_cutting(self, sub_path, request_data, force_standard=False):
         """Prepara el subtítulo (estandariza si es necesario) antes del recorte."""
         if force_standard or request_data.get("standardize_srt"):
-            standardized = SubtitleProcessor.standardize_to_srt(sub_path)
+            standardized = SubtitleProcessor.standardize_to_srt(
+                sub_path, is_auto=bool(request_data.get("subtitle_is_auto")))
             # La estandarización puede escribir un archivo nuevo (.vtt -> .srt).
             self._note_artifact(standardized)
             return standardized
@@ -1548,30 +1650,35 @@ class DownloaderMaster:
         respaldo (deepcopy no clona funciones), así que los ítems que se recuperen aquí
         se anotan igual en _completed_playlist_indices.
         """
-        from core.ytdlp_logic.resilient_downloader import make_fallback_ydl_opts
-
-        pending = [i for i in self._requested_playlist_items(ydl_opts, info)
-                   if i not in self._completed_playlist_indices]
-        if not pending:
+        all_pending = [i for i in self._requested_playlist_items(ydl_opts, info)
+                       if i not in self._completed_playlist_indices]
+        if not all_pending:
             return
 
         logger.warning(
-            f"DownloaderMaster: {len(pending)} ítem(s) de la playlist no se descargaron "
+            f"DownloaderMaster: {len(all_pending)} ítem(s) de la playlist no se descargaron "
             f"(YouTube suele devolver 403 en el primer intento). Reintentando solo esos "
-            f"con cliente alternativo (web_embedded): {pending}"
+            f"con clientes alternativos: {all_pending}"
         )
-        fallback_opts = make_fallback_ydl_opts(ydl_opts)
-        fallback_opts["playlist_items"] = ",".join(str(i) for i in pending)
-        try:
-            with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
-                ydl_fallback.extract_info(url, download=True)
-        except DownloadCancelledError:
-            raise
-        except Exception as retry_err:
-            # El reintento es un extra: si también falla, se sigue adelante y el resumen
-            # dirá cuántos quedaron sin descargar.
-            logger.error(f"DownloaderMaster: el reintento de la playlist también falló: {retry_err}")
+        # Un intento por cada respaldo (otros perfiles de clientes en YouTube), solo con
+        # los ítems que todavía falten.
+        for profile, fallback_opts in self._iter_fallback_opts(url, ydl_opts):
+            pending = [i for i in all_pending if i not in self._completed_playlist_indices]
+            if not pending:
+                break
+            fallback_opts["playlist_items"] = ",".join(str(i) for i in pending)
+            try:
+                with yt_dlp.YoutubeDL(fallback_opts) as ydl_fallback:
+                    ydl_fallback.extract_info(url, download=True)
+            except DownloadCancelledError:
+                raise
+            except Exception as retry_err:
+                # El reintento es un extra: si también falla, se sigue adelante y el resumen
+                # dirá cuántos quedaron sin descargar.
+                logger.error(f"DownloaderMaster: el reintento de la playlist "
+                             f"({profile or 'opciones alternativas'}) también falló: {retry_err}")
 
+        pending = all_pending
         recovered = [i for i in pending if i in self._completed_playlist_indices]
         if recovered:
             logger.info(f"DownloaderMaster: recuperados {len(recovered)} de {len(pending)} "

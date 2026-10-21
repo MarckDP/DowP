@@ -71,7 +71,8 @@ def get_config():
             "vegas_enabled": False,
             "vegas_path": ""
         },
-        "pot_provider": "bgutil",       # "bgutil" | "wpc" | "none"
+        "subtitle_clean_default": True, # "Limpiar y convertir a SRT" activa al analizar
+        "pot_provider": "wpc",          # "wpc" | "bgutil" | "none": respaldo con token (ver client_profiles)
         "pot_wpc_browser_path": "",     # ruta al ejecutable Chromium; vacío = auto-detect
         "ytdlp_channel": "stable",      # "stable" | "nightly"
         "ffmpeg_mode": "managed",       # "managed" | "custom"

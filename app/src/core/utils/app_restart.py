@@ -19,6 +19,12 @@ import sys
 
 from core.logger.logger_manager import logger
 
+# Marca para la instancia nueva: la vieja tarda unos segundos en cerrarse (cola,
+# editores, Socket.IO) y sigue respondiendo al candado de instancia única hasta el
+# final; sin esto la nueva -- que llega al candado en ~0,3 s -- creía que había otra
+# DowP abierta y se cerraba. main.py la quita de sys.argv antes de seguir.
+RESTART_FLAG = "--dowp-restarted"
+
 
 def _relaunch_target() -> tuple[str, list]:
     """(ejecutable, args) con los que volver a arrancar esta misma instalación.
@@ -63,7 +69,7 @@ def restart_app() -> bool:
         if not exe or not os.path.exists(exe):
             logger.error(f"AppRestart: no existe el ejecutable para relanzar: {exe!r}")
             return False
-        pid = spawn_detached(exe, args)
+        pid = spawn_detached(exe, [*args, RESTART_FLAG])
         logger.info(f"AppRestart: instancia nueva lanzada (pid {pid}) desde {exe!r}")
         return True
     except Exception as e:

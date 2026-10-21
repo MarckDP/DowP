@@ -42,6 +42,13 @@ def main():
     if resume_pending_swap():
         sys.exit(0)
 
+    # Marca de reinicio (ver core/utils/app_restart.py). Se quita de sys.argv para que
+    # no llegue a Qt ni se arrastre a un reinicio posterior (que reenvía sys.argv[1:]).
+    from core.utils.app_restart import RESTART_FLAG
+    restarted = RESTART_FLAG in sys.argv
+    if restarted:
+        sys.argv = [a for a in sys.argv if a != RESTART_FLAG]
+
     # 1. Setup App y base
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Estilo base multiplataforma que previene bugs de QComboBox en Windows
@@ -51,6 +58,24 @@ def main():
     from PySide6.QtNetwork import QLocalSocket, QLocalServer
 
     SINGLE_INSTANCE_KEY = "com.dowp.app.single_instance"
+
+    # Reinicio (cambio de idioma/tema): la instancia vieja sigue cerrándose y respondiendo
+    # al candado unos segundos. En vez de rendirse ante ella, se espera a que suelte el
+    # candado (ver core/utils/app_restart.py). Con límite: si no termina de cerrarse,
+    # se cae al comportamiento normal (activar la existente y salir).
+    if restarted:
+        import time
+        wait_start = time.monotonic()
+        while time.monotonic() - wait_start < 20:
+            probe = QLocalSocket()
+            probe.connectToServer(SINGLE_INSTANCE_KEY)
+            if not probe.waitForConnected(300):
+                break
+            probe.abort()
+            time.sleep(0.3)
+        logger.info(f"Reinicio: esperando a que se cierre la instancia anterior -- "
+                    f"{time.monotonic() - wait_start:.1f}s")
+
     local_socket = QLocalSocket()
     local_socket.connectToServer(SINGLE_INSTANCE_KEY)
     if local_socket.waitForConnected(500):

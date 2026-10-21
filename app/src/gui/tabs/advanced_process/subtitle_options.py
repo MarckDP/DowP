@@ -115,8 +115,22 @@ class SubtitleOptionsWidget(QFrame):
 
         # Switches
         self.chk_download_with_media = self._build_switch_row(self.tr("Descargar con el medio"))
-        self.chk_standardize_srt = self._build_switch_row(self.tr("Convertir y estandarizar a SRT"))
+        self.chk_standardize_srt = self._build_switch_row(self.tr("Limpiar y convertir a SRT"))
         self.chk_cut_to_fragment = self._build_switch_row(self.tr("Recortar al fragmento"))
+        # Activa por defecto: el SRT tal como lo entrega YouTube puede traer las líneas
+        # repetidas de un subtítulo con estilo y caracteres invisibles. Se recuerda la
+        # última elección del usuario (solo con clic: al cambiar de medio en la cola el
+        # estado de cada ítem se restaura con setChecked y no debe tocar la preferencia).
+        from core.utils.config_manager import get_config
+        self.chk_standardize_srt["switch"].setChecked(get_config().get("subtitle_clean_default", True))
+        self.chk_standardize_srt["switch"].clicked.connect(self._remember_clean_default)
+        clean_tip = self.tr(
+            "Quita las líneas repetidas por el estilo del creador, las etiquetas y los caracteres "
+            "invisibles, y entrega un SRT compatible con cualquier editor.\n"
+            "Desactívalo para recibir el subtítulo tal como lo entrega YouTube."
+        )
+        self.chk_standardize_srt["container"].setToolTip(clean_tip)
+        self.chk_standardize_srt["switch"].setToolTip(clean_tip)
         
         # Deshabilitados por defecto hasta que se seleccione un subtítulo válido
         self.chk_download_with_media["container"].setEnabled(False)
@@ -240,12 +254,23 @@ class SubtitleOptionsWidget(QFrame):
 
         return {"container": container, "switch": switch}
 
+    def _remember_clean_default(self, checked):
+        from core.utils.config_manager import get_config, save_config
+        cfg = get_config()
+        cfg["subtitle_clean_default"] = bool(checked)
+        save_config(cfg)
+
+    def default_clean_checked(self):
+        """Estado inicial de 'Limpiar y convertir a SRT' para un medio sin opciones propias."""
+        from core.utils.config_manager import get_config
+        return bool(get_config().get("subtitle_clean_default", True))
+
     def update_standardize_visibility(self):
-        """Habilita 'Convertir y estandarizar a SRT' solo cuando hay un subtítulo seleccionado
-        cuyo formato de origen no sea ya SRT."""
+        """Habilita 'Limpiar y convertir a SRT' cuando hay un subtítulo seleccionado, también
+        si ya es SRT: el SRT de YouTube puede traer líneas repetidas por el estilo. Sin
+        subtítulo solo se deshabilita, sin desmarcar, para no perder el valor por defecto
+        antes de que el usuario elija un idioma."""
         fmt_data = self.combo_subtitle_format.currentData()
         ext = (fmt_data.get("ext") or "").lower() if fmt_data else ""
-        should_enable = bool(fmt_data) and ext != "" and ext != "srt"
+        should_enable = bool(fmt_data) and ext != ""
         self.chk_standardize_srt["container"].setEnabled(should_enable)
-        if not should_enable:
-            self.chk_standardize_srt["switch"].setChecked(False)

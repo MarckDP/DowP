@@ -53,6 +53,30 @@ def is_cdn_forbidden_error(error_msg: object) -> bool:
     return any(marker in lowered for marker in CDN_FORBIDDEN_MARKERS)
 
 
+def _preserve_format_with_fallback(opts: dict) -> None:
+    """Otro cliente puede no exponer el ID exacto elegido (ej. "299+140"): se agrega
+    bestvideo+bestaudio/best como último recurso en vez de fallar con "Requested
+    format is not available"."""
+    if "format" in opts and opts["format"]:
+        fmt = str(opts["format"])
+        if "/bestvideo" not in fmt and "/best" not in fmt:
+            opts["format"] = f"{fmt}/bestvideo+bestaudio/best"
+
+
+def make_profile_fallback_opts(ydl_opts: dict, profile: str) -> dict:
+    """Opciones de respaldo para YouTube: las mismas, con otro perfil de clientes
+    (ver client_profiles)."""
+    from core.ytdlp_logic.client_profiles import apply_profile
+    fallback = copy.deepcopy(ydl_opts)
+    apply_profile(fallback, profile)
+    # Los encabezados fijos son los del cliente original; cada cliente trae los suyos.
+    fallback.pop("user_agent", None)
+    fallback.pop("referer", None)
+    fallback.pop("impersonate", None)
+    _preserve_format_with_fallback(fallback)
+    return fallback
+
+
 def make_fallback_ydl_opts(ydl_opts: dict) -> dict:
     """
     Crea opciones de fallback usando el cliente 'web_embedded' (patrón Xomacito).
@@ -82,9 +106,6 @@ def make_fallback_ydl_opts(ydl_opts: dict) -> dict:
     # Preservar el formato elegido por el usuario (ej: "299+140"):
     # yt-dlp probará primero "299+140"; si ese ID de stream no está disponible
     # en web_embedded, pasará a bestvideo+bestaudio/best en lugar de crash-403.
-    if "format" in fallback and fallback["format"]:
-        fmt = str(fallback["format"])
-        if "/bestvideo" not in fmt and "/best" not in fmt:
-            fallback["format"] = f"{fmt}/bestvideo+bestaudio/best"
+    _preserve_format_with_fallback(fallback)
 
     return fallback
