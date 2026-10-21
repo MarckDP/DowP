@@ -39,6 +39,24 @@ class RecodeController(QObject):
             "upscale_filename_suffix": widget.txt_upscale_suffix.text().strip(),
         }
 
+    def ensure_ai_models_ready(self, preset_names=None) -> bool:
+        """Antes de arrancar descargas con Posprocesar > IA: si algún preajuste de IA
+        tiene su modelo sin descargar, ofrece descargarlo (o ir a Ajustes > Modelos) y
+        devuelve False para no empezar -- si no, la etapa de IA fallaría al final,
+        después de esperar la descarga del video. Sin `preset_names`, revisa el
+        preajuste que muestra la tarjeta Posprocesar."""
+        from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
+        from gui.widgets.ia_preset_models import offer_preset_model_download, preset_model_ready
+        if preset_names is None:
+            data = self.collect_recode_data()
+            preset_names = [data["upscale_preset_name"]] if data.get("upscale_enabled") else []
+        for name in dict.fromkeys(n for n in preset_names if n):
+            settings = get_preset_manager().get_settings(IA_TOOLS_NAMESPACE, name)
+            if settings and not preset_model_ready(settings):
+                offer_preset_model_download(self.tab, settings, notify_downloading=True)
+                return False
+        return True
+
     def restore_recode_to_ui(self, data: dict):
         widget = self.tab.recode_options
         widget.switch_recode.blockSignals(True)

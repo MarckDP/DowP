@@ -147,8 +147,6 @@ class DepthPopoverContent(QFrame):
         self.combo_family = AutoPopupComboBox(fit_contents=True)
         self.combo_family.addItem(AI_ENGINE_HOLDER, None)
         for family_name, models in get_depth_families().items():
-            if video_mode and any(m.get("engine") == "moge" for m in models.values()):
-                continue    # MoGe-2 todavía no calcula profundidad en video
             label = family_name
             if video_mode and any(m.get("input_layout") == "5d" for m in models.values()):
                 label = self.tr("{0} (recomendado para video)").format(family_name)
@@ -183,6 +181,7 @@ class DepthPopoverContent(QFrame):
         model_downloads().started.connect(self._on_download_started)
         model_downloads().progress_changed.connect(self._on_download_progress)
         model_downloads().finished.connect(self._on_download_finished)
+        model_downloads().models_changed.connect(self._on_models_changed)
 
         self.actions_row = ModelActionsRow(
             delete_tooltip=self.tr("Borrar del disco el modelo seleccionado"))
@@ -434,7 +433,7 @@ class DepthPopoverContent(QFrame):
 
     # ── Acciones sobre el modelo elegido ────────────────────────────────────
     def _on_manage_clicked(self):
-        if open_models_settings(self):
+        if open_models_settings(self, self._current_model_info(), "depth"):
             self.close_popover_requested.emit()
 
     def _on_delete_clicked(self):
@@ -502,10 +501,19 @@ class DepthPopoverContent(QFrame):
         if self._is_current_model(model_id):
             self.status_row.show_progress(pct)
 
+    def _on_models_changed(self):
+        """Carpeta de modelos cambiada/movida o un modelo borrado en Ajustes: lo que
+        hay en disco ya no es lo mismo (is_ready() y el estado pueden cambiar)."""
+        self._refresh_model_items()
+        self._update_status()
+        self._emit_selection()
+
     def _on_download_finished(self, success: bool, message: str, model_id: str):
         started_here = model_id in self._started_here
         self._started_here.discard(model_id)
         self._refresh_model_items()
+        # is_ready() pudo cambiar: quien decide el botón Iniciar lo recalcula.
+        self._emit_selection()
         if success:
             self._update_status()
             return
@@ -517,6 +525,15 @@ class DepthPopoverContent(QFrame):
     # ── API para ImageToolsTab ──────────────────────────────────────────────
     def is_valid_selection(self) -> bool:
         return self.combo_family.currentData() is not None and self.combo_model.currentData() is not None
+
+    def is_ready(self) -> bool:
+        """Selección válida Y el modelo ya está en disco (no a medio descargar). Es lo
+        que decide si se puede iniciar: is_valid_selection() solo mira que haya algo
+        elegido, y con un modelo sin descargar el botón Iniciar se activaba igual."""
+        if not self.is_valid_selection():
+            return False
+        model_info = self._current_model_info()
+        return bool(model_info) and is_depth_model_installed(model_info) and             not model_downloads().is_downloading(self._model_id(model_info))
 
     def is_active(self) -> bool:
         return self.is_valid_selection()

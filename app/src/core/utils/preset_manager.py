@@ -48,13 +48,11 @@ IA_TOOL_FUNCTIONS = {
     "ia_normales": QT_TRANSLATE_NOOP("preset_manager", "Mapa de normales"),
 }
 
-# Solo las funciones de IA que Modo Rápido y Proceso Avanzado saben ejecutar después de
-# una descarga (hoy, el Reescalado: ver core/tabs/video_tools/upscale_chain.py). Sus
-# pickers usan esta lista, así un preajuste de Mapa de Profundidad o de Normales (que
-# solo corren en Herramientas Multimedia) no aparece ahí: PresetBar solo lista las funciones que recibe.
-IA_POST_DOWNLOAD_FUNCTIONS = {
-    "ia_reescalar": IA_TOOL_FUNCTIONS["ia_reescalar"],
-}
+# Las funciones de IA que Modo Rápido y Proceso Avanzado saben ejecutar después de una
+# descarga: las tres (ver ia_job_spec en core/tabs/video_tools/upscale_chain.py, que
+# elige el job según "ia_function"). Sus pickers usan esta lista: PresetBar solo lista
+# las funciones que recibe.
+IA_POST_DOWNLOAD_FUNCTIONS = dict(IA_TOOL_FUNCTIONS)
 
 # Namespace único (ver PresetManager) para TODO preset de IA -- constante acá, no un
 # literal repetido en cada módulo que lo lee/escribe (quick_mode/download_controller.py,

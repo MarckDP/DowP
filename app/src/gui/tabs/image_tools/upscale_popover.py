@@ -185,6 +185,7 @@ class UpscalePopoverContent(QFrame):
         model_downloads().started.connect(self._on_download_started)
         model_downloads().progress_changed.connect(self._on_download_progress)
         model_downloads().finished.connect(self._on_download_finished)
+        model_downloads().models_changed.connect(self._on_models_changed)
 
         # "Eliminar" borra el MOTOR entero (binario + sus modelos), que es como se
         # instaló -- los modelos de la lista de arriba no existen por separado.
@@ -411,7 +412,7 @@ class UpscalePopoverContent(QFrame):
     def _on_manage_clicked(self):
         """Salta a Ajustes > Modelos y cierra este popover -- ver
         RembgPopoverContent._on_manage_clicked."""
-        if open_models_settings(self):
+        if open_models_settings(self, UPSCALING_TOOLS.get(self._current_engine_key()), "upscaling"):
             self.close_popover_requested.emit()
 
     def _on_delete_clicked(self):
@@ -478,10 +479,19 @@ class UpscalePopoverContent(QFrame):
         if self._is_current_download(key):
             self.status_row.show_progress(pct)
 
+    def _on_models_changed(self):
+        """Carpeta de modelos cambiada/movida o un modelo borrado en Ajustes: lo que
+        hay en disco ya no es lo mismo (is_ready() y el estado pueden cambiar)."""
+        self._refresh_engine_items()
+        self._update_status()
+        self._emit_selection()
+
     def _on_download_finished(self, success: bool, message: str, key: str):
         started_here = key in self._started_here
         self._started_here.discard(key)
         self._refresh_engine_items()
+        # is_ready() pudo cambiar: quien decide el botón Iniciar lo recalcula.
+        self._emit_selection()
         if success:
             self._update_status()
             return
@@ -492,6 +502,16 @@ class UpscalePopoverContent(QFrame):
 
     def is_valid_selection(self) -> bool:
         return self.combo_engine.currentData() is not None and self.combo_model.currentData() is not None
+
+    def is_ready(self) -> bool:
+        """Selección válida Y el motor ya está en disco (no a medio descargar). Es lo
+        que decide si se puede iniciar: is_valid_selection() solo mira que haya algo
+        elegido, y con un motor sin descargar el botón Iniciar se activaba igual."""
+        if not self.is_valid_selection():
+            return False
+        engine_key = self._current_engine_key()
+        info = UPSCALING_TOOLS.get(engine_key)
+        return bool(info) and is_upscaling_engine_installed(info) and             not model_downloads().is_downloading(self._download_key(engine_key))
 
     def is_active(self) -> bool:
         """API común a los tres popovers de la barra lateral (Reescalar/Eliminar

@@ -24,6 +24,7 @@ from gui.tabs.advanced_process.advanced_process_view import AdvancedProcessTab
 from gui.tabs.quick_mode.quick_mode_view import QuickModeTab
 from gui.tabs.image_tools.image_tools_view import ImageToolsTab
 from gui.tabs.video_tools.video_tools_view import VideoToolsTab
+from gui.tabs.ai_tools.ai_tools_view import AIToolsTab
 from gui.tabs.editing_media.editing_media_view import EditingMediaTab
 from gui.tabs.settings.settings_view import SettingsTab
 
@@ -809,7 +810,9 @@ class MainWindow(QMainWindow):
         self._page_image = self.tabs.add_lazy_tab(
             lambda _parent: ImageToolsTab(), self.tr("Herramientas de Imagen"), "Herramientas de Imagen")
         self._page_video = self.tabs.add_lazy_tab(
-            lambda _parent: VideoToolsTab(), self.tr("Herramientas Multimedia"), "Herramientas Multimedia")
+            lambda _parent: self._wire_send_targets(VideoToolsTab()), self.tr("Herramientas Multimedia"), "Herramientas Multimedia")
+        self._page_ai = self.tabs.add_lazy_tab(
+            lambda _parent: self._wire_send_targets(AIToolsTab()), self.tr("Herramientas IA"), "Herramientas IA")
         self._page_editing = self.tabs.add_lazy_tab(
             EditingMediaTab, self.tr("Gestor de Medios"), "Gestor de Medios")
 
@@ -818,7 +821,8 @@ class MainWindow(QMainWindow):
         # ya que un QTabWidget solo muestra una pestaña a la vez (ver tab_drag_hover.py).
         self._tab_drag_hover = TabBarDragHoverSwitcher(
             self.tabs,
-            hoverable_indices={self.tabs.indexOf(self._page_image), self.tabs.indexOf(self._page_video)},
+            hoverable_indices={self.tabs.indexOf(self._page_image), self.tabs.indexOf(self._page_video),
+                               self.tabs.indexOf(self._page_ai)},
         )
 
         # Corner Widget (Editor Status & Ajustes)
@@ -864,13 +868,38 @@ class MainWindow(QMainWindow):
         return self.tabs.ensure_built(self._page_video)
 
     @property
+    def tab_ai(self):
+        return self.tabs.ensure_built(self._page_ai)
+
+    @property
     def tab_editing(self):
         return self.tabs.ensure_built(self._page_editing)
 
     def _built_tab(self, name: str):
-        page = {"image": self._page_image, "video": self._page_video,
+        page = {"image": self._page_image, "video": self._page_video, "ai": self._page_ai,
                 "editing": self._page_editing}[name]
         return self.tabs.built_tab(page)
+
+    def _wire_send_targets(self, tab):
+        """"Enviar a Herramientas IA" / "Enviar a Herramientas Multimedia" en el menú
+        contextual de la cola de cada una: pasa las filas (con su recorte) a la otra
+        pestaña, construyéndola si hace falta, y la muestra."""
+        if isinstance(tab, AIToolsTab):
+            text, target = self.tr("Enviar a Herramientas Multimedia"), lambda: self.tab_video
+        else:
+            text, target = self.tr("Enviar a Herramientas IA"), lambda: self.tab_ai
+
+        def send(entry_keys):
+            items = tab.queue_items_for(entry_keys)
+            if not items:
+                return
+            destination = target()
+            self.tabs.setCurrentWidget(destination)
+            added = destination.receive_media_from_editor(items)
+            logger.info(f"MainWindow: {added} archivo(s) enviados de {type(tab).__name__} a {type(destination).__name__}.")
+
+        tab.queue_widget.set_send_targets([(text, send)])
+        return tab
 
     # Cuánto tiempo sin tocar la app (mouse, teclado) hace falta antes de construir la
     # siguiente pieza diferida. Cada construcción congela la interfaz entre 0,1 y ~1 s:
@@ -944,6 +973,11 @@ class MainWindow(QMainWindow):
         if tab_video is not None and current is tab_video and hasattr(tab_video, "load_labels"):
             logger.info("MainWindow: Recargando etiquetas en Herramientas Multimedia")
             tab_video.load_labels()
+
+        tab_ai = self._built_tab("ai")
+        if tab_ai is not None and current is tab_ai:
+            logger.info("MainWindow: Recargando etiquetas en Herramientas IA")
+            tab_ai.load_labels()
 
         tab_image = self._built_tab("image")
         if tab_image is not None and current is tab_image and hasattr(tab_image, "load_labels"):
@@ -1023,22 +1057,23 @@ class MainWindow(QMainWindow):
 
     def open_preset_creator(self, kind: str):
         """Desde "+ Crear preajuste..." de Posprocesar (Modo Rápido / Proceso Avanzado):
-        abre Herramientas Multimedia en la pestaña donde se crea ese tipo de preajuste --
-        "recode" -> Avanzado (Recodificación), "ia" -> Herramientas IA."""
-        self.tabs.setCurrentWidget(self.tab_video)
-        options = getattr(self.tab_video, "options_widget", None)
+        abre la pestaña donde se crea ese tipo de preajuste -- "recode" -> Herramientas
+        Multimedia, subpestaña Avanzado; "ia" -> la pestaña Herramientas IA."""
+        tab = self.tab_ai if kind == "ia" else self.tab_video
+        self.tabs.setCurrentWidget(tab)
+        options = getattr(tab, "options_widget", None)
         if options is None:
             return
-        target = options.tab_upscale_ia if kind == "ia" else options.tab_advanced
-        options.tabs.setCurrentWidget(target)
+        if kind != "ia":
+            options.tabs.setCurrentWidget(options.tab_advanced)
         # En ventanas no muy anchas el panel de Opciones vive plegado como overlay (ver
         # VideoToolsTab.right_panel): sin abrirlo, el usuario veía la pestaña pero no las
         # opciones. Diferido para que la pestaña ya tenga su tamaño definitivo al abrirlo;
         # open_overlay() no hace nada si el panel está acoplado o ya abierto.
-        panel = getattr(self.tab_video, "right_panel", None)
+        panel = getattr(tab, "right_panel", None)
         if panel is not None:
             QTimer.singleShot(0, panel.open_overlay)
-        logger.info(f"MainWindow: abriendo Herramientas Multimedia para crear un preajuste ({kind}).")
+        logger.info(f"MainWindow: abriendo {type(tab).__name__} para crear un preajuste ({kind}).")
 
     def refresh_labels(self):
         """Fuerza la recarga de las etiquetas en todas las pestañas relevantes."""
@@ -1054,6 +1089,9 @@ class MainWindow(QMainWindow):
         tab_image = self._built_tab("image")
         if tab_image is not None and hasattr(tab_image, "load_labels"):
             tab_image.load_labels()
+        tab_ai = self._built_tab("ai")
+        if tab_ai is not None:
+            tab_ai.load_labels()
 
     def _handle_nccalcsize(self, msg):
         """WM_NCCALCSIZE: el área de cliente pasa a ocupar toda la ventana (si no,

@@ -179,6 +179,7 @@ class RembgPopoverContent(QFrame):
         model_downloads().started.connect(self._on_download_started)
         model_downloads().progress_changed.connect(self._on_download_progress)
         model_downloads().finished.connect(self._on_download_finished)
+        model_downloads().models_changed.connect(self._on_models_changed)
 
         self.actions_row = ModelActionsRow(
             delete_tooltip=self.tr("Borrar del disco el modelo seleccionado"))
@@ -383,7 +384,7 @@ class RembgPopoverContent(QFrame):
         """Salta a la gestión completa (descargar/reinstalar/importar/borrar) y
         cierra este popover: al volver de Ajustes su contenido podría estar de más
         viejo -- reabrirlo lo repuebla desde cero (ver showEvent)."""
-        if open_models_settings(self):
+        if open_models_settings(self, self._current_model_info(), "rembg"):
             self.close_popover_requested.emit()
 
     def _on_delete_clicked(self):
@@ -393,6 +394,18 @@ class RembgPopoverContent(QFrame):
         # lo que se quita es su entrada en config.json.
         orphaned = model_info and is_rembg_model_orphaned(model_info)
         if not model_info or not (is_rembg_model_installed(model_info) or orphaned):
+            return
+
+        # Importado a mano: "Quitar de la lista" o "Eliminar del disco" (a la Papelera),
+        # el mismo diálogo que Ajustes > Modelos (ver custom_model_dialogs.py).
+        if self._current_family_key() == CUSTOM_REMBG_FAMILY:
+            from gui.widgets.custom_model_dialogs import confirm_remove_custom_model
+            if confirm_remove_custom_model(self, model_name):
+                self._refresh_family_list()
+                self._refresh_model_items()
+                self._update_status()
+                self._emit_selection()
+                model_downloads().models_changed.emit()
             return
 
         if orphaned:
@@ -472,10 +485,21 @@ class RembgPopoverContent(QFrame):
         if self._is_current_model(model_id):
             self.status_row.show_progress(pct)
 
+    def _on_models_changed(self):
+        """Carpeta de modelos cambiada/movida o un modelo borrado en Ajustes: lo que
+        hay en disco ya no es lo mismo (is_ready() y el estado pueden cambiar). Incluye
+        la familia de importados: pudo agregarse, quitarse o reubicarse uno."""
+        self._refresh_family_list()
+        self._refresh_model_items()
+        self._update_status()
+        self._emit_selection()
+
     def _on_download_finished(self, success: bool, message: str, model_id: str):
         started_here = model_id in self._started_here
         self._started_here.discard(model_id)
         self._refresh_model_items()
+        # is_ready() pudo cambiar: quien decide el botón Iniciar lo recalcula.
+        self._emit_selection()
         if success:
             self._update_status()
             return
@@ -486,6 +510,15 @@ class RembgPopoverContent(QFrame):
 
     def is_valid_selection(self) -> bool:
         return self.combo_family.currentData() is not None and self.combo_model.currentData() is not None
+
+    def is_ready(self) -> bool:
+        """Selección válida Y el modelo ya está en disco (no a medio descargar). Es lo
+        que decide si se puede iniciar: is_valid_selection() solo mira que haya algo
+        elegido, y con un modelo sin descargar el botón Iniciar se activaba igual."""
+        if not self.is_valid_selection():
+            return False
+        model_info = self._current_model_info()
+        return bool(model_info) and is_rembg_model_installed(model_info) and             not model_downloads().is_downloading(self._model_id(model_info))
 
     def is_active(self) -> bool:
         """Ver UpscalePopoverContent.is_active()."""

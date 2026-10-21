@@ -141,7 +141,7 @@ def probe_video_source(path: str) -> dict:
 
     Con ffprobe si está; si no (o si falla), leyendo la salida de "ffmpeg -i"."""
     info = {"width": 0, "height": 0, "fps": 0.0, "pix_fmt": "", "has_alpha": False,
-            "decoder_args": [], "has_audio": False}
+            "decoder_args": [], "has_audio": False, "duration": 0.0}
     streams = []
     ffprobe = get_ffprobe_path()
     if ffprobe and os.path.exists(ffprobe):
@@ -159,11 +159,18 @@ def probe_video_source(path: str) -> dict:
     if not video:
         return info
     pix_fmt = video.get("pix_fmt") or ""
+    try:
+        # Del stream de video, no del contenedor: en un corte normal (sin "preciso") el
+        # video arranca en el fotograma clave anterior y dura más que el audio.
+        video_duration = float(video.get("duration") or 0.0)
+    except (TypeError, ValueError):
+        video_duration = 0.0
     info.update(
         width=int(video.get("width") or 0),
         height=int(video.get("height") or 0),
         fps=_parse_rate(video.get("avg_frame_rate")) or _parse_rate(video.get("r_frame_rate")),
         pix_fmt=pix_fmt,
+        duration=video_duration,
     )
     codec = (video.get("codec_name") or "").lower()
     info["codec"] = codec
@@ -186,6 +193,30 @@ def trim_input_args(trim_in, trim_out) -> list:
     if trim_out is not None and trim_out > 0:
         args += ["-to", f"{trim_out:.3f}"]
     return args
+
+
+def video_length_cap(video_duration: float, fps: float) -> list:
+    """-t para que el resultado no dure más que el video procesado cuando se le copia el
+    audio del original. Reemplaza a -shortest, que cortaba al stream MÁS CORTO: con un
+    audio más corto que el video (lo normal en un fragmento descargado sin corte preciso,
+    donde el video arranca en el fotograma clave anterior) recortaba el video, y con un
+    modelo que tarda en entregar el primer fotograma ffmpeg daba el video por terminado
+    y el trabajo fallaba. Con -t el audio más largo se sigue cortando, y el más corto
+    simplemente termina antes. Medio fotograma de margen para no cortar el último.
+    Sin duración conocida no limita nada."""
+    if not video_duration or video_duration <= 0:
+        return []
+    margin = 0.5 / fps if fps and fps > 0 else 0.02
+    return ["-t", f"{video_duration + margin:.3f}"]
+
+
+def trimmed_video_duration(video_duration: float, trim_in, trim_out) -> float:
+    """Duración del video dentro del tramo [trim_in, trim_out] (0 si no se conoce)."""
+    if not video_duration or video_duration <= 0:
+        return 0.0
+    start = trim_in if trim_in and trim_in > 0 else 0.0
+    end = min(trim_out, video_duration) if trim_out and trim_out > 0 else video_duration
+    return max(0.0, end - start)
 
 
 def trimmed_duration(duration_sec: float, trim_in, trim_out) -> float:

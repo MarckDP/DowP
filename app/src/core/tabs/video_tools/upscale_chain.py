@@ -50,6 +50,33 @@ def probe_fps_and_duration(filepath: str, fallback_duration_sec: float = 0.0) ->
     return fps, duration_sec
 
 
+# Qué job crea cada función de IA de un preajuste ("ia_function", ver
+# gui/tabs/video_tools/upscale_ia_panel.py): (job_type, clave de opciones en job.config).
+# Los preajustes anteriores al Mapa de Profundidad no traen la clave: son Reescalado.
+_IA_JOB_SPECS = {
+    "upscale": ("UPSCALE_VIDEO", "upscale_options"),
+    "depth": ("DEPTH_VIDEO", "depth_options"),
+    "normals": ("NORMAL_VIDEO", "normal_options"),
+}
+
+
+def ia_job_spec(settings: dict | None) -> tuple[str, str]:
+    """(job_type, clave de opciones) del job que corre un preajuste de IA."""
+    function = (settings or {}).get("ia_function") or "upscale"
+    return _IA_JOB_SPECS.get(function, _IA_JOB_SPECS["upscale"])
+
+
+def ia_job_title(settings: dict | None, name: str) -> str:
+    """Título del job en la cola según la función del preajuste."""
+    from PySide6.QtCore import QCoreApplication
+    job_type, _key = ia_job_spec(settings)
+    if job_type == "DEPTH_VIDEO":
+        return QCoreApplication.translate("VideoToolsTab", "Mapa de profundidad: {0}").format(name)
+    if job_type == "NORMAL_VIDEO":
+        return QCoreApplication.translate("VideoToolsTab", "Mapa de normales: {0}").format(name)
+    return f"Reescalado IA: {name}"
+
+
 def start_upscale_stage(qm, input_path: str, upscale_settings: dict, temp_dir: str,
                          fps: float, duration_sec: float, title: str | None = None,
                          extra_config: dict | None = None, *, origin: str) -> tuple[str, str]:
@@ -65,19 +92,27 @@ def start_upscale_stage(qm, input_path: str, upscale_settings: dict, temp_dir: s
     job.config (ej. una clave de fila propia, equivalente a
     "queue_entry_key" en video_tools_view.py)."""
     base_name = os.path.splitext(os.path.basename(input_path))[0]
-    intermediate_path = os.path.join(temp_dir, f"{uuid.uuid4().hex[:8]}_{base_name}.mp4")
+    job_type, options_key = ia_job_spec(upscale_settings)
+    extension = "mp4"
+    if job_type != "UPSCALE_VIDEO":
+        # Un mapa sale en el contenedor de su preajuste (puede ser 16 bits o ProRes, que
+        # MP4 no admite); la Recodificación de la etapa 2 define el formato final.
+        from core.utils.recode_guard import CONTAINER_TO_EXTENSION
+        container = upscale_settings.get("container") or "mkv"
+        extension = CONTAINER_TO_EXTENSION.get(container, container)
+    intermediate_path = os.path.join(temp_dir, f"{uuid.uuid4().hex[:8]}_{base_name}.{extension}")
 
     config = {
         "input_path": input_path,
         "output_path": intermediate_path,
-        "upscale_options": upscale_settings,
+        options_key: upscale_settings,
         "fps": fps,
         "duration_sec": duration_sec,
-        "title": title or f"Reescalado IA: {base_name}",
+        "title": title or ia_job_title(upscale_settings, base_name),
     }
     if extra_config:
         config.update(extra_config)
 
     # origin: el carril de la cola de quien encadena (ver ORIGIN_* en queue_manager.py).
-    job_id = qm.add_job(config, "UPSCALE_VIDEO", origin=origin)
+    job_id = qm.add_job(config, job_type, origin=origin)
     return job_id, intermediate_path

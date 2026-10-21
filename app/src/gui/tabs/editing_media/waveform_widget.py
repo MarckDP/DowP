@@ -24,6 +24,11 @@ class AudioWaveformWidget(QWidget):
     # mouseReleaseEvent (nunca antes ni durante el gesto).
     subclip_send_requested = Signal()
 
+    # Selección rápida terminada (al soltar el clic derecho): (in_ratio, out_ratio), o
+    # (-1.0, -1.0) si quedó vacía. El Gestor no la usa; Herramientas IA la toma como el
+    # tramo a procesar.
+    lite_selection_changed = Signal(float, float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(70)
@@ -96,6 +101,12 @@ class AudioWaveformWidget(QWidget):
                 return None, None
             return min(self._lite_start_ratio, self._lite_end_ratio), max(self._lite_start_ratio, self._lite_end_ratio)
         return None, None
+
+    def set_lite_selection(self, in_ratio: float, out_ratio: float):
+        """Marca una selección rápida desde fuera (sin emitir lite_selection_changed)."""
+        self._lite_start_ratio = max(0.0, min(in_ratio, 1.0))
+        self._lite_end_ratio = max(0.0, min(out_ratio, 1.0))
+        self.update()
 
     def clear_lite_selection(self):
         """Limpia la selección rápida."""
@@ -362,6 +373,9 @@ class AudioWaveformWidget(QWidget):
             if self._lite_start_ratio is not None and self._lite_end_ratio is not None:
                 if abs(self._lite_start_ratio - self._lite_end_ratio) < 0.005:
                     self.clear_lite_selection()
+            in_ratio, out_ratio = self.get_lite_selection()
+            self.lite_selection_changed.emit(-1.0 if in_ratio is None else in_ratio,
+                                             -1.0 if out_ratio is None else out_ratio)
         elif event.button() == Qt.LeftButton:
             self._pending_subclip_drag = False
             if getattr(self, "_armed_for_editor_send", False):

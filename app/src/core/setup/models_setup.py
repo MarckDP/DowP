@@ -42,8 +42,17 @@ def _platform_value(value):
     return value
 
 
-def _model_path(model_info: dict) -> str:
-    return os.path.join(get_models_dir(), model_info["folder"], model_info["file"])
+def get_rembg_model_path(model_info: dict) -> str:
+    """Ruta del .onnx de un modelo de Eliminar Fondo. Los importados a mano guardan
+    la ruta completa del archivo del usuario ("path"): no se copian a la carpeta de
+    modelos, así que no dependen de ella ni se mueven con ella. El resto vive en la
+    carpeta de modelos (y los importados de antes, que sí se copiaban, en rembg_custom/)."""
+    if model_info.get("path"):
+        return model_info["path"]
+    return os.path.join(get_models_dir(), model_info.get("folder", "rembg"), model_info["file"])
+
+
+_model_path = get_rembg_model_path
 
 
 def is_rembg_model_installed(model_info: dict) -> bool:
@@ -247,11 +256,16 @@ def _safe_filename(name: str) -> str:
     return base
 
 
-def import_custom_rembg_model(display_name: str, source_path: str, input_size: tuple[int, int]) -> tuple[bool, str]:
-    """Copia un .onnx externo a bin/models/rembg_custom/ y lo registra en
-    config.json bajo CUSTOM_REMBG_FAMILY -- a partir de aquí se comporta como
-    cualquier otro modelo del catálogo (aparece en el popover de Eliminar Fondo,
-    lo puede usar rembg_engine.py, se puede borrar desde Ajustes > Modelos)."""
+def import_custom_rembg_model(display_name: str, source_path: str, input_size: tuple[int, int],
+                              copy_to_models: bool = False) -> tuple[bool, str]:
+    """Registra un .onnx del usuario en config.json bajo CUSTOM_REMBG_FAMILY: a partir
+    de aquí se comporta como cualquier otro modelo del catálogo (aparece en el popover
+    de Eliminar Fondo, lo usa rembg_engine.py, se gestiona desde Ajustes > Modelos).
+
+    Por defecto NO se copia: se guarda la ruta del archivo donde el usuario lo tiene
+    (sin duplicar el espacio, y sin moverse al cambiar la carpeta de modelos). Con
+    `copy_to_models` se copia a <carpeta de modelos>/rembg_custom/, para quien importa
+    desde algo que luego borra o desconecta (una descarga, una memoria USB)."""
     from core.utils.config_manager import get_config, save_config
 
     display_name = (display_name or "").strip()
@@ -261,6 +275,23 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
         return False, QCoreApplication.translate("models_setup", "No se encontró el archivo: {0}").format(source_path)
     if not source_path.lower().endswith(".onnx"):
         return False, QCoreApplication.translate("models_setup", "El archivo elegido no es un .onnx.")
+
+    height, width = input_size
+    if not copy_to_models:
+        cfg = get_config()
+        custom = dict(cfg.get(_CUSTOM_REMBG_CONFIG_KEY, {}))
+        custom[display_name] = {
+            "path": os.path.abspath(source_path),
+            "file": os.path.basename(source_path),
+            "folder": "",
+            "input_size": (height, width),
+            "url": "",  # importado a mano -- nunca se descarga solo, no aplica get_install_info/gated.
+        }
+        cfg[_CUSTOM_REMBG_CONFIG_KEY] = custom
+        save_config(cfg)
+        logger.info(f"Modelos IA: modelo personalizado registrado '{display_name}' en su ubicación "
+                    f"({source_path}, input_size={input_size})")
+        return True, QCoreApplication.translate("models_setup", "Modelo importado correctamente.")
 
     target_dir = os.path.join(get_models_dir(), _CUSTOM_REMBG_FOLDER)
     os.makedirs(target_dir, exist_ok=True)
@@ -284,7 +315,6 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
         logger.error(f"Modelos IA: no se pudo copiar el modelo personalizado: {e}")
         return False, QCoreApplication.translate("models_setup", "No se pudo copiar el archivo: {0}").format(e)
 
-    height, width = input_size
     cfg = get_config()
     custom = dict(cfg.get(_CUSTOM_REMBG_CONFIG_KEY, {}))
     custom[display_name] = {
@@ -299,27 +329,70 @@ def import_custom_rembg_model(display_name: str, source_path: str, input_size: t
     return True, QCoreApplication.translate("models_setup", "Modelo importado correctamente.")
 
 
-def delete_custom_rembg_model(display_name: str) -> bool:
-    """Borra el archivo y la entrada del registro de un modelo importado."""
+def is_custom_rembg_model_external(model_info: dict) -> bool:
+    """True si el importado apunta al archivo del usuario (no es una copia de DowP)."""
+    return bool((model_info or {}).get("path"))
+
+
+def remove_custom_rembg_model(display_name: str, delete_file: bool = False,
+                              permanent: bool = False) -> tuple[bool, str]:
+    """Quita un modelo importado de la lista. Con `delete_file`, además manda su archivo
+    a la Papelera (o lo borra para siempre con `permanent`, si la Papelera no está
+    disponible). Devuelve (ok, motivo): motivo "no_trash" = no se pudo mandar a la
+    Papelera y no se tocó nada (quien llama puede ofrecer borrarlo para siempre)."""
     from core.utils.config_manager import get_config, save_config
 
     cfg = get_config()
     custom = dict(cfg.get(_CUSTOM_REMBG_CONFIG_KEY, {}))
-    model_info = custom.pop(display_name, None)
+    model_info = custom.get(display_name)
     if model_info is None:
-        return False
+        return False, "missing"
 
-    try:
-        path = _model_path(model_info)
+    if delete_file:
+        path = get_rembg_model_path(model_info)
         if os.path.exists(path):
-            os.remove(path)
-    except Exception as e:
-        logger.error(f"Modelos IA: no se pudo borrar el archivo de '{display_name}': {e}")
-        return False
+            if permanent:
+                try:
+                    os.remove(path)
+                except Exception as e:
+                    logger.error(f"Modelos IA: no se pudo borrar el archivo de '{display_name}': {e}")
+                    return False, str(e)
+            else:
+                from PySide6.QtCore import QFile
+                # Según la versión de PySide devuelve bool o (bool, ruta en la Papelera).
+                result = QFile.moveToTrash(path)
+                trashed = result[0] if isinstance(result, tuple) else bool(result)
+                if not trashed:
+                    return False, "no_trash"
 
+    custom.pop(display_name, None)
     cfg[_CUSTOM_REMBG_CONFIG_KEY] = custom
     save_config(cfg)
-    logger.info(f"Modelos IA: modelo personalizado eliminado '{display_name}'")
+    logger.info(f"Modelos IA: modelo personalizado '{display_name}' quitado de la lista "
+                f"({'archivo enviado a la Papelera' if delete_file and not permanent else 'archivo borrado' if delete_file else 'archivo intacto'}).")
+    return True, ""
+
+
+def delete_custom_rembg_model(display_name: str) -> bool:
+    """Compatibilidad: quita el modelo de la lista y manda su archivo a la Papelera."""
+    return remove_custom_rembg_model(display_name, delete_file=True)[0]
+
+
+def relocate_custom_rembg_model(display_name: str, new_path: str) -> bool:
+    """El archivo de un importado se movió: apuntar la entrada a su nueva ubicación."""
+    from core.utils.config_manager import get_config, save_config
+    if not new_path or not os.path.isfile(new_path):
+        return False
+    cfg = get_config()
+    custom = dict(cfg.get(_CUSTOM_REMBG_CONFIG_KEY, {}))
+    if display_name not in custom:
+        return False
+    info = dict(custom[display_name])
+    info.update({"path": os.path.abspath(new_path), "file": os.path.basename(new_path), "folder": ""})
+    custom[display_name] = info
+    cfg[_CUSTOM_REMBG_CONFIG_KEY] = custom
+    save_config(cfg)
+    logger.info(f"Modelos IA: '{display_name}' ahora apunta a {new_path}")
     return True
 
 
@@ -329,7 +402,6 @@ def delete_custom_rembg_model(display_name: str) -> bool:
 # funciones propias: un modelo puede ser VARIOS archivos (el .onnx + su
 # model.onnx_data, ver "extra_files"), y solo está instalado si están todos.
 # ═════════════════════════════════════════════════════════════════════════════
-
 def get_depth_families() -> dict:
     """Catálogo de modelos de profundidad -- fuente única para la UI y el motor
     (mismo papel que get_all_rembg_families(), sin modelos importados).

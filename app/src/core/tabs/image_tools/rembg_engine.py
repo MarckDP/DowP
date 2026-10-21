@@ -20,7 +20,6 @@ from core.logger.logger_manager import logger
 from core.setup.models_setup import get_all_rembg_families
 from core.utils import onnx_sessions
 from core.utils.onnx_providers import is_gpu_failure
-from core.utils.paths import get_models_dir
 from PySide6.QtCore import QCoreApplication
 
 _DEFAULT_INPUT_SIZE = (1024, 1024)
@@ -41,7 +40,9 @@ def _model_info(family: str | None, model: str | None) -> dict | None:
 
 
 def _model_path(model_info: dict) -> str:
-    return os.path.join(get_models_dir(), model_info.get("folder", "rembg"), model_info["file"])
+    # Misma regla que Ajustes > Modelos: los importados apuntan al archivo del usuario.
+    from core.setup.models_setup import get_rembg_model_path
+    return get_rembg_model_path(model_info)
 
 
 def _get_session(model_path: str, use_gpu: bool):

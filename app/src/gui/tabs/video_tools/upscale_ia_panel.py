@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSizePolicy, QComboBox,
     QStackedWidget,
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import QCoreApplication, Signal, Qt
 
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
@@ -58,6 +58,13 @@ def ia_function_of(settings: dict | None) -> str:
     return (settings or {}).get("ia_function") or FUNCTION_UPSCALE
 
 
+def ia_settings_ready(settings: dict | None) -> bool:
+    """¿El motor/modelo de un dict de ajustes de IA (un preajuste guardado) está en
+    disco y no a medio descargar? Ver gui/widgets/ia_preset_models.py."""
+    from gui.widgets.ia_preset_models import preset_model_ready
+    return preset_model_ready(settings)
+
+
 class UpscaleIAPanel(QWidget):
     """Pestaña "Herramientas IA" de Herramientas Multimedia: Reescalado IA, Mapa de
     Profundidad o Mapa de Normales, elegido arriba de todo.
@@ -84,7 +91,7 @@ class UpscaleIAPanel(QWidget):
         self._shown_function = None
         self._init_ui()
 
-    def _card(self, parent, title: str):
+    def _card(self, parent, title: str, header: QWidget | None = None):
         frame = QFrame(parent)
         frame.setObjectName("advancedCard")
         set_themed_style(frame, lambda: f"""
@@ -98,10 +105,14 @@ class UpscaleIAPanel(QWidget):
         v = QVBoxLayout(frame)
         v.setContentsMargins(12, 10, 12, 12)
         v.setSpacing(8)
-        lbl = QLabel(title, frame)
-        lbl.setObjectName("sectionTitle")
-        lbl.setAlignment(Qt.AlignCenter)
-        v.addWidget(lbl)
+        if header is not None:
+            # Cabecera propia en lugar del título (ej. la casilla "Recodificar").
+            v.addWidget(header)
+        else:
+            lbl = QLabel(title, frame)
+            lbl.setObjectName("sectionTitle")
+            lbl.setAlignment(Qt.AlignCenter)
+            v.addWidget(lbl)
         return frame, v
 
     def _combo(self, parent):
@@ -124,7 +135,9 @@ class UpscaleIAPanel(QWidget):
         scroll.setObjectName("upscaleIAScroll")
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Sin scroll horizontal mientras quepa; si la ventana es tan angosta que no entra,
+        # mejor una barra que controles cortados (ver content_min_width).
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll.viewport().setAutoFillBackground(False)
         self.setStyleSheet("""
             QWidget#upscaleIAPanel { background: transparent; }
@@ -196,6 +209,18 @@ class UpscaleIAPanel(QWidget):
         self.stack.addWidget(self.upscale_content)
         self.stack.addWidget(self.depth_content)
         self.stack.addWidget(self.normal_content)
+        # Estos contenidos vienen de los popovers del Editor de Imagen, pensados para un
+        # globo de ancho fijo: sus combos se ensanchan hasta el nombre más largo de la
+        # lista (el de Motor de Profundidad pedía ~330 px). Aquí recortan su texto y
+        # crecen con la columna, así las opciones caben en ~350 px sin scroll horizontal.
+        # Solo en estas copias: los popovers del Editor quedan como estaban.
+        for page in (self.upscale_content, self.depth_content, self.normal_content):
+            for combo in page.findChildren(QComboBox):
+                combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+                combo.setMinimumContentsLength(8)
+                policy = combo.sizePolicy()
+                policy.setHorizontalPolicy(QSizePolicy.Expanding)
+                combo.setSizePolicy(policy)
         layout.addWidget(self.stack)
         layout.addWidget(frame_video)
 
@@ -209,6 +234,8 @@ class UpscaleIAPanel(QWidget):
         # Recodificación, para poder combinar los dos (correr la función de IA y
         # después Recodificación encadenados) -- mismo molde que
         # AdvancedRecodePanel (guarda) + PresetsPanel (elige).
+        # Aquí solo se guarda: la lista para elegir (las tres funciones en un solo menú)
+        # vive en la pestaña Preajustes de Herramientas IA, y en Multimedia y Posprocesar.
         frame_presets, pv = self._card(content, self.tr("Preajustes"))
         self.preset_bar = PresetBar(
             _PRESET_NAMESPACE, self.get_settings, frame_presets,
@@ -222,9 +249,37 @@ class UpscaleIAPanel(QWidget):
         layout.addStretch(1)
         scroll.setWidget(content)
         outer.addWidget(scroll)
+        self._scroll = scroll
+        self._content = content
+        self._content_layout = layout
 
         self.function_selector.mode_changed.connect(self._on_function_changed)
         self._on_function_changed()
+
+    def content_min_width(self) -> int:
+        """Ancho que necesita el contenido para no cortarse, con la barra de scroll
+        vertical incluida (el QScrollArea no lo propaga en su minimumSizeHint)."""
+        bar = self._scroll.verticalScrollBar().sizeHint().width()
+        frame = 2 * self._scroll.frameWidth()
+        return self._content.minimumSizeHint().width() + bar + frame + 4
+
+    def max_content_min_width(self) -> int:
+        """Como content_min_width(), pero con la función que MÁS ancho pide, no la
+        elegida: así quien decide el layout con esto no cambia de opinión al pasar de
+        Reescalado a Profundidad o Normales."""
+        margins = self._content_layout.contentsMargins()
+        widest_page = max(self.stack.widget(i).minimumSizeHint().width() for i in range(self.stack.count()))
+        content = max(self._content.minimumSizeHint().width(), widest_page + margins.left() + margins.right())
+        bar = self._scroll.verticalScrollBar().sizeHint().width()
+        return content + bar + 2 * self._scroll.frameWidth() + 4
+
+    def add_card(self, title: str, header: QWidget | None = None):
+        """Tarjeta nueva al final del panel, dentro del mismo scroll y con el mismo
+        estilo (la usa la pestaña Herramientas IA para "Recodificar"). `header`
+        reemplaza al título. Devuelve (frame, layout)."""
+        frame, v = self._card(self._content, title, header)
+        self._content_layout.insertWidget(self._content_layout.count() - 1, frame)
+        return frame, v
 
     # ─── Internos ────────────────────────────────────────────────────────────
 
@@ -246,6 +301,14 @@ class UpscaleIAPanel(QWidget):
             self._container_by_function[self._shown_function] = self.combo_container.currentData()
         self._shown_function = function
         self.stack.setCurrentIndex(self._function_ids.index(function))
+        # El apilado toma el ancho de su página MÁS ancha aunque esté oculta (por eso
+        # Normales pedía lo mismo que Profundidad): las ocultas no cuentan.
+        for index in range(self.stack.count()):
+            page = self.stack.widget(index)
+            visible = index == self.stack.currentIndex()
+            page.setSizePolicy(QSizePolicy.Preferred if visible else QSizePolicy.Ignored,
+                               QSizePolicy.Preferred if visible else QSizePolicy.Ignored)
+        self.stack.updateGeometry()
         self.frame_video.setVisible(is_map)
         self.output_options.set_kind("normals" if function == FUNCTION_NORMALS else
                                      "gray" if function == FUNCTION_DEPTH else "color")
@@ -303,16 +366,32 @@ class UpscaleIAPanel(QWidget):
 
     # ─── API pública (mismo contrato que los demás tabs de EncodingOptionsWidget) ──
 
-    def is_valid(self) -> bool:
+    def _current_content(self):
         function = self.current_function()
         if function == FUNCTION_DEPTH:
-            return self.depth_content.is_valid_selection()
+            return self.depth_content
         if function == FUNCTION_NORMALS:
-            return self.normal_content.is_valid_selection()
-        return self.upscale_content.is_valid_selection()
+            return self.normal_content
+        return self.upscale_content
+
+    def is_valid(self) -> bool:
+        """Hay motor y modelo elegidos Y el modelo ya está en disco: mientras se
+        descarga (o si no se descargó) no se puede iniciar."""
+        return self._current_content().is_ready()
+
+    @staticmethod
+    def start_text(function: str) -> str:
+        if function == FUNCTION_DEPTH:
+            return QCoreApplication.translate("UpscaleIAPanel", "Iniciar Mapa de Profundidad")
+        if function == FUNCTION_NORMALS:
+            return QCoreApplication.translate("UpscaleIAPanel", "Iniciar Mapa de Normales")
+        return QCoreApplication.translate("UpscaleIAPanel", "Iniciar Reescalado")
 
     def get_status(self) -> tuple[bool, str]:
         function = self.current_function()
+        content = self._current_content()
+        if content.is_valid_selection() and not content.is_ready():
+            return False, self.tr("El modelo elegido todavía no está descargado.")
         if function == FUNCTION_DEPTH:
             if self.is_valid():
                 return True, self.tr("Iniciar Mapa de Profundidad")

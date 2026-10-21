@@ -2002,6 +2002,9 @@ class ImageToolsTab(QWidget):
         self._convert_worker = None
         self._update_convert_button_state()
         self.image_queue.queue_updated.connect(lambda _count: self._update_convert_button_state())
+        # Elegir, cambiar o terminar de descargar el modelo de una herramienta de IA.
+        for content in self._ai_popover_contents():
+            content.selection_changed.connect(lambda *_: self._update_convert_button_state())
         self.image_queue.queue_updated.connect(lambda _count: self._prune_history())
         return container
 
@@ -2195,6 +2198,12 @@ class ImageToolsTab(QWidget):
     def _on_convert_validity_changed(self, _is_valid: bool):
         self._update_convert_button_state()
 
+    def _ai_popover_contents(self):
+        return [content for content in (
+            getattr(self, "upscale_popover_content", None), getattr(self, "rembg_popover_content", None),
+            getattr(self, "depth_popover_content", None), getattr(self, "normal_popover_content", None),
+        ) if content is not None]
+
     def _update_convert_button_state(self):
         """Habilita "Iniciar Proceso" solo si la cola tiene archivos y las opciones
         actuales son válidas (ej. ICO necesita al menos un tamaño marcado, ver
@@ -2206,11 +2215,17 @@ class ImageToolsTab(QWidget):
             return
         has_files = bool(self.image_queue.get_all_filepaths()) if hasattr(self, "image_queue") else False
         is_valid = self.convert_panel.is_valid() if hasattr(self, "convert_panel") else True
-        can_start = has_files and is_valid
+        # Una herramienta de IA activa con su modelo aún sin descargar (o descargándose)
+        # no puede correr: antes el botón se activaba igual al elegir el modelo.
+        models_ready = all(
+            content.is_ready() for content in self._ai_popover_contents() if content.is_active())
+        can_start = has_files and is_valid and models_ready
         self.btn_convert.setEnabled(can_start)
         if not can_start:
             if not has_files:
                 self.btn_convert.setToolTip(self.tr("Agrega al menos una imagen a la lista para iniciar el proceso"))
+            elif not models_ready:
+                self.btn_convert.setToolTip(self.tr("El modelo elegido todavía no está descargado"))
             else:
                 self.btn_convert.setToolTip(self.tr("Revisa la configuración de conversión para continuar"))
         else:

@@ -37,6 +37,7 @@ from core.logger.logger_manager import logger
 from core.setup.ffmpeg_setup import get_ffmpeg_path
 from core.tabs.video_tools.ia_video_common import (
     CONTAINERS_16BIT, alpha_supported, build_video_encode_args, container_of, probe_video_source, trim_input_args,
+    trimmed_video_duration, video_length_cap,
 )
 
 # Peso del fotograma NUEVO en el suavizado temporal (1.0 = sin suavizado).
@@ -180,7 +181,9 @@ def run_frame_video(input_path: str, output_path: str, make_processor, *, encode
         graph += ";[d]null[v]"
     encode_cmd += ["-filter_complex", graph, "-map", "[v]"]
     if keep_audio:
-        encode_cmd += ["-map", "1:a:0?", "-c:a", "copy", "-shortest"]
+        # Sin -shortest: ver video_length_cap.
+        video_span = trimmed_video_duration(source["duration"], trim_in, trim_out)
+        encode_cmd += ["-map", "1:a:0?", "-c:a", "copy", *video_length_cap(video_span, fps)]
     else:
         encode_cmd += ["-an"]
     encode_cmd += [*video_args, output_path]
@@ -205,16 +208,22 @@ def run_frame_video(input_path: str, output_path: str, make_processor, *, encode
     threading.Thread(target=_drain, args=(encoder.stderr, enc_err), daemon=True).start()
 
     def _kill():
-        cancellation_event.set()
         for proc in (decoder, encoder):
             try:
                 proc.kill()
             except Exception:
                 pass
 
+    def _cancel():
+        # Solo la cancelación del usuario marca el evento. Antes _kill() lo marcaba
+        # siempre, también al cortar ffmpeg por un error, y el error real terminaba
+        # informado como "Cancelado por el usuario." (y el trabajo como CANCELADO).
+        cancellation_event.set()
+        _kill()
+
     if worker_ref is not None:
         worker_ref.downloader = encoder
-        worker_ref.cancel = _kill
+        worker_ref.cancel = _cancel
 
     total = max(1, int(round(duration_sec * fps)))
     frame_bytes = proc_w * proc_h * 3

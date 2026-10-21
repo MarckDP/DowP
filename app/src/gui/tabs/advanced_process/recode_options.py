@@ -38,10 +38,9 @@ class RecodeOptionsWidget(QFrame):
     independientes y COMBINABLES -- Recodificación (switch + PresetBar sobre
     "video_tools/avanzado") y "Herramientas IA" (switch + PresetBar sobre
     "video_tools/ia_tools", namespace compartido -- ver
-    core.utils.preset_manager.IA_POST_DOWNLOAD_FUNCTIONS: solo Reescalado; los
-    preajustes de Mapa de Profundidad no se listan aquí porque solo corren en
-    Herramientas Multimedia) -- elegir solo una corre solo esa al terminar la
-    descarga; elegir las dos las encadena (Reescalado IA primero,
+    core.utils.preset_manager.IA_POST_DOWNLOAD_FUNCTIONS: Reescalado, Mapa de
+    Profundidad y Mapa de Normales) -- elegir solo una corre solo esa al terminar la
+    descarga; elegir las dos las encadena (la etapa de IA primero,
     Recodificación después, mismo orden y mismas razones que en Herramientas
     Multimedia -- ver core/tabs/video_tools/upscale_chain.py). Antes se
     llamaba "Recodificar" y tenía una sola sección -- renombrada al agregar
@@ -183,7 +182,7 @@ class RecodeOptionsWidget(QFrame):
 
         body_layout.addLayout(naming_row)
 
-        # ── Herramientas IA (hoy solo Reescalado) -- segunda sección, combinable con la de arriba ──
+        # ── Herramientas IA (Reescalado, Profundidad o Normales) -- segunda sección, combinable con la de arriba ──
         # (ver docstring de la clase): mismo molde (switch + PresetBar +
         # prefijo/sufijo), namespace compartido "video_tools/ia_tools". El
         # prefijo/sufijo de acá solo se usa cuando Reescalado IA corre SOLO
@@ -202,7 +201,7 @@ class RecodeOptionsWidget(QFrame):
 
         switch_row_upscale = QHBoxLayout()
         switch_row_upscale.setContentsMargins(0, 0, 0, 0)
-        self.switch_upscale = QCheckBox(self.tr("Reescalar con IA al finalizar"))
+        self.switch_upscale = QCheckBox(self.tr("Procesar con IA al finalizar"))
         self.switch_upscale.setCursor(Qt.PointingHandCursor)
         switch_row_upscale.addWidget(self.switch_upscale)
         switch_row_upscale.addStretch()

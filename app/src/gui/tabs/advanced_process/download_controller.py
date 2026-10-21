@@ -14,7 +14,7 @@ from core.utils.preset_manager import (
 )
 from core.utils.output_artifacts import OutputArtifactTracker, find_actual_downloaded_file, sanitize_filename
 from core.utils.file_conflict_manager import quarantine_for_recode, commit_backup, rollback_backup, predict_final_extension
-from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
+from core.tabs.video_tools.upscale_chain import ia_job_spec, ia_job_title, start_upscale_stage, probe_fps_and_duration
 from core.utils.queue_manager import ORIGIN_ADVANCED
 from core.utils.sound_notifier import (get_sound_notifier, SOURCE_ADVANCED,
                                        SOURCE_ADVANCED_SOLO)
@@ -120,6 +120,18 @@ class DownloadController(QObject):
                     continue
                 if not job.request_data and job.video_data:
                     job.request_data = self.tab._build_default_request_data(job.video_data, job.title)
+
+        # Cada trabajo guarda su propio Posprocesar: revisar los preajustes de IA de
+        # todos los pendientes antes de arrancar (si no, la etapa de IA fallaría al final).
+        ai_presets = []
+        for job in self.queue_mgr.get_all_jobs():
+            if job.status != "PENDING" or getattr(job, "origin", None) != ORIGIN_ADVANCED:
+                continue
+            data = (job.config if job.job_type == "PLAYLIST" else job.request_data) or {}
+            if data.get("upscale_enabled"):
+                ai_presets.append(data.get("upscale_preset_name"))
+        if ai_presets and not self.tab.recode_controller.ensure_ai_models_ready(ai_presets):
+            return
         self.tab._apply_global_output_path()
 
         self.queue_mgr.start_queue(ORIGIN_ADVANCED)
@@ -134,6 +146,10 @@ class DownloadController(QObject):
         """Inicia una descarga directa en modo SOLO sin usar el gestor de colas."""
         req_data = self.tab._collect_request_data()
         if not req_data:
+            return
+        # Posprocesar > IA con el modelo sin descargar: ofrecerlo y no empezar todavía.
+        if req_data.get("upscale_enabled") and not self.tab.recode_controller.ensure_ai_models_ready(
+                [req_data.get("upscale_preset_name")]):
             return
 
         self.cancellation_event.clear()
@@ -820,7 +836,7 @@ class DownloadController(QObject):
                 chain_temp_dir = tempfile.mkdtemp(prefix="dowp_chain_ap_")
                 job_id, _intermediate_path = start_upscale_stage(
                     self.queue_mgr, backup_path, upscale_settings, chain_temp_dir,
-                    fps, duration_sec, title=f"Reescalado IA: {title}",
+                    fps, duration_sec, title=ia_job_title(upscale_settings, title),
                     origin=ORIGIN_ADVANCED,
                 )
                 chain_next = {
@@ -829,20 +845,21 @@ class DownloadController(QObject):
                     "recode_prefix": request_data.get("recode_filename_prefix") or "",
                     "recode_suffix": request_data.get("recode_filename_suffix") or "",
                 }
-                stage_label = self.tr("Reescalando con IA...")
+                stage_label = self._ia_stage_label(upscale_settings)
 
         if chain_next is None:
             if upscale_enabled and not recode_enabled:
                 fps, real_duration = probe_fps_and_duration(backup_path, duration_sec)
+                job_type, options_key = ia_job_spec(settings)
                 job_id = self.queue_mgr.add_job({
                     "input_path": backup_path,
                     "output_path": out_file,
-                    "upscale_options": settings,
+                    options_key: settings,
                     "fps": fps,
                     "duration_sec": real_duration,
-                    "title": f"Reescalado IA: {title}",
-                }, "UPSCALE_VIDEO", origin=ORIGIN_ADVANCED)
-                stage_label = self.tr("Reescalando con IA...")
+                    "title": ia_job_title(settings, title),
+                }, job_type, origin=ORIGIN_ADVANCED)
+                stage_label = self._ia_stage_label(settings)
             else:
                 job_id = self.queue_mgr.add_job({
                     "input_path": backup_path,
@@ -861,6 +878,7 @@ class DownloadController(QObject):
             "fragment_position": fragment_position,
             "fragment_total": fragment_total,
             "chain_next": chain_next,
+            "stage_label": stage_label,
         }
 
         status_text = self._recode_status_text(fragment_position, fragment_total, label=stage_label)
@@ -884,12 +902,21 @@ class DownloadController(QObject):
                 # "Descargado" o la velocidad final) hasta el primer tick de ffmpeg.
                 card.update_progress(0, speed_text="", status_text=status_text)
 
+    def _ia_stage_label(self, settings):
+        """Texto de la fila mientras corre la etapa de IA, según la función del preajuste."""
+        job_type, _key = ia_job_spec(settings)
+        if job_type == "DEPTH_VIDEO":
+            return self.tr("Creando mapa de profundidad...")
+        if job_type == "NORMAL_VIDEO":
+            return self.tr("Creando mapa de normales...")
+        return self.tr("Reescalando con IA...")
+
     def _on_recode_job_progress(self, job_id, percent, speed, eta):
         target = self._recode_by_download.get(job_id)
         if target is None:
             return
         state = self._recode_state.get(job_id, {})
-        label = self.tr("Reescalando con IA...") if state.get("chain_next") else None
+        label = state.get("stage_label")
         status_text = self._recode_status_text(state.get("fragment_position"), state.get("fragment_total"), label=label)
         if target == _SOLO_RECODE_KEY:
             self.tab.output_options.set_progress(int(percent), f"{status_text} {int(percent)}%", "downloading")

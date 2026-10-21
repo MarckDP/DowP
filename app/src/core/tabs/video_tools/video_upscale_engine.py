@@ -24,7 +24,9 @@ from PySide6.QtCore import QCoreApplication
 
 from core.logger.logger_manager import logger
 from core.setup.ffmpeg_setup import get_ffmpeg_path
-from core.tabs.video_tools.ia_video_common import build_video_encode_args, container_of, trim_input_args
+from core.tabs.video_tools.ia_video_common import (
+    build_video_encode_args, container_of, trim_input_args, video_length_cap,
+)
 
 # Los motores NCNN escriben siempre PNG (-f png); la extracción, JPG o PNG (ver arriba).
 _FRAME_NAME_PATTERN = "frame_%06d.png"
@@ -198,8 +200,14 @@ def reassemble_video(frames_dir: str, original_input_path: str, output_path: str
     frame_pattern = os.path.join(frames_dir, _FRAME_NAME_PATTERN)
     cmd = [ffmpeg_exe, "-y", "-framerate", str(fps or 30.0), "-i", frame_pattern]
     if keep_audio:
+        # Sin -shortest (ver ia_video_common.video_length_cap): la duración del video
+        # es exacta, los fotogramas ya están en disco.
+        frame_count = sum(1 for name in os.listdir(frames_dir)
+                          if name.startswith("frame_") and name.endswith(".png"))
+        video_span = frame_count / (fps or 30.0)
         cmd += [*trim_input_args(trim_in, trim_out), "-i", original_input_path,
-                "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy", "-shortest"]
+                "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy",
+                *video_length_cap(video_span, fps or 30.0)]
     else:
         cmd += ["-map", "0:v:0", "-an"]
     cmd += [*build_video_encode_args(container_of(output_path), alpha=alpha), output_path]

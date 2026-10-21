@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, Signal, QCoreApplication
+from PySide6.QtCore import Qt, Signal, QCoreApplication, QTimer
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -13,7 +13,7 @@ import os
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.dialogs.dialogs import SavePresetDialog
 from core.logger.logger_manager import logger
-from core.utils.preset_manager import get_preset_manager, PRESET_FUNCTIONS, UNSPECIFIED_FUNCTION_LABEL
+from core.utils.preset_manager import get_preset_manager, IA_TOOLS_NAMESPACE, PRESET_FUNCTIONS, UNSPECIFIED_FUNCTION_LABEL
 from core.utils.watermark_builder import check_watermark_file
 
 _NO_PRESET_DATA = None  # dato del item "Sin preset" (siempre el primero del combo)
@@ -247,6 +247,18 @@ class PresetBar(QWidget):
         if self._active_name:
             logger.info(f"PresetBar [{self.namespace}]: Preset '{self._active_name}' seleccionado.")
         self.preset_applied.emit(self._active_name or "")
+        # Un preajuste de IA cuyo modelo no está en disco: ofrecer descargarlo (o ir a
+        # Ajustes > Modelos). Solo al elegirlo a mano: refresh()/restores bloquean las
+        # señales. Diferido un ciclo para no abrir el modal con el desplegable cerrándose.
+        if self._active_name and self.namespace == IA_TOOLS_NAMESPACE:
+            name = self._active_name
+            QTimer.singleShot(0, lambda: self._offer_model_download(name))
+
+    def _offer_model_download(self, name: str):
+        if name != self._active_name:
+            return
+        from gui.widgets.ia_preset_models import offer_preset_model_download
+        offer_preset_model_download(self, get_preset_manager().get_settings(self.namespace, name))
 
     def _on_save_clicked(self):
         manager = get_preset_manager()

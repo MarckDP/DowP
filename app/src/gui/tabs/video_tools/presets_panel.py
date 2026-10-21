@@ -261,6 +261,12 @@ class PresetsPanel(QWidget):
             return False, self.tr("Selecciona al menos un preajuste")
         if has_recode and self._warning_text:
             return False, self.tr("Resuelve el aviso de la marca de agua")
+        if has_upscale:
+            # Con el modelo del preajuste de IA sin descargar no se puede iniciar (el
+            # menú ofrece descargarlo al elegirlo, ver ia_preset_models.py).
+            from gui.widgets.ia_preset_models import preset_model_ready
+            if not preset_model_ready(self.get_upscale_settings()):
+                return False, self.tr("El modelo del preajuste de IA todavía no está descargado")
         if has_upscale and not has_recode:
             # El mismo combo de IA trae preajustes de Reescalado y de los mapas
             # (ver upscale_ia_panel.ia_function_of).

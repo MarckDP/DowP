@@ -45,6 +45,7 @@ SOURCE_QUICK = "quick"
 SOURCE_ADVANCED = "advanced"
 SOURCE_ADVANCED_SOLO = "advanced_solo"
 SOURCE_VIDEO_TOOLS = "video_tools"
+SOURCE_AI_TOOLS = "ai_tools"
 SOURCE_IMAGE_TOOLS = "image_tools"
 
 KIND_SUCCESS = "success"

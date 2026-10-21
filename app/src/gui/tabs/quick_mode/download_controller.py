@@ -16,7 +16,7 @@ from core.utils.preset_manager import (
     build_recode_output_path, get_preset_manager, IA_TOOLS_NAMESPACE, ia_tools_fit, recode_preset_fits,
 )
 from core.utils.file_conflict_manager import quarantine_for_recode, rollback_backup
-from core.tabs.video_tools.upscale_chain import start_upscale_stage, probe_fps_and_duration
+from core.tabs.video_tools.upscale_chain import ia_job_spec, ia_job_title, start_upscale_stage, probe_fps_and_duration
 from core.tabs.quick_mode.quick_mode_logic import build_quick_request_data, reveal_in_file_manager
 from gui.tabs.advanced_process.workers import AnalysisWorker, DownloadWorker
 from gui.dialogs.playlist_selection_dialog import PlaylistSelectionDialog
@@ -1110,7 +1110,7 @@ class QuickDownloadController(QObject):
                 chain_temp_dir = tempfile.mkdtemp(prefix="dowp_chain_qm_")
                 job_id, _intermediate_path = start_upscale_stage(
                     self.queue_mgr, backup_path, upscale_settings, chain_temp_dir,
-                    fps, duration_sec, title=f"Reescalado IA: {title}",
+                    fps, duration_sec, title=ia_job_title(upscale_settings, title),
                     origin=ORIGIN_QUICK,
                 )
                 chain_next = {
@@ -1119,20 +1119,21 @@ class QuickDownloadController(QObject):
                     "recode_prefix": request_data.get("recode_filename_prefix") or "",
                     "recode_suffix": request_data.get("recode_filename_suffix") or "",
                 }
-                stage_label = self.tr("Reescalando con IA...")
+                stage_label = self._ia_stage_label(upscale_settings)
 
         if chain_next is None:
             if upscale_enabled and not recode_enabled:
                 fps, duration_sec = probe_fps_and_duration(backup_path, duration_sec)
+                job_type, options_key = ia_job_spec(settings)
                 job_id = self.queue_mgr.add_job({
                     "input_path": backup_path,
                     "output_path": out_file,
-                    "upscale_options": settings,
+                    options_key: settings,
                     "fps": fps,
                     "duration_sec": duration_sec,
-                    "title": f"Reescalado IA: {title}",
-                }, "UPSCALE_VIDEO", origin=ORIGIN_QUICK)
-                stage_label = self.tr("Reescalando con IA...")
+                    "title": ia_job_title(settings, title),
+                }, job_type, origin=ORIGIN_QUICK)
+                stage_label = self._ia_stage_label(settings)
             else:
                 job_id = self.queue_mgr.add_job({
                     "input_path": backup_path,
@@ -1151,6 +1152,7 @@ class QuickDownloadController(QObject):
             "fragment_position": fragment_position,
             "fragment_total": fragment_total,
             "chain_next": chain_next,
+            "stage_label": stage_label,
         }
 
         estado = self._recode_status_text(fragment_position, fragment_total, label=stage_label)
@@ -1167,13 +1169,22 @@ class QuickDownloadController(QObject):
         self.queue_mgr.start_queue(ORIGIN_QUICK)
         return True
 
+    def _ia_stage_label(self, settings):
+        """Texto de la fila mientras corre la etapa de IA, según la función del preajuste."""
+        job_type, _key = ia_job_spec(settings)
+        if job_type == "DEPTH_VIDEO":
+            return self.tr("Creando mapa de profundidad...")
+        if job_type == "NORMAL_VIDEO":
+            return self.tr("Creando mapa de normales...")
+        return self.tr("Reescalando con IA...")
+
     def _on_recode_job_progress(self, job_id, percent, speed, eta):
         row = self._recode_by_download.get(job_id)
         if row is None:
             return
         info = f"{speed} | {eta}" if speed and eta else (speed or eta or "")
         state = self._recode_state.get(job_id, {})
-        label = self.tr("Reescalando con IA...") if state.get("chain_next") else None
+        label = state.get("stage_label")
         status = self._recode_status_text(state.get("fragment_position"), state.get("fragment_total"), label=label)
         row.update_progress(percent, info=info, status=status)
 

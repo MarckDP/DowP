@@ -434,6 +434,10 @@ class QuickModeTab(QWidget):
             self._open_search(url)
             return
 
+        # Posprocesar > IA con el modelo sin descargar: ofrecerlo y no empezar todavía.
+        if not self.recode_controller.ensure_ai_models_ready():
+            return
+
         # Delegar la descarga al controlador
         self.controller.start_download_flow(
             url=url,
@@ -458,6 +462,8 @@ class QuickModeTab(QWidget):
         from gui.dialogs.media_search_dialog import MediaSearchDialog
         dialog = MediaSearchDialog(self, multi_select=True, initial_query=query)
         if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_items:
+            return
+        if not self.recode_controller.ensure_ai_models_ready():
             return
         if query and self.url_input.text().strip() == query:
             self.url_input.clear()

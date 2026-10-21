@@ -55,7 +55,7 @@ def format_model_label(name: str, size_bytes: int) -> str:
     return f"{name} ({compact})" if compact else name
 
 
-def open_models_settings(widget) -> bool:
+def open_models_settings(widget, focus_info: dict | None = None, focus_kind: str | None = None) -> bool:
     """Abre Ajustes > Modelos desde donde sea que esté `widget`, subiendo hasta
     la ventana principal para pedirle su overlay de ajustes. Devuelve False si no
     lo encuentra (widget suelto en un test, o la ventana todavía sin construir),
@@ -70,6 +70,11 @@ def open_models_settings(widget) -> bool:
         logger.warning("Modelos IA: no se encontró el overlay de Ajustes para abrir la página de Modelos.")
         return False
     overlay.open_page(SETTINGS_PAGE_MODELS)
+    # Con un modelo concreto (`focus_info`), la página abre su sección y familia y lo
+    # resalta, en vez de dejar al usuario arriba de todo buscándolo.
+    page = getattr(getattr(overlay, "settings_tab", None), "page_models", None)
+    if focus_info and page is not None and hasattr(page, "focus_model"):
+        page.focus_model(focus_info, focus_kind)
     return True
 
 
@@ -178,6 +183,10 @@ class ModelDownloadManager(QObject):
     started = Signal(str)                  # key
     progress_changed = Signal(int, str)    # percent, key
     finished = Signal(bool, str, str)      # success, message, key
+    # Cambió qué modelos hay en disco por algo que no es una descarga: la carpeta de
+    # modelos se cambió o se movió, o se borró un modelo desde Ajustes > Modelos. Quien
+    # decide si se puede iniciar (popovers, Herramientas IA, Multimedia) lo recalcula.
+    models_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -242,6 +251,15 @@ def confirm_model_download(parent, display_name: str, size_bytes: int,
     `subject` es cómo llamar a lo que se baja en el título/texto ("modelo",
     "motor"); `extra_note` permite sumar una aclaración propia de quien pregunta
     (ej. que el motor de upscaling trae sus modelos adentro)."""
+    return ask_model_download(parent, display_name, size_bytes, subject, extra_note) == "download"
+
+
+def ask_model_download(parent, display_name: str, size_bytes: int, subject: str = "",
+                       extra_note: str = "", offer_manage: bool = False,
+                       manage_focus: dict | None = None, manage_kind: str | None = None) -> str:
+    """Como confirm_model_download(), con un tercer botón opcional "Administrar" que
+    abre Ajustes > Modelos (lo usan los menús de preajustes, donde no hay a mano los
+    controles del modelo). Devuelve "download", "manage" o "cancel"."""
     subject = subject or QCoreApplication.translate("ModelDownloadPrompt", "modelo")
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Question)
@@ -258,10 +276,19 @@ def confirm_model_download(parent, display_name: str, size_bytes: int,
     box.setInformativeText(note)
 
     btn_download = box.addButton(QCoreApplication.translate("ModelDownloadPrompt", "Descargar"), QMessageBox.AcceptRole)
+    btn_manage = None
+    if offer_manage:
+        btn_manage = box.addButton(QCoreApplication.translate("ModelDownloadPrompt", "Administrar"), QMessageBox.ActionRole)
     box.addButton(QCoreApplication.translate("ModelDownloadPrompt", "Cancelar"), QMessageBox.RejectRole)
     box.setDefaultButton(btn_download)
     box.exec()
-    return box.clickedButton() is btn_download
+    clicked = box.clickedButton()
+    if clicked is btn_download:
+        return "download"
+    if btn_manage is not None and clicked is btn_manage:
+        open_models_settings(parent, manage_focus, manage_kind)
+        return "manage"
+    return "cancel"
 
 
 class ModelStatusRow(QWidget):

@@ -3,9 +3,9 @@ import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea,
     QPushButton, QMessageBox, QProgressBar, QFileDialog, QDialog,
-    QLineEdit, QSpinBox, QDialogButtonBox, QFormLayout, QSizePolicy,
+    QLineEdit, QSpinBox, QDialogButtonBox, QFormLayout, QSizePolicy, QCheckBox,
 )
-from PySide6.QtCore import Qt, QThread, Signal, QUrl, QSize
+from PySide6.QtCore import Qt, QThread, QTimer, Signal, QUrl, QSize
 from PySide6.QtGui import QDesktopServices
 from core.utils.i18n import logger
 from core.utils.cache_manager import format_bytes
@@ -19,12 +19,13 @@ from core.setup.models_setup import (
     is_rembg_model_installed, is_rembg_model_gated, download_rembg_model, delete_rembg_model,
     is_upscaling_engine_installed, download_upscaling_engine, delete_upscaling_engine,
     get_folder_size, get_custom_rembg_models, import_custom_rembg_model,
-    delete_custom_rembg_model, probe_onnx_input_size,
+    probe_onnx_input_size, get_rembg_model_path, relocate_custom_rembg_model,
     get_rembg_model_size_bytes, get_upscaling_engine_size_bytes,
 )
 from core.utils.onnx_providers import get_gpu_adapter_name, get_gpu_provider_label
 from core.utils.hardware_detector import get_cached_gpu_name
 from gui.widgets.toggle_switch import ToggleSwitch
+from gui.widgets.mode_selector import ModeSelector
 # Las descargas no se lanzan desde aquí sino desde el gestor común (model_downloads(),
 # ver gui/widgets/model_download_prompt.py): los popovers del Editor de Imagen también
 # descargan modelos, y así el progreso de cada descarga se ve en las dos pantallas.
@@ -96,13 +97,20 @@ class ImportOnnxDialog(QDialog):
         layout.addWidget(self.lbl_probe)
 
         hint = QLabel(self.tr(
-            "Si no se detecta solo, dejalo en 1024 (el más común en modelos "
+            "Si no se detecta solo, déjalo en 1024 (el más común en modelos "
             "modernos de Eliminar Fondo) o revisa la página de donde bajaste el "
             "modelo -- los legacy tipo U2Net suelen usar 320."
         ))
         hint.setWordWrap(True)
         set_themed_style(hint, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 10px;")
         layout.addWidget(hint)
+
+        # Por defecto DowP solo apunta al archivo donde está (sin duplicar el espacio).
+        self.chk_copy = QCheckBox(self.tr("Copiar a la carpeta de modelos de DowP"))
+        self.chk_copy.setToolTip(self.tr(
+            "Útil si el archivo está en algo que luego borrarás o desconectarás (una "
+            "descarga, una memoria USB). Sin marcar, DowP usa el archivo donde está."))
+        layout.addWidget(self.chk_copy)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
@@ -123,8 +131,8 @@ class ImportOnnxDialog(QDialog):
             self.lbl_probe.setText(self.tr("No se pudo detectar el tamaño -- confírmalo a mano."))
             set_themed_style(self.lbl_probe, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px;")
 
-    def get_values(self) -> tuple[str, int]:
-        return self.entry_name.text().strip(), self.spin_size.value()
+    def get_values(self) -> tuple[str, int, bool]:
+        return self.entry_name.text().strip(), self.spin_size.value(), self.chk_copy.isChecked()
 
     def closeEvent(self, event):
         # El sondeo corre en un QThread aparte -- si el usuario cierra el diálogo
@@ -140,13 +148,14 @@ class ModelRow(QFrame):
     licencia restringida en Hugging Face -- se descarga con la cuenta del usuario
     (token) o a mano, con "Abrir página" + "Ya lo descargué…"."""
     download_requested = Signal(str)        # row_id
+    relocate_requested = Signal(str)        # row_id -- importado cuyo archivo se movió
     page_requested = Signal(str)            # row_id -- abrir su página en Hugging Face
     manual_install_requested = Signal(str)  # row_id -- elegir el archivo descargado a mano
 
     def __init__(self, row_id: str, title: str, path_for_size: str, gated: bool = False,
                  no_download: bool = False, installed_check=None, disk_size=None,
                  license_text: str = "", license_noncommercial: bool = False,
-                 license_note: str = "", parent=None):
+                 license_note: str = "", relocatable: bool = False, parent=None):
         super().__init__(parent)
         self.row_id = row_id
         self.path_for_size = path_for_size
@@ -166,6 +175,9 @@ class ModelRow(QFrame):
         # instalados por definición (se copiaron al importar), no tiene sentido
         # ofrecer "Descargar"/"Reinstalar" para algo que no viene de una URL.
         self.no_download = no_download
+        # Importados que apuntan al archivo del usuario: si ese archivo se movió, la
+        # fila ofrece "Ubicar…" para elegir dónde está ahora.
+        self.relocatable = relocatable
         self.setObjectName("settingsCard")
         self._build_ui(title)
         self.refresh_status()
@@ -204,6 +216,21 @@ class ModelRow(QFrame):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.hide()
         info_vbox.addWidget(self.progress_bar)
+
+        self.btn_relocate = None
+        if self.relocatable:
+            self.btn_relocate = QPushButton(self.tr("Ubicar…"))
+            self.btn_relocate.setToolTip(self.tr("Elegir dónde está ahora el archivo de este modelo"))
+            self.btn_relocate.setCursor(Qt.PointingHandCursor)
+            self.btn_relocate.setFlat(True)
+            set_themed_style(self.btn_relocate, lambda: f"""
+                QPushButton {{ background: transparent; border: none; padding: 0px; text-align: left;
+                               color: {get_theme_token('acento_primario', '#B9E640')}; font-size: 11px; font-weight: bold; }}
+                QPushButton:hover {{ text-decoration: underline; }}
+            """)
+            self.btn_relocate.clicked.connect(lambda: self.relocate_requested.emit(self.row_id))
+            self.btn_relocate.hide()
+            info_vbox.addWidget(self.btn_relocate, 0, Qt.AlignLeft)
 
         layout.addLayout(info_vbox, 1)
 
@@ -246,7 +273,8 @@ class ModelRow(QFrame):
 
         self.btn_delete = QPushButton(self.tr("Eliminar"))
         self.btn_delete.setFixedHeight(32)
-        self.btn_delete.setFixedWidth(80)
+        # Mínimo, no fijo: con la fuente y el relleno del tema, 80 px cortaba "Eliminar".
+        self.btn_delete.setMinimumWidth(80)
         self.btn_delete.setCursor(Qt.PointingHandCursor)
         self.btn_delete.setProperty("variant", "danger")
         # Sin acción propia: quien crea la fila (ModelsPage) conecta este botón a su
@@ -283,8 +311,19 @@ class ModelRow(QFrame):
         register_theme_callback(self.btn_download, "icono_tema", lambda: self._set_download_icon(name))
 
     def refresh_status(self):
+        # Lo leen los resúmenes de las secciones/familias (ver ModelsPage._refresh_summaries).
+        self.installed = False
+        self.installed_bytes = 0
+        self.downloading = False
+        self.progress_pct = 0
+        if self.btn_relocate is not None:
+            self.btn_relocate.setVisible(not self.is_installed())
+        # La ruta real a mano (los importados pueden estar en cualquier carpeta).
+        self.lbl_status.setToolTip(self.path_for_size if self.no_download else "")
         if self.is_installed():
             size = self._disk_size() if self._disk_size is not None else get_folder_size(self.path_for_size)
+            self.installed = True
+            self.installed_bytes = size or 0
             self.lbl_status.setText(self.tr("Instalado ({0})").format(format_bytes(size)))
             set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px; font-weight: bold;")
             if not self.no_download:
@@ -303,7 +342,9 @@ class ModelRow(QFrame):
             # antes al compartir esta rama con los modelos del catálogo, dejaba la
             # entrada huérfana de config.json imposible de borrar desde la interfaz:
             # el modelo seguía apareciendo en la lista para siempre.
-            self.lbl_status.setText(self.tr("Archivo no encontrado — elimínalo de la lista"))
+            self.lbl_status.setText(
+                self.tr("Archivo no encontrado — ubícalo o quítalo de la lista") if self.relocatable
+                else self.tr("Archivo no encontrado — elimínalo de la lista"))
             set_themed_style(self.lbl_status, lambda: f"color: {get_theme_token('estado_aviso', '#FFC107')}; font-size: 11px; font-weight: bold;")
             self.btn_folder.setDisabled(False)
             self.btn_delete.setDisabled(False)
@@ -320,6 +361,8 @@ class ModelRow(QFrame):
             self.btn_delete.setDisabled(True)
 
     def set_downloading(self, is_downloading: bool):
+        self.downloading = is_downloading
+        self.progress_pct = 0
         self.btn_download.setDisabled(is_downloading)
         if self.gated:
             self.btn_manual.setDisabled(is_downloading)
@@ -332,6 +375,7 @@ class ModelRow(QFrame):
             self.btn_download.setToolTip(self.tr("Descargando..."))
 
     def set_progress(self, pct: int):
+        self.progress_pct = pct
         self.progress_bar.setValue(pct)
 
 
@@ -455,9 +499,109 @@ class _MoveModelsWorker(QThread):
         self.finished_move.emit(ok, msg)
 
 
+class _GroupHeader(QFrame):
+    """Cabecera clicable de un grupo. Un QFrame y no un QPushButton: el botón calcula su
+    alto por su propio texto e ignoraba el de los títulos de dentro (salían cortados)."""
+
+    clicked = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_Hover)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+
+class _ModelGroup(QWidget):
+    """Sección (Eliminación de fondo, Profundidad...) o familia de modelos plegable: una
+    cabecera clicable con flecha, título y un resumen a la derecha ("13 modelos · 2
+    descargados · 2,1 GB"), y debajo el cuerpo con sus filas. Antes era una lista corrida
+    de ~40 modelos en la que era fácil perderse."""
+
+    toggled = Signal(str, bool)  # group_id, expandido
+
+    def __init__(self, group_id: str, title: str, level: str, parent=None):
+        super().__init__(parent)
+        self.group_id = group_id
+        self.level = level  # "section" | "family"
+        self._expanded = False
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(6 if level == "family" else 8)
+
+        self.header = _GroupHeader(self)
+        self.header.setObjectName("modelGroupHeader")
+        set_themed_style(self.header, lambda: f"""
+            QFrame#modelGroupHeader {{ background: transparent; border: none; border-radius: 6px; }}
+            QFrame#modelGroupHeader:hover {{ background-color: {get_theme_token('fondo_hover', '#2a2a2a')}; }}
+        """)
+        header_layout = QHBoxLayout(self.header)
+        header_layout.setContentsMargins(4, 4, 8, 4)
+        header_layout.setSpacing(6)
+        self.arrow = QLabel(self.header)
+        self.arrow.setFixedSize(18, 18)
+        self.lbl_title = QLabel(title, self.header)
+        if level == "section":
+            self.lbl_title.setObjectName("settingsSectionTitle")
+        else:
+            set_themed_style(self.lbl_title, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 12px; font-weight: bold;")
+        self.lbl_summary = QLabel(self.header)
+        set_themed_style(self.lbl_summary, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        for w in (self.arrow, self.lbl_title, self.lbl_summary):
+            # Los clics sobre los textos también pliegan/despliegan.
+            w.setAttribute(Qt.WA_TransparentForMouseEvents)
+        header_layout.addWidget(self.arrow)
+        header_layout.addWidget(self.lbl_title)
+        header_layout.addStretch(1)
+        header_layout.addWidget(self.lbl_summary)
+        self.header.clicked.connect(lambda: self.set_expanded(not self._expanded, user=True))
+        outer.addWidget(self.header)
+
+        self.body = QWidget(self)
+        self.body_layout = QVBoxLayout(self.body)
+        # Las familias van un poco hacia adentro de su sección.
+        self.body_layout.setContentsMargins(14 if level == "family" else 6, 0, 0, 4)
+        self.body_layout.setSpacing(10)
+        outer.addWidget(self.body)
+        self._apply_expanded()
+        register_theme_callback(self.arrow, "icono_tema", self._paint_arrow)
+
+    def is_expanded(self) -> bool:
+        return self._expanded
+
+    def set_expanded(self, expanded: bool, user: bool = False):
+        if expanded == self._expanded:
+            return
+        self._expanded = expanded
+        self._apply_expanded()
+        if user:
+            self.toggled.emit(self.group_id, expanded)
+
+    def _apply_expanded(self):
+        self.body.setVisible(self._expanded)
+        self._paint_arrow()
+
+    def _paint_arrow(self):
+        name = "arrow_drop_down.svg" if self._expanded else "arrow_right.svg"
+        icon = get_colored_svg_icon(name, get_theme_token("texto_gris", "#aaaaaa"), size=18)
+        self.arrow.setPixmap(icon.pixmap(18, 18))
+
+    def set_summary(self, text: str):
+        self.lbl_summary.setText(text)
+
+
 class ModelsPage(QWidget):
     """Pestaña de Ajustes para descargar/gestionar modelos de IA (rembg, upscaling).
     Los modelos nunca se descargan solos -- solo cuando el usuario aprieta Descargar."""
+
+    # Qué secciones y familias dejó abiertas el usuario (group_id -> bool). Todo empieza
+    # plegado: la página tenía ~40 filas seguidas.
+    _EXPANDED_CONFIG_KEY = "models_page_expanded"
 
     # (etiqueta del provider de GPU o None, nombre de la tarjeta o None) -- ver
     # _start_gpu_detection.
@@ -471,6 +615,13 @@ class ModelsPage(QWidget):
         # Claves (model_download_key) de las descargas lanzadas desde esta página:
         # solo quien lanza una descarga avisa con un diálogo si falla.
         self._started_here: set[str] = set()
+        # Grupos plegables (secciones y familias) y a cuáles pertenece cada fila, para
+        # los resúmenes de sus cabeceras y para abrirlos al llegar a un modelo.
+        self._groups: dict[str, _ModelGroup] = {}
+        self._row_groups: dict[str, list] = {}
+        self._target_layout = None
+        self._current_groups: list = []
+        self._expanded_state = dict(get_config().get(self._EXPANDED_CONFIG_KEY) or {})
         self._build_ui()
         model_downloads().started.connect(self._on_download_started)
         model_downloads().progress_changed.connect(self._on_progress)
@@ -516,29 +667,37 @@ class ModelsPage(QWidget):
         self._max_sessions_row = self._build_max_sessions_row()
         self.content_layout.addWidget(self._max_sessions_row)
 
-        self._add_section_header(self.tr("Eliminación de Fondo (Rembg)"))
+        # Modelos: secciones y familias plegables (ver _ModelGroup), con un resumen en
+        # cada cabecera para no tener que abrirlas.
+        self.content_layout.addWidget(self._build_filter_row())
+        self.lbl_no_matches = QLabel(self.tr("Ningún modelo coincide con el filtro."))
+        set_themed_style(self.lbl_no_matches, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px; font-style: italic;")
+        self.lbl_no_matches.hide()
+        self.content_layout.addWidget(self.lbl_no_matches)
+
+        section = self._begin_section("rembg", self.tr("Eliminación de Fondo (Rembg)"))
         for family_name, models in REMBG_MODEL_FAMILIES.items():
-            self._add_family_header(family_name)
+            self._begin_family(section, family_name)
             for model_name, model_info in models.items():
                 self._add_rembg_row(model_name, model_info)
 
-        self._add_section_header(self.tr("Mapas de Profundidad"))
+        section = self._begin_section("depth", self.tr("Mapas de Profundidad"))
         for family_name, models in DEPTH_MODEL_FAMILIES.items():
-            self._add_family_header(family_name)
+            self._begin_family(section, family_name)
             for model_name, model_info in models.items():
                 self._add_depth_row(model_name, model_info)
 
-        self._add_section_header(self.tr("Mapas de Normales"))
+        section = self._begin_section("normals", self.tr("Mapas de Normales"))
         for family_name, models in NORMAL_MODEL_FAMILIES.items():
-            self._add_family_header(family_name)
+            self._begin_family(section, family_name)
             for model_name, model_info in models.items():
                 self._add_depth_row(model_name, model_info, kind="normals")
 
-        self._add_section_header(self.tr("Motores de Reescalado (Upscaling)"))
+        self._begin_section("upscaling", self.tr("Motores de Reescalado (Upscaling)"))
         for engine_key, tool_info in UPSCALING_TOOLS.items():
             self._add_upscaling_row(engine_key, tool_info)
 
-        self._add_section_header(self.tr("Modelos Personalizados (Importados)"))
+        self._custom_section = self._begin_section("custom", self.tr("Modelos Personalizados (Importados)"))
         import_row = QHBoxLayout()
         import_desc = QLabel(self.tr(
             "Para modelos ONNX de Eliminar Fondo que no están en el catálogo de arriba "
@@ -553,15 +712,18 @@ class ModelsPage(QWidget):
         set_button_variant(self.btn_import_custom, "accent-solid")
         self.btn_import_custom.clicked.connect(self._on_import_custom_clicked)
         import_row.addWidget(self.btn_import_custom, 0, Qt.AlignVCenter)
-        self.content_layout.addLayout(import_row)
+        self._target_layout.addLayout(import_row)
 
         self.custom_rows_container = QVBoxLayout()
         self.custom_rows_container.setSpacing(10)
-        self.content_layout.addLayout(self.custom_rows_container)
+        self._target_layout.addLayout(self.custom_rows_container)
+        self._target_layout = None
         self._refresh_custom_rows()
 
         scroll_area.setWidget(scroll_content)
+        self.scroll_area = scroll_area
         self.main_layout.addWidget(scroll_area)
+        self._refresh_summaries()
 
     def refresh_rows(self):
         """Relee de disco el estado de cada fila. Hace falta porque esta página
@@ -578,6 +740,7 @@ class ModelsPage(QWidget):
                 row.set_downloading(True)
                 row.set_progress(model_downloads().progress(key))
         self._refresh_custom_rows()
+        self._refresh_summaries()
 
     # ── Carpeta de modelos ───────────────────────────────────────────────────
     def _build_models_dir_row(self) -> QWidget:
@@ -764,6 +927,7 @@ class ModelsPage(QWidget):
                 row.path_for_size = os.path.join(get_models_dir(), info["folder"], info["file"])
         self._refresh_models_dir_row()
         self.refresh_rows()
+        model_downloads().models_changed.emit()
 
     # ── Cuenta de Hugging Face (modelos con licencia restringida) ───────────
     def _build_hf_account_row(self) -> QWidget:
@@ -1144,18 +1308,175 @@ class ModelsPage(QWidget):
                 self.tr("No hay ningún modelo cargado en memoria en este momento."),
             )
 
+    # ── Secciones y familias plegables ───────────────────────────────────────
+    def _make_group(self, group_id: str, title: str, level: str, parent_layout) -> "_ModelGroup":
+        group = _ModelGroup(group_id, title, level)
+        group.set_expanded(bool(self._expanded_state.get(group_id, False)))
+        group.toggled.connect(self._on_group_toggled)
+        parent_layout.addWidget(group)
+        self._groups[group_id] = group
+        return group
+
+    def _begin_section(self, section_id: str, title: str) -> "_ModelGroup":
+        section = self._make_group(section_id, title, "section", self.content_layout)
+        self._target_layout = section.body_layout
+        self._current_groups = [section]
+        return section
+
+    def _begin_family(self, section: "_ModelGroup", family_name: str) -> "_ModelGroup":
+        family = self._make_group(f"{section.group_id}::{family_name}", family_name, "family",
+                                  section.body_layout)
+        self._target_layout = family.body_layout
+        self._current_groups = [family, section]
+        return family
+
+    def _place_row(self, row_id: str, row):
+        (self._target_layout or self.content_layout).addWidget(row)
+        self._row_groups[row_id] = list(self._current_groups)
+
+    def focus_model(self, info: dict, kind: str | None = None):
+        """Lleva la vista a la fila de ese modelo/motor (botón "Administrar" de los
+        popovers y de los avisos de descarga): abre su sección y su familia, la hace
+        visible y la resalta un momento. `kind` ("depth", "normals"...) desempata si el
+        mismo archivo apareciera en dos secciones."""
+        key = model_download_key(info or {})
+        candidates = [row_id for row_id, row_info in self.row_info.items()
+                      if model_download_key(row_info) == key]
+        if kind:
+            candidates.sort(key=lambda row_id: self.row_kind.get(row_id) != kind)
+        if not candidates:
+            return False
+        if self._filter_active():
+            # El filtro podría estar escondiendo justo esa fila.
+            self.txt_filter.clear()
+            self.filter_selector.buttons[0].click()
+        row_id = candidates[0]
+        row = self.rows[row_id]
+        for group in self._row_groups.get(row_id, []):
+            group.set_expanded(True)
+        # Diferido: con los grupos recién abiertos, el layout todavía no ubicó la fila.
+        QTimer.singleShot(50, lambda: self._scroll_and_flash(row))
+        return True
+
+    def _scroll_and_flash(self, row):
+        self.scroll_area.ensureWidgetVisible(row, 0, 80)
+        set_themed_style(row, lambda: f"""
+            QFrame#settingsCard {{ border: 2px solid {get_theme_token('acento_primario', '#B9E640')}; }}
+        """)
+        QTimer.singleShot(1800, lambda: set_themed_style(row, lambda: ""))
+
+    # ── Filtro: buscar por nombre y "Todos / Descargados" ─────────────────────
+    def _build_filter_row(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 6, 0, 0)
+        layout.setSpacing(10)
+        self.txt_filter = QLineEdit()
+        self.txt_filter.setPlaceholderText(self.tr("Buscar modelo..."))
+        self.txt_filter.setClearButtonEnabled(True)
+        self.txt_filter.setFixedHeight(32)
+        self.txt_filter.textChanged.connect(self._apply_filter)
+        layout.addWidget(self.txt_filter, 1)
+        self.filter_selector = ModeSelector(row, labels=[self.tr("Todos"), self.tr("Descargados")])
+        self.filter_selector.setFixedWidth(240)
+        self.filter_selector.mode_changed.connect(self._apply_filter)
+        layout.addWidget(self.filter_selector)
+        return row
+
+    def _only_installed(self) -> bool:
+        buttons = self.filter_selector.buttons
+        return len(buttons) > 1 and buttons[1].isChecked()
+
+    def _apply_filter(self, *_args):
+        """Muestra solo las filas que coinciden (nombre del modelo, de su familia o de su
+        sección) y, con "Descargados", solo las instaladas. Con un filtro activo se abren
+        las secciones y familias que tienen coincidencias; al quitarlo, vuelven a como las
+        dejó el usuario."""
+        text = self.txt_filter.text().strip().lower()
+        only_installed = self._only_installed()
+        active = bool(text) or only_installed
+        visible_in = {}
+        any_match = False
+        for row_id, row in self.rows.items():
+            groups = self._row_groups.get(row_id, [])
+            haystack = " ".join([row.lbl_title.text()] + [g.lbl_title.text() for g in groups]).lower()
+            match = (not text or text in haystack) and (not only_installed or getattr(row, "installed", False))
+            row.setVisible(match)
+            any_match = any_match or match
+            for group in groups:
+                visible_in[group.group_id] = visible_in.get(group.group_id, False) or match
+        for group_id, group in self._groups.items():
+            if group_id == "custom":
+                custom = get_custom_rembg_models()
+                if only_installed:
+                    # Registrados en la config, pero el archivo puede no estar en la carpeta
+                    # de modelos actual (ej. tras cambiarla sin moverlos).
+                    custom = {n: i for n, i in custom.items() if os.path.exists(get_rembg_model_path(i))}
+                names = " ".join(custom).lower()
+                show = not active or (bool(custom) and (not text or text in names or text in group.lbl_title.text().lower()))
+                group.setVisible(show)
+                any_match = any_match or (active and show)
+                if active:
+                    group.set_expanded(show)
+                else:
+                    group.set_expanded(bool(self._expanded_state.get(group_id, False)))
+                continue
+            show = visible_in.get(group_id, False) or not active
+            group.setVisible(show)
+            group.set_expanded(show if active else bool(self._expanded_state.get(group_id, False)))
+        self.lbl_no_matches.setVisible(active and not any_match)
+
+    def _on_group_toggled(self, group_id: str, expanded: bool):
+        self._expanded_state[group_id] = expanded
+        cfg = get_config()
+        cfg[self._EXPANDED_CONFIG_KEY] = dict(self._expanded_state)
+        save_config(cfg)
+
+    def _refresh_summaries(self):
+        """Resumen en la cabecera de cada sección y familia: cuántos modelos hay,
+        cuántos están descargados y cuánto ocupan, y el avance si alguno se descarga."""
+        stats = {}
+        for row_id, groups in self._row_groups.items():
+            row = self.rows[row_id]
+            for group in groups:
+                s = stats.setdefault(group.group_id, {"total": 0, "installed": 0, "bytes": 0, "pcts": []})
+                s["total"] += 1
+                if getattr(row, "installed", False):
+                    s["installed"] += 1
+                    s["bytes"] += getattr(row, "installed_bytes", 0)
+                if getattr(row, "downloading", False):
+                    s["pcts"].append(getattr(row, "progress_pct", 0))
+        for group_id, s in stats.items():
+            group = self._groups[group_id]
+            engines = group_id == "upscaling"
+            if engines:
+                text = self.tr("{0} motores").format(s["total"]) if s["total"] != 1 else self.tr("1 motor")
+            else:
+                text = self.tr("{0} modelos").format(s["total"]) if s["total"] != 1 else self.tr("1 modelo")
+            if s["installed"]:
+                text += " · " + (self.tr("{0} descargados").format(s["installed"]) if s["installed"] != 1
+                                 else self.tr("1 descargado"))
+                text += " · " + format_bytes(s["bytes"])
+            if s["pcts"]:
+                text += " · " + self.tr("descargando {0} %").format(min(s["pcts"]))
+            group.set_summary(text)
+        if hasattr(self, "_custom_section"):
+            count = len(get_custom_rembg_models())
+            self._custom_section.set_summary(
+                self.tr("{0} importados").format(count) if count != 1 else self.tr("1 importado"))
+        # Con un filtro activo (ej. "Descargados"), una descarga o un borrado cambia qué
+        # filas entran. Sin filtro no se toca nada: no hay que cerrar lo que abrió una descarga.
+        if self._filter_active():
+            self._apply_filter()
+
+    def _filter_active(self) -> bool:
+        return hasattr(self, "txt_filter") and (bool(self.txt_filter.text().strip()) or self._only_installed())
+
     def _add_section_header(self, text: str):
         """Subtítulo de sección: el mismo estilo que "Aspecto"/"Comportamiento" en
         General (QLabel#settingsSectionTitle en _base.qss, color del acento del tema)."""
         lbl = QLabel(text)
         lbl.setObjectName("settingsSectionTitle")
-        self.content_layout.addWidget(lbl)
-
-    def _add_family_header(self, text: str):
-        """Familia de modelos dentro de una sección: tono neutro del tema, para que no
-        compita con el subtítulo."""
-        lbl = QLabel(text)
-        set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_gris', '#aaaaaa')}; font-size: 12px; font-weight: bold; margin-top: 4px;")
         self.content_layout.addWidget(lbl)
 
     def _is_gated(self, model_info: dict) -> bool:
@@ -1179,7 +1500,7 @@ class ModelsPage(QWidget):
         self.rows[row_id] = row
         self.row_info[row_id] = model_info
         self.row_kind[row_id] = "rembg"
-        self.content_layout.addWidget(row)
+        self._place_row(row_id, row)
 
     def _license_row_text(self, model_info: dict) -> str:
         license_name = get_depth_model_license(model_info)
@@ -1206,7 +1527,7 @@ class ModelsPage(QWidget):
         self.rows[row_id] = row
         self.row_info[row_id] = model_info
         self.row_kind[row_id] = kind
-        self.content_layout.addWidget(row)
+        self._place_row(row_id, row)
 
     # ── Modelos personalizados (importados) ─────────────────────────────────
     def _refresh_custom_rows(self):
@@ -1221,16 +1542,21 @@ class ModelsPage(QWidget):
             lbl = QLabel(self.tr("Todavía no importaste ningún modelo."))
             set_themed_style(lbl, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px; font-style: italic;")
             self.custom_rows_container.addWidget(lbl)
+            if hasattr(self, "scroll_area"):
+                self._refresh_summaries()
             return
 
         for model_name, model_info in custom.items():
             self._add_custom_row(model_name, model_info)
+        if hasattr(self, "scroll_area"):
+            self._refresh_summaries()
 
     def _add_custom_row(self, model_name: str, model_info: dict):
         row_id = f"custom::{model_name}"
-        path = os.path.join(get_models_dir(), model_info["folder"], model_info["file"])
-        row = ModelRow(row_id, model_name, path, gated=False, no_download=True)
+        path = get_rembg_model_path(model_info)
+        row = ModelRow(row_id, model_name, path, gated=False, no_download=True, relocatable=True)
         row.btn_delete.clicked.connect(lambda: self._on_delete_custom(model_name))
+        row.relocate_requested.connect(lambda _rid: self._on_relocate_custom(model_name))
         self.custom_rows_container.addWidget(row)
 
     def _on_import_custom_clicked(self):
@@ -1244,7 +1570,7 @@ class ModelsPage(QWidget):
         if dialog.exec() != QDialog.Accepted:
             return
 
-        name, size = dialog.get_values()
+        name, size, copy_to_models = dialog.get_values()
         if not name:
             QMessageBox.warning(self, self.tr("Error"), self.tr("El modelo necesita un nombre."))
             return
@@ -1256,21 +1582,27 @@ class ModelsPage(QWidget):
             ) != QMessageBox.Yes:
                 return
 
-        success, msg = import_custom_rembg_model(name, path, (size, size))
+        success, msg = import_custom_rembg_model(name, path, (size, size), copy_to_models=copy_to_models)
         if success:
             self._refresh_custom_rows()
+            model_downloads().models_changed.emit()
             QMessageBox.information(self, self.tr("Modelo importado"), msg)
         else:
             QMessageBox.warning(self, self.tr("Error al importar"), msg)
 
     def _on_delete_custom(self, model_name: str):
-        if QMessageBox.question(
-            self, self.tr("Eliminar modelo"),
-            self.tr("¿Eliminar el modelo importado '{0}'?").format(model_name)
-        ) != QMessageBox.Yes:
-            return
-        if delete_custom_rembg_model(model_name):
+        """Quitar de la lista o eliminar del disco (a la Papelera): ver custom_model_dialogs."""
+        from gui.widgets.custom_model_dialogs import confirm_remove_custom_model
+        if confirm_remove_custom_model(self, model_name):
             self._refresh_custom_rows()
+            model_downloads().models_changed.emit()
+
+    def _on_relocate_custom(self, model_name: str):
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("¿Dónde está ahora '{0}'?").format(model_name), "", self.tr("Modelos ONNX (*.onnx)"))
+        if path and relocate_custom_rembg_model(model_name, path):
+            self._refresh_custom_rows()
+            model_downloads().models_changed.emit()
 
     def _add_upscaling_row(self, engine_key: str, tool_info: dict):
         row_id = f"upscaling::{engine_key}"
@@ -1282,7 +1614,7 @@ class ModelsPage(QWidget):
         self.rows[row_id] = row
         self.row_info[row_id] = tool_info
         self.row_kind[row_id] = "upscaling"
-        self.content_layout.addWidget(row)
+        self._place_row(row_id, row)
 
     # ── Descarga ─────────────────────────────────────────────────────────────
     def _on_download_requested(self, row_id: str):
@@ -1314,10 +1646,16 @@ class ModelsPage(QWidget):
         for row in self._rows_for_key(key):
             row.set_downloading(True)
             row.set_progress(model_downloads().progress(key))
+            # Una descarga en curso abre su sección y su familia, para ver el avance
+            # (sin recordarlo: es temporal, no una elección del usuario).
+            for group in self._row_groups.get(row.row_id, []):
+                group.set_expanded(True)
+        self._refresh_summaries()
 
     def _on_progress(self, pct: int, key: str):
         for row in self._rows_for_key(key):
             row.set_progress(pct)
+        self._refresh_summaries()
 
     def _on_download_finished(self, success: bool, msg: str, key: str):
         started_here = key in self._started_here
@@ -1325,6 +1663,7 @@ class ModelsPage(QWidget):
         for row in self._rows_for_key(key):
             row.set_downloading(False)
             row.refresh_status()
+        self._refresh_summaries()
         if not success and started_here:
             QMessageBox.warning(self, self.tr("Error de Descarga"), msg)
 
@@ -1337,6 +1676,8 @@ class ModelsPage(QWidget):
             return
         if delete_rembg_model(self.row_info[row_id]):
             self.rows[row_id].refresh_status()
+            self._refresh_summaries()
+            model_downloads().models_changed.emit()
 
     def _on_delete_depth(self, row_id: str, display_name: str):
         if QMessageBox.question(
@@ -1346,6 +1687,8 @@ class ModelsPage(QWidget):
             return
         if delete_depth_model(self.row_info[row_id]):
             self.rows[row_id].refresh_status()
+            self._refresh_summaries()
+            model_downloads().models_changed.emit()
 
     def _on_delete_upscaling(self, row_id: str, display_name: str):
         if QMessageBox.question(
@@ -1355,3 +1698,5 @@ class ModelsPage(QWidget):
             return
         if delete_upscaling_engine(self.row_info[row_id]):
             self.rows[row_id].refresh_status()
+            self._refresh_summaries()
+            model_downloads().models_changed.emit()

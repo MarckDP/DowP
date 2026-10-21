@@ -97,19 +97,11 @@ class DownloaderMaster:
         if request_data.get("mode") == "subtitle_only" and not request_data.get("cut_subtitles"):
             request_data["selected_fragments"] = []
 
-        # 1. Preparar Opciones (Heredando base del analizador)
-        ydl_opts = self._prepare_opts(request_data, progress_callback)
-        
-        # Detectar modo de fragmentos
-        from core.tabs.advanced_process.fragment_logic import FragmentState
-        fragments = request_data.get("selected_fragments", [])
-        fragment_mode = request_data.get("fragment_mode")
-        
-        # ¿Necesitamos descargas individuales (Corte Normal o Preciso)?
-        # El modo Normal (fragment_mode is None) ahora genera archivos separados.
-        individual_download = fragments and (fragment_mode is None or fragment_mode == FragmentState.PRECISE)
-
-        # 3. Preparar entorno y ejecución
+        # yt-dlp tiene que ser importable ANTES de _prepare_opts: arma los rangos de
+        # fragmento con yt_dlp.utils. Si esta descarga era lo primero que tocaba yt-dlp
+        # en la sesión (sin análisis previo), fallaba "Error configurando rango
+        # individual: No module named 'yt_dlp'" -- sin efecto en el resultado (cada
+        # fragmento se vuelve a preparar después), pero con un ERROR falso en el log.
         ytdlp_path = get_ytdlp_path()
         if ytdlp_path not in sys.path:
             sys.path.insert(0, ytdlp_path)
@@ -123,6 +115,18 @@ class DownloaderMaster:
         if (check_plugin() or check_wpc()) and plugin_dir not in sys.path:
             sys.path.insert(0, plugin_dir)
             logger.debug(f"DownloaderMaster: plugin dir inyectado en sys.path -> {plugin_dir}")
+
+        # 1. Preparar Opciones (Heredando base del analizador)
+        ydl_opts = self._prepare_opts(request_data, progress_callback)
+
+        # Detectar modo de fragmentos
+        from core.tabs.advanced_process.fragment_logic import FragmentState
+        fragments = request_data.get("selected_fragments", [])
+        fragment_mode = request_data.get("fragment_mode")
+
+        # ¿Necesitamos descargas individuales (Corte Normal o Preciso)?
+        # El modo Normal (fragment_mode is None) ahora genera archivos separados.
+        individual_download = fragments and (fragment_mode is None or fragment_mode == FragmentState.PRECISE)
 
         from core.ytdlp_logic.resilient_downloader import is_youtube_access_error
 

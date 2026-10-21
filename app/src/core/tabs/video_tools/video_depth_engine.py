@@ -23,6 +23,12 @@ brillo del mapa salte entre fotogramas. Contra eso:
     puede, por CPU (ver _DepthRunner / _DepthProcessor.process).
   - Normalización estable (siempre): el rango cerca/lejos se adapta de a poco a lo largo
     del video en vez de recalcularse de cero en cada fotograma (_StableNormalizer).
+
+MoGe-2 (la familia de Mapa de Normales, ver models_setup.get_depth_families): no da una
+disparidad relativa sino la posición 3D de cada píxel. Como en el Editor de Imagen
+(depth_engine._moge_near_bright), el mapa sale de -log(z) y lo que no es superficie (el
+cielo) queda como lo más lejano; el rango cerca/lejos pasa por la misma normalización
+estable, medida solo sobre lo que es superficie.
   - Suavizado temporal y procesar a menos fps (opcionales): ver video_frame_engine.
 """
 import numpy as np
@@ -31,6 +37,7 @@ from PySide6.QtCore import QCoreApplication
 from core.logger.logger_manager import logger
 from core.setup.models_setup import get_depth_families, get_depth_model_path, is_depth_model_installed
 from core.tabs.image_tools.depth_engine import get_process_size, normalize_rgb_array, raw_to_disparity
+from core.tabs.image_tools.normal_engine import MOGE_TOKENS, moge_outputs, moge_work_size
 from core.tabs.video_tools.video_frame_engine import (
     FrameProcessor, frame_step_of, run_frame_video, smoothing_weight_of,
 )
@@ -68,8 +75,14 @@ class _StableNormalizer:
         self.lo = None
         self.hi = None
 
-    def __call__(self, disparity: np.ndarray) -> np.ndarray:
-        lo, hi = np.percentile(disparity[::4, ::4], (1.0, 99.0))
+    def __call__(self, disparity: np.ndarray, valid: np.ndarray | None = None) -> np.ndarray:
+        """`valid` (opcional): qué píxeles cuentan para el rango (MoGe-2: sin el cielo)."""
+        sample = disparity[::4, ::4]
+        if valid is not None:
+            sample = sample[valid[::4, ::4]]
+            if sample.size == 0:
+                return np.zeros_like(disparity)
+        lo, hi = np.percentile(sample, (1.0, 99.0))
         lo, hi = float(lo), float(hi)
         if self.lo is None or hi < self.lo or lo > self.hi:
             self.lo, self.hi = lo, hi
@@ -139,18 +152,57 @@ class _DepthProcessor(FrameProcessor):
         self.model_info = model_info
         self.model_name = options.get("depth_model")
         self.invert = bool(options.get("depth_invert"))
-        self.proc_w, self.proc_h = get_process_size(model_info, width, height)
-        self.map_w, self.map_h = self.proc_w, self.proc_h
-        self.runner = _DepthRunner(model_info, bool(options.get("depth_gpu", True)))
         self.normalizer = _StableNormalizer()
         self.prev_disp = None
         self.window = 1
+        self.moge = model_info.get("engine") == "moge"
+        if self.moge:
+            # Mismo tamaño de trabajo y "Detalle" que el Mapa de Normales en video.
+            self.proc_w, self.proc_h = moge_work_size(width, height)
+            self.map_w, self.map_h = self.proc_w, self.proc_h
+            self.tokens = MOGE_TOKENS.get(options.get("depth_detail", "medium"), MOGE_TOKENS["medium"])
+            self.path = get_depth_model_path(model_info)
+            self.use_gpu = bool(options.get("depth_gpu", True))
+            self.session = onnx_sessions.get_session(self.path, self.use_gpu, label=_TAG)
+            return
+        self.proc_w, self.proc_h = get_process_size(model_info, width, height)
+        self.map_w, self.map_h = self.proc_w, self.proc_h
+        self.runner = _DepthRunner(model_info, bool(options.get("depth_gpu", True)))
         if self.runner.layout == "5d":
             self.window = _da3_window(self.proc_w, self.proc_h)
             logger.info(f"{_TAG}: {self.window} fotograma(s) por pasada.")
 
     def describe(self) -> str:
+        if self.moge:
+            return f"modelo {self.model_name} (MoGe-2, {self.tokens} tokens)"
         return f"modelo {self.model_name} ({self.runner.layout})"
+
+    def _moge_nearness(self, rgb):
+        """(-log z, máscara de superficie) de un fotograma, con reintento por CPU."""
+        try:
+            outputs = moge_outputs(self.session, rgb, self.tokens)
+        except Exception as e:
+            if self.use_gpu and is_gpu_failure(e):
+                logger.warning(f"{_TAG}: la GPU falló ({e!r}) -- sigue por CPU.")
+                self.use_gpu = False
+                self.session = onnx_sessions.get_session(self.path, False, label=_TAG)
+                outputs = moge_outputs(self.session, rgb, self.tokens)
+            else:
+                raise
+        z = outputs["points"][0][..., 2].astype(np.float32)
+        valid = (outputs["mask"][0] > 0.5) & np.isfinite(z) & (z > 1e-6)
+        nearness = np.zeros_like(z)
+        nearness[valid] = -np.log(z[valid])
+        return nearness, valid
+
+    def _moge_maps(self, rgbs: list) -> list:
+        maps = []
+        for rgb in rgbs:
+            nearness, valid = self._moge_nearness(rgb)
+            depth = self.normalizer(nearness, valid)
+            depth[~valid] = 0.0          # sin superficie (cielo): lo más lejano
+            maps.append(depth)
+        return maps
 
     def _infer_window(self, rgbs):
         """Una ventana; si la GPU no da abasto, se sigue de a un fotograma (y, si
@@ -164,6 +216,9 @@ class _DepthProcessor(FrameProcessor):
             return [d for rgb in rgbs for d in self.runner.infer([rgb])]
 
     def process(self, rgbs: list) -> list:
+        if self.moge:
+            maps = self._moge_maps(rgbs)
+            return [1.0 - m for m in maps] if self.invert else maps
         disps = self._infer_window(rgbs)
         if self.runner.layout == "5d":
             # Escala común DENTRO de la ventana (la da el modelo); ENTRE ventanas se ajusta
@@ -190,15 +245,12 @@ def run_depth_video(input_path: str, output_path: str, options: dict, fps: float
     """Genera el video de Mapa de Profundidad de `input_path` (o del tramo recortado).
 
     options: depth_family/depth_model/depth_gpu/depth_invert (mismo selector que el
-    Editor de Imagen), depth_16bit, keep_alpha, keep_audio, depth_smoothing
+    Editor de Imagen; depth_detail solo con MoGe-2), depth_16bit, keep_alpha, keep_audio, depth_smoothing
     ("off"/"low"/"medium"/"high") y depth_frame_step (1-4).
     `duration_sec` es la del tramo recortado. progress_callback(pct, eta_segundos)."""
     model_info = _model_info(options)
     if not model_info:
         return False, QCoreApplication.translate("video_depth_engine", "No hay un modelo de profundidad seleccionado.")
-    if model_info.get("engine") == "moge":
-        # El popover en modo video no lo ofrece (ver DepthPopoverContent); esto es por si acaso.
-        return False, QCoreApplication.translate("video_depth_engine", "MoGe-2 todavía no calcula profundidad en video: úsalo en Herramientas de Imagen.")
     if not is_depth_model_installed(model_info):
         return False, QCoreApplication.translate("video_depth_engine", "El modelo '{0}' no está instalado -- ve a Ajustes > Modelos para "
                           "descargarlo.").format(options.get("depth_model"))

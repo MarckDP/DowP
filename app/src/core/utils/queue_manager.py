@@ -203,6 +203,13 @@ def source_has_real_video(input_file: str) -> bool:
 # QueueManager._get_next_runnable_job.
 _HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
 
+# IA de video: entre los pesados van al final (ver _get_next_runnable_job). Ocupan la
+# GPU durante mucho tiempo, así que una recodificación pendiente -- por ejemplo la de
+# una descarga del Modo Rápido -- pasa antes que una IA que todavía no empezó. No
+# interrumpe una IA que ya está corriendo. Las cadenas IA -> recodificación no se
+# desordenan: su etapa de recodificación se crea recién cuando termina la de IA.
+_AI_JOB_TYPES = frozenset({"UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
+
 
 # Carriles de la cola: un solo motor (mismos límites de concurrencia para toda la
 # app, ver QueueWorker.run), pero cada pestaña inicia, pausa y termina SOLO lo suyo.
@@ -214,6 +221,7 @@ _HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_
 ORIGIN_ADVANCED = "advanced"
 ORIGIN_QUICK = "quick"
 ORIGIN_VIDEO_TOOLS = "video_tools"
+ORIGIN_AI_TOOLS = "ai_tools"
 
 
 class JobStatus:
@@ -318,6 +326,7 @@ class QueueWorker(QThread):
     job_status_changed = Signal(str, str)             # job_id, status
     job_progress_changed = Signal(str, float, str, str) # job_id, progress%, speed, eta
     finished_all = Signal(str)                        # origin: ese carril se quedó sin nada que hacer
+    job_waiting = Signal(str, str)                    # job_id, origen del pesado que lo hace esperar
 
     def __init__(self, manager):
         super().__init__()
@@ -326,6 +335,8 @@ class QueueWorker(QThread):
         self._cancellation_event = threading.Event()
         self._active_workers = {}
         self._workers_mutex = QRecursiveMutex()
+        # job_id -> job_id del pesado por el que ya se avisó (un aviso por cada bloqueo)
+        self._waiting_notified = {}
 
     def stop(self):
         """Detiene el despachador y sus hilos de descarga activos."""
@@ -351,7 +362,11 @@ class QueueWorker(QThread):
             
             with QMutexLocker(self._workers_mutex):
                 active_count = len(self._active_workers)
-                active_heavy = sum(1 for w in self._active_workers.values() if w.job.job_type in _HEAVY_JOB_TYPES)
+                heavy_running = [w.job for w in self._active_workers.values() if w.job.job_type in _HEAVY_JOB_TYPES]
+                active_heavy = len(heavy_running)
+
+            if heavy_running:
+                self._notify_waiting_heavy(heavy_running[0])
 
             if active_count < max_concurrent:
                 job = self.manager._get_next_runnable_job(active_heavy)
@@ -377,6 +392,19 @@ class QueueWorker(QThread):
                     self.manager.pause_queue(origin)
                     self.finished_all.emit(origin)
             time.sleep(0.3)
+
+    def _notify_waiting_heavy(self, blocker):
+        """Avisa (una vez por bloqueo) a los pesados pendientes que esperan a `blocker`,
+        para que su pestaña muestre por qué no arrancan: solo corre un pesado a la vez
+        en toda la app (ver _HEAVY_JOB_TYPES)."""
+        blocked = self.manager._blocked_heavy_jobs()
+        # Olvidar a los que ya arrancaron o se quitaron de la cola.
+        self._waiting_notified = {j.job_id: self._waiting_notified[j.job_id]
+                                  for j in blocked if j.job_id in self._waiting_notified}
+        for job in blocked:
+            if self._waiting_notified.get(job.job_id) != blocker.job_id:
+                self._waiting_notified[job.job_id] = blocker.job_id
+                self.job_waiting.emit(job.job_id, blocker.origin or "")
 
     def _on_single_job_finished(self, job_id, status):
         with QMutexLocker(self._workers_mutex):
@@ -1279,14 +1307,12 @@ class QueueWorker(QThread):
             cmd.extend(["-map", f"0:{indice_caratula}", "-c:v:1", "copy",
                         "-disposition:v:1", "attached_pic"])
 
-        if use_watermark_image:
-            # La imagen de marca de agua entra con -loop 1 (stream infinito, ver más
-            # arriba). El filtro overlay por defecto espera a que TODOS sus inputs
-            # terminen antes de cerrar la salida (shortest=0) — sin este flag, ffmpeg
-            # nunca ve EOF en el input infinito y el proceso queda corriendo para
-            # siempre después de terminar de codificar el video real (se ve como
-            # progreso pegado en 100% que nunca llega a completarse).
-            cmd.append("-shortest")
+        # La imagen de marca de agua entra con -loop 1 (stream infinito, ver más arriba).
+        # La cierra el 'shortest=1' del propio overlay (watermark_builder.py), que termina
+        # el video cuando termina el principal. Aquí antes había además un -shortest
+        # GLOBAL, que corta toda la salida al stream más corto: con un audio más corto que
+        # el video (un fragmento descargado sin corte preciso) recortaba el video, y si el
+        # video empezaba después de que terminara el audio la salida quedaba sin video.
 
         cmd.append(output_file)
 
@@ -1659,6 +1685,7 @@ class QueueManager(QObject):
     job_progress_changed = Signal(str, float, str, str) # job_id, percent, speed, eta
     queue_reordered = Signal()                       # Emitido cuando la cola cambia de orden
     queue_finished = Signal(str)                     # origin (ver QueueWorker.finished_all)
+    job_waiting = Signal(str, str)                   # job_id, origen del pesado que lo hace esperar
 
     def __init__(self):
         super().__init__()
@@ -1673,6 +1700,7 @@ class QueueManager(QObject):
         self._worker.job_status_changed.connect(self._on_worker_status_changed)
         self._worker.job_progress_changed.connect(self._on_worker_progress_changed)
         self._worker.finished_all.connect(self.queue_finished)
+        self._worker.job_waiting.connect(self.job_waiting)
         self._worker.start()
 
     def __del__(self):
@@ -1881,14 +1909,27 @@ class QueueManager(QObject):
 
     def _get_next_runnable_job(self, active_heavy: int) -> Job | None:
         """Obtiene la siguiente tarea PENDING de un carril encendido, saltando los
-        job types pesados de GPU/CPU (ver _HEAVY_JOB_TYPES) si ya hay uno corriendo."""
+        job types pesados de GPU/CPU (ver _HEAVY_JOB_TYPES) si ya hay uno corriendo.
+        La IA de video (_AI_JOB_TYPES) solo se elige si no hay otra cosa lista."""
         with QMutexLocker(self._mutex):
+            deferred_ai = None
             for j in self._jobs:
                 if j.status == JobStatus.PENDING and j.origin in self._running_origins:
                     if j.job_type in _HEAVY_JOB_TYPES and active_heavy > 0:
                         continue
+                    if j.job_type in _AI_JOB_TYPES:
+                        if deferred_ai is None:
+                            deferred_ai = j
+                        continue
                     return j
-            return None
+            return deferred_ai
+
+    def _blocked_heavy_jobs(self) -> list:
+        """Trabajos pesados PENDING de carriles encendidos (esperan su turno)."""
+        with QMutexLocker(self._mutex):
+            return [j for j in self._jobs
+                    if j.status == JobStatus.PENDING and j.origin in self._running_origins
+                    and j.job_type in _HEAVY_JOB_TYPES]
 
     def _has_pending(self, origin: str) -> bool:
         with QMutexLocker(self._mutex):

@@ -352,6 +352,9 @@ class MediaQueueWidget(QFrame):
         # (ver _ENTRY_MARKER) -- dos filas del mismo archivo con recortes
         # distintos rastrean su salida cada una por separado.
         self._output_paths = {}
+        # [(texto, callback(claves_seleccionadas))]: "Enviar a <otra pestaña>" en el menú
+        # contextual (ver set_send_targets).
+        self._send_targets = []
         self._init_ui()
         self._model.set_output_lookup(self.get_output_path)
 
@@ -643,7 +646,11 @@ class MediaQueueWidget(QFrame):
 
     def remove_selected(self):
         rows = sorted({idx.row() for idx in self.tree.selectionModel().selectedRows()})
-        removed_paths = [self._model.path_at(r) for r in rows]
+        self.remove_entries([self._model.path_at(r) for r in rows])
+
+    def remove_entries(self, entry_keys: list):
+        """Quita de la cola esas claves de entrada (las que no estén se ignoran)."""
+        removed_paths = list(entry_keys or [])
         for path in removed_paths:
             if path is None:
                 continue
@@ -658,6 +665,16 @@ class MediaQueueWidget(QFrame):
         """Claves de entrada, en orden. Para la ruta real usar entry_path() -- coinciden
         salvo en las repeticiones del mismo archivo (ver _ENTRY_MARKER)."""
         return list(self.files_list)
+
+    def selected_entries(self) -> list:
+        """Claves de entrada de las filas seleccionadas, en el orden de la cola."""
+        rows = sorted({idx.row() for idx in self.tree.selectionModel().selectedRows()})
+        return [key for key in (self._model.path_at(r) for r in rows) if key]
+
+    def set_send_targets(self, targets: list):
+        """[(texto, callback)] para el menú contextual: "Enviar a Herramientas IA",
+        "Enviar a Herramientas Multimedia"... El callback recibe las claves elegidas."""
+        self._send_targets = list(targets or [])
 
     def set_output_path(self, entry_key: str, output_path: str):
         """Registra el archivo de salida de una conversión completada (ver
@@ -697,9 +714,16 @@ class MediaQueueWidget(QFrame):
         menu = QMenu(self)
         action_remove = menu.addAction(self.tr("Eliminar de la cola"))
         action_open_loc = menu.addAction(self.tr("Abrir ubicación del archivo"))
+        send_actions = {}
+        if self._send_targets:
+            menu.addSeparator()
+            for text, callback in self._send_targets:
+                send_actions[menu.addAction(text)] = callback
 
         action = menu.exec(self.tree.viewport().mapToGlobal(pos))
-        if action == action_remove:
+        if action in send_actions:
+            send_actions[action](self.selected_entries() or [path])
+        elif action == action_remove:
             self.remove_selected()
         elif action == action_open_loc:
             path = entry_path(path)
