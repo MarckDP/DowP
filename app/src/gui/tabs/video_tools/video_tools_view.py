@@ -162,6 +162,14 @@ class VideoToolsTab(MediaWorkbenchTab):
         # PresetsPanel.get_upscale_settings()/get_recode_settings().
         if self.options_widget.tabs.currentWidget() is self.options_widget.tab_presets:
             upscale_settings = self.options_widget.tab_presets.get_upscale_settings()
+            if upscale_settings is not None and self.options_widget.tab_presets.is_transcription():
+                # Transcripción: no produce un video, así que no se encadena. Corre aparte
+                # y, si además hay un preajuste de Recodificación, este sigue el flujo de
+                # siempre sobre los mismos archivos.
+                self._start_upscale_ia_jobs(files, upscale_settings, out_dir, same_path)
+                if self.options_widget.tab_presets.get_recode_settings() is None:
+                    return
+                upscale_settings = None
             if upscale_settings is not None:
                 recode_settings = self.options_widget.tab_presets.get_recode_settings()
                 if recode_settings is not None:

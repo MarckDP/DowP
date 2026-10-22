@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from gui.widgets.combo_box import AutoPopupComboBox
+from gui.widgets.mode_selector import ModeSelector
 from gui.styles import get_theme_token
 from gui.styles import apply_shapes
 
@@ -23,6 +25,8 @@ class SubtitleOptionsWidget(QFrame):
     COMPACT_WIDTH = 350
     COLLAPSED_HEIGHT = 38
     toggled_collapse = Signal(bool)
+    # True con "Crear con IA", False con "Del sitio" (ver subtitle_controller.py).
+    source_changed = Signal(bool)
 
     def __init__(self, start_expanded: bool = False):
         super().__init__()
@@ -142,12 +146,54 @@ class SubtitleOptionsWidget(QFrame):
         self.chk_cut_to_fragment["container"].setToolTip(tooltip_text)
         self.chk_cut_to_fragment["switch"].setToolTip(tooltip_text)
         
-        body_layout.addWidget(self.language_container)
-        body_layout.addWidget(self.format_container)
-        body_layout.addWidget(self.btn_download_subtitles)
-        body_layout.addWidget(self.chk_download_with_media["container"])
-        body_layout.addWidget(self.chk_standardize_srt["container"])
-        body_layout.addWidget(self.chk_cut_to_fragment["container"])
+        # Origen de los subtítulos: los que ofrece el sitio, o crearlos con Whisper a partir
+        # del medio descargado (ver subtitle_controller.py). Siempre empieza en "Del sitio".
+        self.source_selector = ModeSelector(self.body_container, labels=[self.tr("Del sitio"), self.tr("Crear con IA")])
+        self.source_selector.mode_changed.connect(lambda _text: self._on_source_changed())
+        body_layout.addWidget(self.source_selector)
+
+        self.site_container = QWidget()
+        site_layout = QVBoxLayout(self.site_container)
+        site_layout.setContentsMargins(0, 0, 0, 0)
+        site_layout.setSpacing(6)
+        site_layout.addWidget(self.language_container)
+        site_layout.addWidget(self.format_container)
+        site_layout.addWidget(self.btn_download_subtitles)
+        site_layout.addWidget(self.chk_download_with_media["container"])
+        site_layout.addWidget(self.chk_standardize_srt["container"])
+        site_layout.addWidget(self.chk_cut_to_fragment["container"])
+        body_layout.addWidget(self.site_container)
+
+        # "Crear con IA": solo lo esencial; lo avanzado (corte, karaoke, detector de voz,
+        # vocabulario, estilo del ASS) llega con un preajuste de Transcripción de
+        # Herramientas IA. Con un preajuste, Modelo y Formato muestran los suyos y se
+        # bloquean; el idioma sigue editable.
+        self.ai_container = QWidget()
+        ai_layout = QGridLayout(self.ai_container)
+        ai_layout.setContentsMargins(0, 0, 0, 0)
+        ai_layout.setHorizontalSpacing(8)
+        ai_layout.setVerticalSpacing(6)
+        ai_layout.setColumnStretch(1, 1)
+        self.combo_ai_model = AutoPopupComboBox()
+        self.combo_ai_language = AutoPopupComboBox()
+        self.combo_ai_format = AutoPopupComboBox()
+        self.combo_ai_preset = AutoPopupComboBox()
+        self.combo_ai_preset.setToolTip(self.tr(
+            "Preajustes de Transcripción guardados en Herramientas IA. Traen las opciones "
+            "avanzadas (corte, karaoke, saltar silencios, vocabulario, estilo). Aquí siempre "
+            "se crea un archivo de subtítulos."))
+        rows = ((self.tr("Modelo"), self.combo_ai_model), (self.tr("Idioma"), self.combo_ai_language),
+                (self.tr("Formato"), self.combo_ai_format), (self.tr("Preajuste"), self.combo_ai_preset))
+        for row, (text, combo) in enumerate(rows):
+            label = QLabel(text)
+            label.setObjectName("menuLabel")
+            label.setMinimumWidth(58)
+            combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(8)
+            ai_layout.addWidget(label, row, 0)
+            ai_layout.addWidget(combo, row, 1)
+        self.ai_container.setVisible(False)
+        body_layout.addWidget(self.ai_container)
 
         # Red de seguridad (ver recode_options.py, mismo patrón): _expanded_height()
         # calcula el alto exacto del contenido, esto es solo por si algún redondeo dejara
@@ -156,6 +202,29 @@ class SubtitleOptionsWidget(QFrame):
         body_layout.addStretch(1)
 
         self.main_layout.addWidget(self.body_container)
+
+    def is_ai_mode(self) -> bool:
+        buttons = self.source_selector.buttons
+        return len(buttons) > 1 and buttons[1].isChecked()
+
+    def set_ai_mode(self, ai: bool):
+        """Cambia el origen sin pasar por el clic (al cambiar de medio en la cola)."""
+        if ai != self.is_ai_mode():
+            self.source_selector.buttons[1 if ai else 0].click()
+        else:
+            self._apply_source_visibility()
+
+    def _on_source_changed(self):
+        self._apply_source_visibility()
+        self.source_changed.emit(self.is_ai_mode())
+
+    def _apply_source_visibility(self):
+        ai = self.is_ai_mode()
+        self.site_container.setVisible(not ai)
+        self.ai_container.setVisible(ai)
+        # El alto de la tarjeta se calcula según el contenido (ver _expanded_height).
+        if self._is_expanded:
+            self.setFixedHeight(self._expanded_height())
 
     def _on_header_clicked(self, event):
         self.toggle_collapse()

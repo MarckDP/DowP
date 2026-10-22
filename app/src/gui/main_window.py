@@ -1058,13 +1058,21 @@ class MainWindow(QMainWindow):
     def open_preset_creator(self, kind: str):
         """Desde "+ Crear preajuste..." de Posprocesar (Modo Rápido / Proceso Avanzado):
         abre la pestaña donde se crea ese tipo de preajuste -- "recode" -> Herramientas
-        Multimedia, subpestaña Avanzado; "ia" -> la pestaña Herramientas IA."""
-        tab = self.tab_ai if kind == "ia" else self.tab_video
+        Multimedia, subpestaña Avanzado; "ia" -> la pestaña Herramientas IA;
+        "transcription" (Subtítulos > Crear con IA) -> Herramientas IA, en Transcripción."""
+        tab = self.tab_ai if kind in ("ia", "transcription") else self.tab_video
         self.tabs.setCurrentWidget(tab)
         options = getattr(tab, "options_widget", None)
         if options is None:
             return
-        if kind != "ia":
+        if kind == "transcription":
+            page = getattr(options, "pages", {}).get("transcription")
+            for index in range(options.tabs.count()):
+                widget = options.tabs.widget(index)
+                if page is not None and (widget is page or widget.isAncestorOf(page)):
+                    options.tabs.setCurrentIndex(index)
+                    break
+        elif kind != "ia":
             options.tabs.setCurrentWidget(options.tab_advanced)
         # En ventanas no muy anchas el panel de Opciones vive plegado como overlay (ver
         # VideoToolsTab.right_panel): sin abrirlo, el usuario veía la pestaña pero no las

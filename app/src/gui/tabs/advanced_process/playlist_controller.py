@@ -260,3 +260,4 @@ class PlaylistController(QObject):
         # Recodificación: config única para toda la playlist, vive en job.config (no en
         # request_data - ver advanced_process_view.py::_save_current_job_options).
         self.tab.recode_controller.restore_recode_to_ui(job.config)
+        self.tab.subtitle_controller.restore_ai_subtitles_to_ui(job.config)

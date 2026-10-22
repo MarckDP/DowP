@@ -1,7 +1,7 @@
 # src/gui/tabs/ai_tools/ai_tools_view.py
 """
-Pestaña "Herramientas IA": Reescalado, Mapa de Profundidad y Mapa de Normales de
-video, con IA local.
+Pestaña "Herramientas IA": transcripción, reescalado, profundidad y normales,
+con IA local.
 
 Comparte con Herramientas Multimedia toda la base (cola, vista previa con recorte,
 opciones de salida con etiquetas, progreso, seguimiento de trabajos y la cadena
@@ -19,8 +19,12 @@ from PySide6.QtWidgets import (
 )
 
 from core.utils.config_manager import get_config, save_config
+from core.utils.media_extensions import AUDIO_EXTS as AUDIO_ONLY_EXTENSIONS
+from core.tabs.video_tools.transcription_engine import embed_mode
 from gui.tabs.ai_tools.ai_preview_panel import AIPreviewPanel
 from gui.tabs.video_tools.media_workbench import MediaWorkbenchTab
+from gui.tabs.video_tools.media_queue_widget import entry_path
+from core.tabs.editing_media.ffprobe_metadata_manager import FFprobeMetadataManager
 from gui.tabs.video_tools.upscale_ia_panel import FUNCTION_UPSCALE, UpscaleIAPanel, ia_function_of, ia_settings_ready
 from gui.widgets.animated_tab_indicator import AnimatedTabIndicator
 from core.utils.preset_manager import IA_TOOL_FUNCTIONS, IA_TOOLS_NAMESPACE
@@ -35,17 +39,12 @@ from core.utils.sound_notifier import SOURCE_AI_TOOLS
 
 
 class AIToolsOptions(QFrame):
-    """Opciones de Herramientas IA, en dos pestañas (como las de Multimedia):
+    """Preajustes primero, seguidos de una pestaña por función de IA.
 
-    - Opciones: función, motor/modelo, contenedor... (UpscaleIAPanel), "Guardar como
-      preajuste" y la tarjeta "Recodificar" (opcional, corre después de la IA).
-    - Preajustes: un preajuste de IA (Reescalado, Profundidad o Normales en un solo
-      menú) y, si se quiere, uno de Recodificación que corre después. Se usan tal cual,
-      sin tocar los controles de Opciones. Recodificar sin IA no: para eso está
-      Herramientas Multimedia.
-
-    Iniciar corre lo de la pestaña abierta, y solo se activa si hay algo válido elegido
-    y su modelo ya está en disco (no mientras se descarga)."""
+    Cada pestaña presenta los controles de su función y permite guardar ajustes.
+    Preajustes ejecuta los ajustes guardados; la recodificación posterior solo se
+    ofrece para las funciones cuya salida es video.
+    """
 
     start_status_changed = Signal(bool, str)
 
@@ -64,7 +63,7 @@ class AIToolsOptions(QFrame):
             }}
             QTabWidget#aiOptionsTabs > QTabBar::tab {{
                 background: transparent;
-                padding: 8px 18px;
+                padding: 8px 8px;
             }}
             QTabWidget#aiOptionsTabs > QTabBar::tab:selected {{
                 background: transparent;
@@ -78,23 +77,28 @@ class AIToolsOptions(QFrame):
         self.tabs = QTabWidget(self)
         self.tabs.setObjectName("aiOptionsTabs")
 
-        # ── Opciones ─────────────────────────────────────────────────────────
-        self.panel = UpscaleIAPanel(self)
-        self.chk_recode = QCheckBox(self.tr("Recodificar"))
-        self.chk_recode.setObjectName("sectionTitle")
-        self.chk_recode.setToolTip(self.tr(
-            "Al terminar la IA, recodifica el video con un preajuste de Recodificación "
-            "(por ejemplo, para pasarlo a H.265 o comprimirlo). El archivo intermedio se borra solo."))
-        _frame, card = self.panel.add_card(self.tr("Recodificar"), header=self.chk_recode)
-        self.preset_bar_recode = PresetBar(
-            _RECODE_PRESET_NAMESPACE, get_settings=None, parent=self,
-            show_picker=True, show_save_button=False,
-        )
-        self.preset_bar_recode.setEnabled(False)
-        card.addWidget(self.preset_bar_recode)
-        card.addWidget(self._hint(self.tr(
-            "Los preajustes de Recodificación se crean en Herramientas Multimedia, pestaña Avanzado.")))
-        self.tabs.addTab(self.panel, self.tr("Opciones"))
+        # Cada página conserva sus widgets, scroll y opciones; nunca se reubica.
+        self.pages = {}
+        for function, label in (("upscale", self.tr("Reescalado")),
+                                ("depth", self.tr("Profundidad")),
+                                ("normals", self.tr("Normales")),
+                                ("transcription", self.tr("Transcripción"))):
+            page = UpscaleIAPanel(self.tabs, function=function)
+            self.pages[function] = page
+            if function != "transcription":
+                page.chk_recode = QCheckBox(self.tr("Recodificar"))
+                page.chk_recode.setObjectName("sectionTitle")
+                page.chk_recode.setToolTip(self.tr("Recodifica el video al terminar esta función de IA."))
+                frame, card = page.add_card(self.tr("Recodificar"), header=page.chk_recode)
+                page.preset_bar_recode = PresetBar(
+                    _RECODE_PRESET_NAMESPACE, get_settings=None, parent=frame,
+                    show_picker=True, show_save_button=False)
+                page.preset_bar_recode.setEnabled(False)
+                card.addWidget(page.preset_bar_recode)
+                card.addWidget(self._hint(self.tr(
+                    "Los preajustes de Recodificación se crean en Herramientas Multimedia, pestaña Avanzado.")))
+                page.chk_recode.toggled.connect(page.preset_bar_recode.setEnabled)
+            self.tabs.addTab(page, label)
 
         # ── Preajustes ───────────────────────────────────────────────────────
         presets_page = QScrollArea(self)
@@ -112,7 +116,7 @@ class AIToolsOptions(QFrame):
         pl.setContentsMargins(10, 10, 10, 10)
         pl.setSpacing(10)
 
-        frame_ia, iv = self.panel._card(presets_content, self.tr("Preajustes de IA"))
+        frame_ia, iv = self.pages[FUNCTION_UPSCALE]._card(presets_content, self.tr("Preajustes de IA"))
         self.preset_bar_ia = PresetBar(
             IA_TOOLS_NAMESPACE, get_settings=None, parent=frame_ia,
             show_picker=True, show_save_button=False,
@@ -120,10 +124,11 @@ class AIToolsOptions(QFrame):
         )
         iv.addWidget(self.preset_bar_ia)
         iv.addWidget(self._hint(self.tr(
-            "Se guardan desde la pestaña Opciones, con \"Guardar como preajuste\".")))
+            "Se guardan desde la pestaña de cada función, con \"Guardar como preajuste\".")))
         pl.addWidget(frame_ia)
 
-        frame_rc, rv = self.panel._card(presets_content, self.tr("Recodificar"))
+        frame_rc, rv = self.pages[FUNCTION_UPSCALE]._card(presets_content, self.tr("Recodificar"))
+        self.recode_presets_frame = frame_rc
         self.preset_bar_recode_presets = PresetBar(
             _RECODE_PRESET_NAMESPACE, get_settings=None, parent=frame_rc,
             show_picker=True, show_save_button=False,
@@ -133,23 +138,35 @@ class AIToolsOptions(QFrame):
         pl.addWidget(frame_rc)
         pl.addStretch(1)
         presets_page.setWidget(presets_content)
-        self.tabs.addTab(presets_page, self.tr("Preajustes"))
+        self.tabs.insertTab(0, presets_page, self.tr("Preajustes"))
         self._presets_page = presets_page
 
         layout.addWidget(self.tabs)
         self._tabs_indicator = AnimatedTabIndicator(self.tabs)
 
-        self.panel.validity_changed.connect(self._emit_status)
-        self.chk_recode.toggled.connect(self._on_recode_toggled)
-        self.preset_bar_recode.preset_applied.connect(self._emit_status)
+        for page in self.pages.values():
+            page.validity_changed.connect(self._emit_status)
+            if page.current_function() != "transcription":
+                page.chk_recode.toggled.connect(self._emit_status)
+                page.preset_bar_recode.preset_applied.connect(self._emit_status)
         self.preset_bar_ia.preset_applied.connect(self._emit_status)
         self.preset_bar_recode_presets.preset_applied.connect(self._emit_status)
         self.tabs.currentChanged.connect(self._emit_status)
+        self.tabs.setCurrentIndex(0)
         # Un preajuste de IA cuyo modelo empieza o termina de descargarse.
         from gui.widgets.model_download_prompt import model_downloads
         model_downloads().started.connect(self._emit_status)
         model_downloads().finished.connect(self._emit_status)
         model_downloads().models_changed.connect(self._emit_status)
+
+    @property
+    def panel(self):
+        """Página elegida; Preajustes usa sus propios controles y ajustes."""
+        current = self.tabs.currentWidget()
+        return current if isinstance(current, UpscaleIAPanel) else self.pages[FUNCTION_UPSCALE]
+
+    def content_min_width(self):
+        return max(page.content_min_width() for page in self.pages.values())
 
     def _hint(self, text: str) -> QLabel:
         hint = QLabel(text)
@@ -157,11 +174,9 @@ class AIToolsOptions(QFrame):
         set_themed_style(hint, lambda: f"color: {get_theme_token('texto_secundario', '#888888')}; font-size: 11px;")
         return hint
 
-    def _on_recode_toggled(self, checked: bool):
-        self.preset_bar_recode.setEnabled(checked)
-        self._emit_status()
-
     def _emit_status(self, *_args):
+        transcription = self.get_ia_settings().get("ia_function") == "transcription"
+        self.recode_presets_frame.setVisible(not transcription)
         self.start_status_changed.emit(*self.get_current_status())
 
     def on_presets_tab(self) -> bool:
@@ -169,28 +184,42 @@ class AIToolsOptions(QFrame):
 
     def get_current_status(self) -> tuple[bool, str]:
         if self.on_presets_tab():
-            settings = self.preset_bar_ia.current_preset_settings()
-            if settings is None:
+            if self.preset_bar_ia.current_preset_settings() is None:
                 return False, self.tr("Elige un preajuste de IA.")
+            settings = self.get_ia_settings()
+            if ia_function_of(settings) == "transcription" and not settings.get("transcription_model"):
+                return False, self.tr("Descarga un modelo en la página Transcripción: este preajuste usa ese.")
             if not ia_settings_ready(settings):
+                if ia_function_of(settings) == "transcription":
+                    return False, self.tr("Descarga el motor whisper.cpp en Transcripción y el modelo del preajuste.")
                 return False, self.tr("El modelo del preajuste todavía no está descargado.")
             return True, UpscaleIAPanel.start_text(ia_function_of(settings))
         valid, text = self.panel.get_status()
-        if valid and self.chk_recode.isChecked() and self.preset_bar_recode.current_preset_settings() is None:
+        if valid and self.panel.current_function() != "transcription" and self.panel.chk_recode.isChecked() and self.panel.preset_bar_recode.current_preset_settings() is None:
             return False, self.tr("Elige un preajuste de recodificación.")
         return valid, text
 
     def get_ia_settings(self) -> dict:
         if self.on_presets_tab():
-            return dict(self.preset_bar_ia.current_preset_settings() or {})
+            settings = dict(self.preset_bar_ia.current_preset_settings() or {})
+            # Los preajustes de subtítulos de fábrica no traen modelo (no obligan a bajar
+            # uno concreto): usan el elegido en la página Transcripción o, si no hay, el
+            # descargado por defecto (ver whisper_setup.default_model_id).
+            if settings.get("ia_function") == "transcription" and not settings.get("transcription_model"):
+                from core.setup.whisper_setup import default_model_id
+                settings["transcription_model"] = (
+                    self.pages["transcription"].transcription_content.model.currentData() or default_model_id())
+            return settings
         return self.panel.get_settings()
 
     def get_recode_settings(self) -> dict | None:
         """Ajustes de la recodificación que corre después de la IA, o None si no hay."""
+        if self.get_ia_settings().get("ia_function") == "transcription":
+            return None
         if self.on_presets_tab():
             preset = self.preset_bar_recode_presets.current_preset_settings()
-        elif self.chk_recode.isChecked():
-            preset = self.preset_bar_recode.current_preset_settings()
+        elif self.panel.chk_recode.isChecked():
+            preset = self.panel.preset_bar_recode.current_preset_settings()
         else:
             preset = None
         if preset is None:
@@ -231,6 +260,7 @@ class AIToolsTab(MediaWorkbenchTab):
 
     def __init__(self, parent=None):
         self._source_meta = {}
+        self._transcription_tracks = {}
         super().__init__(parent)
         self._load_saved_suffix()
         self.txt_suffix.editingFinished.connect(self._save_suffix)
@@ -315,7 +345,7 @@ class AIToolsTab(MediaWorkbenchTab):
         informa solo) y la salida, para que nada quede cortado."""
         # La de la función más ancha, no la elegida: si no, cambiar de función movía el
         # punto en que la pestaña pasa de tres columnas a Cola / Vista previa.
-        content = self.options_widget.panel.max_content_min_width()
+        content = self.options_widget.content_min_width()
         return max(self.RIGHT_COLUMN_MIN_WIDTH, content, self.output_card.minimumSizeHint().width())
 
     def _update_right_min_width(self):
@@ -447,6 +477,7 @@ class AIToolsTab(MediaWorkbenchTab):
 
     def _on_source_media(self, meta, filepath, new_file):
         self._source_meta = dict(meta or {})
+        self.options_widget.pages["transcription"].transcription_content.set_audio_tracks(self._source_meta.get("audio_streams", []))
         duration = self._parse_duration_to_seconds(self._source_meta.get("duración", "0"))
         if duration > 0:
             self.preview_widget.set_duration(duration)
@@ -465,7 +496,7 @@ class AIToolsTab(MediaWorkbenchTab):
         files = self.queue_widget.get_all_filepaths()
         if not files:
             QMessageBox.warning(self, self.tr("Sin archivos"),
-                                self.tr("Agrega al menos un video a la cola para iniciar."))
+                                self.tr("Agrega al menos un archivo de audio o video a la cola para iniciar."))
             return
         out_dir = self.txt_output_dir.text().strip()
         same_path = self.chk_same_path.isChecked()
@@ -476,6 +507,8 @@ class AIToolsTab(MediaWorkbenchTab):
 
         ia_settings = self.options_widget.get_ia_settings()
         recode_settings = self.options_widget.get_recode_settings()
+        if ia_function_of(ia_settings) == "transcription":
+            files = self._prepare_transcription_entries(files, ia_settings)
         logger.info(f"AIToolsTab: Iniciando {ia_settings.get('ia_function')} para {len(files)} archivos"
                     f"{' + recodificación' if recode_settings else ''}. Misma ruta: {same_path}")
         if recode_settings:
@@ -483,12 +516,53 @@ class AIToolsTab(MediaWorkbenchTab):
         else:
             self._start_upscale_ia_jobs(files, ia_settings, out_dir, same_path)
 
+    def _prepare_transcription_entries(self, files, settings):
+        """Con "Todas", cada pista de audio pasa a ser una fila propia de la cola (se puede
+        cancelar por separado y conserva el recorte). Se desglosa una sola vez por fila."""
+        current = set(self.queue_widget.get_all_filepaths())
+        self._transcription_tracks = {k: v for k, v in self._transcription_tracks.items() if k in current}
+        if settings.get("transcription_audio_track", 0) != "all":
+            return files
+        result = []
+        for key in files:
+            if key in self._transcription_tracks:
+                result.append(key)
+                continue
+            path = entry_path(key)
+            meta = FFprobeMetadataManager.get_instance()._extract_ffprobe_json(path, "video")
+            streams = meta.get("audio_streams", [])
+            if not streams:
+                self.queue_widget.update_file_status(key, self.tr("Error: sin pistas de audio"))
+                continue
+            trim = self._trim_cache.get(key)
+            name = self._clip_names.get(key)
+            if len(streams) == 1:
+                entries = [key]
+            else:
+                entries = self.queue_widget.add_files([path] * len(streams), allow_duplicates=True)
+                self.queue_widget.remove_entries([key])
+            for index, entry in enumerate(entries):
+                self._transcription_tracks[entry] = index
+                if trim:
+                    self._trim_cache[entry] = trim
+                if name:
+                    self._clip_names[entry] = name
+                self.queue_widget.set_entry_label(entry, self.tr("{0} · Pista {1}").format(os.path.basename(path), index + 1))
+                result.append(entry)
+        return result
+
+    def _on_queue_changed(self, _count: int = 0):
+        """Además de lo de la base, olvida la pista asignada a filas que ya no están."""
+        current = set(self.queue_widget.get_all_filepaths())
+        self._transcription_tracks = {k: v for k, v in self._transcription_tracks.items() if k in current}
+        super()._on_queue_changed(_count)
+
     def start_tutorial(self):
         from gui.widgets.tutorial_overlay import TutorialOverlay
         steps = [
             {
                 "title": self.tr("Herramientas IA"),
-                "desc": self.tr("Reescala videos, o crea mapas de profundidad y de normales, con IA "
+                "desc": self.tr("Transcribe audio y video, reescala videos o crea mapas de profundidad y de normales con IA "
                                 "que corre en tu equipo: sin suscripciones y sin subir tus archivos."),
                 "widgets": [self.queue_widget],
             },
@@ -522,6 +596,13 @@ class AIToolsTab(MediaWorkbenchTab):
     # ------------------------------------------------------------------
     def _output_text(self) -> str:
         """Resolución que va a entregar la función de IA elegida, para los detalles."""
+        if self.options_widget.get_ia_settings().get("ia_function") == "transcription":
+            settings = self.options_widget.get_ia_settings()
+            label = {"md": "Markdown"}.get(settings.get("container", "srt"), settings.get("container", "srt").upper())
+            embed = embed_mode(settings)
+            if embed == "burn":
+                return self.tr("Video con subtítulos quemados")
+            return self.tr("Video + pista {0}").format(label) if embed == "track" else label
         match = re.match(r"(\d+)x(\d+)", str(self._source_meta.get("resolución", "")))
         if not match:
             return "-"
@@ -553,7 +634,8 @@ class AIToolsTab(MediaWorkbenchTab):
         self.preview_widget.pause()
         trim = self.preview_widget.trim() or (0.0, duration)
         dlg = SubclipEditorDialog(
-            media_path=path, media_type="video", duration_sec=duration,
+            media_path=path, media_type="audio" if os.path.splitext(path)[1].lower() in
+            AUDIO_ONLY_EXTENSIONS else "video", duration_sec=duration,
             fps=self.preview_widget.fps(), existing_subclips=[],
             initial_in_sec=trim[0], initial_out_sec=trim[1],
             display_name=os.path.basename(path), parent=self,
@@ -600,14 +682,15 @@ class AIToolsTab(MediaWorkbenchTab):
             from core.setup.vegas_setup import get_vegas_version_icon
             icon_file, name = get_vegas_version_icon(), "VEGAS Pro"
         icon = get_svg_icon(icon_file) if icon_file else QIcon()
-        has_output = bool(self._current_output())
+        output = self._current_output()
+        has_output = bool(output) and os.path.splitext(output)[1].lower() not in (".srt", ".vtt", ".txt")
         self.preview_widget.set_editor_state(self.tr("Enviar a {0}").format(name), has_output, icon)
         self.preview_widget.btn_send_editor.setToolTip(
             "" if has_output else self.tr("Disponible cuando esta fila termine de procesarse."))
 
     def _on_send_to_editor_clicked(self):
         output = self._current_output()
-        if not output:
+        if not output or os.path.splitext(output)[1].lower() in (".srt", ".vtt", ".txt"):
             return
         from core.services.editor_integration_manager import EditorIntegrationManager
         editor_mgr = EditorIntegrationManager.get_instance()

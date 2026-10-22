@@ -1,6 +1,7 @@
 # src/gui/tabs/settings/pages/deps_page.py
 import os
 import platform
+from functools import partial
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QPushButton, QFrame, QScrollArea, QProgressBar, QMessageBox,
@@ -35,6 +36,8 @@ from core.setup.ghostscript_setup import (
     check_ghostscript, download_ghostscript, get_local_version as gs_local,
     get_remote_version as gs_remote, get_install_info as gs_install_info,
 )
+from core.setup import whisper_setup
+from core.setup.optional_dependencies import uninstall_optional
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 from gui.styles import set_themed_style
 from gui.styles import apply_shapes
@@ -117,16 +120,21 @@ class DependencyDownloadWorker(QThread):
     progress_signal = Signal(str, str) # current phase message, dep_id
     numeric_progress_signal = Signal(int, str) # percentage, dep_id
 
-    def __init__(self, dep_id, download_func, version=None, channel=None, parent=None):
+    def __init__(self, dep_id, download_func, version=None, channel=None, parent=None, operation="download"):
         super().__init__(parent)
         self.dep_id = dep_id
         self.download_func = download_func
         self.version = version
         self.channel = channel
+        self.operation = operation
 
     def run(self):
         try:
-            self.progress_signal.emit(f"Descargando {self.dep_id}...", self.dep_id)
+            if self.operation == "uninstall":
+                message = QCoreApplication.translate("DependencyDownloadWorker", "Desinstalando {0}...")
+            else:
+                message = QCoreApplication.translate("DependencyDownloadWorker", "Descargando {0}...")
+            self.progress_signal.emit(message.format(self.dep_id), self.dep_id)
             
             def progress_cb(percent):
                 self.numeric_progress_signal.emit(percent, self.dep_id)
@@ -1460,6 +1468,7 @@ class VtracerCardPanel(QFrame):
     """Tarjeta dedicada a vtracer -- calcada de DenoCardPanel (mismo perfil de
     dependencia: un solo binario portable, sin variantes/canales)."""
     download_requested = Signal(str, object)  # "vtracer", version
+    uninstall_requested = Signal(str)
 
     _TOOLTIP_VTRACER = QCoreApplication.translate(
         "VtracerCardPanel",
@@ -1473,6 +1482,7 @@ class VtracerCardPanel(QFrame):
         self.setObjectName("vtracerCardPanel")
         self.dep_id = "vtracer"
         self.is_installed = False
+        self._busy = False
         self.local_ver = None
         self._build_ui()
         self.check_status()
@@ -1527,6 +1537,13 @@ class VtracerCardPanel(QFrame):
         desc_lbl.setWordWrap(True)
         bottom_row.addWidget(desc_lbl, 1)
 
+        self._btn_remove = QPushButton(self.tr("Desinstalar"))
+        self._btn_remove.setMinimumWidth(110)
+        self._btn_remove.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self._btn_remove, "secondary")
+        self._btn_remove.clicked.connect(lambda: self.uninstall_requested.emit(self.dep_id))
+        bottom_row.addWidget(self._btn_remove, 0, Qt.AlignVCenter)
+
         self._btn_action = QPushButton(self.tr("Descargar"))
         self._btn_action.setCursor(Qt.PointingHandCursor)
         set_button_variant(self._btn_action, "secondary")
@@ -1561,6 +1578,7 @@ class VtracerCardPanel(QFrame):
         self._update_ui_state()
 
     def _update_ui_state(self):
+        self._btn_remove.setEnabled(self.is_installed)
         if self.is_installed:
             self._status_badge.setText(self.tr("✓ Instalado"))
             set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-weight: bold; font-size: 12px;")
@@ -1571,10 +1589,10 @@ class VtracerCardPanel(QFrame):
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
         else:
-            self._status_badge.setText(self.tr("✗ Falta"))
-            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
+            self._status_badge.setText(self.tr("No instalado"))
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-weight: bold; font-size: 12px;")
             self._version_summary.setText(self.tr("No instalado"))
-            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Descargar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
@@ -1584,6 +1602,8 @@ class VtracerCardPanel(QFrame):
             self._version_summary.setText(self.tr("Versión: {0} (Buscando...)").format(self.local_ver))
 
     def set_update_available(self, remote_ver):
+        if self._busy:
+            return
         if not self.is_installed:
             return
         if not remote_ver:
@@ -1611,7 +1631,9 @@ class VtracerCardPanel(QFrame):
         self.download_requested.emit(self.dep_id, version)
 
     def set_downloading_state(self, is_downloading, message=""):
+        self._busy = is_downloading
         self._btn_action.setDisabled(is_downloading)
+        self._btn_remove.setEnabled(self.is_installed and not is_downloading)
         if is_downloading:
             self._progress_bar.setRange(0, 0)
             self._progress_bar.setValue(0)
@@ -1652,6 +1674,7 @@ class GhostscriptCardPanel(QFrame):
     gestor de paquetes (ver _system_box / ghostscript_setup.get_install_info),
     con un botón para copiarlo y otro para re-verificar tras instalarlo a mano."""
     download_requested = Signal(str, object)  # "ghostscript", None
+    uninstall_requested = Signal(str)
 
     _TOOLTIP_GS = QCoreApplication.translate(
         "GhostscriptCardPanel",
@@ -1670,6 +1693,7 @@ class GhostscriptCardPanel(QFrame):
         self.setProperty("variant", "card")
         self.dep_id = "ghostscript"
         self.is_installed = False
+        self._busy = False
         self.local_ver = None
         self._is_windows = platform.system() == "Windows"
         self._pkg_label = ""
@@ -1728,6 +1752,13 @@ class GhostscriptCardPanel(QFrame):
         desc_lbl.setWordWrap(True)
         windows_layout.addWidget(desc_lbl, 1)
 
+        self._btn_remove = QPushButton(self.tr("Desinstalar"))
+        self._btn_remove.setMinimumWidth(110)
+        self._btn_remove.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self._btn_remove, "secondary")
+        self._btn_remove.clicked.connect(lambda: self.uninstall_requested.emit(self.dep_id))
+        windows_layout.addWidget(self._btn_remove, 0, Qt.AlignVCenter)
+
         self._btn_action = QPushButton(self.tr("Descargar"))
         self._btn_action.setCursor(Qt.PointingHandCursor)
         set_button_variant(self._btn_action, "secondary")
@@ -1780,6 +1811,12 @@ class GhostscriptCardPanel(QFrame):
         self._btn_verify.clicked.connect(self._on_verify_clicked)
         command_row.addWidget(self._btn_verify)
 
+        self._btn_system_remove = QPushButton(self.tr("Cómo desinstalar"))
+        set_button_variant(self._btn_system_remove, "secondary")
+        self._btn_system_remove.setCursor(Qt.PointingHandCursor)
+        self._btn_system_remove.clicked.connect(self._show_system_uninstall)
+        command_row.addWidget(self._btn_system_remove)
+
         system_layout.addLayout(command_row)
 
         self._system_hint_lbl = QLabel("")
@@ -1809,6 +1846,8 @@ class GhostscriptCardPanel(QFrame):
         self._update_ui_state()
 
     def _update_ui_state(self):
+        self._btn_remove.setEnabled(self.is_installed)
+        self._btn_system_remove.setEnabled(self.is_installed)
         self._windows_box.setVisible(self._is_windows)
         self._system_box.setVisible(not self._is_windows)
 
@@ -1826,10 +1865,10 @@ class GhostscriptCardPanel(QFrame):
                 ).format(self._pkg_label))
                 set_themed_style(self._system_hint_lbl, lambda: f"color: {get_theme_token('estado_exito', '#4CAF50')}; font-size: 11px;")
             else:
-                self._status_badge.setText(self.tr("✗ Falta"))
-                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
+                self._status_badge.setText(self.tr("No instalado"))
+                set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-weight: bold; font-size: 12px;")
                 self._version_summary.setText(self.tr("No instalado"))
-                set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
+                set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
                 self._system_hint_lbl.setText(self.tr(
                     "No se detectó Ghostscript vía {0}. Copia el comando, ejecútalo en tu terminal "
                     "y después presiona \"Verificar\"."
@@ -1850,10 +1889,10 @@ class GhostscriptCardPanel(QFrame):
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "secondary")
         else:
-            self._status_badge.setText(self.tr("✗ Falta"))
-            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-weight: bold; font-size: 12px;")
+            self._status_badge.setText(self.tr("No instalado"))
+            set_themed_style(self._status_badge, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-weight: bold; font-size: 12px;")
             self._version_summary.setText(self.tr("No instalado"))
-            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('estado_error', '#F44336')}; font-size: 12px;")
+            set_themed_style(self._version_summary, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
             self._btn_action.setText(self.tr("Descargar"))
             self._btn_action.setDisabled(False)
             set_button_variant(self._btn_action, "accent-blue")
@@ -1869,6 +1908,8 @@ class GhostscriptCardPanel(QFrame):
         """Resultado del chequeo. `remote_ver` a None significa que la consulta no
         se pudo hacer (sin conexion, o GitHub sin responder); en ese caso se deja la
         version instalada tal cual, sin afirmar que esta al dia."""
+        if self._busy:
+            return
         if not self._is_windows or not self.is_installed:
             return
 
@@ -1903,6 +1944,31 @@ class GhostscriptCardPanel(QFrame):
         self.set_downloading_state(True)
         self.download_requested.emit(self.dep_id, None)
 
+    def _show_system_uninstall(self):
+        # Solo instrucciones: esta instalación pertenece al gestor de paquetes del sistema.
+        commands = {
+            "brew install ghostscript": "brew uninstall ghostscript",
+            "sudo apt install ghostscript": "sudo apt remove ghostscript",
+            "sudo dnf install ghostscript": "sudo dnf remove ghostscript",
+            "sudo pacman -S ghostscript": "sudo pacman -R ghostscript",
+            "sudo zypper install ghostscript": "sudo zypper remove ghostscript",
+        }
+        command = commands.get(self._install_cmd, "")
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(self.tr("Desinstalar Ghostscript del sistema"))
+        copy_button = None
+        if command:
+            dialog.setText(self.tr("Ghostscript está instalado en el sistema y puede ser usado por otras aplicaciones. Si lo instalaste con {0}, puedes retirarlo desde tu terminal con:\n\n{1}\n\nDespués pulsa Verificar.").format(self._pkg_label, command))
+        else:
+            # Gestor de paquetes que no está en la lista: sin comando que mostrar ni copiar.
+            dialog.setText(self.tr("Ghostscript está instalado en el sistema y puede ser usado por otras aplicaciones. Para quitarlo, desinstálalo con el mismo gestor de paquetes con el que lo instalaste.\n\nDespués pulsa Verificar."))
+        dialog.setStandardButtons(QMessageBox.Close)
+        if command:
+            copy_button = dialog.addButton(self.tr("Copiar comando"), QMessageBox.ActionRole)
+        dialog.exec()
+        if copy_button is not None and dialog.clickedButton() == copy_button:
+            QApplication.clipboard().setText(command)
+
     def _on_copy_command_clicked(self):
         QApplication.clipboard().setText(self._install_cmd)
         self._btn_copy.setText(self.tr("¡Copiado!"))
@@ -1927,7 +1993,9 @@ class GhostscriptCardPanel(QFrame):
             )
 
     def set_downloading_state(self, is_downloading, message=""):
+        self._busy = is_downloading
         self._btn_action.setDisabled(is_downloading)
+        self._btn_remove.setEnabled(self.is_installed and not is_downloading)
         if is_downloading:
             self._progress_bar.setRange(0, 100)
             self._progress_bar.setValue(0)
@@ -1983,6 +2051,7 @@ class DependenciesPage(QWidget):
 
         # Scroll area para los paneles y tarjetas
         scroll_area = QScrollArea()
+        self.scroll_area = scroll_area
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
         scroll_area.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
@@ -1993,6 +2062,8 @@ class DependenciesPage(QWidget):
         self.scroll_layout = TopAlignedVBoxLayout(scroll_content)
         self.scroll_layout.setContentsMargins(0, 0, 10, 0)
         self.scroll_layout.setSpacing(12)
+
+        self._add_section(self.tr("Esenciales"), self.tr("Componentes para las funciones principales de descarga y procesamiento."))
 
         # 1. Tarjeta FFmpeg con opciones avanzadas
         self.ffmpeg_panel = FFmpegOptionsPanel()
@@ -2008,15 +2079,24 @@ class DependenciesPage(QWidget):
         self.deno_panel.download_requested.connect(self.start_download)
         self.scroll_layout.addWidget(self.deno_panel)
 
+        self._add_section(self.tr("Opcionales"), self.tr("Instala solo los motores que necesites. No forman parte de la instalación inicial."))
+
         # 4. Tarjeta Ghostscript (EPS/PS del Editor de Imagen -- opcional)
         self.gs_panel = GhostscriptCardPanel()
         self.gs_panel.download_requested.connect(self.start_download)
+        self.gs_panel.uninstall_requested.connect(self.start_uninstall)
         self.scroll_layout.addWidget(self.gs_panel)
 
         # 5. Tarjeta vtracer (SVG del Editor de Imagen -- opcional)
         self.vtracer_panel = VtracerCardPanel()
         self.vtracer_panel.download_requested.connect(self.start_download)
+        self.vtracer_panel.uninstall_requested.connect(self.start_uninstall)
         self.scroll_layout.addWidget(self.vtracer_panel)
+
+        # Transcripción nativa opcional; usa el mismo registro global de descargas que su selector.
+        from gui.tabs.ai_tools.transcription_panel import WhisperRuntimeCard
+        self.whisper_panel = WhisperRuntimeCard(dependency_card=True)
+        self.scroll_layout.addWidget(self.whisper_panel)
 
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
@@ -2041,6 +2121,21 @@ class DependenciesPage(QWidget):
         bottom_layout.addWidget(self.btn_check_updates)
         
         layout.addLayout(bottom_layout)
+
+    def _add_section(self, title, description):
+        label = QLabel(title)
+        label.setObjectName("sectionTitle")
+        self.scroll_layout.addWidget(label)
+        description_label = QLabel(description)
+        description_label.setObjectName("settingsLabel")
+        description_label.setWordWrap(True)
+        self.scroll_layout.addWidget(description_label)
+
+    def focus_dependency(self, dep_id):
+        card = {"whisper": self.whisper_panel, "vtracer": self.vtracer_panel,
+                "ghostscript": self.gs_panel}.get(dep_id)
+        if card is not None:
+            QTimer.singleShot(0, lambda: self.scroll_area.ensureWidgetVisible(card, 0, 16))
 
     def open_dependencies_folder(self):
         """Abre la carpeta de dependencias en el explorador de archivos."""
@@ -2087,6 +2182,14 @@ class DependenciesPage(QWidget):
         update_configs.append(
             {"id": "vtracer", "local_func": vtracer_local, "remote_func": vtracer_remote})
 
+        self.whisper_panel.set_searching_updates()
+        update_configs.append({"id": "whisper", "local_func": whisper_setup.get_local_version,
+                               "remote_func": whisper_setup.get_latest_release})
+        # Complemento de whisper.cpp: el detector de voz, en su misma tarjeta.
+        self.whisper_panel.vad_section.set_searching_updates()
+        update_configs.append({"id": "whisper_vad", "local_func": whisper_setup.vad_local_version,
+                               "remote_func": whisper_setup.get_latest_vad})
+
         self.update_worker = UpdateCheckWorker(update_configs)
         self.update_worker.finished_signal.connect(self.on_update_check_finished)
         self.update_worker.start()
@@ -2129,7 +2232,29 @@ class DependenciesPage(QWidget):
                 self.vtracer_panel.local_ver = results["vtracer"]["local"]
             self.vtracer_panel.set_update_available(results["vtracer"]["remote"])
 
+        if "whisper" in results:
+            self.whisper_panel.set_update_available(results["whisper"]["remote"])
+        if "whisper_vad" in results:
+            self.whisper_panel.vad_section.set_update_available(results["whisper_vad"]["remote"])
+
+    def start_uninstall(self, dep_id):
+        panel = {"vtracer": self.vtracer_panel, "ghostscript": self.gs_panel}.get(dep_id)
+        if panel is None or dep_id in self.workers:
+            return
+        if QMessageBox.question(self, self.tr("Desinstalar dependencia"),
+                                self.tr("¿Desinstalar {0} de DowP? Podrás descargarlo otra vez cuando lo necesites.").format(dep_id)) != QMessageBox.Yes:
+            return
+        panel.set_downloading_state(True, self.tr("Desinstalando…"))
+        worker = DependencyDownloadWorker(dep_id, partial(uninstall_optional, dep_id), operation="uninstall")
+        worker.progress_signal.connect(self.on_worker_progress)
+        worker.numeric_progress_signal.connect(self.on_worker_numeric_progress)
+        worker.finished_signal.connect(self.on_worker_finished)
+        self.workers[dep_id] = worker
+        worker.start()
+
     def start_download(self, dep_id, version=None):
+        if dep_id in self.workers:
+            return
         channel = None
         if dep_id == "ytdlp":
             download_fn = download_ytdlp
@@ -2204,6 +2329,6 @@ class DependenciesPage(QWidget):
             self.vtracer_panel.set_downloading_state(False)
 
         if not success:
-            QMessageBox.warning(self, self.tr("Error de Descarga"), self.tr("Fallo al descargar {0}:\n{1}").format(dep_id, msg))
+            QMessageBox.warning(self, self.tr("Error de dependencia"), self.tr("No se pudo completar la operación con {0}:\n{1}").format(dep_id, msg))
         else:
-            logger.info(f"Dependency {dep_id} downloaded successfully.")
+            logger.info(f"Dependency operation for {dep_id} completed successfully.")

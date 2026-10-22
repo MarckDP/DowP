@@ -30,7 +30,7 @@ _NAMESPACE = "video_tools/avanzado"
 # preajuste aquí, para que PresetManager sepa que hay defaults nuevos para sembrar sin
 # resembrar (ni resucitar) los que el usuario ya haya modificado o borrado - ver
 # PresetManager.seed_defaults().
-DEFAULT_PRESETS_VERSION = 2
+DEFAULT_PRESETS_VERSION = 3
 
 
 def _video_profile_args(encoder: str, label_hint: str) -> list[str]:
@@ -160,6 +160,26 @@ def _loudness_preset(name: str, integrated_lufs: float) -> dict:
     }
 
 
+_IA_NAMESPACE = "video_tools/ia_tools"
+
+
+def _subtitle_preset(name: str, container: str, **options) -> dict:
+    """Preajuste de Transcripción para subtítulos (catálogo v3). Sin modelo ni idioma a
+    propósito: el modelo es el que el usuario ya tenga elegido (no obliga a bajar uno
+    concreto) y el idioma sale del video o se detecta. Sin "Saltar silencios": pediría
+    descargar el detector la primera vez y en videos con música a veces corta voz."""
+    settings = {
+        "ia_function": "transcription", "transcription_engine": "whisper.cpp",
+        "transcription_mode": "subtitles", "container": container, "transcription_embed": "none",
+        "transcription_task": "transcribe", "transcription_split": "sentences",
+        "transcription_max_chars": 42, "transcription_max_lines": 2, "transcription_max_words": 1,
+        "transcription_vad": False,
+    }
+    settings.update(options)
+    return {"namespace": _IA_NAMESPACE, "name": name, "function": "ia_transcripcion",
+            "job_type": "TRANSCRIBE", "settings": settings}
+
+
 def build_default_presets() -> list[dict]:
     """Catálogo completo de preajustes empaquetados - ver PresetManager.seed_defaults()
     para cómo (y cuándo) se instalan en presets.json."""
@@ -205,4 +225,17 @@ def build_default_presets() -> list[dict]:
                 "container": "mp3",
             },
         },
+
+        # Subtítulos (catálogo v3): para "Crear con IA" de Proceso Avanzado y para
+        # Herramientas IA. SRT en los de redes: es lo que importan CapCut, Premiere,
+        # DaVinci y las apps; el estilo se pone en el editor.
+        _subtitle_preset("Redes: 1 palabra", "srt", transcription_split="words",
+                         transcription_max_words=1, transcription_max_lines=1),
+        _subtitle_preset("Redes: 3 palabras", "srt", transcription_split="words",
+                         transcription_max_words=3, transcription_max_lines=1),
+        _subtitle_preset("Redes: 5 palabras", "srt", transcription_split="words",
+                         transcription_max_words=5, transcription_max_lines=1),
+        _subtitle_preset("Subtítulos estándar (cine y TV)", "srt"),
+        _subtitle_preset("Letras de canciones (karaoke)", "lrc", transcription_split="karaoke",
+                         transcription_max_lines=1),
     ]

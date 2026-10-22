@@ -15,7 +15,12 @@ from core.utils.paths import get_src_dir
 from PySide6.QtCore import QCoreApplication
 
 class ThumbnailLoaderThread(QThread):
-    finished = Signal(bytes, str) # content, error
+    # "loaded", NO "finished": antes se llamaba "finished" y tapaba la señal de QThread.
+    # Se emite DENTRO de run(), con el hilo todavía vivo; quien la escuchaba soltaba la
+    # única referencia (o llamaba a deleteLater) y Qt abortaba la app con "QThread:
+    # Destroyed while thread is still running" (issue #1, Mac, con la máquina cargada
+    # por una recodificación). Liberar el hilo solo con el "finished" real de QThread.
+    loaded = Signal(bytes, str) # content, error
     
     def __init__(self, url, fallback_urls=None):
         super().__init__()
@@ -29,11 +34,11 @@ class ThumbnailLoaderThread(QThread):
             try:
                 resp = requests.get(url, timeout=4)
                 if resp.status_code == 200:
-                    self.finished.emit(resp.content, "")
+                    self.loaded.emit(resp.content, "")
                     return
             except Exception as e:
                 last_error = str(e)
-        self.finished.emit(b"", last_error)
+        self.loaded.emit(b"", last_error)
 
 class RichTextDelegate(CheckmarkComboDelegate):
     """

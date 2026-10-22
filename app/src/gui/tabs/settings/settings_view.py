@@ -30,6 +30,7 @@ from gui.styles import apply_shapes
 # gui/widgets/model_download_prompt.py::open_models_settings, que es lo que hay
 # detrás del botón "Administrar" de los popovers del Editor de Imagen. Si se
 # reordenan las páginas hay que actualizar esto.
+SETTINGS_PAGE_DEPENDENCIES = 4
 SETTINGS_PAGE_MODELS = 8
 
 

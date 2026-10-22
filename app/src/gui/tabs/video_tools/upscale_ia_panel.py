@@ -1,13 +1,11 @@
 # src/gui/tabs/video_tools/upscale_ia_panel.py
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QSizePolicy, QComboBox,
-    QStackedWidget,
 )
 from PySide6.QtCore import QCoreApplication, Signal, Qt
 
 from gui.styles import get_theme_token
 from gui.widgets.combo_box import CheckmarkComboDelegate, AutoPopupComboBox
-from gui.widgets.mode_selector import ModeSelector
 from gui.widgets.preset_bar import PresetBar
 from gui.tabs.image_tools.depth_popover import DepthPopoverContent
 from gui.tabs.image_tools.normal_popover import NormalPopoverContent
@@ -40,9 +38,11 @@ _CONTAINER_IDS = ["mp4", "mov", "mkv"]
 FUNCTION_UPSCALE = "upscale"
 FUNCTION_DEPTH = "depth"
 FUNCTION_NORMALS = "normals"
+FUNCTION_TRANSCRIPTION = "transcription"
 _PRESET_FUNCTION_IDS = {FUNCTION_UPSCALE: ("ia_reescalar", "UPSCALE_VIDEO"),
                         FUNCTION_DEPTH: ("ia_profundidad", "DEPTH_VIDEO"),
-                        FUNCTION_NORMALS: ("ia_normales", "NORMAL_VIDEO")}
+                        FUNCTION_NORMALS: ("ia_normales", "NORMAL_VIDEO"),
+                        FUNCTION_TRANSCRIPTION: ("ia_transcripcion", "TRANSCRIBE")}
 # Funciones que generan un mapa fotograma a fotograma (ver video_frame_engine.py):
 # comparten las opciones de video (suavizado, procesar a menos fps) y la casilla "16 bits".
 _MAP_FUNCTIONS = (FUNCTION_DEPTH, FUNCTION_NORMALS)
@@ -66,29 +66,15 @@ def ia_settings_ready(settings: dict | None) -> bool:
 
 
 class UpscaleIAPanel(QWidget):
-    """Pestaña "Herramientas IA" de Herramientas Multimedia: Reescalado IA, Mapa de
-    Profundidad o Mapa de Normales, elegido arriba de todo.
-
-    - Reescalado: extrae los fotogramas del video, los reescala con el motor NCNN elegido
-      (mismo selector que el Editor de Imagen, UpscalePopoverContent) y rearma el video
-      -- job_type "UPSCALE_VIDEO", ver QueueWorker._execute_upscale_video.
-    - Mapa de Profundidad: mismo selector de modelos que el Editor de Imagen
-      (DepthPopoverContent en modo video) -- job_type "DEPTH_VIDEO", ver
-      core/tabs/video_tools/video_depth_engine.py.
-    - Mapa de Normales: mismo selector que el Editor de Imagen (NormalPopoverContent en
-      modo video, solo MoGe-2) -- job_type "NORMAL_VIDEO", ver
-      core/tabs/video_tools/video_normal_engine.py.
-
-    El nombre de la clase se conserva (lo usan EncodingOptionsWidget y la vista) aunque
-    ya no sea solo de reescalado."""
+    """Página permanente de una función de IA, con sus propios ajustes y scroll."""
 
     validity_changed = Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, function=FUNCTION_UPSCALE):
         super().__init__(parent)
-        # Contenedor elegido en cada función, para volver a él al cambiar de función.
-        self._container_by_function = dict(_DEFAULT_CONTAINERS)
-        self._shown_function = None
+        if function not in _PRESET_FUNCTION_IDS:
+            raise ValueError(f"Función de IA desconocida: {function}")
+        self._function = function
         self._init_ui()
 
     def _card(self, parent, title: str, header: QWidget | None = None):
@@ -151,16 +137,9 @@ class UpscaleIAPanel(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        # ── Función: mismo selector segmentado que "Rápido / Manual" de Comprimir ─
-        # (ModeSelector). Las etiquetas se traducen aquí; la función se resuelve por
-        # posición (ver current_function), nunca comparando el texto visible.
-        self._function_ids = [FUNCTION_UPSCALE, FUNCTION_DEPTH, FUNCTION_NORMALS]
-        self.function_selector = ModeSelector(
-            content, labels=[self.tr("Reescalado"), self.tr("Profundidad"), self.tr("Normales")])
-        layout.addWidget(self.function_selector)
-
         # ── Contenedor de salida (+ 16 bits / transparencia / audio) ─────────
         frame_container, cv = self._card(content, self.tr("Contenedor de salida"))
+        self.frame_container = frame_container
         self.combo_container = self._combo(frame_container)
         cv.addWidget(self.combo_container)
         self.output_options = VideoIAOutputOptions(frame_container, allow_16bit=True)
@@ -170,14 +149,26 @@ class UpscaleIAPanel(QWidget):
         layout.addWidget(frame_container)
 
         # ── Contenido de cada función ────────────────────────────────────────
-        self.stack = QStackedWidget(content)
-        self.upscale_content = UpscalePopoverContent(content)
-        self.upscale_content.selection_changed.connect(self._on_selection_changed)
-
-        self.depth_content = DepthPopoverContent(content, video_mode=True)
-        self.depth_content.selection_changed.connect(self._on_selection_changed)
-        self.normal_content = NormalPopoverContent(content, video_mode=True)
-        self.normal_content.selection_changed.connect(self._on_selection_changed)
+        function = self.current_function()
+        if function == FUNCTION_TRANSCRIPTION:
+            from gui.tabs.ai_tools.transcription_panel import TranscriptionPanel
+            self.transcription_content = page = TranscriptionPanel(content)
+        elif function == FUNCTION_DEPTH:
+            self.depth_content = page = DepthPopoverContent(content, video_mode=True)
+        elif function == FUNCTION_NORMALS:
+            self.normal_content = page = NormalPopoverContent(content, video_mode=True)
+        else:
+            self.upscale_content = page = UpscalePopoverContent(content)
+        page.selection_changed.connect(self._on_selection_changed)
+        # Solo la página activa participa en la altura; no hay pila compartida.
+        page.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        for combo in page.findChildren(QComboBox):
+            combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(8)
+            policy = combo.sizePolicy()
+            policy.setHorizontalPolicy(QSizePolicy.Expanding)
+            combo.setSizePolicy(policy)
+        layout.addWidget(page)
 
         # Opciones de video de los mapas (profundidad y normales): una sola tarjeta,
         # debajo del selector de modelo de la función elegida.
@@ -205,23 +196,6 @@ class UpscaleIAPanel(QWidget):
         row.addWidget(self.combo_step, 1)
         vv.addLayout(row)
 
-        # Orden de las páginas = orden de self._function_ids.
-        self.stack.addWidget(self.upscale_content)
-        self.stack.addWidget(self.depth_content)
-        self.stack.addWidget(self.normal_content)
-        # Estos contenidos vienen de los popovers del Editor de Imagen, pensados para un
-        # globo de ancho fijo: sus combos se ensanchan hasta el nombre más largo de la
-        # lista (el de Motor de Profundidad pedía ~330 px). Aquí recortan su texto y
-        # crecen con la columna, así las opciones caben en ~350 px sin scroll horizontal.
-        # Solo en estas copias: los popovers del Editor quedan como estaban.
-        for page in (self.upscale_content, self.depth_content, self.normal_content):
-            for combo in page.findChildren(QComboBox):
-                combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-                combo.setMinimumContentsLength(8)
-                policy = combo.sizePolicy()
-                policy.setHorizontalPolicy(QSizePolicy.Expanding)
-                combo.setSizePolicy(policy)
-        layout.addWidget(self.stack)
         layout.addWidget(frame_video)
 
         self.lbl_note = QLabel(content)
@@ -253,8 +227,7 @@ class UpscaleIAPanel(QWidget):
         self._content = content
         self._content_layout = layout
 
-        self.function_selector.mode_changed.connect(self._on_function_changed)
-        self._on_function_changed()
+        self._configure_function()
 
     def content_min_width(self) -> int:
         """Ancho que necesita el contenido para no cortarse, con la barra de scroll
@@ -262,16 +235,6 @@ class UpscaleIAPanel(QWidget):
         bar = self._scroll.verticalScrollBar().sizeHint().width()
         frame = 2 * self._scroll.frameWidth()
         return self._content.minimumSizeHint().width() + bar + frame + 4
-
-    def max_content_min_width(self) -> int:
-        """Como content_min_width(), pero con la función que MÁS ancho pide, no la
-        elegida: así quien decide el layout con esto no cambia de opinión al pasar de
-        Reescalado a Profundidad o Normales."""
-        margins = self._content_layout.contentsMargins()
-        widest_page = max(self.stack.widget(i).minimumSizeHint().width() for i in range(self.stack.count()))
-        content = max(self._content.minimumSizeHint().width(), widest_page + margins.left() + margins.right())
-        bar = self._scroll.verticalScrollBar().sizeHint().width()
-        return content + bar + 2 * self._scroll.frameWidth() + 4
 
     def add_card(self, title: str, header: QWidget | None = None):
         """Tarjeta nueva al final del panel, dentro del mismo scroll y con el mismo
@@ -284,32 +247,13 @@ class UpscaleIAPanel(QWidget):
     # ─── Internos ────────────────────────────────────────────────────────────
 
     def current_function(self) -> str:
-        for i, btn in enumerate(self.function_selector.buttons):
-            if btn.isChecked():
-                return self._function_ids[i]
-        return FUNCTION_UPSCALE
+        return self._function
 
-    def set_function(self, function: str):
-        """Elige la función por su clave (FUNCTION_UPSCALE / FUNCTION_DEPTH / FUNCTION_NORMALS)."""
-        if function in self._function_ids:
-            self.function_selector.buttons[self._function_ids.index(function)].click()
-
-    def _on_function_changed(self, *_args):
+    def _configure_function(self):
         function = self.current_function()
         is_map = function in _MAP_FUNCTIONS
-        if self._shown_function is not None:
-            self._container_by_function[self._shown_function] = self.combo_container.currentData()
-        self._shown_function = function
-        self.stack.setCurrentIndex(self._function_ids.index(function))
-        # El apilado toma el ancho de su página MÁS ancha aunque esté oculta (por eso
-        # Normales pedía lo mismo que Profundidad): las ocultas no cuentan.
-        for index in range(self.stack.count()):
-            page = self.stack.widget(index)
-            visible = index == self.stack.currentIndex()
-            page.setSizePolicy(QSizePolicy.Preferred if visible else QSizePolicy.Ignored,
-                               QSizePolicy.Preferred if visible else QSizePolicy.Ignored)
-        self.stack.updateGeometry()
         self.frame_video.setVisible(is_map)
+        self.frame_container.setVisible(function != FUNCTION_TRANSCRIPTION)
         self.output_options.set_kind("normals" if function == FUNCTION_NORMALS else
                                      "gray" if function == FUNCTION_DEPTH else "color")
         # "16 bits" solo tiene sentido en los mapas.
@@ -317,8 +261,10 @@ class UpscaleIAPanel(QWidget):
             if not is_map:
                 self.output_options.chk_16bit.setChecked(False)
             self.output_options.chk_16bit.setVisible(is_map)
-        self._populate_containers(preferred=self._container_by_function.get(function))
-        if function == FUNCTION_DEPTH:
+        self._populate_containers(preferred=_DEFAULT_CONTAINERS.get(function))
+        if function == FUNCTION_TRANSCRIPTION:
+            self.lbl_note.setText(self.tr("Transcribe audio o video en tu equipo y genera subtítulos, texto o un video con los subtítulos incluidos. Tus archivos no se suben a ningún servidor. Los tiempos de un recorte comienzan en cero."))
+        elif function == FUNCTION_DEPTH:
             self.combo_smoothing.setToolTip(self.tr(
                 "Mezcla cada mapa con el anterior para quitar el temblor entre fotogramas. "
                 "Cuanto más alto, más estable, pero en movimientos rápidos deja una ligera estela.\n"
@@ -359,7 +305,6 @@ class UpscaleIAPanel(QWidget):
 
     def _on_container_changed(self, _index: int):
         self.output_options.set_container(self.combo_container.currentData())
-        self._container_by_function[self.current_function()] = self.combo_container.currentData()
 
     def _on_selection_changed(self, *_args):
         self.validity_changed.emit(self.is_valid())
@@ -368,6 +313,8 @@ class UpscaleIAPanel(QWidget):
 
     def _current_content(self):
         function = self.current_function()
+        if function == FUNCTION_TRANSCRIPTION:
+            return self.transcription_content
         if function == FUNCTION_DEPTH:
             return self.depth_content
         if function == FUNCTION_NORMALS:
@@ -381,6 +328,8 @@ class UpscaleIAPanel(QWidget):
 
     @staticmethod
     def start_text(function: str) -> str:
+        if function == FUNCTION_TRANSCRIPTION:
+            return QCoreApplication.translate("UpscaleIAPanel", "Iniciar Transcripción")
         if function == FUNCTION_DEPTH:
             return QCoreApplication.translate("UpscaleIAPanel", "Iniciar Mapa de Profundidad")
         if function == FUNCTION_NORMALS:
@@ -390,6 +339,8 @@ class UpscaleIAPanel(QWidget):
     def get_status(self) -> tuple[bool, str]:
         function = self.current_function()
         content = self._current_content()
+        if function == FUNCTION_TRANSCRIPTION:
+            return (True, self.tr("Iniciar Transcripción")) if content.is_ready() else (False, content.not_ready_reason())
         if content.is_valid_selection() and not content.is_ready():
             return False, self.tr("El modelo elegido todavía no está descargado.")
         if function == FUNCTION_DEPTH:
@@ -406,6 +357,8 @@ class UpscaleIAPanel(QWidget):
 
     def get_settings(self, meta_override: dict | None = None, filepath_override: str | None = None) -> dict:
         function = self.current_function()
+        if function == FUNCTION_TRANSCRIPTION:
+            return self.transcription_content.get_settings()
         if function == FUNCTION_DEPTH:
             settings = self.depth_content.get_settings()
             settings["depth_smoothing"] = self.combo_smoothing.currentData() or "off"

@@ -17,6 +17,7 @@ colorear los estados). Con self.tr() en una clase base, lupdate los registraría
 con otro contexto y se perderían las traducciones existentes.
 """
 import os
+import re
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -50,6 +51,7 @@ from core.utils.sound_notifier import get_sound_notifier, SOURCE_VIDEO_TOOLS
 from core.utils.file_conflict_manager import resolve_conflict, commit_backup, rollback_backup, find_available_rename
 from core.utils.recode_guard import CONTAINER_TO_EXTENSION
 from core.tabs.video_tools.ia_video_common import trimmed_duration
+from core.tabs.video_tools.transcription_engine import embed_mode, embed_extension
 from gui.tabs.video_tools.upscale_ia_panel import (
     FUNCTION_DEPTH, FUNCTION_NORMALS, FUNCTION_UPSCALE, ia_function_of,
 )
@@ -993,6 +995,8 @@ class MediaWorkbenchTab(QWidget):
         """(job_type, clave de opciones en job.config, título) del job de Herramientas
         IA según la función de los ajustes (ver upscale_ia_panel.ia_function_of)."""
         function = ia_function_of(settings)
+        if function == "transcription":
+            return "TRANSCRIBE", "transcription_options", QCoreApplication.translate("VideoToolsTab", "Transcripción: {0}").format(base_name)
         if function == FUNCTION_DEPTH:
             return "DEPTH_VIDEO", "depth_options", QCoreApplication.translate("VideoToolsTab", "Mapa de profundidad: {0}").format(base_name)
         if function == FUNCTION_NORMALS:
@@ -1068,7 +1072,10 @@ class MediaWorkbenchTab(QWidget):
         for entry_key in files:
             filepath = entry_path(entry_key)
             ext = os.path.splitext(filepath)[1].lower()
-            if ext in AUDIO_ONLY_EXTENSIONS:
+            transcribing = ia_function_of(settings) == "transcription"
+            # Incrustar los subtítulos necesita video; un audio solo se transcribe a archivo.
+            embed = embed_mode(settings) if transcribing else "none"
+            if ext in AUDIO_ONLY_EXTENSIONS and (not transcribing or embed != "none"):
                 logger.info(f"{self.LOG_NAME}: Reescalado IA omite (sin video): {filepath}")
                 self.queue_widget.update_file_status(entry_key, QCoreApplication.translate("VideoToolsTab", "Omitido (sin video)"))
                 continue
@@ -1091,8 +1098,25 @@ class MediaWorkbenchTab(QWidget):
                 self.queue_widget.update_file_status(entry_key, QCoreApplication.translate("VideoToolsTab", "Sin espacio en disco"))
                 continue
 
+            job_settings = dict(settings)
             base_name = self._clip_names.get(entry_key) or os.path.splitext(os.path.basename(filepath))[0]
-            out_name = f"{prefix}{base_name}{suffix}.{container_ext}"
+            if ia_function_of(settings) == "transcription":
+                track = settings.get("transcription_audio_track", 0)
+                if track == "all":
+                    track = getattr(self, "_transcription_tracks", {}).get(entry_key, 0)
+                job_settings["transcription_audio_track"] = track
+                # El número de pista solo hace falta para distinguir resultados: con una
+                # sola pista de audio (un MP3, la mayoría de videos) el nombre queda limpio.
+                if len(meta.get("audio_streams") or []) > 1:
+                    base_name += f"_pista{int(track) + 1}"
+                # El ASS (y el quemado) se dibujan a la resolución del video.
+                size = re.match(r"(\d+)x(\d+)", str(meta.get("resolución", "")))
+                if size:
+                    job_settings["transcription_video_size"] = (int(size.group(1)), int(size.group(2)))
+            # Con los subtítulos dentro del video, la salida es un video: su extensión
+            # depende de cada archivo (ver embed_extension).
+            file_ext = embed_extension(ext, embed) if embed != "none" else container_ext
+            out_name = f"{prefix}{base_name}{suffix}.{file_ext}"
             actual_out_dir = os.path.dirname(filepath) if same_path else out_dir
             out_file = os.path.join(actual_out_dir, out_name)
 
@@ -1112,7 +1136,7 @@ class MediaWorkbenchTab(QWidget):
             config = {
                 "input_path": filepath,
                 "output_path": out_file,
-                options_key: settings,
+                options_key: job_settings,
                 "fps": fps,
                 "duration_sec": duration_sec,
                 "trim_in_sec": trim_in,
@@ -1404,7 +1428,7 @@ class MediaWorkbenchTab(QWidget):
             # Enviar el archivo final al editor (el QueueManager ignora los trabajos RECODE)
             from core.services.editor_integration_manager import EditorIntegrationManager
             editor_mgr = EditorIntegrationManager.get_instance()
-            if editor_mgr and editor_mgr.is_auto_send_enabled:
+            if editor_mgr and editor_mgr.is_auto_send_enabled and job.job_type != "TRANSCRIBE":
                 if output_path:
                     editor_mgr.process_raw_download(output_path, job.request_data if job else {})
 

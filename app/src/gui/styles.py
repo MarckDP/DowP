@@ -513,17 +513,18 @@ def _apply_fixed_size_qss(btn):
     btn.setStyleSheet(f"min-width: {width}px; min-height: {height}px; padding: 0px;")
 
 
-def apply_folder_browse_button_style(btn, tooltip=None, icon_size=18):
+def apply_folder_browse_button_style(btn, tooltip=None, icon_size=18, icon_name="folder_managed.svg"):
     """
     Aplica el estilo unificado al botón de examinar/configurar carpeta o ruta.
     - Icono: folder_managed.svg en negro (#000000) habilitado y gris (#777777) deshabilitado.
+    - icon_name permite reutilizar el mismo estilo para otros ajustes.
     - Variante: 'accent-solid' (verde plano reactivo).
     """
     from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
     from PySide6.QtCore import QSize
     dis_color = get_theme_token("texto_deshabilitado", "#777777")
-    _remember_for_theme(btn, apply_folder_browse_button_style, tooltip=tooltip, icon_size=icon_size)
-    btn.setIcon(get_colored_svg_icon("folder_managed.svg", get_theme_token("boton_acento_texto", "#000000"), size=icon_size, disabled_color_hex=dis_color))
+    _remember_for_theme(btn, apply_folder_browse_button_style, tooltip=tooltip, icon_size=icon_size, icon_name=icon_name)
+    btn.setIcon(get_colored_svg_icon(icon_name, get_theme_token("boton_acento_texto", "#000000"), size=icon_size, disabled_color_hex=dis_color))
     btn.setIconSize(QSize(icon_size, icon_size))
     if not btn.objectName():
         btn.setObjectName("pathToolButton")

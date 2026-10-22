@@ -10,6 +10,10 @@ from core.constants import LANGUAGE_ORDER, DEFAULT_PRIORITY
 from core.ytdlp_logic.analyzer import strip_ansi_codes
 from gui.tabs.advanced_process.workers import DownloadWorker
 
+# Dato del item "+ Crear preajuste..." del combo de "Crear con IA": no es un preajuste.
+_CREATE_PRESET = "__dowp_create_preset__"
+
+
 class SubtitleController(QObject):
     def __init__(self, tab):
         super().__init__()
@@ -264,6 +268,10 @@ class SubtitleController(QObject):
         self._subtitle_request_data = None
 
     def populate_subtitles(self, data):
+        # Cada medio empieza en "Del sitio" (si tenía "Crear con IA", lo repone
+        # restore_subtitles_to_ui, que corre después).
+        self.tab.subtitle_options.set_ai_mode(False)
+        self._fill_ai_languages(data)
         sub_combo = self.tab.subtitle_options.combo_subtitle_language
         sub_combo.clear()
         # Valor por defecto para este medio; si ya tenía opciones guardadas en la cola,
@@ -454,6 +462,8 @@ class SubtitleController(QObject):
         self.tab.subtitle_options.update_standardize_visibility()
 
     def clear_subtitles(self):
+        self.tab.subtitle_options.set_ai_mode(False)
+        self._fill_ai_languages(None)
         self.tab.subtitle_options.combo_subtitle_language.clear()
         self.tab.subtitle_options.combo_subtitle_format.clear()
         self.tab.subtitle_options.btn_download_subtitles.setEnabled(False)
@@ -461,6 +471,15 @@ class SubtitleController(QObject):
 
     def collect_subtitle_data(self):
         """Returns dict of current subtitle options for request_data."""
+        data = self._collect_site_subtitle_data()
+        data.update(self.collect_ai_subtitle_data())
+        if data["ai_subtitles"]:
+            # Con "Crear con IA" no se baja ningún subtítulo del sitio.
+            data.update({"subtitle_lang": None, "subtitle_format": None, "subtitle_output_ext": None,
+                         "embed_subtitles": False, "cut_subtitles": False})
+        return data
+
+    def _collect_site_subtitle_data(self):
         return {
             "subtitle_lang": self.get_selected_subtitle_lang(),
             "subtitle_is_auto": self.get_selected_subtitle_is_auto(),
@@ -472,6 +491,7 @@ class SubtitleController(QObject):
         }
 
     def restore_subtitles_to_ui(self, req: dict):
+        self.restore_ai_subtitles_to_ui(req)
         if "subtitle_lang" in req:
             lang = req["subtitle_lang"]
             for i in range(self.tab.subtitle_options.combo_subtitle_language.count()):
@@ -500,3 +520,178 @@ class SubtitleController(QObject):
                     continue
                 self.tab.subtitle_options.combo_subtitle_format.setCurrentIndex(i)
                 break
+
+    # ── Crear con IA ─────────────────────────────────────────────────────────
+    # Subtítulos creados con Whisper a partir del medio ya descargado (y posprocesado):
+    # el trabajo de transcripción lo encola download_controller.py al final de todo, y el
+    # archivo queda junto al video con el nombre de yt-dlp ("video.es.srt"). Solo crea un
+    # archivo: nada de pistas ni quemado. No se recuerda entre medios: cada uno empieza en
+    # "Del sitio" (lo pidió así el usuario).
+    def setup_ai_subtitles(self):
+        from gui.tabs.ai_tools.transcription_panel import fill_whisper_models, _SUBTITLE_FORMATS
+        from gui.widgets.model_download_prompt import model_downloads
+        opts = self.tab.subtitle_options
+        fill_whisper_models(opts.combo_ai_model)
+        self._select_default_ai_model()
+        for key, label in _SUBTITLE_FORMATS:
+            opts.combo_ai_format.addItem(label, key)
+        self._fill_ai_languages(None)
+        self._refresh_ai_presets()
+        opts.source_changed.connect(self._on_ai_source_changed)
+        for combo in (opts.combo_ai_model, opts.combo_ai_language, opts.combo_ai_format):
+            combo.currentIndexChanged.connect(self._update_ai_header)
+        opts.combo_ai_preset.currentIndexChanged.connect(self._on_ai_preset_changed)
+        opts.combo_ai_model.activated.connect(self._offer_ai_model_download)
+        manager = model_downloads()
+        manager.models_changed.connect(self._refresh_ai_model_icons)
+        manager.finished.connect(lambda *_: self._refresh_ai_model_icons())
+        # Un preajuste creado, editado o borrado en Herramientas IA aparece aquí al instante.
+        from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
+        get_preset_manager().presets_changed.connect(
+            lambda namespace: self._refresh_ai_presets() if namespace == IA_TOOLS_NAMESPACE else None)
+
+    def _refresh_ai_model_icons(self):
+        from gui.tabs.ai_tools.transcription_panel import refresh_whisper_model_icons
+        refresh_whisper_model_icons(self.tab.subtitle_options.combo_ai_model)
+
+    def _select_default_ai_model(self):
+        """large-v3-turbo si está descargado; si no, el primero descargado; si no hay
+        ninguno, el marcador "Seleccione el modelo"."""
+        from core.setup.whisper_setup import default_model_id
+        combo = self.tab.subtitle_options.combo_ai_model
+        choice = default_model_id()
+        combo.setCurrentIndex(max(0, combo.findData(choice)) if choice else 0)
+
+    def _offer_ai_model_download(self, *_):
+        from gui.widgets.ia_preset_models import offer_preset_model_download
+        settings = self._ai_settings()
+        if settings.get("transcription_model"):
+            offer_preset_model_download(self.tab, settings)
+
+    def _fill_ai_languages(self, video_data):
+        """Idiomas de Whisper. Si el sitio informa el idioma del video y Whisper lo
+        conoce, se marca "(del video)" y queda elegido; si no, "Detectar automáticamente"."""
+        from gui.tabs.ai_tools.transcription_panel import whisper_language_items
+        combo = self.tab.subtitle_options.combo_ai_language
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "Detectar automáticamente"), "auto")
+        video_language = str((video_data or {}).get("language") or "").lower().replace("_", "-").split("-")[0]
+        for name, code in whisper_language_items():
+            if code == video_language:
+                name = QCoreApplication.translate("AdvancedProcessTab", "{0} (del video)").format(name)
+            combo.addItem(name, code)
+        combo.setCurrentIndex(max(0, combo.findData(video_language)) if video_language else 0)
+        combo.blockSignals(False)
+
+    def _refresh_ai_presets(self):
+        """Preajustes de Transcripción con formato de subtítulos (los de texto no sirven aquí)."""
+        from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
+        from core.tabs.video_tools.transcript_formats import SUBTITLE_FORMATS
+        combo = self.tab.subtitle_options.combo_ai_preset
+        current = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(QCoreApplication.translate("AdvancedProcessTab", "(ninguno)"), None)
+        for preset in get_preset_manager().list_presets(IA_TOOLS_NAMESPACE):
+            settings = preset.get("settings") or {}
+            if preset.get("function") == "ia_transcripcion" and settings.get("container") in SUBTITLE_FORMATS:
+                combo.addItem(preset["name"], preset["name"])
+        # Mismo atajo que los pickers de Posprocesar (ver PresetBar, create_shortcut).
+        combo.addItem(QCoreApplication.translate("PresetBar", "+ Crear preajuste..."), _CREATE_PRESET)
+        combo.setCurrentIndex(max(0, combo.findData(current)) if current else 0)
+        self._ai_preset_index = combo.currentIndex()
+        combo.blockSignals(False)
+        self._on_ai_preset_changed()
+
+    def _on_ai_preset_changed(self, *_):
+        """Con un preajuste, Formato (y Modelo, si el preajuste trae uno) muestran los
+        suyos y se bloquean. Los preajustes de fábrica no traen modelo: se usa el del panel."""
+        from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
+        opts = self.tab.subtitle_options
+        name = opts.combo_ai_preset.currentData()
+        if name == _CREATE_PRESET:
+            # No es un preajuste: vuelve al que estaba y lleva a donde se crean.
+            opts.combo_ai_preset.blockSignals(True)
+            opts.combo_ai_preset.setCurrentIndex(getattr(self, "_ai_preset_index", 0))
+            opts.combo_ai_preset.blockSignals(False)
+            window = self.tab.window()
+            if hasattr(window, "open_preset_creator"):
+                window.open_preset_creator("transcription")
+            return
+        self._ai_preset_index = opts.combo_ai_preset.currentIndex()
+        settings = get_preset_manager().get_settings(IA_TOOLS_NAMESPACE, name) if name else None
+        locked = {}
+        if settings:
+            for combo, value in ((opts.combo_ai_model, settings.get("transcription_model")),
+                                 (opts.combo_ai_format, settings.get("container"))):
+                index = combo.findData(value) if value else -1
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+                    locked[combo] = True
+        opts.combo_ai_model.setEnabled(opts.combo_ai_model not in locked)
+        opts.combo_ai_format.setEnabled(opts.combo_ai_format not in locked)
+        self._update_ai_header()
+
+    def _on_ai_source_changed(self, ai):
+        if ai:
+            self._refresh_ai_presets()
+            self._refresh_ai_model_icons()
+            self._update_ai_header()
+        else:
+            self.on_subtitle_selection_changed()
+
+    def _update_ai_header(self, *_):
+        opts = self.tab.subtitle_options
+        if opts.is_ai_mode():
+            opts.set_header_active(bool(opts.combo_ai_model.currentData()))
+
+    def _ai_settings(self) -> dict:
+        """Ajustes de transcripción listos para el motor: los del preajuste (si hay) con
+        el modelo, el formato y el idioma del panel, y siempre un archivo de subtítulos con
+        el nombre al estilo de yt-dlp."""
+        import os as _os
+        from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
+        opts = self.tab.subtitle_options
+        name = opts.combo_ai_preset.currentData()
+        settings = dict(get_preset_manager().get_settings(IA_TOOLS_NAMESPACE, name) or {}) if name else {}
+        settings.setdefault("transcription_threads", min(8, _os.cpu_count() or 4))
+        settings.update({
+            "ia_function": "transcription", "transcription_engine": "whisper.cpp",
+            "transcription_model": opts.combo_ai_model.currentData(),
+            "transcription_language": opts.combo_ai_language.currentData() or "auto",
+            "container": opts.combo_ai_format.currentData() or "srt",
+            "transcription_mode": "subtitles", "transcription_embed": "none",
+            "transcription_audio_track": 0, "transcription_name_language": True,
+            # Archivo suelto: la fuente depende del reproductor (ver TranscriptionPanel._font_applies).
+            "transcription_style_font": "Arial", "transcription_style_font_file": "",
+        })
+        return settings
+
+    def collect_ai_subtitle_data(self) -> dict:
+        """Lo de "Crear con IA" para request_data (o job.config en una playlist)."""
+        opts = self.tab.subtitle_options
+        ai = opts.is_ai_mode()
+        return {
+            "ai_subtitles": ai,
+            "ai_subtitles_preset": opts.combo_ai_preset.currentData() if ai else None,
+            "ai_subtitles_settings": self._ai_settings() if ai else None,
+        }
+
+    def restore_ai_subtitles_to_ui(self, req: dict):
+        opts = self.tab.subtitle_options
+        ai = bool((req or {}).get("ai_subtitles"))
+        opts.set_ai_mode(ai)
+        if not ai:
+            return
+        settings = req.get("ai_subtitles_settings") or {}
+        self._refresh_ai_presets()
+        preset = opts.combo_ai_preset.findData(req.get("ai_subtitles_preset"))
+        opts.combo_ai_preset.setCurrentIndex(max(0, preset) if req.get("ai_subtitles_preset") else 0)
+        for combo, value in ((opts.combo_ai_model, settings.get("transcription_model")),
+                             (opts.combo_ai_format, settings.get("container")),
+                             (opts.combo_ai_language, settings.get("transcription_language"))):
+            index = combo.findData(value)
+            if index >= 0 and combo.isEnabled():
+                combo.setCurrentIndex(index)
+        self._update_ai_header()

@@ -159,6 +159,7 @@ class _QueueTableModel(QAbstractTableModel):
         # para saber si una fila ya tiene un resultado convertido -- eso es lo
         # único que se puede arrastrar fuera/dentro de la app (ver flags/mimeData).
         self._output_lookup = None
+        self.entry_labels = {}
 
     def set_output_lookup(self, lookup_fn):
         self._output_lookup = lookup_fn
@@ -282,6 +283,8 @@ class _QueueTableModel(QAbstractTableModel):
         if col == 0:
             if role == Qt.DisplayRole:
                 name = os.path.basename(path)
+                if entry_key in self.entry_labels:
+                    return self.entry_labels[entry_key]
                 # La repetición se numera a la vista para que dos filas del mismo archivo
                 # con recortes distintos no parezcan un duplicado accidental.
                 return name if occurrence == 1 else f"{name}  ({occurrence})"
@@ -630,6 +633,7 @@ class MediaQueueWidget(QFrame):
         self.tree.scrollTo(self._model.index(row, 0))
 
     def clear_queue(self):
+        self._model.entry_labels.clear()
         self.files_list.clear()
         self._path_set.clear()
         self._model.set_rows([])
@@ -658,6 +662,7 @@ class MediaQueueWidget(QFrame):
                 self.files_list.remove(path)
                 self._path_set.discard(path)
             self._output_paths.pop(path, None)
+            self._model.entry_labels.pop(path, None)
         self._model.set_rows(self.files_list)
         self._update_counter()
 
@@ -675,6 +680,13 @@ class MediaQueueWidget(QFrame):
         """[(texto, callback)] para el menú contextual: "Enviar a Herramientas IA",
         "Enviar a Herramientas Multimedia"... El callback recibe las claves elegidas."""
         self._send_targets = list(targets or [])
+
+    def set_entry_label(self, entry_key: str, label: str):
+        self._model.entry_labels[entry_key] = label
+        row = self._model._path_to_row.get(entry_key)
+        if row is not None:
+            index = self._model.index(row, 0)
+            self._model.dataChanged.emit(index, index, [Qt.DisplayRole])
 
     def set_output_path(self, entry_key: str, output_path: str):
         """Registra el archivo de salida de una conversión completada (ver

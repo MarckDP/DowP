@@ -201,14 +201,14 @@ def source_has_real_video(input_file: str) -> bool:
 # Job types que compiten por GPU/CPU local (a diferencia de DOWNLOAD/PLAYLIST,
 # limitados por ancho de banda) -- máximo 1 a la vez, ver QueueWorker.run() y
 # QueueManager._get_next_runnable_job.
-_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
+_HEAVY_JOB_TYPES = frozenset({"RECODE", "UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO", "TRANSCRIBE"})
 
 # IA de video: entre los pesados van al final (ver _get_next_runnable_job). Ocupan la
 # GPU durante mucho tiempo, así que una recodificación pendiente -- por ejemplo la de
 # una descarga del Modo Rápido -- pasa antes que una IA que todavía no empezó. No
 # interrumpe una IA que ya está corriendo. Las cadenas IA -> recodificación no se
 # desordenan: su etapa de recodificación se crea recién cuando termina la de IA.
-_AI_JOB_TYPES = frozenset({"UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO"})
+_AI_JOB_TYPES = frozenset({"UPSCALE_VIDEO", "DEPTH_VIDEO", "NORMAL_VIDEO", "TRANSCRIBE"})
 
 
 # Carriles de la cola: un solo motor (mismos límites de concurrencia para toda la
@@ -307,6 +307,8 @@ class SingleJobWorker(QThread):
                 self.queue_worker._execute_upscale_video(self.job, self.cancellation_event, self)
             elif self.job.job_type == "DEPTH_VIDEO":
                 self.queue_worker._execute_depth_video(self.job, self.cancellation_event, self)
+            elif self.job.job_type == "TRANSCRIBE":
+                self.queue_worker._execute_transcription(self.job, self.cancellation_event, self)
             elif self.job.job_type == "NORMAL_VIDEO":
                 self.queue_worker._execute_normal_video(self.job, self.cancellation_event, self)
         except Exception as e:
@@ -972,8 +974,9 @@ class QueueWorker(QThread):
                 # (no se encola un job RECODE aparte) - mismo criterio que ya usaba
                 # DowP-Lite para no competir por el cupo de "1 recode simultáneo" de la
                 # cola ni complicar el borrado del original con una espera async.
+                recoded_path = None
                 if job.config.get("recode_enabled") and child_media_path:
-                    self._recode_downloaded_file(
+                    recoded_path = self._recode_downloaded_file(
                         job, child_media_path,
                         preset_name=job.config.get("recode_preset_name"),
                         keep_original=job.config.get("recode_keep_original", True),
@@ -981,6 +984,13 @@ class QueueWorker(QThread):
                         cancellation_event=cancellation_event,
                         item_pos=pos, item_total=total,
                     )
+
+                # Subtítulos > "Crear con IA": del archivo final de este ítem (el
+                # recodificado si lo hubo), también síncrono e inline, por la misma razón.
+                if job.config.get("ai_subtitles") and child_media_path and not cancellation_event.is_set():
+                    self._transcribe_playlist_item(
+                        job, recoded_path or child_media_path, entry.get("duration") or 0.0,
+                        cancellation_event, item_pos=pos, item_total=total)
 
                 if should_download_thumb_file:
                     try:
@@ -1116,9 +1126,40 @@ class QueueWorker(QThread):
                 commit_backup(backup_path)  # éxito + no mantener: confirma (borra) el original
             job.add_output_files([out_file], is_stem_source=False)
             logger.info(f"QueueWorker: [Playlist] Recodificado: {out_file}")
+            return out_file
         else:
             rollback_backup(backup_path)  # fallo o cancelación: SIEMPRE se restaura, sin importar keep_original
             logger.warning(f"QueueWorker: [Playlist] Recodificación falló para '{input_path}': {error or 'cancelado'}")
+        return None
+
+    def _transcribe_playlist_item(self, job, media_path, duration_sec, cancellation_event,
+                                  item_pos=1, item_total=1):
+        """Crea los subtítulos de un ítem de playlist con Whisper ("Crear con IA" de
+        Proceso Avanzado), junto al video y con el nombre al estilo de yt-dlp
+        ("video.es.srt"). Un fallo no frena el resto de la playlist."""
+        from core.tabs.video_tools.transcription_engine import run_transcription
+        settings = dict(job.config.get("ai_subtitles_settings") or {})
+        if not settings.get("transcription_model") or not media_path or not os.path.isfile(media_path):
+            return
+        settings["transcription_overwrite"] = job.config.get("conflict_policy") == "sobrescribir"
+        out_file = os.path.splitext(media_path)[0] + "." + settings.get("container", "srt")
+
+        def progress_callback(percent, _eta_sec):
+            total_percent = ((item_pos - 1) + (percent / 100.0)) / item_total * 100.0
+            job.progress = total_percent
+            self.job_progress_changed.emit(
+                job.job_id, total_percent,
+                self.tr("[{0}/{1}] Creando subtítulos {2}%").format(item_pos, item_total, int(percent)), "")
+
+        success, error = run_transcription(media_path, out_file, settings, duration_sec=duration_sec,
+                                           cancellation_event=cancellation_event,
+                                           progress_callback=progress_callback)
+        if success:
+            created = settings.get("_final_output_path") or out_file
+            job.add_output_files([created], is_stem_source=False)
+            logger.info(f"QueueWorker: [Playlist] Subtítulos creados: {created}")
+        elif not cancellation_event.is_set():
+            logger.warning(f"QueueWorker: [Playlist] No se pudieron crear los subtítulos de '{media_path}': {error}")
 
     def _run_ffmpeg_command(self, input_file, output_file, settings, duration_sec,
                              cancellation_event, progress_callback=None, worker_ref=None,
@@ -1497,6 +1538,12 @@ class QueueWorker(QThread):
             self.job_status_changed.emit(job.job_id, JobStatus.FAILED)
             logger.error(f"QueueWorker: [RECODE] FFmpeg falló: {job.error_message} ({job.title})")
 
+    def _execute_transcription(self, job, cancellation_event=None, worker_ref=None):
+        from core.tabs.video_tools.transcription_engine import run_transcription
+        self._execute_frame_video(job, run_transcription, "transcription_options", "TRANSCRIBE",
+                                  self.tr("Transcribiendo…"), self.tr("Error de transcripción"),
+                                  cancellation_event, worker_ref)
+
     def _execute_depth_video(self, job, cancellation_event=None, worker_ref=None):
         """Mapa de Profundidad de video -- ver core/tabs/video_tools/video_depth_engine.py."""
         from core.tabs.video_tools.video_depth_engine import run_depth_video
@@ -1556,6 +1603,9 @@ class QueueWorker(QThread):
             return
 
         if success:
+            # La transcripción puede elegir el nombre al terminar (con el idioma detectado,
+            # ver transcription_engine.language_output_path).
+            output_file = config.get(options_key, {}).get("_final_output_path") or output_file
             job.status = JobStatus.COMPLETED
             job.progress = 100.0
             job.final_filepath = output_file

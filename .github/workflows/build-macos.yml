@@ -17,7 +17,8 @@ name: Build macOS arm64 (manual)
 # tools/updater/secrets/private_key.pem). El token para subir lo pone GitHub
 # solo (GITHUB_TOKEN, con el permiso contents: write de abajo).
 #
-# NUNCA lanzarlo mientras corre otro publish.py (Windows o la VM): cada
+# NUNCA lanzarlo mientras corre otro publish.py (Windows o la VM; con el workflow
+# de Intel se encola solo, ver concurrency): cada
 # publicador baja manifest.json, agrega su plataforma y lo vuelve a subir, y
 # si dos lo hacen a la vez el ultimo borra la plataforma del otro.
 on:
@@ -31,9 +32,11 @@ on:
 permissions:
   contents: write
 
-# Nunca dos corridas de este workflow a la vez (misma razon que arriba).
+# Nunca dos corridas a la vez (misma razon que arriba). IMPORTANTE: este grupo debe
+# ser el MISMO en build-macos-intel.yml (x64), asi los dos workflows se encolan
+# entre si en vez de pisarse el manifiesto.
 concurrency:
-  group: publish-macos-arm64
+  group: publish-macos
   cancel-in-progress: false
 
 jobs:

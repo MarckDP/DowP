@@ -727,7 +727,7 @@ class QuickDownloadRow(QFrame):
             
         self.thumb_thread = ThumbnailLoaderThread(primary, fallback_urls=fallback_urls)
         
-        def on_finished(content, error):
+        def on_loaded(content, error):
             self._thumb_loading = False
             if content:
                 self._thumb_loaded = True
@@ -735,17 +735,24 @@ class QuickDownloadRow(QFrame):
                 if not img.isNull():
                     pix = QPixmap.fromImage(img)
                     self.thumb_widget.set_pixmap(pix)
-            if self.thumb_thread:
-                self.thumb_thread.deleteLater()
-            self.thumb_thread = None
-            
-        self.thumb_thread.finished.connect(on_finished)
+
+        thread = self.thumb_thread
+
+        def on_thread_done():
+            # Solo aquí, con el hilo ya fuera de run(): borrarlo desde on_loaded destruía
+            # un hilo vivo (ver ThumbnailLoaderThread).
+            thread.deleteLater()
+            if self.thumb_thread is thread:
+                self.thumb_thread = None
+
+        self.thumb_thread.loaded.connect(on_loaded)
+        self.thumb_thread.finished.connect(on_thread_done)
         self.thumb_thread.start()
 
     def destroy_row(self):
         if self.thumb_thread:
             try:
-                self.thumb_thread.finished.disconnect()
+                self.thumb_thread.loaded.disconnect()
             except Exception:
                 pass
             try:

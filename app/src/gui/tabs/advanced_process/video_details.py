@@ -502,12 +502,15 @@ class VideoDetailsWidget(QFrame):
         thread = ThumbnailLoaderThread(url, fallback_urls=fallback_urls)
         self._thumb_threads.append(thread)
 
-        def cleanup(content, error):
+        def release():
+            # Recién con el "finished" de QThread (el hilo ya salió de run()) se suelta la
+            # referencia: soltarla antes destruía un hilo vivo (ver ThumbnailLoaderThread).
             if thread in getattr(self, '_thumb_threads', []):
                 self._thumb_threads.remove(thread)
-            self._on_thumbnail_loaded(content, error, cache_key=url)
+            thread.deleteLater()
 
-        thread.finished.connect(cleanup)
+        thread.loaded.connect(lambda content, error: self._on_thumbnail_loaded(content, error, cache_key=url))
+        thread.finished.connect(release)
         thread.start()
 
     def _on_thumbnail_loaded(self, content, error, cache_key=None):

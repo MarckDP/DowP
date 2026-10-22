@@ -57,12 +57,18 @@ class DownloadController(QObject):
         # archivo intermedio (y su carpeta temporal propia) a borrar cuando esa etapa
         # termine, pase lo que pase -- el intermedio nunca es el resultado final.
         self._chain_cleanup = {}
+        # Subtítulos > "Crear con IA" (ver _start_ai_subtitles): job TRANSCRIBE ->
+        # download_key, y por download_key el estado a mostrar al terminar.
+        self._subs_by_download = {}
+        self._subs_base = {}
 
         # Connect signals
         self.queue_mgr.job_progress_changed.connect(self._on_queue_job_progress)
         self.queue_mgr.job_status_changed.connect(self._on_queue_job_status)
         self.queue_mgr.job_progress_changed.connect(self._on_recode_job_progress)
         self.queue_mgr.job_status_changed.connect(self._on_recode_job_status)
+        self.queue_mgr.job_progress_changed.connect(self._on_subs_job_progress)
+        self.queue_mgr.job_status_changed.connect(self._on_subs_job_status)
         self.queue_mgr.job_removed.connect(self._on_download_job_removed)
         self.queue_mgr._worker.finished_all.connect(self._on_queue_finished_all)
 
@@ -132,6 +138,11 @@ class DownloadController(QObject):
                 ai_presets.append(data.get("upscale_preset_name"))
         if ai_presets and not self.tab.recode_controller.ensure_ai_models_ready(ai_presets):
             return
+        if not self._ai_subtitles_ready(
+                (job.config if job.job_type == "PLAYLIST" else job.request_data) or {}
+                for job in self.queue_mgr.get_all_jobs()
+                if job.status == "PENDING" and getattr(job, "origin", None) == ORIGIN_ADVANCED):
+            return
         self.tab._apply_global_output_path()
 
         self.queue_mgr.start_queue(ORIGIN_ADVANCED)
@@ -150,6 +161,8 @@ class DownloadController(QObject):
         # Posprocesar > IA con el modelo sin descargar: ofrecerlo y no empezar todavía.
         if req_data.get("upscale_enabled") and not self.tab.recode_controller.ensure_ai_models_ready(
                 [req_data.get("upscale_preset_name")]):
+            return
+        if not self._ai_subtitles_ready([req_data]):
             return
 
         self.cancellation_event.clear()
@@ -292,6 +305,10 @@ class DownloadController(QObject):
                             self._send_to_editor_if_enabled(p, resolved_request_data)
                     else:
                         self._send_to_editor_if_enabled(actual_path or self.last_downloaded_filepath, resolved_request_data)
+                    self._start_ai_subtitles(
+                        _SOLO_RECODE_KEY,
+                        [p for p, _suffix in fragment_paths] or [actual_path or self.last_downloaded_filepath],
+                        self.solo_request_data, self.tab._current_video_data, title)
                 self._history_sync(_SOLO_RECODE_KEY)
             else:
                 self.tab.output_options.set_progress(0, QCoreApplication.translate("AdvancedProcessTab", "Error: {0}").format(message), "wait")
@@ -346,7 +363,8 @@ class DownloadController(QObject):
         return [j for j in self.queue_mgr.get_all_jobs()
                 if j.origin == ORIGIN_ADVANCED and (
                     j.job_type in ("DOWNLOAD", "PLAYLIST") or
-                    (j.job_type == "RECODE" and j.job_id in self._recode_by_download))]
+                    (j.job_type == "RECODE" and j.job_id in self._recode_by_download) or
+                    (j.job_type == "TRANSCRIBE" and j.job_id in self._subs_by_download))]
 
     def update_queue_main_progress(self):
         """
@@ -562,6 +580,11 @@ class DownloadController(QObject):
                     elif job.final_filepath:
                         actual_path = self._find_actual_downloaded_file(job.final_filepath)
                         self._send_to_editor_if_enabled(actual_path or job.final_filepath, job.request_data)
+                    self._start_ai_subtitles(
+                        job_id,
+                        [p for p, _suffix in fragment_paths]
+                        or [self._find_actual_downloaded_file(job.final_filepath) or job.final_filepath],
+                        job.request_data, job.video_data or job.analysis_data, job.title)
         elif status in ("FAILED", "CANCELLED"):
             job = self.queue_mgr.get_job(job_id)
             err_msg = job.error_message if job else ""
@@ -606,6 +629,9 @@ class DownloadController(QObject):
                 f"curso, cancelando el job RECODE asociado ({recode_id})."
             )
             self.queue_mgr.remove_job(recode_id)
+        for subs_id in [s for s, target in self._subs_by_download.items() if target == job_id]:
+            logger.info(f"AdvancedProcessTab: Job {job_id} eliminado, se cancela la creación de subtítulos ({subs_id}).")
+            self.queue_mgr.remove_job(subs_id)
 
     def _send_to_editor_if_enabled(self, path, request_data):
         if not path:
@@ -775,6 +801,7 @@ class DownloadController(QObject):
                 self._note_group_skip(download_key, fragment_total)
             else:
                 self._mark_recode_pending(download_key, False)
+            self._start_ai_subtitles(download_key, [actual_path], request_data, video_data, title)
             return
 
         # El archivo final se nombra con el preset/prefijo/sufijo de la ÚLTIMA etapa
@@ -800,6 +827,7 @@ class DownloadController(QObject):
                 self._note_group_skip(download_key, fragment_total)
             else:
                 self._mark_recode_pending(download_key, False)
+            self._start_ai_subtitles(download_key, [actual_path], request_data, video_data, title)
             return
 
         try:
@@ -810,6 +838,7 @@ class DownloadController(QObject):
                 self._note_group_skip(download_key, fragment_total)
             else:
                 self._mark_recode_pending(download_key, False)
+            self._start_ai_subtitles(download_key, [actual_path], request_data, video_data, title)
             return
 
         duration_sec = (video_data or {}).get("duration") or 0.0
@@ -1082,7 +1111,15 @@ class DownloadController(QObject):
             self._group_pending[target] = remaining
             if remaining > 0:
                 return
+            group_paths = list(results["final_paths"])
+            group_ok = results["all_ok"]
             self._finalize_group(target)
+            self._start_ai_subtitles(
+                target, group_paths, request_data, title=title,
+                base_text=None if group_ok else (
+                    QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar (original conservado)")
+                    if target == _SOLO_RECODE_KEY else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar")),
+                base_partial=not group_ok)
             return
 
         # Camino normal: una sola recodificación (sin fragmentos, o un fragmento único).
@@ -1118,7 +1155,142 @@ class DownloadController(QObject):
             
             if status == "COMPLETED" and final_path:
                 self._send_to_editor_if_enabled(final_path, request_data)
-                
+
+        # Subtítulos del archivo que quedó (el recodificado, o el original restaurado si
+        # la recodificación falló: también tiene sus subtítulos). Cancelada, no.
+        if status == "COMPLETED":
+            self._start_ai_subtitles(target, [final_path], request_data, title=title)
+        elif status == "FAILED":
+            failed_text = (QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar (original conservado)")
+                           if target == _SOLO_RECODE_KEY else QCoreApplication.translate("AdvancedProcessTab", "Error al recodificar"))
+            self._start_ai_subtitles(target, [final_path], request_data, title=title,
+                                     base_text=failed_text, base_partial=True)
+        self.update_queue_main_progress()
+
+    # ── Subtítulos > "Crear con IA"──────────────────────────────────────────
+    # Cuando el archivo de una descarga ya es definitivo (descargado, y recodificado o
+    # procesado con IA si se pidió), se encola un TRANSCRIBE por archivo (uno por
+    # fragmento). Va aparte de la cadena de posprocesado: no toca su cuarentena ni sus
+    # grupos, solo vuelve a mostrar "Creando subtítulos..." en la misma tarjeta/barra y
+    # bloquea el arrastre hasta terminar. Las playlists lo hacen inline (ver
+    # QueueWorker._transcribe_playlist_item).
+    def _ai_subtitles_ready(self, request_datas) -> bool:
+        """Antes de arrancar: motor y modelo (y detector de voz, si el preajuste lo usa)
+        descargados. Si falta algo, lo ofrece y devuelve False para no empezar."""
+        from PySide6.QtWidgets import QMessageBox
+        from core.setup.whisper_setup import runtime_ready
+        from gui.widgets.ia_preset_models import offer_preset_model_download, preset_model_ready
+        for data in request_datas:
+            if not (data or {}).get("ai_subtitles"):
+                continue
+            settings = data.get("ai_subtitles_settings") or {}
+            title = QCoreApplication.translate("AdvancedProcessTab", "Crear subtítulos con IA")
+            if not settings.get("transcription_model"):
+                QMessageBox.information(self.tab, title, QCoreApplication.translate(
+                    "AdvancedProcessTab", "Elige un modelo de Whisper en Subtítulos > Crear con IA."))
+                return False
+            if not runtime_ready():
+                QMessageBox.information(self.tab, title, QCoreApplication.translate(
+                    "AdvancedProcessTab", "Para crear subtítulos hace falta el motor whisper.cpp. "
+                    "Instálalo en Ajustes > Dependencias."))
+                return False
+            if not preset_model_ready(settings):
+                offer_preset_model_download(self.tab, settings, notify_downloading=True)
+                return False
+        return True
+
+    def _start_ai_subtitles(self, download_key, paths, request_data, video_data=None, title="",
+                            base_text=None, base_partial=False) -> bool:
+        """Encola la creación de subtítulos de `paths`. `base_text`/`base_partial` son el
+        estado que debe volver a mostrar la tarjeta al terminar bien (ej. "Error al
+        recodificar" si la recodificación falló pero los subtítulos salieron)."""
+        if not request_data or not request_data.get("ai_subtitles"):
+            return False
+        settings = request_data.get("ai_subtitles_settings") or {}
+        if not settings.get("transcription_model"):
+            return False
+        queued = False
+        for path in dict.fromkeys(p for p in paths if p):
+            if not os.path.isfile(path):
+                continue
+            job_settings = dict(settings, transcription_overwrite=request_data.get("conflict_policy") == "sobrescribir")
+            job_id = self.queue_mgr.add_job({
+                "input_path": path,
+                "output_path": os.path.splitext(path)[0] + "." + job_settings.get("container", "srt"),
+                "transcription_options": job_settings,
+                "duration_sec": (video_data or {}).get("duration") or 0.0,
+                "title": QCoreApplication.translate("AdvancedProcessTab", "Subtítulos: {0}").format(
+                    title or os.path.basename(path)),
+            }, "TRANSCRIBE", origin=ORIGIN_ADVANCED)
+            self._subs_by_download[job_id] = download_key
+            queued = True
+        if not queued:
+            return False
+        if download_key not in self._subs_base:
+            if base_text is None:
+                base_text = (QCoreApplication.translate("AdvancedProcessTab", "Descarga completada con éxito")
+                             if download_key == _SOLO_RECODE_KEY
+                             else QCoreApplication.translate("AdvancedProcessTab", "Completado"))
+            self._subs_base[download_key] = {"text": base_text, "partial": base_partial, "errors": []}
+        self._mark_recode_pending(download_key, True)
+        self._show_subs_progress(download_key, 0, "")
+        if download_key == _SOLO_RECODE_KEY:
+            # Misma razón que en _start_post_download_recode: en SOLO nadie más arranca la cola.
+            self.queue_mgr.start_queue(ORIGIN_ADVANCED)
+        return True
+
+    def _show_subs_progress(self, download_key, percent, eta):
+        text = QCoreApplication.translate("AdvancedProcessTab", "Creando subtítulos...")
+        if download_key == _SOLO_RECODE_KEY:
+            self.tab.output_options.set_progress(int(percent), f"{text} {int(percent)}%", "downloading")
+        else:
+            card = self.tab.queue_panel.cards.get(download_key)
+            if card:
+                card.update_progress(percent, speed_text=eta or "", status_text=text)
+
+    def _on_subs_job_progress(self, job_id, percent, speed, eta):
+        target = self._subs_by_download.get(job_id)
+        if target is not None:
+            self._show_subs_progress(target, percent, eta)
+
+    def _on_subs_job_status(self, job_id, status):
+        if job_id not in self._subs_by_download or status not in ("COMPLETED", "FAILED", "CANCELLED"):
+            return
+        target = self._subs_by_download.pop(job_id)
+        base = self._subs_base.get(target, {"text": "", "partial": False, "errors": []})
+        job = self.queue_mgr.get_job(job_id)
+        if status == "COMPLETED" and job and job.final_filepath:
+            self._register_recode_outputs(target, [job.final_filepath], succeeded=True)
+            logger.info(f"AdvancedProcessTab: Subtítulos creados: {job.final_filepath}")
+        elif status == "FAILED":
+            error = (job.error_message if job else "") or ""
+            base["errors"].append(error)
+            logger.error(f"AdvancedProcessTab: No se pudieron crear los subtítulos: {error}")
+        elif status == "CANCELLED":
+            base["errors"].append(QCoreApplication.translate("AdvancedProcessTab", "Cancelado"))
+        # Interno, igual que los RECODE: no queda visible ni reintentable en la cola.
+        self.queue_mgr.remove_job(job_id)
+        if target in self._subs_by_download.values():
+            return  # quedan otros fragmentos de esta misma descarga
+        self._subs_base.pop(target, None)
+        self._mark_recode_pending(target, False)
+        failed = bool(base["errors"])
+        if target == _SOLO_RECODE_KEY:
+            if failed:
+                text = QCoreApplication.translate("AdvancedProcessTab", "Error al crear subtítulos: {0}").format(base["errors"][-1])
+                self.tab.output_options.set_progress(0, text, "wait")
+            else:
+                self.tab.output_options.set_progress(100, base["text"], "done")
+        else:
+            card = self.tab.queue_panel.cards.get(target)
+            if card:
+                if failed:
+                    card.status_lbl.setToolTip(base["errors"][-1])
+                    card.update_progress(100, speed_text=base["errors"][-1],
+                                         status_text=QCoreApplication.translate("AdvancedProcessTab", "Error al crear subtítulos"),
+                                         partial=True)
+                else:
+                    card.update_progress(100, speed_text="", status_text=base["text"], partial=base["partial"])
         self.update_queue_main_progress()
 
     def on_open_output_path_clicked(self):

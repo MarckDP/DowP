@@ -84,6 +84,7 @@ PRUEBAS_PENDIENTES.md
 # Excepciones de archivos Markdown que SI queremos versionar
 !app/src/gui/themes/TEMAS.md
 !README.md
+!docs/TRANSCRIPCION.md
 !importer_adobe/src/MACOS.md
 !importer_vegas/README.md
 

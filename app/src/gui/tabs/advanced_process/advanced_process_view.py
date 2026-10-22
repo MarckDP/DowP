@@ -173,6 +173,7 @@ class AdvancedProcessTab(QWidget):
             self.subtitle_controller.on_subtitle_selection_changed
         )
         self.subtitle_options.btn_download_subtitles.clicked.connect(self.subtitle_controller.start_subtitle_download)
+        self.subtitle_controller.setup_ai_subtitles()
         
         # Sincronizar el switch de recorte con la lista de formatos
         self.subtitle_options.chk_cut_to_fragment["switch"].toggled.connect(
@@ -1171,6 +1172,9 @@ class AdvancedProcessTab(QWidget):
             # request_data por hijo aquí, ver comentario arriba) - misma tarjeta que
             # una descarga individual, pero lo que junta se guarda en job.config.
             job.config.update(self.recode_controller.collect_recode_data())
+            # "Crear con IA" también vale para toda la playlist (no hay subtítulos del sitio
+            # por video en una playlist).
+            job.config.update(self.subtitle_controller.collect_ai_subtitle_data())
             return
 
         req_data = self._collect_request_data()

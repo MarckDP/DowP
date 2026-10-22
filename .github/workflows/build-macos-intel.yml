@@ -54,7 +54,11 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r app/requirements.txt
+          # --prefer-binary: algunos paquetes ya no publican wheel x86_64 en su ultima
+          # version pero si el codigo fuente (ej. rawpy 0.27, solo arm64). Sin esto pip
+          # intentaria compilarlos en el runner limpio; asi usa la ultima version con
+          # wheel para Intel (rawpy 0.25.1). Los que tienen wheel x86_64 no cambian.
+          pip install --prefer-binary -r app/requirements.txt
           pip install pyinstaller==6.22.2
 
       - name: Compilar DowP (DowP.app + helper de swap, firma ad-hoc incluida)

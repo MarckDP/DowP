@@ -19,7 +19,7 @@ from core.utils.paths import get_default_models_dir, get_models_dir, get_src_dir
 # Subcarpetas que crean los modelos de DowP: sirven para reconocer una carpeta de
 # modelos ya existente (por ejemplo, la de otra instalación o la que se usó antes).
 KNOWN_MODEL_FOLDERS = {"rembg", "rembg_custom", "rmbg2", "depth", "normals", "upscayl",
-                       "waifu2x", "srmd", "inspyrenet", "realesrgan"}
+                       "waifu2x", "srmd", "inspyrenet", "realesrgan", "whisper"}
 SUBFOLDER_NAME = "DowP Modelos"
 
 

@@ -210,7 +210,17 @@ class PresetsPanel(QWidget):
         settings = dict(preset)
         if mode == "video_only":
             settings["keep_audio"] = False
+        if settings.get("ia_function") == "transcription" and not settings.get("transcription_model"):
+            # Los de subtítulos de fábrica no traen modelo: el descargado por defecto.
+            from core.setup.whisper_setup import default_model_id
+            settings["transcription_model"] = default_model_id()
         return settings
+
+    def is_transcription(self) -> bool:
+        """El preajuste de IA elegido crea subtítulos o texto: no produce un video, así que
+        no se encadena con la Recodificación (corren por separado, ver video_tools_view)."""
+        settings = self.get_upscale_settings()
+        return bool(settings) and settings.get("ia_function") == "transcription"
 
     def get_recode_settings(self, meta_override: dict | None = None, filepath_override: str | None = None) -> dict | None:
         """Ajustes del preajuste de Recodificación elegido, o None si el
@@ -265,8 +275,13 @@ class PresetsPanel(QWidget):
             # Con el modelo del preajuste de IA sin descargar no se puede iniciar (el
             # menú ofrece descargarlo al elegirlo, ver ia_preset_models.py).
             from gui.widgets.ia_preset_models import preset_model_ready
+            if self.is_transcription() and not self.get_upscale_settings().get("transcription_model"):
+                return False, self.tr("Descarga un modelo de Whisper en Herramientas IA > Transcripción")
             if not preset_model_ready(self.get_upscale_settings()):
                 return False, self.tr("El modelo del preajuste de IA todavía no está descargado")
+        if has_upscale and self.is_transcription():
+            return True, (self.tr("Iniciar Recodificación y Transcripción") if has_recode
+                          else self.tr("Iniciar Transcripción"))
         if has_upscale and not has_recode:
             # El mismo combo de IA trae preajustes de Reescalado y de los mapas
             # (ver upscale_ia_panel.ia_function_of).

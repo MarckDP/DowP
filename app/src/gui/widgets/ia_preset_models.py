@@ -37,6 +37,27 @@ def preset_model(settings: dict | None) -> dict | None:
             "note": QCoreApplication.translate("IAPresetModels", "El motor trae sus propios modelos de reescalado adentro -- se "
                         "descarga una sola vez y sirve para todos los modelos de esta lista."),
         }
+    if function == "transcription":
+        from core.setup import whisper_setup
+        from core.whisper_catalog import WHISPER_MODELS
+        info = WHISPER_MODELS.get(settings.get("transcription_model"))
+        if not info:
+            return None
+        # Con "Saltar silencios" también hace falta el detector de voz: una vez que el
+        # modelo de Whisper está, el que falta es ese. No está en Ajustes > Modelos
+        # (vive en Dependencias), así que su aviso no ofrece "Administrar".
+        if (whisper_setup.model_ready(info) and settings.get("transcription_vad")
+                and not whisper_setup.vad_ready()):
+            from core.whisper_catalog import VAD_MODEL, VAD_DOWNLOAD_INFO
+            return {"name": "Silero VAD " + VAD_MODEL["variant"], "info": VAD_MODEL,
+                    "key": model_download_key(VAD_DOWNLOAD_INFO), "installed": False,
+                    "size": VAD_MODEL["size_bytes"], "download": whisper_setup.download_vad,
+                    "subject": QCoreApplication.translate("IAPresetModels", "detector de voz"),
+                    "note": "", "manageable": False}
+        return {"name": info["id"], "info": info, "key": model_download_key(info),
+                "installed": whisper_setup.model_ready(info), "size": info["size_bytes"],
+                "download": whisper_setup.download_model,
+                "subject": QCoreApplication.translate("IAPresetModels", "modelo"), "note": ""}
     if function == "depth":
         name = settings.get("depth_model")
         info = models_setup.get_depth_families().get(settings.get("depth_family"), {}).get(name)
@@ -61,6 +82,10 @@ def preset_model(settings: dict | None) -> dict | None:
 def preset_model_ready(settings: dict | None) -> bool:
     """El modelo del preajuste está en disco y no a medio descargar."""
     model = preset_model(settings)
+    if (settings or {}).get("ia_function") == "transcription":
+        from core.setup.whisper_setup import runtime_ready, ENGINE_INFO
+        if not runtime_ready() or model_downloads().is_downloading(model_download_key(ENGINE_INFO)):
+            return False
     return bool(model) and model["installed"] and not model_downloads().is_downloading(model["key"])
 
 
@@ -83,7 +108,7 @@ def offer_preset_model_download(parent, settings: dict | None, notify_downloadin
     kind = {"upscale": "upscaling"}.get((settings or {}).get("ia_function") or "upscale",
                                         (settings or {}).get("ia_function"))
     choice = ask_model_download(parent, model["name"], model["size"], subject=model["subject"],
-                                extra_note=model["note"], offer_manage=True,
+                                extra_note=model["note"], offer_manage=model.get("manageable", True),
                                 manage_focus=model["info"], manage_kind=kind)
     if choice == "download":
         model_downloads().start(model["key"], model["download"], model["info"])

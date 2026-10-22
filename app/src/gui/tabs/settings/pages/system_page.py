@@ -382,7 +382,17 @@ class SystemPage(QWidget):
 
         self.scan_thread = ScanHardwareThread()
         self.scan_thread.finished_scan.connect(self._on_scan_finished)
-        self.scan_thread.start()
+        # finished_scan sale DENTRO de run(): el hilo se borra recién con el "finished"
+        # de QThread (borrarlo antes abortaba la app, ver ThumbnailLoaderThread).
+        thread = self.scan_thread
+
+        def release():
+            thread.deleteLater()
+            if self.scan_thread is thread:
+                self.scan_thread = None
+
+        thread.finished.connect(release)
+        thread.start()
 
     def _on_scan_finished(self, info):
         self.load_hardware_info(force=False)
@@ -390,7 +400,3 @@ class SystemPage(QWidget):
         self.btn_redetect.setText(self.tr("Redetectar hardware"))
         sec = info.get("scan_duration_sec", 0.5)
         self.lbl_status.setText(self.tr("Actualizado en {0}s").format(sec))
-        
-        if self.scan_thread:
-            self.scan_thread.deleteLater()
-            self.scan_thread = None

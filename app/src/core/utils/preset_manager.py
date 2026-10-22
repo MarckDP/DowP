@@ -46,13 +46,14 @@ IA_TOOL_FUNCTIONS = {
     "ia_reescalar": QT_TRANSLATE_NOOP("preset_manager", "Reescalado"),
     "ia_profundidad": QT_TRANSLATE_NOOP("preset_manager", "Mapa de profundidad"),
     "ia_normales": QT_TRANSLATE_NOOP("preset_manager", "Mapa de normales"),
+    "ia_transcripcion": QT_TRANSLATE_NOOP("preset_manager", "Transcripción"),
 }
 
 # Las funciones de IA que Modo Rápido y Proceso Avanzado saben ejecutar después de una
 # descarga: las tres (ver ia_job_spec en core/tabs/video_tools/upscale_chain.py, que
 # elige el job según "ia_function"). Sus pickers usan esta lista: PresetBar solo lista
 # las funciones que recibe.
-IA_POST_DOWNLOAD_FUNCTIONS = dict(IA_TOOL_FUNCTIONS)
+IA_POST_DOWNLOAD_FUNCTIONS = {key: value for key, value in IA_TOOL_FUNCTIONS.items() if key != "ia_transcripcion"}
 
 # Namespace único (ver PresetManager) para TODO preset de IA -- constante acá, no un
 # literal repetido en cada módulo que lo lee/escribe (quick_mode/download_controller.py,

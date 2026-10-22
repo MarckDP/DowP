@@ -77,6 +77,8 @@ THIRD_PARTY = [
         ("Ghostscript", QT_TRANSLATE_NOOP("Credits", "PDF y PostScript (se descarga aparte)"), "AGPL-3.0", "https://www.ghostscript.com"),
     ]),
     (_AI, [
+        ("whisper.cpp", QT_TRANSLATE_NOOP("Credits", "Transcripción local (motor opcional)"), "MIT", "https://github.com/ggml-org/whisper.cpp"),
+        ("OpenAI Whisper", QT_TRANSLATE_NOOP("Credits", "Modelos de reconocimiento de voz"), "MIT", "https://github.com/openai/whisper"),
         ("ONNX Runtime", QT_TRANSLATE_NOOP("Credits", "Ejecuta los modelos de IA"), "MIT", "https://github.com/microsoft/onnxruntime"),
         ("NumPy", "", "BSD-3-Clause", "https://github.com/numpy/numpy"),
         ("rembg", QT_TRANSLATE_NOOP("Credits", "Modelos U²-Net e IS-Net para quitar fondos"), "MIT", "https://github.com/danielgatis/rembg"),

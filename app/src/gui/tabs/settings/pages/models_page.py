@@ -12,6 +12,8 @@ from core.utils.cache_manager import format_bytes
 from core.utils.paths import get_models_dir
 from core.utils.config_manager import get_config, save_config
 from core.constants import DEPTH_MODEL_FAMILIES, NORMAL_MODEL_FAMILIES, REMBG_MODEL_FAMILIES, UPSCALING_TOOLS
+from core.whisper_catalog import WHISPER_MODELS
+from core.setup import whisper_setup
 from core.setup.models_setup import (
     is_depth_model_installed, download_depth_model, delete_depth_model,
     get_depth_model_size_bytes, get_depth_model_disk_size, get_depth_model_path,
@@ -692,6 +694,11 @@ class ModelsPage(QWidget):
             self._begin_family(section, family_name)
             for model_name, model_info in models.items():
                 self._add_depth_row(model_name, model_info, kind="normals")
+
+        section = self._begin_section("transcription", self.tr("Transcripción"))
+        self._begin_family(section, "Whisper · whisper.cpp")
+        for model_name, model_info in WHISPER_MODELS.items():
+            self._add_transcription_row(model_name, model_info)
 
         self._begin_section("upscaling", self.tr("Motores de Reescalado (Upscaling)"))
         for engine_key, tool_info in UPSCALING_TOOLS.items():
@@ -1529,6 +1536,31 @@ class ModelsPage(QWidget):
         self.row_kind[row_id] = kind
         self._place_row(row_id, row)
 
+    def _add_transcription_row(self, name, info):
+        row_id = f"transcription::{info['file']}"
+        label = name + (self.tr(" · solo inglés") if info["english_only"] else self.tr(" · multilingüe"))
+        row = ModelRow(row_id, format_model_label(label, info["size_bytes"]),
+                       whisper_setup.model_path(info),
+                       installed_check=lambda: whisper_setup.model_ready(info),
+                       disk_size=lambda: os.path.getsize(whisper_setup.model_path(info)) if os.path.isfile(whisper_setup.model_path(info)) else 0,
+                       license_text="MIT")
+        row.download_requested.connect(self._on_download_requested)
+        row.btn_delete.clicked.connect(lambda: self._on_delete_transcription(row_id, name))
+        self.rows[row_id] = row
+        self.row_info[row_id] = info
+        self.row_kind[row_id] = "transcription"
+        self._place_row(row_id, row)
+
+    def _on_delete_transcription(self, row_id, name):
+        if QMessageBox.question(self, self.tr("Eliminar modelo"), self.tr("¿Eliminar '{0}' del disco?").format(name)) != QMessageBox.Yes:
+            return
+        if whisper_setup.delete_model(self.row_info[row_id]):
+            self.rows[row_id].refresh_status()
+            self._refresh_summaries()
+            model_downloads().models_changed.emit()
+        else:
+            QMessageBox.warning(self, self.tr("Eliminar modelo"), self.tr("No se pudo eliminar el modelo."))
+
     # ── Modelos personalizados (importados) ─────────────────────────────────
     def _refresh_custom_rows(self):
         while self.custom_rows_container.count():
@@ -1627,6 +1659,7 @@ class ModelsPage(QWidget):
             "rembg": download_rembg_model,
             "depth": download_depth_model,
             "normals": download_depth_model,
+            "transcription": whisper_setup.download_model,
         }.get(kind, download_upscaling_engine)
 
         # Si ya se estaba bajando (lanzada desde un popover), start() no hace nada: la
