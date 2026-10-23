@@ -590,7 +590,7 @@ Tem certeza?</translation>
     <message>
         <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="720"/>
         <location filename="../../gui/tabs/advanced_process/advanced_process_view.py" line="1048"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="496"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="502"/>
         <source>En espera</source>
         <translation>Aguardando</translation>
     </message>
@@ -798,103 +798,98 @@ Tem certeza?</translation>
         <translation>Processando o download...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="287"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="293"/>
         <source>Descarga</source>
         <translation>Download</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="291"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="666"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1134"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="297"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="672"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1140"/>
         <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1231"/>
         <source>Descarga completada con éxito</source>
         <translation>Download concluído com sucesso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="314"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="320"/>
         <source>Error: {0}</source>
         <translation>Erro: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="331"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="337"/>
         <source>Descarga cancelada</source>
         <translation>Download cancelado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="349"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="355"/>
         <source>Pausando...</source>
         <translation>Pausando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="353"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="475"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="502"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="603"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="359"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="481"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="508"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="609"/>
         <source>Reanudar cola</source>
         <translation>Retomar fila</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="432"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="438"/>
         <source>Analizando...</source>
         <translation>Analisando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="646"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="652"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="648"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="654"/>
         <source>{0} ({1} de {2})</source>
         <translation>{0} ({1} de {2})</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="668"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1120"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1137"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1164"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="674"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1126"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1143"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1170"/>
         <source>Error al recodificar (original conservado)</source>
         <translation>Erro ao recodificar (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="672"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1143"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="678"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1149"/>
         <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1233"/>
         <source>Completado</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="672"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1121"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1144"/>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1165"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="678"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1127"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1150"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1171"/>
         <source>Error al recodificar</source>
         <translation>Erro ao recodificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1136"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1142"/>
         <source>Recodificación cancelada (original conservado)</source>
         <translation>Recodificação cancelada (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1144"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1150"/>
         <source>Recodificación cancelada</source>
         <translation>Recodificação cancelada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1187"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1194"/>
         <source>Crear subtítulos con IA</source>
         <translation>Criar legendas com IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1189"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1195"/>
         <source>Elige un modelo de Whisper en Subtítulos &gt; Crear con IA.</source>
         <translation>Escolha um modelo do Whisper em Legendas &gt; Criar com IA.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1193"/>
-        <source>Para crear subtítulos hace falta el motor whisper.cpp. Instálalo en Ajustes &gt; Dependencias.</source>
-        <translation>Para criar legendas é preciso o motor whisper.cpp. Instale-o em Configurações &gt; Dependências.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/download_controller.py" line="1222"/>
@@ -1023,17 +1018,22 @@ Tem certeza?</translation>
         <translation>Incompatível com corte</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="578"/>
+        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="589"/>
+        <source>No se pudo descargar: {0}</source>
+        <translation>Não foi possível baixar: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="620"/>
         <source>Detectar automáticamente</source>
         <translation>Detectar automaticamente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="582"/>
+        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="624"/>
         <source>{0} (del video)</source>
         <translation>{0} (do vídeo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="595"/>
+        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="637"/>
         <source>(ninguno)</source>
         <translation>(nenhum)</translation>
     </message>
@@ -3899,32 +3899,32 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>DownloadController</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="853"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="859"/>
         <source>Recodificando...</source>
         <translation>Recodificando...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="938"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="944"/>
         <source>Creando mapa de profundidad...</source>
         <translation>Criando mapa de profundidade...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="940"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="946"/>
         <source>Creando mapa de normales...</source>
         <translation>Criando mapa de normais...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="941"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="947"/>
         <source>Reescalando con IA...</source>
         <translation>Ampliando com IA...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="980"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="986"/>
         <source>Error al reescalar (original conservado)</source>
         <translation>Erro ao ampliar (original mantido)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="984"/>
+        <location filename="../../gui/tabs/advanced_process/download_controller.py" line="990"/>
         <source>Error al reescalar</source>
         <translation>Erro ao ampliar</translation>
     </message>
@@ -5453,145 +5453,145 @@ Inicia sesión y autoriza la aplicación. Esta ventana se actualizará automáti
 <context>
     <name>GeneralPage</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="38"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="37"/>
         <source>Ajustes Generales</source>
         <translation>Configurações Gerais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="79"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="78"/>
         <source>Actualizaciones DowP</source>
         <translation>Atualizações do DowP</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="89"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="88"/>
         <source>Solo releases oficiales: recibe únicamente versiones estables, ya probadas.
 Todas (incluye experimentales): recibe también compilaciones de prueba, antes de que salgan como estables -- pueden traer errores nuevos sin detectar todavía.</source>
         <translation>Somente releases oficiais: você recebe apenas versões estáveis, já testadas.
 Todas (inclui experimentais): você recebe também compilações de teste, antes de saírem como estáveis -- elas podem trazer erros novos ainda não detectados.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="101"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="100"/>
         <source>Solo releases oficiales</source>
         <translation>Somente releases oficiais</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="102"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="101"/>
         <source>Solo versiones estables, ya probadas</source>
         <translation>Somente versões estáveis, já testadas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="103"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="102"/>
         <source>Todas (incluye experimentales)</source>
         <translation>Todas (inclui experimentais)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="104"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="103"/>
         <source>También compilaciones de prueba, antes de que salgan como estables</source>
         <translation>Também compilações de teste, antes de saírem como estáveis</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="117"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="116"/>
         <source>Aspecto</source>
         <translation>Aparência</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="123"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="122"/>
         <source>Idioma de la aplicación</source>
         <translation>Idioma do aplicativo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="139"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="138"/>
         <source>Tema visual</source>
         <translation>Tema visual</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="177"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="176"/>
         <source>Tipografía / Fuente</source>
         <translation>Tipografia / Fonte</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="185"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="184"/>
         <source>Abrir carpeta de fuentes personalizadas (%APPDATA%/DowP2/fonts)</source>
         <translation>Abrir a pasta de fontes personalizadas (%APPDATA%/DowP2/fonts)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="246"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="245"/>
         <source>Comportamiento</source>
         <translation>Comportamento</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="252"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="251"/>
         <source>Analizar automáticamente al pegar URL</source>
         <translation>Analisar automaticamente ao colar a URL</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="265"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="264"/>
         <source>Auto-pegar URL del portapapeles</source>
         <translation>Colar automaticamente a URL da área de transferência</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="268"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="267"/>
         <source>Al volver a la ventana, pega automáticamente la URL copiada en el campo de análisis.</source>
         <translation>Ao voltar para a janela, cola automaticamente a URL copiada no campo de análise.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="285"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="284"/>
         <source>Selección predeterminada para Adobe</source>
         <translation>Seleção padrão para a Adobe</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="288"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="287"/>
         <source>Si está activo, preseleccionará el formato más compatible (✨). Si no, la mejor calidad absoluta.</source>
         <translation>Se ativo, pré-seleciona o formato mais compatível (✨). Se não, a melhor qualidade absoluta.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="325"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="324"/>
         <source>Tutoriales interactivos</source>
         <translation>Tutoriais interativos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="328"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="327"/>
         <source>Si deseas volver a ver los tutoriales iniciales de cada pestaña, puedes restablecerlos aquí.</source>
         <translation>Se quiser rever os tutoriais iniciais de cada aba, você pode reiniciá-los aqui.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="335"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="436"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="334"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="435"/>
         <source>Restablecer</source>
         <translation>Restaurar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="369"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="368"/>
         <source>Sonidos</source>
         <translation>Sons</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="376"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="375"/>
         <source>Sonido al terminar un proceso</source>
         <translation>Som ao terminar um processo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="392"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="391"/>
         <source>Cuándo sonar</source>
         <translation>Quando tocar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="396"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="395"/>
         <source>Al terminar todo</source>
         <translation>Ao terminar tudo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="397"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="396"/>
         <source>Al terminar cada elemento</source>
         <translation>Ao terminar cada item</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="398"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="397"/>
         <source>Ambos</source>
         <translation>Ambos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="400"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="399"/>
         <source>Al terminar todo: un solo sonido cuando acaba toda la tanda (de error si algo falló).
 Al terminar cada elemento: un sonido por cada descarga, archivo o imagen.
 Ambos: por cada elemento y también al final.</source>
@@ -5600,255 +5600,255 @@ Ao terminar cada item: um som para cada download, arquivo ou imagem.
 Ambos: para cada item e também no final.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="412"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="411"/>
         <source>Sonido de éxito</source>
         <translation>Som de sucesso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="413"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="412"/>
         <source>Sonido de error</source>
         <translation>Som de erro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="423"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="422"/>
         <source>Probar</source>
         <translation>Testar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="429"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="428"/>
         <source>Elegir...</source>
         <translation>Escolher...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="433"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="432"/>
         <source>WAV, MP3 u OGG, de hasta 10 segundos y 2 MB.</source>
         <translation>WAV, MP3 ou OGG, de até 10 segundos e 2 MB.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="440"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="439"/>
         <source>Volver al sonido predeterminado de DowP</source>
         <translation>Voltar ao som padrão do DowP</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="495"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="494"/>
         <source>Predeterminado</source>
         <translation>Padrão</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="456"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="455"/>
         <source>Volumen</source>
         <translation>Volume</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="147"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="146"/>
         <source>Importar, exportar o eliminar temas</source>
         <translation>Importar, exportar ou excluir temas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="158"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="157"/>
         <source>Modo</source>
         <translation>Modo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="163"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="162"/>
         <source>Oscuro</source>
         <translation>Escuro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="164"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="163"/>
         <source>Claro</source>
         <translation>Claro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="165"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="164"/>
         <source>Según el sistema</source>
         <translation>Seguir o sistema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="196"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="195"/>
         <source>Tamaño de texto (requiere reinicio para ver todo)</source>
         <translation>Tamanho do texto (requer reinicialização para aplicar tudo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="205"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="204"/>
         <source>Aplicar</source>
         <translation>Aplicar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="220"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="219"/>
         <source>⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados.</source>
         <translation>⚠️ Tamanhos maiores que 18px podem fazer com que alguns textos e botões fiquem cortados.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="234"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="233"/>
         <source>Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza.</source>
         <translation>Se alguma parte não mudou de aparência, reiniciar o DowP a atualiza.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="305"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="304"/>
         <source>Cambiar opción con la rueda en menús</source>
         <translation>Mudar opção com a roda do mouse em menus</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="308"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="307"/>
         <source>Permite cambiar la opción seleccionada al pasar la rueda del ratón sobre un menú cerrado. Si está desactivado (recomendado), la rueda desplazará la página normalmente.</source>
         <translation>Permite mudar a opção selecionada ao rolar a roda do mouse sobre um menu fechado. Quando desativado (recomendado), a roda rolará a página normalmente.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="379"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="378"/>
         <source>Suena al terminar en Modo Rápido, Proceso Avanzado, Herramientas Multimedia y Herramientas de Imagen. Un sonido para cuando todo sale bien y otro si algo falla.</source>
         <translation>Toca ao finalizar no Modo Rápido, Processo Avançado, Ferramentas Multimídia e Ferramentas de Imagem. Um som para quando tudo der certo e outro se algo falhar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="495"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="494"/>
         <source>Personalizado</source>
         <translation>Personalizado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="532"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="531"/>
         <source>Elegir sonido</source>
         <translation>Escolher som</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="532"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="531"/>
         <source>Audio (*.wav *.mp3 *.ogg)</source>
         <translation>Áudio (*.wav *.mp3 *.ogg)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="538"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="537"/>
         <source>Formato no admitido. Usa un archivo WAV, MP3 u OGG.</source>
         <translation>Formato não suportado. Use um arquivo WAV, MP3 ou OGG.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="539"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="538"/>
         <source>El archivo pesa más de 2 MB.</source>
         <translation>O arquivo tem mais de 2 MB.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="540"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="539"/>
         <source>El sonido dura más de 10 segundos.</source>
         <translation>O som dura mais de 10 segundos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="541"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="540"/>
         <source>Hace falta FFmpeg para preparar el sonido. Instálalo desde Ajustes &gt; Dependencias.</source>
         <translation>O FFmpeg é necessário para preparar o som. Instale-o em Configurações &gt; Dependências.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="542"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="541"/>
         <source>No se pudo leer el archivo de audio. Prueba con otro.</source>
         <translation>Não foi possível ler o arquivo de áudio. Tente outro.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="544"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="543"/>
         <source>No se pudo usar ese sonido</source>
         <translation>Não foi possível usar esse som</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="561"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="560"/>
         <source>Importar tema…</source>
         <translation>Importar tema…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="562"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="561"/>
         <source>Exportar tema actual…</source>
         <translation>Exportar tema atual…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="563"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="562"/>
         <source>Eliminar este tema</source>
         <translation>Excluir este tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="566"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="565"/>
         <source>Abrir carpeta de temas</source>
         <translation>Abrir pasta de temas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="584"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="594"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="583"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="593"/>
         <source>Importar tema</source>
         <translation>Importar tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="584"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="620"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="583"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="619"/>
         <source>Temas de DowP (*.json)</source>
         <translation>Temas do DowP (*.json)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="590"/>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="601"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="589"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="600"/>
         <source>No se pudo importar el tema</source>
         <translation>Não foi possível importar o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="595"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="594"/>
         <source>Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?</source>
         <translation>Você já tem um tema chamado “{0}”. Deseja substituí-lo?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="604"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="603"/>
         <source>Se importó el tema «{0}» y ya está aplicado.</source>
         <translation>O tema “{0}” foi importado e já está aplicado.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="606"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="605"/>
         <source>Era un tema de DowP 1: se convirtió al formato nuevo. Lo que no tiene equivalente se toma del tema DowP.</source>
         <translation>Era um tema do DowP 1: foi convertido para o novo formato. O que não tem equivalente é tirado do tema DowP.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="610"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="609"/>
         <source>Se ignoraron {0} colores no válidos: {1}</source>
         <translation>{0} cores inválidas foram ignoradas: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="612"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="611"/>
         <source>Tema importado</source>
         <translation>Tema importado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="620"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="619"/>
         <source>Exportar tema</source>
         <translation>Exportar tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="628"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="627"/>
         <source>No se pudo exportar el tema</source>
         <translation>Não foi possível exportar o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="631"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="630"/>
         <source>Tema exportado</source>
         <translation>Tema exportado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="632"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="631"/>
         <source>Se guardó el tema completo, con sus dos modos, formas y tipografía. Puedes editarlo y volver a importarlo, o compartirlo.</source>
         <translation>O tema completo foi salvo, com os dois modos, formas e tipografia. Você pode editá-lo e importá-lo de novo, ou compartilhá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="641"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="640"/>
         <source>Eliminar tema</source>
         <translation>Excluir tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="642"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="641"/>
         <source>¿Eliminar el tema «{0}»? Se volverá al tema DowP.</source>
         <translation>Excluir o tema “{0}”? O DowP voltará para o tema DowP.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="648"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="647"/>
         <source>No se pudo eliminar el tema</source>
         <translation>Não foi possível excluir o tema</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="680"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="679"/>
         <source>Este tema tiene un solo modo</source>
         <translation>Este tema tem apenas um modo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="686"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="685"/>
         <source>Por defecto del tema</source>
         <translation>Padrão do tema</translation>
     </message>
@@ -5868,7 +5868,7 @@ Ambos: para cada item e também no final.</translation>
         <translation>A preferência já foi salva. Se você não reiniciar, a interface continua no idioma atual até a próxima vez que abrir o aplicativo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/general_page.py" line="237"/>
+        <location filename="../../gui/tabs/settings/pages/general_page.py" line="236"/>
         <location filename="../../gui/tabs/settings/pages/general_page.py" line="796"/>
         <source>Reiniciar ahora</source>
         <translation>Reiniciar agora</translation>
@@ -6313,12 +6313,22 @@ Nenhum arquivo baixado é apagado, apenas os cartões do histórico. Não é pos
         <translation>modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/ia_preset_models.py" line="104"/>
+        <location filename="../../gui/widgets/ia_preset_models.py" line="105"/>
+        <source>Descargando</source>
+        <translation>Baixando</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/ia_preset_models.py" line="106"/>
+        <source>Se está descargando lo necesario para transcribir. Podrás iniciar cuando termine.</source>
+        <translation>O necessário para transcrever está sendo baixado. Você poderá iniciar quando terminar.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/ia_preset_models.py" line="115"/>
         <source>Descargando el modelo</source>
         <translation>Baixando o modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/ia_preset_models.py" line="105"/>
+        <location filename="../../gui/widgets/ia_preset_models.py" line="116"/>
         <source>&apos;{0}&apos; se está descargando ({1}%). Podrás iniciar cuando termine.</source>
         <translation>&apos;{0}&apos; está sendo baixado ({1}%). Você poderá iniciar quando terminar.</translation>
     </message>
@@ -10008,34 +10018,34 @@ Você pode baixá-lo novamente quando quiser.</translation>
 <context>
     <name>PlaylistGroupRow</name>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="822"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="1008"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="829"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="1015"/>
         <source>{0} de {1}</source>
         <translation>{0} de {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="843"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="850"/>
         <source>Quitar la playlist de la lista</source>
         <translation>Remover a playlist da lista</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="922"/>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="924"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="929"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="931"/>
         <source>Arrastra la playlist a otra aplicación para importar sus archivos</source>
         <translation>Arraste a playlist para outro aplicativo para importar os arquivos dela</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="957"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="964"/>
         <source>Contraer</source>
         <translation>Recolher</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="957"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="964"/>
         <source>Ver los elementos</source>
         <translation>Ver os itens</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/quick_mode/download_row.py" line="1010"/>
+        <location filename="../../gui/tabs/quick_mode/download_row.py" line="1017"/>
         <source> · {0} con error</source>
         <translation> · {0} com erro</translation>
     </message>
@@ -10113,7 +10123,7 @@ Você pode baixá-lo novamente quando quiser.</translation>
         <translation>Sem preset</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="601"/>
+        <location filename="../../gui/tabs/advanced_process/subtitle_controller.py" line="643"/>
         <location filename="../../gui/widgets/preset_bar.py" line="203"/>
         <source>+ Crear preajuste...</source>
         <translation>+ Criar preset...</translation>
@@ -11500,12 +11510,12 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>ResponsiveThumbnail</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="197"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="202"/>
         <source>Sin Vista Previa</source>
         <translation>Sem Pré-visualização</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="207"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="212"/>
         <source>Recortar fragmento</source>
         <translation>Recortar fragmento</translation>
     </message>
@@ -11513,12 +11523,12 @@ Você pode baixá-lo de novo quando quiser.</translation>
 <context>
     <name>RichComboBox</name>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="277"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="282"/>
         <source>[Combinado]</source>
         <translation>[Combinado]</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="278"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="283"/>
         <source>[Multi-Idioma]</source>
         <translation>[Multi-Idioma]</translation>
     </message>
@@ -11527,13 +11537,13 @@ Você pode baixá-lo de novo quando quiser.</translation>
     <name>RichTextDelegate</name>
     <message>
         <location filename="../../core/utils/format_manager.py" line="297"/>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="48"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="53"/>
         <source>[Combinado]</source>
         <translation>[Combinado]</translation>
     </message>
     <message>
         <location filename="../../core/utils/format_manager.py" line="295"/>
-        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="49"/>
+        <location filename="../../gui/tabs/advanced_process/video_details_components.py" line="54"/>
         <source>[Multi-Idioma]</source>
         <translation>[Multi-Idioma]</translation>
     </message>
@@ -12333,7 +12343,7 @@ Desative para receber a legenda exatamente como o YouTube a entrega.</translatio
     </message>
     <message>
         <location filename="../../gui/tabs/settings/pages/system_page.py" line="264"/>
-        <location filename="../../gui/tabs/settings/pages/system_page.py" line="390"/>
+        <location filename="../../gui/tabs/settings/pages/system_page.py" line="400"/>
         <source>Redetectar hardware</source>
         <translation>Detectar hardware de novo</translation>
     </message>
@@ -12408,7 +12418,7 @@ Desative para receber a legenda exatamente como o YouTube a entrega.</translatio
         <translation>Analisando componentes...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/system_page.py" line="392"/>
+        <location filename="../../gui/tabs/settings/pages/system_page.py" line="402"/>
         <source>Actualizado en {0}s</source>
         <translation>Atualizado em {0}s</translation>
     </message>
@@ -12595,110 +12605,116 @@ Desative para receber a legenda exatamente como o YouTube a entrega.</translatio
 <context>
     <name>TranscriptionPanel</name>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="593"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="728"/>
         <source>Transcripción con IA</source>
         <translation>Transcrição com IA</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="605"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="606"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="991"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="734"/>
+        <source>Con la aceleración NVIDIA instalada (se ofrece al descargar el motor si hay una NVIDIA), transcribe con la GPU: mucho más rápido. Desmarcada, usa siempre la CPU. Si la GPU falla, se repite por CPU automáticamente.</source>
+        <translation>Com a aceleração NVIDIA instalada (oferecida ao baixar o motor se houver uma NVIDIA), transcreve com a GPU: muito mais rápido. Desmarcada, usa sempre a CPU. Se a GPU falhar, repete automaticamente pela CPU.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="741"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="742"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1142"/>
         <source>Configurar motor</source>
         <translation>Configurar motor</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="607"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="743"/>
         <source>Motor:</source>
         <translation>Motor:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="610"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="746"/>
         <source>Modelo:</source>
         <translation>Modelo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="613"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="81"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="749"/>
         <source>Licencia: MIT</source>
         <translation>Licença: MIT</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="625"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="946"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="769"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1090"/>
         <source>Todas (un archivo por pista)</source>
         <translation>Todas (um arquivo por faixa)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="626"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="770"/>
         <source>Pista 1</source>
         <translation>Faixa 1</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="628"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="772"/>
         <source>La selección se aplica por número de pista a cada archivo del lote. Todas crea una fila y un resultado por pista.</source>
         <translation>A seleção se aplica pelo número da faixa a cada arquivo do lote. Todas cria uma linha e um resultado por faixa.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="630"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="774"/>
         <source>Detectar automáticamente</source>
         <translation>Detectar automaticamente</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="636"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="780"/>
         <source>Tarea:</source>
         <translation>Tarefa:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="637"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="781"/>
         <source>Transcribir en el idioma original</source>
         <translation>Transcrever no idioma original</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="638"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="782"/>
         <source>Traducir a inglés</source>
         <translation>Traduzir para inglês</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="462"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="597"/>
         <source>Salida</source>
         <translation>Saída</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="463"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="598"/>
         <source>Subtítulos</source>
         <translation>Legendas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="463"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="598"/>
         <source>Texto</source>
         <translation>Texto</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="465"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="600"/>
         <source>Formato:</source>
         <translation>Formato:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="470"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="605"/>
         <source>Guardar como:</source>
         <translation>Salvar como:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="471"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="606"/>
         <source>Archivo de subtítulos</source>
         <translation>Arquivo de legendas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="472"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="607"/>
         <source>Pista dentro del video</source>
         <translation>Faixa dentro do vídeo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="473"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="608"/>
         <source>Quemados en la imagen</source>
         <translation>Embutidas na imagem</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="475"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="610"/>
         <source>Archivo: un archivo aparte, junto al video.
 Pista: un video con los subtítulos como pista que se puede activar o desactivar. No recodifica (salvo si recortas un tramo). MP4, MOV y WebM los guardan sin estilo; MKV conserva el ASS con estilo. Otros formatos salen en MKV.
 Quemados: dibujados en la imagen con el estilo elegido, visibles en cualquier reproductor o red social. Recodifica el video a MP4 (H.264), así que tarda más.</source>
@@ -12707,389 +12723,409 @@ Faixa: um vídeo com as legendas como faixa que pode ser ativada ou desativada. 
 Embutidas: desenhadas na imagem com o estilo escolhido, visíveis em qualquer player ou rede social. Recodifica o vídeo para MP4 (H.264), então demora mais.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="484"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="681"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="619"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="825"/>
         <source>Sin límite</source>
         <translation>Sem limite</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="485"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="620"/>
         <source> caracteres</source>
         <translation> caracteres</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="486"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="621"/>
         <source>Largo máximo de cada línea. 42 es el estándar de subtítulos.</source>
         <translation>Comprimento máximo de cada linha. 42 é o padrão de legendas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="487"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="622"/>
         <source>Largo de línea:</source>
         <translation>Comprimento da linha:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="488"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="623"/>
         <source>Líneas:</source>
         <translation>Linhas:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="489"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="624"/>
         <source>1 línea</source>
         <translation>1 linha</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="490"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="625"/>
         <source>2 líneas</source>
         <translation>2 linhas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="492"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="627"/>
         <source>Corte:</source>
         <translation>Divisão:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="493"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="628"/>
         <source>Por frases</source>
         <translation>Por frases</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="495"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="630"/>
         <source>Karaoke (resalta cada palabra)</source>
         <translation>Karaokê (destaca cada palavra)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="494"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="629"/>
         <source>Por palabras</source>
         <translation>Por palavras</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="497"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="63"/>
+        <source>solo inglés</source>
+        <translation>só inglês</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="63"/>
+        <source>multilingüe</source>
+        <translation>multilíngue</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="67"/>
+        <source>F16: modelo original. Q: variante cuantizada, de menor tamaño y consumo de memoria.</source>
+        <translation>F16: modelo original. Q: variante quantizada, menor e com menos consumo de memória.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="80"/>
+        <source>Instalado</source>
+        <translation>Instalado</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="80"/>
+        <source>No descargado</source>
+        <translation>Não baixado</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="632"/>
         <source>Por palabras: subtítulos cortos de pocas palabras (1 = palabra por palabra), como en TikTok o Reels.
 Karaoke: la frase completa, y cada palabra cambia de color cuando se dice. Solo en ASS, LRC (el LRC &quot;mejorado&quot; de los reproductores de música) y quemados.
 Los dos calculan los tiempos de cada palabra con más precisión, así que tardan algo más.</source>
         <translation>Por palavras: legendas curtas de poucas palavras (1 = palavra por palavra), como no TikTok ou Reels.
-Karaokê: a frase inteira, e cada palavra muda de cor quando é dita. Só em ASS, LRC (o LRC "aprimorado" dos players de música) e embutidas.
+Karaokê: a frase inteira, e cada palavra muda de cor quando é dita. Só em ASS, LRC (o LRC &quot;aprimorado&quot; dos players de música) e embutidas.
 Os dois calculam o tempo de cada palavra com mais precisão, então demoram um pouco mais.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="509"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="644"/>
         <source>Palabras por subtítulo. Un subtítulo nunca cruza el final de una frase, y las palabras de cada frase se reparten parejas.</source>
         <translation>Palavras por legenda. Uma legenda nunca atravessa o fim de uma frase, e as palavras de cada frase são divididas por igual.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="511"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="646"/>
         <source>Palabras:</source>
         <translation>Palavras:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="518"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="653"/>
         <source>Organización:</source>
         <translation>Organização:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="519"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="654"/>
         <source>Párrafos (por pausas)</source>
         <translation>Parágrafos (por pausas)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="520"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="655"/>
         <source>Una línea por segmento</source>
         <translation>Uma linha por segmento</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="521"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="656"/>
         <source>Incluir marcas de tiempo</source>
         <translation>Incluir marcações de tempo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="522"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="657"/>
         <source>Agrega el tiempo, por ejemplo [01:23], al inicio de cada párrafo o línea.</source>
         <translation>Adiciona o tempo, por exemplo [01:23], no início de cada parágrafo ou linha.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="528"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="663"/>
         <source>Estilo de los subtítulos</source>
         <translation>Estilo das legendas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="535"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="670"/>
         <source>Fuente:</source>
         <translation>Fonte:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="540"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="675"/>
         <source>Al quemar se dibuja con esta fuente. En una pista MKV va adjunta al video, y la usan reproductores como VLC, mpv o MPC aunque no esté instalada.</source>
         <translation>Ao embutir, as legendas são desenhadas com esta fonte. Em uma faixa MKV ela vai anexada ao vídeo, e players como VLC, mpv ou MPC a usam mesmo que não esteja instalada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="547"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="682"/>
         <source>Tamaño para un video de 1080 de alto; se ajusta solo a la resolución de cada video.</source>
         <translation>Tamanho para um vídeo de 1080 de altura; ajusta-se sozinho à resolução de cada vídeo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="548"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="683"/>
         <source>Tamaño:</source>
         <translation>Tamanho:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="549"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="684"/>
         <source>Posición:</source>
         <translation>Posição:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="550"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="685"/>
         <source>Abajo</source>
         <translation>Embaixo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="551"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="686"/>
         <source>Centro</source>
         <translation>Centro</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="552"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="687"/>
         <source>Arriba</source>
         <translation>Em cima</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="554"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="689"/>
         <source>Color del texto:</source>
         <translation>Cor do texto:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="556"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="691"/>
         <source>Color del borde:</source>
         <translation>Cor da borda:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="561"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="696"/>
         <source>Color que toma cada palabra cuando se dice.</source>
         <translation>Cor que cada palavra assume quando é dita.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="562"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="697"/>
         <source>Color del karaoke:</source>
         <translation>Cor do karaokê:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="565"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="700"/>
         <source>Negrita</source>
         <translation>Negrito</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="567"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="702"/>
         <source>Caja de fondo</source>
         <translation>Caixa de fundo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="568"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="703"/>
         <source>Un recuadro oscuro semitransparente detrás del texto, en lugar del borde. Se lee mejor sobre fondos claros o con mucho movimiento.</source>
         <translation>Um retângulo escuro semitransparente atrás do texto, em vez da borda. Lê-se melhor sobre fundos claros ou com muito movimento.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="573"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="708"/>
         <source>Las pistas en MP4, MOV o WebM no conservan el estilo; en MKV sí, con la fuente adjunta.</source>
         <translation>As faixas em MP4, MOV ou WebM não mantêm o estilo; em MKV sim, com a fonte anexada.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="596"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="731"/>
         <source>Aceleración de Hardware (GPU)</source>
         <translation>Aceleração de Hardware (GPU)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="599"/>
-        <source>Usa la GPU si el motor instalado la admite. La descarga oficial de Windows usa CPU; para Metal o Vulkan importa un paquete compilado con ese soporte.</source>
-        <translation>Usa a GPU se o motor instalado for compatível. O download oficial do Windows usa a CPU; para Metal ou Vulkan, importe um pacote compilado com esse suporte.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="623"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="767"/>
         <source>Opciones de audio</source>
         <translation>Opções de áudio</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="624"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="768"/>
         <source>Pista:</source>
         <translation>Faixa:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="629"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="773"/>
         <source>Idioma:</source>
         <translation>Idioma:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="640"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="784"/>
         <source>Nombres o términos, separados por comas</source>
         <translation>Nomes ou termos, separados por vírgulas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="642"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="786"/>
         <source>Vocabulario: nombres propios, marcas o jerga que Whisper debe escribir bien (por ejemplo: DowP, Upscayl, MoGe).</source>
         <translation>Vocabulário: nomes próprios, marcas ou gírias que o Whisper deve escrever corretamente (por exemplo: DowP, Upscayl, MoGe).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="644"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="788"/>
         <source>Vocabulario:</source>
         <translation>Vocabulário:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="648"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="792"/>
         <source>Hilos de CPU:</source>
         <translation>Threads da CPU:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="649"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="793"/>
         <source>Saltar silencios (VAD)</source>
         <translation>Pular silêncios (VAD)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="651"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="795"/>
         <source>Transcribe solo los tramos con voz: más rápido en audios largos y con menos frases inventadas en los silencios. Usa un modelo pequeño aparte (885 KB) que se descarga una vez.</source>
         <translation>Transcreve só os trechos com voz: mais rápido em áudios longos e com menos frases inventadas nos silêncios. Usa um modelo pequeno à parte (885 KB) que é baixado uma vez.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="654"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="798"/>
         <source>Sensibilidad:</source>
         <translation>Sensibilidade:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="655"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="799"/>
         <source>Normal</source>
         <translation>Normal</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="656"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="800"/>
         <source>Alta (voces bajas, susurros)</source>
         <translation>Alta (vozes baixas, sussurros)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="657"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="801"/>
         <source>Estricta (música o ruido de fondo)</source>
         <translation>Estrita (música ou ruído de fundo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="658"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="802"/>
         <source>Personalizada</source>
         <translation>Personalizada</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="660"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="804"/>
         <source>Alta detecta voces débiles y deja más margen para no cortar sílabas. Estricta ignora lo que no sea voz clara. Personalizada permite ajustar cada valor.</source>
         <translation>Alta detecta vozes fracas e deixa mais margem para não cortar sílabas. Estrita ignora o que não for voz clara. Personalizada permite ajustar cada valor.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="670"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="814"/>
         <source>Probabilidad mínima para considerar que hay voz. Más bajo detecta más; más alto ignora más ruido.</source>
         <translation>Probabilidade mínima para considerar que há voz. Mais baixo detecta mais; mais alto ignora mais ruído.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="671"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="815"/>
         <source>Umbral:</source>
         <translation>Limiar:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="672"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="816"/>
         <source>Pausa necesaria para separar dos tramos de voz.</source>
         <translation>Pausa necessária para separar dois trechos de voz.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="673"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="817"/>
         <source>Silencio mínimo:</source>
         <translation>Silêncio mínimo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="674"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="818"/>
         <source>Los sonidos más cortos se descartan (golpes, clics).</source>
         <translation>Sons mais curtos são descartados (batidas, cliques).</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="675"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="819"/>
         <source>Voz mínima:</source>
         <translation>Voz mínima:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="676"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="820"/>
         <source>Margen que se agrega antes y después de cada tramo, para no cortar la primera o la última sílaba.</source>
         <translation>Margem adicionada antes e depois de cada trecho, para não cortar a primeira ou a última sílaba.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="677"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="821"/>
         <source>Margen:</source>
         <translation>Margem:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="682"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="826"/>
         <source>Parte los tramos de voz más largos que esto.</source>
         <translation>Divide os trechos de voz mais longos que isso.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="683"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="827"/>
         <source>Tramo máximo:</source>
         <translation>Trecho máximo:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="908"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1052"/>
         <source>Detector de voz (Silero)</source>
         <translation>Detector de voz (Silero)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="921"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="926"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1065"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1070"/>
         <source>Descarga el motor whisper.cpp y el modelo.</source>
         <translation>Baixe o motor whisper.cpp e o modelo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="923"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1067"/>
         <source>Elige un modelo de transcripción descargado.</source>
         <translation>Escolha um modelo de transcrição baixado.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="925"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1069"/>
         <source>Falta el detector de voz para saltar silencios.</source>
         <translation>Falta o detector de voz para pular silêncios.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="949"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1093"/>
         <source>Pista {0}</source>
         <translation>Faixa {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="951"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1095"/>
         <source>Pista {0} (no está en este archivo)</source>
         <translation>Faixa {0} (não está neste arquivo)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="986"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1137"/>
         <source>Modelo listo para usar.</source>
         <translation>Modelo pronto para usar.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="988"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1139"/>
         <source>No descargado — vuelve a elegirlo en la lista para descargarlo.</source>
         <translation>Não baixado — escolha-o novamente na lista para baixá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="991"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1142"/>
         <source>Instalar motor whisper.cpp</source>
         <translation>Instalar motor whisper.cpp</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1003"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1005"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1154"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1156"/>
         <source>Eliminar modelo</source>
         <translation>Excluir modelo</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1003"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1154"/>
         <source>¿Eliminar &apos;{0}&apos; del disco?</source>
         <translation>Excluir &apos;{0}&apos; do disco?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1005"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1156"/>
         <source>No se pudo eliminar el modelo.</source>
         <translation>Não foi possível excluir o modelo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1013"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="1164"/>
         <source>Error de descarga</source>
         <translation>Erro de download</translation>
     </message>
@@ -13860,7 +13896,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="113"/>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="765"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="768"/>
         <source>Etiqueta</source>
         <translation>Etiqueta</translation>
     </message>
@@ -13871,7 +13907,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="143"/>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="741"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="744"/>
         <source>Seleccionar video...</source>
         <translation>Selecionar vídeo...</translation>
     </message>
@@ -13882,7 +13918,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
     </message>
     <message>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="157"/>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="743"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="746"/>
         <source>Seleccionar audio...</source>
         <translation>Selecionar áudio...</translation>
     </message>
@@ -13895,7 +13931,7 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="197"/>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="228"/>
         <location filename="../../gui/tabs/advanced_process/video_details.py" line="344"/>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="663"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="666"/>
         <source>Solo Audio</source>
         <translation>Somente Áudio</translation>
     </message>
@@ -13926,32 +13962,32 @@ O motor inteiro é apagado, com todos os modelos dele. Você pode baixá-lo de n
         <translation>Carregando pré-visualização...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="595"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="598"/>
         <source>No hay video disponible</source>
         <translation>Nenhum vídeo disponível</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="604"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="607"/>
         <source>Ninguno (Flujos separados)</source>
         <translation>Nenhum (Fluxos separados)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="673"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="676"/>
         <source>Directo en curso</source>
         <translation>Transmissão ao vivo em andamento</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="674"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="677"/>
         <source>Los directos en curso no se pueden recortar. Puedes descargarlo completo; la descarga seguirá hasta que termine la transmisión o la canceles.</source>
         <translation>Transmissões ao vivo em andamento não podem ser recortadas. Você pode baixá-la por completo; o download continuará até a transmissão terminar ou você cancelá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="721"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="724"/>
         <source>Fragmentos</source>
         <translation>Fragmentos</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/advanced_process/video_details.py" line="744"/>
+        <location filename="../../gui/tabs/advanced_process/video_details.py" line="747"/>
         <source>Sin Vista Previa</source>
         <translation>Sem Pré-visualização</translation>
     </message>
@@ -14803,165 +14839,431 @@ só é necessário se você for exportar para esse formato.</translation>
     </message>
 </context>
 <context>
-    <name>WhisperRuntimeCard</name>
+    <name>WhisperDownloadDialog</name>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="109"/>
-        <source>whisper.cpp (Transcripción)</source>
-        <translation>whisper.cpp (Transcrição)</translation>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="68"/>
+        <source>Motor de transcripción</source>
+        <translation>Motor de transcrição</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="118"/>
-        <source>Motor opcional para transcribir audio y video localmente. Solo se instala cuando lo solicitas. Los modelos se administran por separado en Ajustes &gt; Modelos.</source>
-        <translation>Motor opcional para transcrever áudio e vídeo localmente. Só é instalado quando você solicita. Os modelos são gerenciados separadamente em Configurações &gt; Modelos.</translation>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="69"/>
+        <source>Crear subtítulos</source>
+        <translation>Criar legendas</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="144"/>
-        <source>Abrir carpeta del motor</source>
-        <translation>Abrir pasta do motor</translation>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="74"/>
+        <source>Para crear subtítulos falta descargar:</source>
+        <translation>Para criar legendas, falta baixar:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="147"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="193"/>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="83"/>
+        <source>Motor whisper.cpp</source>
+        <translation>Motor whisper.cpp</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="95"/>
+        <source>Se detectó: {0} · driver {1}</source>
+        <translation>Detectado: {0} · driver {1}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="156"/>
+        <source>Recomendado: mucho más rápido.</source>
+        <translation>Recomendado: muito mais rápido.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="106"/>
+        <source>Solo CPU</source>
+        <translation>Só CPU</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="107"/>
+        <source>Funciona en cualquier equipo.</source>
+        <translation>Funciona em qualquer computador.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="99"/>
+        <source>Se detectó {0}, pero su driver ({1}) es antiguo para usar la GPU. Actualízalo para poder acelerar la transcripción.</source>
+        <translation>{0} foi detectada, mas o driver dela ({1}) é antigo demais para usar a GPU. Atualize-o para acelerar a transcrição.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="73"/>
+        <source>Acelerar la transcripción con la GPU:</source>
+        <translation>Acelerar a transcrição com a GPU:</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="82"/>
+        <source>Aceleración por GPU</source>
+        <translation>Aceleração por GPU</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="88"/>
+        <source>Metal (GPU)</source>
+        <translation>Metal (GPU)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="89"/>
+        <source>CPU con Accelerate</source>
+        <translation>CPU com Accelerate</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="90"/>
+        <source>Motor ({0})</source>
+        <translation>Motor ({0})</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="96"/>
+        <source>Se detectó: {0}</source>
+        <translation>Detectado: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="109"/>
+        <source>Motor (CPU)</source>
+        <translation>Motor (CPU)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="115"/>
+        <source>Modelos</source>
+        <translation>Modelos</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="117"/>
+        <source>Modelo {0}</source>
+        <translation>Modelo {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="120"/>
+        <source>Detector de voz (Silero)</source>
+        <translation>Detector de voz (Silero)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="127"/>
+        <source>Se descarga una sola vez y se verifica antes de instalarse.</source>
+        <translation>É baixado uma única vez e verificado antes de instalar.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="129"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="148"/>
-        <source>Importar paquete…</source>
-        <translation>Importar pacote…</translation>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="130"/>
+        <source>Cancelar</source>
+        <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="149"/>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="141"/>
+        <source>Beta: compilación sin probar todavía en equipos como este. Si falla, DowP repite la transcripción por CPU automáticamente.</source>
+        <translation>Beta: compilação ainda não testada em computadores como este. Se falhar, o DowP repete a transcrição pela CPU automaticamente.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="151"/>
+        <source>Aceleración por GPU ({0})</source>
+        <translation>Aceleração por GPU ({0})</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="154"/>
+        <source>CPU + aceleración por GPU ({0})</source>
+        <translation>CPU + aceleração por GPU ({0})</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="157"/>
+        <source>Alternativa: paquete oficial de NVIDIA, más pesado.</source>
+        <translation>Alternativa: pacote oficial da NVIDIA, mais pesado.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="159"/>
+        <source>La primera transcripción tarda más: el driver prepara la GPU una sola vez.</source>
+        <translation>A primeira transcrição demora mais: o driver prepara a GPU uma única vez.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="223"/>
+        <source>Total: {0}</source>
+        <translation>Total: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="290"/>
+        <source>Descargar…</source>
+        <translation>Baixar…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="311"/>
+        <source>Descargando el motor whisper.cpp: {0}%</source>
+        <translation>Baixando o motor whisper.cpp: {0}%</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="315"/>
+        <source>Para crear subtítulos hace falta el motor whisper.cpp (se descarga una sola vez).</source>
+        <translation>Para criar legendas é preciso o motor whisper.cpp (baixado uma única vez).</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="349"/>
+        <source>Instalar</source>
+        <translation>Instalar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="376"/>
+        <source>Se detectó {0}: instala la aceleración por GPU ({1}) para transcribir mucho más rápido · {2}.</source>
+        <translation>{0} detectada: instale a aceleração por GPU ({1}) para transcrever muito mais rápido · {2}.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="380"/>
+        <source>(Beta)</source>
+        <translation>(Beta)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/widgets/whisper_download_dialog.py" line="354"/>
+        <source>No mostrar más</source>
+        <translation>Não mostrar mais</translation>
+    </message>
+</context>
+<context>
+    <name>WhisperGpuSection</name>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="355"/>
+        <source>Aceleración por GPU</source>
+        <translation>Aceleração por GPU</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="365"/>
+        <source>Transcribe con la GPU, mucho más rápido que con la CPU. Vulkan (recomendada) funciona con NVIDIA, AMD e Intel y pesa poco; con NVIDIA también está CUDA, el paquete oficial, más pesado. Se instala junto al motor base, que queda como respaldo: si la GPU falla, la transcripción se repite por CPU. Usa la casilla &quot;Aceleración de Hardware (GPU)&quot; de Transcripción.</source>
+        <translation>Transcreve com a GPU, muito mais rápido que com a CPU. Vulkan (recomendada) funciona com NVIDIA, AMD e Intel e é leve; com NVIDIA também há CUDA, o pacote oficial, mais pesado. É instalada junto ao motor base, que fica como reserva: se a GPU falhar, a transcrição é repetida pela CPU. Usa a caixa &quot;Aceleração de Hardware (GPU)&quot; de Transcrição.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="405"/>
+        <source>✓ Instalada</source>
+        <translation>✓ Instalada</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="405"/>
+        <source>Beta</source>
+        <translation>Beta</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="408"/>
+        <source>Transcribe con la GPU {0}. Si falla, se usa el motor base.</source>
+        <translation>Transcreve com a GPU {0}. Se falhar, usa o motor base.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="410"/>
+        <source>Opcional · No instalada</source>
+        <translation>Opcional · Não instalada</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="414"/>
+        <source>Disponible: {0}</source>
+        <translation>Disponível: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="416"/>
+        <source>Se detectó {0}, pero su driver ({1}) es antiguo para usar la GPU. Actualízalo para poder instalarla.</source>
+        <translation>{0} foi detectada, mas o driver dela ({1}) é antigo demais para usar a GPU. Atualize-o para poder instalá-la.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="419"/>
+        <source>Se detectó {0}. Se ofrece al descargar el motor.</source>
+        <translation>{0} foi detectada. É oferecida ao baixar o motor.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="421"/>
+        <source>Se detectó {0}. Transcribe mucho más rápido con la GPU · {1}.</source>
+        <translation>{0} detectada. Transcreve muito mais rápido com a GPU · {1}.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="424"/>
+        <source>(Beta)</source>
+        <translation>(Beta)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="427"/>
         <source>Desinstalar</source>
         <translation>Desinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="193"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="427"/>
+        <source>Instalar</source>
+        <translation>Instalar</translation>
+    </message>
+</context>
+<context>
+    <name>WhisperRuntimeCard</name>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="107"/>
+        <source>whisper.cpp (Transcripción)</source>
+        <translation>whisper.cpp (Transcrição)</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="116"/>
+        <source>Motor opcional para transcribir audio y video localmente. Solo se instala cuando lo solicitas. Los modelos se administran por separado en Ajustes &gt; Modelos.</source>
+        <translation>Motor opcional para transcrever áudio e vídeo localmente. Só é instalado quando você solicita. Os modelos são gerenciados separadamente em Configurações &gt; Modelos.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="142"/>
+        <source>Abrir carpeta del motor</source>
+        <translation>Abrir pasta do motor</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="145"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="196"/>
+        <source>Descargar</source>
+        <translation>Baixar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="146"/>
+        <source>Importar paquete…</source>
+        <translation>Importar pacote…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="147"/>
+        <source>Desinstalar</source>
+        <translation>Desinstalar</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="196"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="193"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="196"/>
         <source>Instalar oficial</source>
         <translation>Instalar oficial</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="193"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="196"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="195"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="198"/>
         <source>Descargando whisper.cpp: {0}%</source>
         <translation>Baixando whisper.cpp: {0}%</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="197"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="200"/>
         <source>whisper.cpp instalado. Los modelos se descargan por separado.</source>
         <translation>whisper.cpp instalado. Os modelos são baixados separadamente.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="201"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="204"/>
         <source>No hay un CLI oficial descargable para este sistema. Importa un paquete nativo con whisper-cli y sus bibliotecas.</source>
         <translation>Não há um CLI oficial para baixar neste sistema. Importe um pacote nativo com o whisper-cli e suas bibliotecas.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="203"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="206"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="203"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="206"/>
         <source>Versión: Desconocida</source>
         <translation>Versão: Desconhecida</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="203"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="206"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="205"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="208"/>
         <source> · Buscando…</source>
         <translation> · Procurando…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="207"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="210"/>
         <source> · No se pudo comprobar</source>
         <translation> · Não foi possível verificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="209"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="212"/>
         <source> · Disponible: {0}</source>
         <translation> · Disponível: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="212"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="215"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="212"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="215"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="212"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="215"/>
         <source>Opcional · No instalado</source>
         <translation>Opcional · Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="219"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="222"/>
         <source>Procesando whisper.cpp: {0}%</source>
         <translation>Processando whisper.cpp: {0}%</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="220"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="223"/>
         <source>Opcional. Transcribe audio y video sin conexión. Los modelos se descargan por separado.</source>
         <translation>Opcional. Transcreve áudio e vídeo sem conexão. Os modelos são baixados separadamente.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="222"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="225"/>
+        <source>Se usa el whisper-cli instalado con Homebrew. Para usar el de DowP, descárgalo.</source>
+        <translation>Está sendo usado o whisper-cli instalado com o Homebrew. Para usar o do DowP, baixe-o.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="227"/>
+        <source>Beta: compilación sin probar todavía en equipos como este; si falla, avísanos.</source>
+        <translation>Beta: compilação ainda não testada em computadores como este; se falhar, avise-nos.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="229"/>
         <source>La versión consultada no ofrece un paquete nativo verificado para este sistema; puedes importarlo.</source>
         <translation>A versão consultada não oferece um pacote nativo verificado para este sistema; você pode importá-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="247"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="254"/>
         <source>Motor en uso</source>
         <translation>Motor em uso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="247"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="254"/>
         <source>Espera a que terminen o cancela las transcripciones pendientes antes de modificar el motor.</source>
         <translation>Aguarde as transcrições pendentes terminarem, ou cancele-as, antes de modificar o motor.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="254"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="261"/>
         <source>Desinstalar whisper.cpp</source>
         <translation>Desinstalar whisper.cpp</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="254"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="261"/>
         <source>¿Desinstalar el motor whisper.cpp? Los modelos descargados se conservarán.</source>
         <translation>Desinstalar o motor whisper.cpp? Os modelos baixados serão mantidos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="264"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="288"/>
         <source>motor</source>
         <translation>motor</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="273"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="299"/>
+        <source>Desinstalar aceleración por GPU</source>
+        <translation>Desinstalar aceleração por GPU</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="300"/>
+        <source>¿Desinstalar la aceleración por GPU? El motor base se conserva: las transcripciones seguirán funcionando, pero más lentas.</source>
+        <translation>Desinstalar a aceleração por GPU? O motor base é mantido: as transcrições continuarão funcionando, porém mais lentas.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="311"/>
         <source>Importar whisper.cpp</source>
         <translation>Importar whisper.cpp</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="273"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="311"/>
         <source>Paquetes (*.zip *.tar.gz *.tgz)</source>
         <translation>Pacotes (*.zip *.tar.gz *.tgz)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="288"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="326"/>
         <source>whisper.cpp</source>
         <translation>whisper.cpp</translation>
     </message>
@@ -14969,114 +15271,114 @@ só é necessário se você for exportar para esse formato.</translation>
 <context>
     <name>WhisperVadSection</name>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="319"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="454"/>
         <source>Detector de voz (VAD)</source>
         <translation>Detector de voz (VAD)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="329"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="464"/>
         <source>Silero VAD: un modelo pequeño que detecta en qué momentos hay voz. Con &quot;Saltar silencios&quot; whisper.cpp transcribe solo esos tramos: más rápido en audios largos y sin frases inventadas en los silencios o la música. Licencia MIT.</source>
         <translation>Silero VAD: um modelo pequeno que detecta em quais momentos há voz. Com &quot;Pular silêncios&quot; o whisper.cpp transcreve só esses trechos: mais rápido em áudios longos e sem frases inventadas nos silêncios ou na música. Licença MIT.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="347"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="482"/>
         <source>Eliminar</source>
         <translation>Excluir</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="348"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="380"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="483"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="515"/>
         <source>Descargar</source>
         <translation>Baixar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="380"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="515"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="380"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="515"/>
         <source>Reinstalar</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="382"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="517"/>
         <source>Versión: {0}</source>
         <translation>Versão: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="382"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="517"/>
         <source>No instalado</source>
         <translation>Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="384"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="519"/>
         <source> · Buscando…</source>
         <translation> · Buscando…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="386"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="521"/>
         <source> · No se pudo comprobar</source>
         <translation> · Não foi possível verificar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="388"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="523"/>
         <source> · Disponible: {0}</source>
         <translation> · Disponível: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="390"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="525"/>
         <source>Procesando</source>
         <translation>Processando</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="390"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="525"/>
         <source>✓ Instalado</source>
         <translation>✓ Instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="390"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="525"/>
         <source>Opcional · No instalado</source>
         <translation>Opcional · Não instalado</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="396"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="531"/>
         <source>Descargando detector de voz: {0}%</source>
         <translation>Baixando detector de voz: {0}%</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="398"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="533"/>
         <source>Complemento opcional para &quot;Saltar silencios&quot; en Transcripción. Se guarda en la carpeta de modelos.</source>
         <translation>Complemento opcional para &quot;Pular silêncios&quot; em Transcrição. É salvo na pasta de modelos.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="416"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="551"/>
         <source>Detector en uso</source>
         <translation>Detector em uso</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="416"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="551"/>
         <source>Espera a que terminen o cancela las transcripciones pendientes antes de modificar el detector de voz.</source>
         <translation>Aguarde o término das transcrições pendentes ou cancele-as antes de modificar o detector de voz.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="431"/>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="435"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="566"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="570"/>
         <source>Eliminar detector de voz</source>
         <translation>Excluir detector de voz</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="432"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="567"/>
         <source>¿Eliminar el detector de voz? &quot;Saltar silencios&quot; volverá a pedir descargarlo.</source>
         <translation>Excluir o detector de voz? &quot;Pular silêncios&quot; vai pedir para baixá-lo de novo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="435"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="570"/>
         <source>No se pudo eliminar el archivo.</source>
         <translation>Não foi possível excluir o arquivo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="442"/>
+        <location filename="../../gui/tabs/ai_tools/transcription_panel.py" line="577"/>
         <source>Detector de voz</source>
         <translation>Detector de voz</translation>
     </message>

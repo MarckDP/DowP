@@ -49,22 +49,51 @@ def setup_logger():
 
         # File Handler — única fuente de diagnóstico disponible en el .exe compilado
         # sin consola, donde el handler de arriba no escribe a ningún lado visible.
-        try:
-            log_dir = _get_log_dir()
-            os.makedirs(log_dir, exist_ok=True)
-            fh = RotatingFileHandler(
-                os.path.join(log_dir, "dowp.log"),
-                maxBytes=5 * 1024 * 1024,
-                backupCount=3,
-                encoding="utf-8",
-            )
-            fh.setLevel(logging.DEBUG)
-            fh.setFormatter(formatter)
-            logger.addHandler(fh)
-        except Exception:
-            pass  # Si no se puede escribir el log a disco, seguimos solo con consola (si la hay).
+        # DOWP_NO_FILE_LOG=1 lo desactiva: lo usan las pruebas automáticas, que no deben
+        # escribir en el log real del usuario.
+        if not os.environ.get("DOWP_NO_FILE_LOG"):
+            try:
+                log_dir = _get_log_dir()
+                os.makedirs(log_dir, exist_ok=True)
+                fh = RotatingFileHandler(
+                    os.path.join(log_dir, "dowp.log"),
+                    maxBytes=5 * 1024 * 1024,
+                    backupCount=3,
+                    encoding="utf-8",
+                )
+                fh.setLevel(logging.DEBUG)
+                fh.setFormatter(formatter)
+                logger.addHandler(fh)
+            except Exception:
+                pass  # Si no se puede escribir el log a disco, seguimos solo con consola (si la hay).
 
     return logger
 
 # Global logger instance
 logger = setup_logger()
+
+
+def install_exception_logging():
+    """Registra en el log cualquier excepción no capturada, con su traza: las de las
+    funciones que responden a eventos de Qt (botones, señales de hilos) y las de hilos de
+    Python. Sin esto solo salían por la consola, que el .exe no tiene: un fallo así (por
+    ejemplo, un NameError en el final de una descarga) no dejaba ni una línea en dowp.log.
+    No cambia el comportamiento: después de registrar, sigue el manejador anterior."""
+    import threading
+    import traceback
+
+    previous = sys.excepthook
+
+    def hook(exc_type, exc, tb):
+        if not issubclass(exc_type, KeyboardInterrupt):
+            logger.error("Error no capturado:\n" + "".join(traceback.format_exception(exc_type, exc, tb)).rstrip())
+        previous(exc_type, exc, tb)
+
+    def thread_hook(args):
+        if not issubclass(args.exc_type, SystemExit):
+            name = args.thread.name if args.thread else "?"
+            logger.error(f"Error no capturado en el hilo {name}:\n" + "".join(
+                traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)).rstrip())
+
+    sys.excepthook = hook
+    threading.excepthook = thread_hook

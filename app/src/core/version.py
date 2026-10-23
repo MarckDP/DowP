@@ -27,10 +27,10 @@ APP_VERSION = "1.9.3"
 # mundo. Si las betas usaran algo como "2.0.0.3", la 2.0.0 real quedaria por debajo
 # numericamente y nunca se ofreceria como update a quien ya tiene una beta instalada.
 #
-# Apagar (poner en False) al compilar/publicar la 2.0.0 oficial -- eso cambia sola dos
-# cosas: get_display_version() empieza a mostrar el numero real en vez de BETA_LABEL, y
-# el default de "update_channel" en config_manager.py pasa de "beta" a "stable" para
-# instalaciones NUEVAS (quien ya tenia "beta" guardado a mano no se mueve solo).
+# Apagar (poner en False) al compilar/publicar la 2.0.0 oficial -- eso cambia que
+# get_display_version() muestre el numero real en vez de BETA_LABEL. Ya NO decide el
+# canal de actualizaciones: ese es siempre "stable" salvo que el usuario elija "beta"
+# en Ajustes (ver config_manager._migrate_update_channel).
 IS_BETA = True
 BETA_LABEL = "Beta"
 

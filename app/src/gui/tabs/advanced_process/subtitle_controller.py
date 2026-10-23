@@ -542,13 +542,55 @@ class SubtitleController(QObject):
             combo.currentIndexChanged.connect(self._update_ai_header)
         opts.combo_ai_preset.currentIndexChanged.connect(self._on_ai_preset_changed)
         opts.combo_ai_model.activated.connect(self._offer_ai_model_download)
+        # Aviso en línea si falta el motor whisper.cpp (dependencia opcional).
+        from gui.widgets.whisper_download_dialog import WhisperEngineNotice
+        self.ai_engine_notice = WhisperEngineNotice(self._ai_settings, opts.ai_container)
+        opts.ai_container.layout().addWidget(self.ai_engine_notice, 4, 0, 1, 2)
+        self.ai_engine_notice.visibility_changed.connect(lambda _shown: opts._apply_source_visibility())
+        # Avance de lo que se esté bajando para transcribir (motor, modelo, detector de
+        # voz): sin esto, en Proceso Avanzado la descarga no se veía hasta que terminaba.
+        from gui.widgets.model_download_prompt import ModelStatusRow
+        self.ai_download_status = ModelStatusRow(opts.ai_container)
+        opts.ai_container.layout().addWidget(self.ai_download_status, 5, 0, 1, 2)
         manager = model_downloads()
         manager.models_changed.connect(self._refresh_ai_model_icons)
         manager.finished.connect(lambda *_: self._refresh_ai_model_icons())
+        manager.started.connect(lambda key: self._on_ai_download_event(key))
+        manager.progress_changed.connect(lambda _pct, key: self._on_ai_download_event(key))
+        manager.finished.connect(lambda ok, message, key: self._on_ai_download_event(key, ok, message))
+        self._on_ai_download_event(None)
         # Un preajuste creado, editado o borrado en Herramientas IA aparece aquí al instante.
         from core.utils.preset_manager import IA_TOOLS_NAMESPACE, get_preset_manager
         get_preset_manager().presets_changed.connect(
             lambda namespace: self._refresh_ai_presets() if namespace == IA_TOOLS_NAMESPACE else None)
+
+    @staticmethod
+    def _whisper_download_keys():
+        from core.setup import whisper_setup as setup
+        from core.whisper_catalog import WHISPER_MODELS, VAD_DOWNLOAD_INFO
+        from gui.widgets.model_download_prompt import model_download_key
+        infos = [setup.ENGINE_INFO, VAD_DOWNLOAD_INFO, *WHISPER_MODELS.values()]
+        return {model_download_key(info) for info in infos}
+
+    def _on_ai_download_event(self, key, ok=True, message=""):
+        """Una sola línea para todo lo de whisper: el porcentaje más bajo de lo que siga
+        bajando (motor y modelo pueden ir a la vez), y el error si alguna falla."""
+        from gui.widgets.model_download_prompt import model_downloads
+        keys = self._whisper_download_keys()
+        if key is not None and key not in keys:
+            return
+        manager = model_downloads()
+        active = [k for k in keys if manager.is_downloading(k)]
+        row = self.ai_download_status
+        was_visible = row.isVisible()
+        if active:
+            row.show_progress(min(manager.progress(k) for k in active))
+        elif not ok:
+            row.show_error(QCoreApplication.translate("AdvancedProcessTab", "No se pudo descargar: {0}").format(message))
+        elif key is not None or not was_visible:
+            row.clear()
+        if row.isVisible() != was_visible:
+            self.tab.subtitle_options._apply_source_visibility()
 
     def _refresh_ai_model_icons(self):
         from gui.tabs.ai_tools.transcription_panel import refresh_whisper_model_icons

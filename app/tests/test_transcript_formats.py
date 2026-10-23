@@ -4,6 +4,7 @@ import csv
 import io
 import json
 from pathlib import Path
+import os
 import sys
 import tempfile
 import unittest
@@ -11,6 +12,8 @@ from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Las pruebas no escriben en el log real del usuario (ver logger_manager).
+os.environ.setdefault("DOWP_NO_FILE_LOG", "1")
 from core.setup import whisper_setup as setup
 from core.tabs.video_tools import transcript_formats as tf
 from core.tabs.video_tools import transcription_engine as engine
@@ -141,9 +144,16 @@ class TranscriptFormatsTests(unittest.TestCase):
         header = tf.render(self.transcript, "ass", options)
         self.assertIn("PlayResY: 1920", header)
         style = next(line for line in header.splitlines() if line.startswith("Style:")).split(",")
-        self.assertEqual(style[2], "107")            # 60 px a 1080 de alto -> 1920 de alto
+        self.assertEqual(style[2], "60")             # vertical 1080x1920: el lado corto es 1080, sin agrandar
         self.assertEqual(style[3], "&H00332211")     # #RRGGBB -> &HAABBGGRR
         self.assertEqual(style[18], "8")             # arriba
+
+    def test_box_is_one_per_line_only_when_burning(self):
+        def border_style(options):
+            header = tf.render(self.transcript, "ass", dict(options, transcription_style_box=True))
+            return next(line for line in header.splitlines() if line.startswith("Style:")).split(",")[15]
+        self.assertEqual(border_style({}), "3")                                  # ASS suelto: estándar
+        self.assertEqual(border_style({"transcription_embed": "burn"}), "4")     # quemado con libass
 
     def test_csv_written_with_bom(self):
         target = Path(self.folder.name) / "t.csv"
@@ -281,6 +291,94 @@ class TranscriptionOptionsTests(unittest.TestCase):
             self.assertIn("[2/4]", Worker.job_progress_changed.calls[-1][2])
             # Los ajustes del job no se tocan (cada ítem parte de los mismos).
             self.assertNotIn("_final_output_path", job.config["ai_subtitles_settings"])
+
+    def test_nvidia_driver_picks_cuda_variant(self):
+        import subprocess
+
+        def detect(line):
+            result = subprocess.CompletedProcess([], 0, stdout=line.encode(), stderr=b"")
+            with patch.object(setup.platform, "system", return_value="Windows"),                     patch.object(setup.shutil, "which", return_value=__file__),                     patch.object(setup.subprocess, "run", return_value=result):
+                return setup._nvidia_smi()
+        self.assertEqual(detect("NVIDIA GeForce RTX 3060, 617.42, 12288")["cuda"], "cuda12")
+        self.assertEqual(detect("NVIDIA GeForce GTX 1060, 531.79, 6144")["cuda"], "cuda11")
+        info = detect("NVIDIA GeForce GTX 960, 472.12, 2048")
+        self.assertIsNone(info["cuda"])                       # driver viejo: sin CUDA
+        self.assertEqual(info["vram_mb"], 2048)
+
+    def test_gpu_options_recommend_vulkan_and_mark_beta(self):
+        from core.utils.vulkan_devices import VulkanDevice
+        nvidia = VulkanDevice(0, "NVIDIA GeForce RTX 3060", 0x10DE, 2)
+        amd = VulkanDevice(0, "AMD Radeon RX 7600", 0x1002, 2)
+
+        def detect(device, smi):
+            setup.detect_gpu.cache_clear()
+            with patch.object(setup, "_platform_key", return_value=("Windows", "x64")),                     patch("core.utils.vulkan_devices.preferred_gpu", return_value=device),                     patch.object(setup, "_nvidia_smi", return_value=smi):
+                gpu = setup.detect_gpu()
+            setup.detect_gpu.cache_clear()
+            return gpu
+        gpu = detect(nvidia, {"name": "RTX 3060", "driver": "617.42", "vram_mb": 12288, "cuda": "cuda12"})
+        self.assertEqual(gpu["options"], ["vulkan", "cuda12"])          # Vulkan recomendada, CUDA alternativa
+        with patch.object(setup.platform, "system", return_value="Windows"):
+            self.assertFalse(setup.accel_is_beta("vulkan", gpu))        # probado con NVIDIA
+            amd_gpu = detect(amd, None)
+            self.assertEqual(amd_gpu["options"], ["vulkan"])
+            self.assertTrue(setup.accel_is_beta("vulkan", amd_gpu))     # AMD sin probar
+        self.assertFalse(setup.accel_is_beta("cuda12", gpu))            # CUDA es el oficial
+        self.assertIsNone(detect(None, None))
+
+    def test_engine_variants_install_side_by_side(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cpu_dir, gpu_dir = Path(folder) / "cpu", Path(folder) / "gpu"
+            calls = []
+
+            def fake_install(asset, root, progress, progress_range):
+                calls.append((asset["name"], Path(root), progress_range))
+                (Path(root) / "Release").mkdir(parents=True, exist_ok=True)
+                (Path(root) / "Release" / "whisper-cli.exe").write_bytes(b"x")
+            with patch.object(setup, "runtime_dir", return_value=cpu_dir), \
+                    patch.object(setup, "accel_dir", return_value=gpu_dir), \
+                    patch.object(setup, "runtime_asset", return_value={"name": "whisper-bin-x64.zip", "size": 9_000_000, "sha256": "a" * 64, "url": "u"}), \
+                    patch.object(setup, "_install_from", side_effect=fake_install), \
+                    patch.object(setup.os, "name", "nt"):
+                ok, _ = setup.download_runtime({"variants": ["cpu", "cuda12"]})
+                self.assertTrue(ok)
+                self.assertEqual([c[1] for c in calls], [cpu_dir, gpu_dir])
+                # El progreso se reparte por tamaño: el de CPU es una fracción mínima.
+                self.assertLess(calls[0][2][1], 2)
+                self.assertEqual(setup.accel_variant(), "cuda12")
+                self.assertEqual(Path(setup.select_binary(True)).parent.parent, gpu_dir)
+                self.assertEqual(Path(setup.select_binary(False)).parent.parent, cpu_dir)
+
+    def test_cuda_failure_retries_on_cpu(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "audio.wav"
+            source.write_bytes(b"audio")
+            ffmpeg = Path(folder) / "ffmpeg"
+            ffmpeg.touch()
+            commands = []
+
+            def run(cmd, *args, **kwargs):
+                commands.append(cmd)
+                if len(commands) == 1:                       # extracción del audio
+                    Path(cmd[-1]).touch()
+                    return True, ""
+                if cmd[0] == "cuda-cli":
+                    return False, "CUDA error: out of memory"
+                base = cmd[cmd.index("-of") + 1]
+                Path(base + ".json").write_text(json.dumps(_WHISPER_JSON), encoding="utf-8")
+                return True, ""
+            with patch.object(engine, "select_binary", return_value="cuda-cli"), \
+                    patch.object(engine, "accel_runtime_path", return_value="cuda-cli"), \
+                    patch.object(engine, "runtime_path", return_value="cpu-cli"), \
+                    patch.object(engine, "model_ready", return_value=True), \
+                    patch.object(engine, "get_ffmpeg_path", return_value=str(ffmpeg)), \
+                    patch.object(engine, "_run", side_effect=run):
+                ok, error = engine.run_transcription(str(source), str(Path(folder) / "out.srt"),
+                                                     {"transcription_model": "small", "container": "srt"})
+            self.assertTrue(ok, error)
+            self.assertEqual([c[0] for c in commands[1:]], ["cuda-cli", "cpu-cli"])
+            self.assertIn("-ng", commands[-1])
+            self.assertIn("Ojalá", (Path(folder) / "out.srt").read_text(encoding="utf-8"))
 
     def test_mkv_ass_track_attaches_font_by_name(self):
         with tempfile.TemporaryDirectory() as folder:

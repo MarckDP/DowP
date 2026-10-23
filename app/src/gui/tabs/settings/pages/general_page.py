@@ -8,7 +8,6 @@ from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
 from core.utils.paths import get_user_themes_dir, get_user_fonts_dir
 from core.utils.font_manager import get_available_fonts, init_fonts
-from core.version import IS_BETA
 from gui.styles import get_available_themes, apply_folder_open_button_style, get_theme_token, set_button_variant
 from core.utils.theme_loader import sync_legacy_theme_key
 from gui.widgets.toggle_switch import ToggleSwitch
@@ -705,8 +704,7 @@ class GeneralPage(QWidget):
         config = get_config()
 
         # Load Update Channel
-        default_channel = "beta" if IS_BETA else "stable"
-        if config.get("update_channel", default_channel) == "beta":
+        if config.get("update_channel", "stable") == "beta":
             self._radio_update_beta.setChecked(True)
         else:
             self._radio_update_stable.setChecked(True)
@@ -763,8 +761,10 @@ class GeneralPage(QWidget):
             return
         channel = "beta" if btn_id == 1 else "stable"
         config = get_config()
-        if config.get("update_channel") != channel:
+        if config.get("update_channel") != channel or not config.get("update_channel_user_set"):
             config["update_channel"] = channel
+            # Elegido a mano: la migración de config_manager ya no lo toca.
+            config["update_channel_user_set"] = True
             save_config(config)
             logger.info(f"GeneralPage: Canal de actualizaciones cambiado a '{channel.upper()}'.")
             self.update_channel_changed.emit(channel)

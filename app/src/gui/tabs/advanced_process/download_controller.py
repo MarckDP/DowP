@@ -255,6 +255,12 @@ class DownloadController(QObject):
                 # mutaciones - sirve para los ajustes elegidos en la UI (preset, keep
                 # original, etc.), no para reconstruir la ruta final del archivo.
                 resolved_request_data = self.solo_worker.request_data if self.solo_worker else self.solo_request_data
+                # Título REAL del medio (con el nombre definitivo si hubo conflicto): lo usan
+                # la recodificación, la IA posterior y los subtítulos de abajo. Faltaba desde
+                # el commit 9c56619 (2026-09-26), que borró su definición pero no sus usos: en
+                # SOLO, todo el posprocesado fallaba en silencio con un NameError.
+                title = ((resolved_request_data or {}).get("title")
+                         or (self.solo_request_data or {}).get("title") or "").strip()
 
                 if self.solo_request_data.get("recode_enabled") or self.solo_request_data.get("upscale_enabled"):
                     # No se marca "Descarga completada" todavía: la misma barra sigue
@@ -1178,24 +1184,18 @@ class DownloadController(QObject):
         """Antes de arrancar: motor y modelo (y detector de voz, si el preajuste lo usa)
         descargados. Si falta algo, lo ofrece y devuelve False para no empezar."""
         from PySide6.QtWidgets import QMessageBox
-        from core.setup.whisper_setup import runtime_ready
-        from gui.widgets.ia_preset_models import offer_preset_model_download, preset_model_ready
+        from gui.widgets.ia_preset_models import offer_preset_model_download
         for data in request_datas:
             if not (data or {}).get("ai_subtitles"):
                 continue
             settings = data.get("ai_subtitles_settings") or {}
-            title = QCoreApplication.translate("AdvancedProcessTab", "Crear subtítulos con IA")
             if not settings.get("transcription_model"):
-                QMessageBox.information(self.tab, title, QCoreApplication.translate(
-                    "AdvancedProcessTab", "Elige un modelo de Whisper en Subtítulos > Crear con IA."))
+                QMessageBox.information(
+                    self.tab, QCoreApplication.translate("AdvancedProcessTab", "Crear subtítulos con IA"),
+                    QCoreApplication.translate("AdvancedProcessTab", "Elige un modelo de Whisper en Subtítulos > Crear con IA."))
                 return False
-            if not runtime_ready():
-                QMessageBox.information(self.tab, title, QCoreApplication.translate(
-                    "AdvancedProcessTab", "Para crear subtítulos hace falta el motor whisper.cpp. "
-                    "Instálalo en Ajustes > Dependencias."))
-                return False
-            if not preset_model_ready(settings):
-                offer_preset_model_download(self.tab, settings, notify_downloading=True)
+            # Motor (con la opción NVIDIA), modelo y detector de voz: un solo diálogo.
+            if not offer_preset_model_download(self.tab, settings, notify_downloading=True):
                 return False
         return True
 

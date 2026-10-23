@@ -13,6 +13,8 @@ from unittest.mock import patch
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Las pruebas no escriben en el log real del usuario (ver logger_manager).
+os.environ.setdefault("DOWP_NO_FILE_LOG", "1")
 from core.setup import whisper_setup as setup
 from core.tabs.video_tools import transcription_engine as engine
 from core.whisper_catalog import WHISPER_MODELS
@@ -114,7 +116,7 @@ class TranscriptionTests(unittest.TestCase):
             target=Path(folder)/"out.srt"; target.write_text("previous")
             ffmpeg=Path(folder)/"ffmpeg"; ffmpeg.touch()
             commands=[]
-            def run(cmd, *args):
+            def run(cmd, *args, **kwargs):
                 commands.append(cmd)
                 if len(commands)==1:
                     Path(cmd[-1]).touch()

@@ -4,7 +4,6 @@ import json
 import threading
 from core.logger.logger_manager import logger
 from core.utils.paths import get_config_path
-from core.version import IS_BETA
 
 CONFIG_FILE = get_config_path()
 
@@ -80,7 +79,9 @@ def get_config():
         "ffmpeg_channel": "recommended",# "recommended" | "latest" | "nightly"
         "ffmpeg_keep_ffplay": False,    # False = eliminar ffplay, True = conservar
         "ffmpeg_custom_path": "",       # Ruta personalizada a ffmpeg.exe o carpeta
-        "update_channel": "beta" if IS_BETA else "stable",  # "stable" | "beta" (incluye prereleases de GitHub)
+        # "stable" | "beta" (incluye prereleases de GitHub). Siempre "stable" por defecto:
+        # una compilación de prueba solo debe llegarle a quien la pidió en Ajustes.
+        "update_channel": "stable",
         "max_concurrent_downloads": 3,  # Número máximo de descargas simultáneas (1 a 10)
         "playlist_numbering": True,     # "001 - Título" en los archivos de una playlist (Ajustes > Descargas)
         "speed_limit_mbps": 0.0,        # Límite de velocidad global en MB/s; 0 = sin límite (Ajustes > Descargas)
@@ -115,7 +116,21 @@ def get_config():
     for k, v in transient_defaults.items():
         _cached_config[k] = v
 
+    _migrate_update_channel(_cached_config)
     return _cached_config
+
+
+def _migrate_update_channel(config):
+    """Migración única (1.9.4): antes el canal por defecto era "beta" mientras IS_BETA
+    estuviera activo, y como los valores por defecto se guardan en config.json, casi
+    todos tenían "beta" escrito sin haberlo elegido. Una prerrelease les habría llegado
+    a todos. Sin la marca "update_channel_user_set" (que solo se guarda al elegir el
+    canal en Ajustes) no se puede saber quién lo eligió: todos pasan a "stable" una vez.
+    Quien quiera las compilaciones de prueba las vuelve a pedir en Ajustes > General."""
+    if "update_channel_user_set" not in config:
+        config["update_channel"] = "stable"
+        config["update_channel_user_set"] = False
+
 
 def save_config(config):
     """Guarda la configuración en archivo, omitiendo las opciones transitorias."""

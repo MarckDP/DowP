@@ -19,6 +19,7 @@ from core.tabs.video_tools.transcript_formats import DEFAULT_STYLE, KARAOKE_FORM
 from core.utils.font_manager import get_available_fonts, get_static_font_path
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from core.constants import AI_MODEL_HOLDER
+from core.utils.cache_manager import format_bytes
 
 
 
@@ -39,9 +40,6 @@ def _native_language_name(code: str, fallback: str) -> str:
         name = name[:1].upper() + name[1:]
     return name
 
-def _tr(text):
-    # Mismo contexto que antes de mover esto fuera de la clase: conserva las traducciones.
-    return QCoreApplication.translate("TranscriptionPanel", text)
 
 
 def fill_whisper_models(combo):
@@ -62,11 +60,11 @@ def fill_whisper_models(combo):
             if family != group:
                 continue
             precision = "F16" if info["variant"] == "f16" else info["variant"].upper()
-            language = _tr("solo inglés") if info["english_only"] else _tr("multilingüe")
+            language = QCoreApplication.translate("TranscriptionPanel", "solo inglés") if info["english_only"] else QCoreApplication.translate("TranscriptionPanel", "multilingüe")
             label = f"{info['model']} · {precision} · {language}"
             combo.addItem(format_model_label(label, info["size_bytes"]), ident)
     refresh_whisper_model_icons(combo)
-    combo.setToolTip(_tr("F16: modelo original. Q: variante cuantizada, de menor tamaño y consumo de memoria."))
+    combo.setToolTip(QCoreApplication.translate("TranscriptionPanel", "F16: modelo original. Q: variante cuantizada, de menor tamaño y consumo de memoria."))
 
 
 def refresh_whisper_model_icons(combo):
@@ -79,8 +77,8 @@ def refresh_whisper_model_icons(combo):
             continue
         installed = setup.model_ready(info)
         combo.setItemIcon(index, ready_icon if installed else missing_icon)
-        state = _tr("Instalado") if installed else _tr("No descargado")
-        combo.setItemData(index, state + " · " + _tr("Licencia: MIT"), Qt.ToolTipRole)
+        state = QCoreApplication.translate("TranscriptionPanel", "Instalado") if installed else QCoreApplication.translate("TranscriptionPanel", "No descargado")
+        combo.setItemData(index, state + " · " + QCoreApplication.translate("TranscriptionPanel", "Licencia: MIT"), Qt.ToolTipRole)
 
 
 def whisper_language_items():
@@ -163,6 +161,9 @@ class WhisperRuntimeCard(QFrame):
             self.progress_msg = QLabel()
             set_themed_style(self.progress_msg, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
             layout.addWidget(self.progress_msg)
+            # La aceleración NVIDIA y el detector de voz, cada uno en su sección.
+            self.gpu_section = WhisperGpuSection(self)
+            layout.addWidget(self.gpu_section)
             self.vad_section = WhisperVadSection(self)
             layout.addWidget(self.vad_section)
         self.download.clicked.connect(self._download)
@@ -189,6 +190,8 @@ class WhisperRuntimeCard(QFrame):
         self.download.setEnabled(downloadable and not busy and not self._searching)
         self.folder_button.setEnabled(installed)
         self.remove_button.setEnabled(installed and not busy)
+        if self._dependency_card:
+            self.gpu_section.refresh(busy)
         self.import_button.setEnabled(not busy)
         self.download.setText(self.tr("Actualizar") if newer else self.tr("Instalar oficial") if installed and not local and remote else self.tr("Reinstalar") if installed else self.tr("Descargar"))
         if busy:
@@ -196,7 +199,7 @@ class WhisperRuntimeCard(QFrame):
         elif setup.runtime_ready():
             text = self.tr("whisper.cpp instalado. Los modelos se descargan por separado.")
         elif asset:
-            text = format_model_label("whisper.cpp " + setup.VERSION, asset[1])
+            text = format_model_label("whisper.cpp " + setup.VERSION, asset["size"])
         else:
             text = self.tr("No hay un CLI oficial descargable para este sistema. Importa un paquete nativo con whisper-cli y sus bibliotecas.")
         if self._dependency_card:
@@ -218,6 +221,10 @@ class WhisperRuntimeCard(QFrame):
             self.progress_bar.setValue(manager.progress(key) if busy else 0)
             self.progress_msg.setText(self.tr("Procesando whisper.cpp: {0}%").format(manager.progress(key)) if busy else "")
             text = self.tr("Opcional. Transcribe audio y video sin conexión. Los modelos se descargan por separado.")
+            if setup.runtime_is_homebrew():
+                text = self.tr("Se usa el whisper-cli instalado con Homebrew. Para usar el de DowP, descárgalo.")
+            elif asset and asset.get("beta"):
+                text += " " + self.tr("Beta: compilación sin probar todavía en equipos como este; si falla, avísanos.")
             if not downloadable:
                 text += " " + self.tr("La versión consultada no ofrece un paquete nativo verificado para este sistema; puedes importarlo.")
         self.status.setText(text)
@@ -258,14 +265,45 @@ class WhisperRuntimeCard(QFrame):
     def _download(self):
         if not self._can_modify():
             return
+        key = model_download_key(setup.ENGINE_INFO)
+        if not setup.runtime_ready():
+            # Primera instalación: el mismo diálogo que al crear subtítulos (con la
+            # aceleración por GPU que admita el equipo), ver whisper_download_dialog.
+            from PySide6.QtWidgets import QDialog
+            from gui.widgets.whisper_download_dialog import WhisperDownloadDialog
+            dialog = WhisperDownloadDialog(self, {"engine": True, "model": None, "vad": False}, engine_only_title=True)
+            if dialog.exec() == QDialog.Accepted:
+                info = dict(setup.ENGINE_INFO, variants=dialog.engine_variants())
+                if self._release:
+                    info["release"] = self._release
+                self._started = model_downloads().start(key, setup.download_runtime, info)
+            return
+        # Actualizar o reinstalar: también la aceleración por GPU, si está instalada.
+        variants = ["cpu"] + ([setup.accel_variant()] if setup.accel_variant() else [])
         asset = self._release.get("asset") if self._release else None
-        size = asset["size"] if asset else setup.runtime_asset()[1] if not self._release and setup.runtime_asset() else None
+        size = asset["size"] if asset else setup.runtime_asset()["size"] if not self._release and setup.runtime_asset() else None
+        if size and len(variants) > 1:
+            size += (setup.accel_asset(variants[1], self._release) or {}).get("size", 0)
         version = self._release["version"] if self._release else setup.VERSION
         if size and confirm_model_download(self, "whisper.cpp " + version, size, subject=self.tr("motor")):
-            info = dict(setup.ENGINE_INFO)
+            info = dict(setup.ENGINE_INFO, variants=variants)
             if self._release:
                 info["release"] = self._release
-            self._started = model_downloads().start(model_download_key(setup.ENGINE_INFO), setup.download_runtime, info)
+            self._started = model_downloads().start(key, setup.download_runtime, info)
+
+    def _toggle_accel(self):
+        if not self._can_modify():
+            return
+        key = model_download_key(setup.ENGINE_INFO)
+        if setup.accel_variant():
+            if QMessageBox.question(self, self.tr("Desinstalar aceleración por GPU"), self.tr(
+                    "¿Desinstalar la aceleración por GPU? El motor base se conserva: las transcripciones "
+                    "seguirán funcionando, pero más lentas.")) == QMessageBox.Yes:
+                self._started = model_downloads().start(key, setup.uninstall_accel, setup.ENGINE_INFO)
+            return
+        # Elegir entre las que admite el equipo (Vulkan recomendada; CUDA con NVIDIA).
+        from gui.widgets.whisper_download_dialog import ask_accel_download
+        self._started = ask_accel_download(self)
 
     def _import(self):
         if not self._can_modify():
@@ -293,6 +331,103 @@ class WhisperRuntimeCard(QFrame):
 _SUBTITLE_FORMATS = [("srt", "SRT"), ("vtt", "VTT"), ("ass", "ASS"), ("lrc", "LRC"), ("ttml", "TTML"), ("sbv", "SBV")]
 _TEXT_FORMATS = [("txt", "TXT"), ("md", "Markdown"), ("html", "HTML"), ("rtf", "RTF"), ("json", "JSON"), ("csv", "CSV")]
 _MODE_SUBTITLES, _MODE_TEXT = "subtitles", "text"
+
+
+class WhisperGpuSection(QWidget):
+    """Aceleración por GPU dentro de la tarjeta de whisper.cpp en Dependencias, como el
+    detector de voz: cuál está instalada (Vulkan o CUDA), la GPU detectada e
+    Instalar/Desinstalar. Solo aparece si el equipo tiene una GPU que se pueda usar o si ya
+    está instalada. Instalarla y desinstalarla lo hace la tarjeta
+    (WhisperRuntimeCard._toggle_accel), que sabe si el motor está en uso."""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 4, 0, 0)
+        layout.setSpacing(8)
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        set_themed_style(sep, lambda: f"color: {get_theme_token('borde_sutil', '#333')};")
+        layout.addWidget(sep)
+        top = QHBoxLayout()
+        top.setSpacing(8)
+        title = QLabel(self.tr("Aceleración por GPU"))
+        set_themed_style(title, lambda: f"font-size: 13px; font-weight: bold; color: {get_theme_token('texto_fuerte', '#DDDDDD')};")
+        top.addWidget(title)
+        info = QToolButton()
+        info.setText("?")
+        info.setFixedSize(18, 18)
+        set_themed_style(info, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 9px;"
+            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 10px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}"
+            f" QToolButton:hover {{ background: {get_theme_token('fondo_control_hover', '#3a3a3a')}; color: {get_theme_token('texto_activo', '#FFF')}; }}")
+        info.setToolTip(self.tr(
+            "Transcribe con la GPU, mucho más rápido que con la CPU. Vulkan (recomendada) "
+            "funciona con NVIDIA, AMD e Intel y pesa poco; con NVIDIA también está CUDA, el "
+            "paquete oficial, más pesado. Se instala junto al motor base, que queda como "
+            "respaldo: si la GPU falla, la transcripción se repite por CPU. Usa la casilla "
+            "\"Aceleración de Hardware (GPU)\" de Transcripción."))
+        top.addWidget(info)
+        self.badge = QLabel()
+        top.addWidget(self.badge)
+        top.addStretch()
+        self.version = QLabel()
+        set_themed_style(self.version, lambda: f"color: {get_theme_token('texto_gris', '#AAAAAA')}; font-size: 12px;")
+        top.addWidget(self.version)
+        layout.addLayout(top)
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        self.status = QLabel()
+        self.status.setWordWrap(True)
+        self.status.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        set_themed_style(self.status, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 12px;")
+        row.addWidget(self.status, 1)
+        self.button = QPushButton()
+        self.button.setCursor(Qt.PointingHandCursor)
+        self.button.setMinimumWidth(110)
+        set_button_variant(self.button, "secondary")
+        self.button.clicked.connect(card._toggle_accel)
+        row.addWidget(self.button, 0, Qt.AlignVCenter)
+        layout.addLayout(row)
+
+    def refresh(self, busy: bool):
+        installed = setup.accel_variant()
+        gpu = setup.detect_gpu()
+        options = gpu["options"] if gpu else []
+        if not (installed or options or (gpu and gpu["vendor"] == "NVIDIA")):
+            self.setVisible(False)
+            return
+        self.setVisible(True)
+        engine = bool(setup.runtime_path()) and not setup.runtime_is_homebrew()
+        name = gpu["name"] if gpu else "GPU"
+        if installed:
+            beta = setup.accel_is_beta(installed, gpu)
+            self.badge.setText(self.tr("✓ Instalada") + (" · " + self.tr("Beta") if beta else ""))
+            token, fallback = "estado_exito", "#4CAF50"
+            self.version.setText(setup.ACCEL_VARIANTS[installed]["label"])
+            self.status.setText(self.tr("Transcribe con la GPU {0}. Si falla, se usa el motor base.").format(name))
+        else:
+            self.badge.setText(self.tr("Opcional · No instalada"))
+            token, fallback = "texto_gris", "#AAAAAA"
+            recommended = options[0] if options else None
+            asset = setup.accel_asset(recommended) if recommended else None
+            self.version.setText(self.tr("Disponible: {0}").format(setup.ACCEL_VARIANTS[recommended]["label"]) if recommended else "")
+            if not recommended:
+                self.status.setText(self.tr("Se detectó {0}, pero su driver ({1}) es antiguo para usar la GPU. "
+                                            "Actualízalo para poder instalarla.").format(name, gpu["driver"] if gpu else ""))
+            elif not engine:
+                self.status.setText(self.tr("Se detectó {0}. Se ofrece al descargar el motor.").format(name))
+            else:
+                text = self.tr("Se detectó {0}. Transcribe mucho más rápido con la GPU · {1}.").format(
+                    name, format_bytes(asset["size"]) if asset else "")
+                if setup.accel_is_beta(recommended, gpu):
+                    text += " " + self.tr("(Beta)")
+                self.status.setText(text)
+        set_themed_style(self.badge, lambda: f"color: {get_theme_token(token, fallback)}; font-weight: bold; font-size: 12px;")
+        self.button.setText(self.tr("Desinstalar") if installed else self.tr("Instalar"))
+        self.button.setVisible(bool(installed or (options and engine)))
+        self.button.setEnabled(not busy)
+        set_button_variant(self.button, "secondary" if installed else "accent-blue")
 
 
 class WhisperVadSection(QWidget):
@@ -596,8 +731,9 @@ class TranscriptionPanel(QWidget):
         self.check_gpu = QCheckBox(self.tr("Aceleración de Hardware (GPU)"))
         self.check_gpu.setChecked(True)
         self.check_gpu.setToolTip(self.tr(
-            "Usa la GPU si el motor instalado la admite. La descarga oficial de Windows usa CPU; "
-            "para Metal o Vulkan importa un paquete compilado con ese soporte."))
+            "Con la aceleración NVIDIA instalada (se ofrece al descargar el motor si hay una "
+            "NVIDIA), transcribe con la GPU: mucho más rápido. Desmarcada, usa siempre la CPU. "
+            "Si la GPU falla, se repite por CPU automáticamente."))
         mc.addWidget(self.check_gpu)
         self.runtime_toggle = QPushButton()
         self.runtime_toggle.setFixedSize(32, 32)
@@ -617,6 +753,14 @@ class TranscriptionPanel(QWidget):
         mc.addWidget(self.actions)
         self.status = ModelStatusRow(self)
         mc.addWidget(self.status)
+        # Aviso en línea si falta el motor (dependencia opcional, ver whisper_download_dialog).
+        from gui.widgets.whisper_download_dialog import WhisperEngineNotice
+        self.engine_notice = WhisperEngineNotice(lambda: self.get_settings(), model_card)
+        mc.addWidget(self.engine_notice)
+        # Ya hay motor de CPU y una NVIDIA sin la aceleración: sugerencia descartable.
+        from gui.widgets.whisper_download_dialog import WhisperGpuHint
+        self.gpu_hint = WhisperGpuHint(model_card)
+        mc.addWidget(self.gpu_hint)
         layout.addWidget(model_card)
 
         # ── Opciones de audio ────────────────────────────────────────────────
@@ -968,6 +1112,12 @@ class TranscriptionPanel(QWidget):
     def _offer_download(self, *_):
         ident = self.model.currentData()
         info = self.info()
+        if info and not setup.runtime_ready():
+            # Sin motor: un solo diálogo con el motor (y la opción NVIDIA) y este modelo.
+            from gui.widgets.ia_preset_models import offer_preset_model_download
+            QTimer.singleShot(0, lambda: offer_preset_model_download(self, self.get_settings())
+                              if self.model.currentData() == ident else None)
+            return
         if info and not setup.model_ready(info) and not model_downloads().is_downloading(model_download_key(info)):
             QTimer.singleShot(0, lambda: self._download() if self.model.currentData() == ident else None)
 

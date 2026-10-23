@@ -94,6 +94,17 @@ def offer_preset_model_download(parent, settings: dict | None, notify_downloadin
     Administrar / Cancelar), arranca la descarga si se pide, y devuelve False: hasta que
     termine no se puede iniciar el proceso. Si ya se está descargando no pregunta nada;
     con `notify_downloading` (al pulsar Iniciar/Descargar) avisa que hay que esperar."""
+    if (settings or {}).get("ia_function") == "transcription":
+        # Motor, modelo y detector de voz en un solo diálogo (ver whisper_download_dialog):
+        # el motor es opcional y se ofrece aquí, cuando alguien quiere crear subtítulos.
+        from gui.widgets.whisper_download_dialog import ask_transcription_downloads
+        result = ask_transcription_downloads(parent, settings)
+        if result == "downloading" and notify_downloading:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                parent, QCoreApplication.translate("IAPresetModels", "Descargando"),
+                QCoreApplication.translate("IAPresetModels", "Se está descargando lo necesario para transcribir. Podrás iniciar cuando termine."))
+        return result == "ready"
     model = preset_model(settings)
     if model is None or model["installed"]:
         return model is not None

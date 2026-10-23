@@ -285,12 +285,14 @@ def style_from(options: dict) -> dict:
     return style
 
 
-def _ass_header(style: dict, video_size=None, karaoke: bool = False) -> str:
+def _ass_header(style: dict, video_size=None, karaoke: bool = False, burn: bool = False) -> str:
     """Encabezado con el estilo. La resolución del guion es la del video (si se conoce)
-    para que el tamaño y los márgenes caigan donde se ven en la vista previa; el tamaño
-    elegido es para 1080 de alto y se escala."""
+    para que el tamaño y los márgenes caigan donde se ven en la vista previa. El tamaño
+    elegido es para 1080 en el lado CORTO: un vertical 1080x1920 usa la misma letra que un
+    horizontal 1920x1080 (escalar por la altura la agrandaba tanto que se salía por los
+    costados)."""
     width, height = video_size if video_size and all(video_size) else (1920, 1080)
-    scale = height / 1080.0
+    scale = min(width, height) / 1080.0
     size = max(8, round(float(style["size"]) * scale))
     outline = max(1, round(3 * scale))
     margin_v = round(60 * scale)
@@ -299,15 +301,22 @@ def _ass_header(style: dict, video_size=None, karaoke: bool = False) -> str:
     # En karaoke la palabra cantada toma el color principal y la que falta, el secundario.
     primary = _ass_color(style["karaoke_color"] if karaoke else style["color"])
     secondary = _ass_color(style["color"])
-    if style["box"]:
+    if style["box"] and burn:
+        # Al quemar (libass): BorderStyle 4, una sola caja por línea con el color de fondo y
+        # el borde normal alrededor del texto. Con 3, el karaoke parte la caja en cada
+        # palabra y se ven cortes. 4 es propio de libass: los ASS sueltos usan 3.
+        border_style, outline_color, back = 4, _ass_color(style["outline"]), _ass_color("#000000", 0x60)
+    elif style["box"]:
         # BorderStyle 3: caja opaca detrás del texto; su color es el del borde.
         border_style, outline_color, back = 3, _ass_color("#000000", 0x60), _ass_color("#000000", 0x60)
         outline = max(2, round(10 * scale))
     else:
         border_style, outline_color, back = 1, _ass_color(style["outline"]), _ass_color("#000000", 0x80)
     return (
+        # WrapStyle 0: libass también corta las líneas que no caben en el ancho (además de
+        # los saltos que pone DowP), así nada se sale del cuadro con cualquier largo de línea.
         "[Script Info]\nScriptType: v4.00+\n"
-        f"PlayResX: {width}\nPlayResY: {height}\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n"
+        f"PlayResX: {width}\nPlayResY: {height}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
         "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
@@ -341,13 +350,13 @@ def _ass_karaoke(cue: dict) -> str:
     return "".join(parts)
 
 
-def _write_ass(cues, style=None, video_size=None, karaoke=False, **_) -> str:
+def _write_ass(cues, style=None, video_size=None, karaoke=False, burn=False, **_) -> str:
     style = style or dict(DEFAULT_STYLE)
     lines = []
     for c in cues:
         text = _ass_karaoke(c) if karaoke else _ass_text(_cue_text(c, "\\N"))
         lines.append(f"Dialogue: 0,{_ass_clock(c['start'])},{_ass_clock(c['end'])},Default,,0,0,0,,{text}\n")
-    return _ass_header(style, video_size, karaoke) + "".join(lines)
+    return _ass_header(style, video_size, karaoke, burn) + "".join(lines)
 
 
 def _lrc_stamp(seconds: float, brackets: str = "[]") -> str:
@@ -511,6 +520,7 @@ def render(transcript: dict, fmt: str, options: dict | None = None, title: str =
                           int(options.get("transcription_max_lines", 2) or 1),
                           int(options.get("transcription_max_words", 1) or 1))
         return _SUBTITLE_WRITERS[fmt](cues, style=style_from(options), language=language, karaoke=karaoke,
+                                      burn=options.get("transcription_embed") == "burn",
                                       video_size=options.get("transcription_video_size"))
     if fmt in TEXT_FORMATS:
         return _TEXT_WRITERS[fmt](segments, layout=options.get("transcription_text_layout", "paragraphs"),

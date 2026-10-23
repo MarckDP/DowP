@@ -71,6 +71,10 @@ palabra con su tiempo) y DowP genera el formato elegido en
     depende de las fuentes del equipo que lo reproduce: ahí se usa Arial.
   - Las pistas en MP4, MOV o WebM no conservan el estilo (`mov_text` y `webvtt` no lo
     admiten); la tarjeta lo avisa.
+  - El tamaño se escala por el lado corto del video (un vertical 1080x1920 usa la misma
+    letra que un horizontal) y libass corta las líneas que no caben (`WrapStyle 0`).
+  - Caja de fondo: al quemar se usa una caja por línea (`BorderStyle 4`, propio de libass;
+    con el karaoke, el estilo 3 la parte en cada palabra). Los ASS sueltos usan el 3.
 - **Texto:** TXT, Markdown, HTML, RTF, JSON (con las palabras y sus tiempos) y CSV (con
   BOM, para que Excel abra bien los acentos). Párrafos (se separan en pausas de 1 s o
   más) o una línea por segmento, con o sin marcas de tiempo.
@@ -145,6 +149,43 @@ y solo se conserva una versión.
 - Si whisper falla con una versión más nueva que la probada, el error explica cómo
   volver a ella (eliminarla y volver a marcar la casilla).
 - Los preajustes con "Saltar silencios" piden descargar el detector si falta.
+
+## Aceleración por GPU y paquetes por sistema
+
+| Sistema | Motor base | Aceleración por GPU |
+|---|---|---|
+| Windows x64 | Oficial de CPU (9 MB) | **Vulkan** (dowp-runtimes, 15 MB; recomendada) o **CUDA 12.4 / 11.8** (oficial, 685 / 285 MB; solo NVIDIA) |
+| Linux x64 | Oficial de CPU | **Vulkan** (dowp-runtimes; necesita `libvulkan1`) — Beta |
+| macOS Apple Silicon | **Metal** (dowp-runtimes, 2 MB) — Beta | (el motor ya usa la GPU) |
+| macOS Intel | **CPU con Accelerate** (dowp-runtimes, 1,3 MB) — Beta | — |
+| Windows/Linux arm64 | Oficial de CPU | — |
+
+- **dowp-runtimes** (`MarckDP/dowp-runtimes`): código oficial sin modificar, compilado en
+  GitHub Actions. Paquetes fijados con su SHA-256 en `whisper_setup._RUNTIMES`
+  (`whisper-v1.9.5-r2`); "Buscar actualizaciones" descubre compilaciones nuevas en el
+  `manifest.json` de la última publicación, y solo acepta un archivo si el SHA-256 del
+  manifiesto coincide con el que publica GitHub.
+- **Una aceleración a la vez**, en `dependences/whisper.cpp-gpu` (`variant.txt`), junto al
+  motor base, que queda como respaldo.
+- **Detección** (`detect_gpu`): Vulkan (`core/utils/vulkan_devices.py`, solo lectura con
+  ctypes) y, con NVIDIA, `nvidia-smi` para el driver. Opciones: Vulkan primero
+  (recomendada: en una RTX 3060 rindió igual que CUDA con 44 veces menos descarga) y CUDA
+  como alternativa si el driver lo admite.
+- **Portátiles con dos GPU:** whisper.cpp toma la primera que lista Vulkan (puede ser la
+  integrada); DowP le indica la dedicada con `GGML_VK_VISIBLE_DEVICES`.
+- **Beta:** lo no probado en equipos reales (Vulkan con AMD/Intel, Linux, macOS) se marca
+  así en el diálogo y en Dependencias. Si la aceleración falla, la transcripción se repite
+  sola con el motor base.
+- **Vulkan, primera vez:** el driver compila los shaders una sola vez (~40 s en la RTX 3060
+  frente a ~3 s después); el diálogo lo avisa.
+- **Homebrew** (macOS/Linux): si no hay motor de DowP, se usa el `whisper-cli` de Homebrew.
+- **Cuándo se ofrece:** whisper.cpp es opcional. Al querer crear subtítulos aparece un aviso
+  en línea y, al actuar, un solo diálogo (`whisper_download_dialog.py`) con el motor y la
+  aceleración (la recomendada marcada; "Solo CPU" siempre), el modelo y el detector de voz.
+  Con motor y sin aceleración, Transcripción sugiere instalarla (descartable). En
+  Dependencias, la sección "Aceleración por GPU" la instala o desinstala.
+- **Medido** (large-v3-turbo, RTX 3060): clip de 12 s, 3,1–3,9 s con GPU frente a 36–50 s
+  con CPU; video de 1:46, 8,7 s con Vulkan frente a 85,8 s con CPU.
 
 ## Distribución del motor y límite de los binarios oficiales
 

@@ -20,32 +20,206 @@ from core.whisper_catalog import WHISPER_MODELS, VAD_MODEL
 VERSION = "v1.9.5"
 BUILD = "b5454"  # Binarios nativos que enlaza la publicación oficial v1.9.5.
 ENGINE_INFO = {"folder": "whisper.cpp-runtime", "file": "", "name": "whisper.cpp"}
-_ASSETS = {
+_OFFICIAL_URL = f"https://github.com/ggml-org/whisper.cpp/releases/download/{BUILD}/"
+
+# Compilaciones propias (repositorio aparte MarckDP/dowp-runtimes): código oficial sin
+# modificar, compilado en GitHub Actions para lo que no cubren los paquetes oficiales.
+# Fijadas aquí con su SHA-256 (se instalan sin consultar nada); "Buscar actualizaciones"
+# descubre compilaciones nuevas en el manifest.json de su última publicación.
+RUNTIMES_REPO = "MarckDP/dowp-runtimes"
+RUNTIMES_RELEASE = "whisper-v1.9.5-r2"
+_RUNTIMES_URL = f"https://github.com/{RUNTIMES_REPO}/releases/download/{RUNTIMES_RELEASE}/"
+_RUNTIMES = {
+    ("Windows", "x64", "vulkan"): ("whisper-v1.9.5-windows-x64-vulkan.zip", 14819345,
+                                   "9117805af18c58097460385885ff60b88114198056022c4f1990027e6ed70d6e"),
+    ("Linux", "x64", "vulkan"): ("whisper-v1.9.5-linux-x64-vulkan.tar.gz", 15482514,
+                                 "513e7a53ae66ad6d5a1f95154e6c3510e69efe06c219fa7ba5e0b309da9187ab"),
+    ("Darwin", "arm64", "metal"): ("whisper-v1.9.5-macos-arm64-metal.tar.gz", 2085776,
+                                   "3951cc7d7d6187f70f4d01e90ac1b0d3d8b2c6a1b540c9644929a8649e2766aa"),
+    ("Darwin", "x64", "cpu"): ("whisper-v1.9.5-macos-x64-cpu.tar.gz", 1306571,
+                               "f7d1c872ba63220dc0c08067596b6aa15fb7ef55582b9eb2263f8b51b5368463"),
+}
+
+# Motor base, el que siempre debe estar (y el respaldo de la aceleración): el oficial de
+# CPU en Windows y Linux; en macOS no hay CLI oficial, así que es el de dowp-runtimes, que
+# ya acelera (Metal en Apple Silicon, Accelerate en Intel). Los de macOS son "beta": nadie
+# los probó todavía en una Mac real.
+_OFFICIAL_BASE = {
     ("Windows", "x64"): ("whisper-bin-x64.zip", 8928640, "6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb"),
     ("Windows", "arm64"): ("whisper-bin-win-cpu-arm64.zip", 4371193, "28c37e7b598c3d9bbfef94f3bd67f2ee6f12b7c86f3da5edcf5e4308d615ff6d"),
     ("Linux", "x64"): ("whisper-bin-ubuntu-x64.tar.gz", 10364195, "a72becf15d7917f990f6313867a52638b82b7f9ef237fb0c980dac56a135781c"),
     ("Linux", "arm64"): ("whisper-bin-ubuntu-arm64.tar.gz", 4608377, "6b95ebfc60447df48e70ef00a73bdc3f41679ed2d01ef465827206a2ff325149"),
 }
+_RUNTIMES_BASE = {("Darwin", "arm64"): "metal", ("Darwin", "x64"): "cpu"}
+
+# Aceleración por GPU: una sola a la vez, instalada aparte (accel_dir) junto al motor base.
+# - Vulkan (dowp-runtimes): cualquier GPU (NVIDIA, AMD, Intel) en Windows y Linux, ~15 MB.
+#   Recomendada: en una RTX 3060 rindió igual que CUDA. La primera vez el driver compila
+#   los shaders (~40 s); después ya no. Beta salvo con NVIDIA, la única probada.
+# - CUDA (oficial, solo Windows x64 y NVIDIA): alternativa, pesa cientos de MB porque trae
+#   cuBLAS. Driver mínimo 551.61 para CUDA 12.4 y 522.06 para 11.8 (requisitos de NVIDIA).
+ACCEL_VARIANTS = {
+    "vulkan": {"label": "Vulkan"},
+    "cuda12": {"label": "CUDA 12", "min_driver": (551, 61), "pattern": r"whisper-bin-win-cuda-12\.[\d.]+-x64\.zip",
+               "asset": ("whisper-bin-win-cuda-12.4.0-x64.zip", 684913404,
+                         "afef0b881c500958921c3f5523b50e59ee2ec9b6f5cbd25b324c51ed308a957a")},
+    "cuda11": {"label": "CUDA 11.8", "min_driver": (522, 6), "pattern": r"whisper-bin-win-cuda-11\.[\d.]+-x64\.zip",
+               "asset": ("whisper-bin-win-cuda-11.8.0-x64.zip", 284761231,
+                         "e81c86c542be6e3d7b7245392d4e1c52ab6e5c61dbe38721754bc0ab59d4d027")},
+}
+CUDA_KEYS = ("cuda12", "cuda11")
+
+
+def _platform_key():
+    machine = platform.machine().lower()
+    arch = "arm64" if machine in ("arm64", "aarch64") else "x64" if machine in ("amd64", "x86_64") else machine
+    return platform.system(), arch
+
+
+def _asset(name, size, sha, base_url, beta=False):
+    return {"name": name, "size": size, "sha256": sha, "url": base_url + name, "beta": beta}
 
 
 def runtime_asset():
-    machine = platform.machine().lower()
-    arch = "arm64" if machine in ("arm64", "aarch64") else "x64" if machine in ("amd64", "x86_64") else machine
-    return _ASSETS.get((platform.system(), arch))
+    """{"name", "size", "sha256", "url", "beta"} del motor base para este sistema, o None."""
+    key = _platform_key()
+    if key in _OFFICIAL_BASE:
+        return _asset(*_OFFICIAL_BASE[key], _OFFICIAL_URL)
+    backend = _RUNTIMES_BASE.get(key)
+    if backend and (*key, backend) in _RUNTIMES:
+        return _asset(*_RUNTIMES[(*key, backend)], _RUNTIMES_URL, beta=True)
+    return None
 
 
 def runtime_dir():
     return Path(get_bin_root_dir()) / "bin" / "dependences" / "whisper.cpp"
 
 
-def runtime_path():
+def accel_dir():
+    return Path(get_bin_root_dir()) / "bin" / "dependences" / "whisper.cpp-gpu"
+
+
+def _find_cli(root):
     name = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
-    root = runtime_dir()
+    root = Path(root)
     return next((str(p) for p in sorted(root.rglob(name)) if p.is_file()), "") if root.exists() else ""
 
 
+def homebrew_cli():
+    """whisper-cli de Homebrew (macOS y Linux), si está. Las apps de macOS no heredan el
+    PATH de la terminal: se buscan las rutas de Homebrew directamente."""
+    if os.name == "nt":
+        return ""
+    for candidate in ("/opt/homebrew/bin/whisper-cli", "/usr/local/bin/whisper-cli",
+                      "/home/linuxbrew/.linuxbrew/bin/whisper-cli"):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return ""
+
+
+def runtime_path():
+    """El motor base: el que instala DowP o, como respaldo, el de Homebrew."""
+    return _find_cli(runtime_dir()) or homebrew_cli()
+
+
+def runtime_is_homebrew():
+    return bool(runtime_path()) and runtime_path() == homebrew_cli()
+
+
+def accel_runtime_path():
+    return _find_cli(accel_dir())
+
+
+def accel_variant():
+    """"vulkan", "cuda12" o "cuda11" según la aceleración instalada, o None."""
+    try:
+        value = (accel_dir() / "variant.txt").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return value if value in ACCEL_VARIANTS and accel_runtime_path() else None
+
+
 def runtime_ready():
-    return bool(runtime_path())
+    return bool(runtime_path() or accel_runtime_path())
+
+
+def select_binary(prefer_gpu=True):
+    """El whisper-cli a usar: el de la aceleración si está instalada y se quiere GPU
+    ("Aceleración de Hardware" marcada); si no, el base. Si solo hay uno, ese."""
+    accel = accel_runtime_path()
+    base = runtime_path()
+    if prefer_gpu and accel:
+        return accel
+    return base or accel
+
+
+def _nvidia_smi():
+    if platform.system() != "Windows":
+        return None
+    candidates = [shutil.which("nvidia-smi"), os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "nvidia-smi.exe")]
+    executable = next((c for c in candidates if c and os.path.isfile(c)), None)
+    if not executable:
+        return None
+    try:
+        result = subprocess.run([executable, "--query-gpu=name,driver_version,memory.total",
+                                 "--format=csv,noheader,nounits"], capture_output=True, timeout=10,
+                                creationflags=subprocess.CREATE_NO_WINDOW)
+        line = result.stdout.decode("utf-8", "replace").strip().splitlines()[0]
+        name, driver, vram = [part.strip() for part in line.split(",")[:3]]
+        driver_parts = tuple(int(p) for p in re.findall(r"\d+", driver)[:2])
+    except Exception:
+        return None
+    cuda = next((key for key in CUDA_KEYS if driver_parts >= ACCEL_VARIANTS[key]["min_driver"]), None)
+    return {"name": name, "driver": driver, "vram_mb": int(vram) if vram.isdigit() else 0, "cuda": cuda}
+
+
+@lru_cache(maxsize=1)
+def detect_gpu():
+    """La GPU para acelerar la transcripción, o None:
+    {"name", "vendor", "vram_mb", "driver", "vulkan", "cuda", "options", "recommended"}.
+    "vulkan": hay paquete Vulkan para este sistema y Vulkan ve una GPU (la dedicada si hay
+    dos). "cuda": variante CUDA que admite el driver de la NVIDIA (None si es viejo).
+    "options": las aceleraciones que se pueden ofrecer, la recomendada primero (Vulkan)."""
+    system, arch = _platform_key()
+    from core.utils.vulkan_devices import preferred_gpu
+    has_vulkan_package = (system, arch, "vulkan") in _RUNTIMES
+    gpu = preferred_gpu() if has_vulkan_package else None
+    nvidia = _nvidia_smi() if (system, arch) == ("Windows", "x64") else None
+    if gpu is None and nvidia is None:
+        return None
+    vendor = gpu.vendor if gpu else "NVIDIA"
+    options = (["vulkan"] if gpu else []) + ([nvidia["cuda"]] if nvidia and nvidia["cuda"] else [])
+    return {
+        "name": gpu.name if gpu else nvidia["name"],
+        "vendor": vendor,
+        "vram_mb": nvidia["vram_mb"] if nvidia else 0,
+        "driver": nvidia["driver"] if nvidia else "",
+        "vulkan": bool(gpu),
+        "cuda": nvidia["cuda"] if nvidia else None,
+        "options": options,
+        "recommended": options[0] if options else None,
+    }
+
+
+def accel_is_beta(variant, gpu=None):
+    """Sin probar en equipos reales: Vulkan con AMD o Intel (o en Linux). Vulkan con NVIDIA
+    se probó en una RTX 3060; CUDA es el paquete oficial."""
+    if variant != "vulkan":
+        return False
+    gpu = gpu if gpu is not None else detect_gpu()
+    return platform.system() != "Windows" or not gpu or gpu.get("vendor") != "NVIDIA"
+
+
+def accel_asset(variant, release=None):
+    """{"name", "size", "sha256", "url", "beta"} del paquete de aceleración: el de la
+    publicación consultada (si la búsqueda de actualizaciones lo encontró) o el fijado."""
+    found = ((release or {}).get("accel_assets") or {}).get(variant)
+    if found:
+        return found
+    if variant == "vulkan":
+        key = (*_platform_key(), "vulkan")
+        return _asset(*_RUNTIMES[key], _RUNTIMES_URL, beta=accel_is_beta("vulkan")) if key in _RUNTIMES else None
+    return _asset(*ACCEL_VARIANTS[variant]["asset"], _OFFICIAL_URL)
 
 
 @lru_cache(maxsize=8)
@@ -60,7 +234,7 @@ def _binary_version(binary, modified, size):
 
 def get_local_version():
     try:
-        binary = runtime_path()
+        binary = runtime_path() or accel_runtime_path()
         if binary:
             info = Path(binary).stat()
             return _binary_version(binary, info.st_mtime_ns, info.st_size)
@@ -77,8 +251,61 @@ def is_newer_version(remote, local):
     return bool(remote and local and remote > local)
 
 
+def _verified_asset(asset, url_prefix):
+    """Un asset de GitHub con su SHA-256 publicado por GitHub (campo "digest")."""
+    digest = asset.get("digest") or ""
+    url = asset.get("browser_download_url", "")
+    if re.fullmatch(r"sha256:[0-9a-fA-F]{64}", digest) and url.startswith(url_prefix):
+        return {"name": asset["name"], "size": int(asset["size"]), "sha256": digest[7:].lower(), "url": url}
+    return None
+
+
+def _latest_runtimes():
+    """Los paquetes de la última publicación de dowp-runtimes: {(sistema, arq, backend): asset}
+    y su versión de whisper.cpp. Solo cuentan los que figuran en manifest.json con el MISMO
+    SHA-256 que publica GitHub para el archivo."""
+    response = requests.get(f"https://api.github.com/repos/{RUNTIMES_REPO}/releases/latest", timeout=20)
+    response.raise_for_status()
+    release = response.json()
+    assets = {a.get("name"): a for a in release.get("assets", [])}
+    manifest_asset = assets.get("manifest.json")
+    if not manifest_asset:
+        return {}, None
+    manifest = requests.get(manifest_asset["browser_download_url"], timeout=20).json()
+    systems = {"windows": "Windows", "linux": "Linux", "macos": "Darwin"}
+    found = {}
+    prefix = f"https://github.com/{RUNTIMES_REPO}/releases/download/"
+    for package in manifest.get("packages", []):
+        asset = assets.get(package.get("file"))
+        verified = _verified_asset(asset, prefix) if asset else None
+        if verified and verified["sha256"] == str(package.get("sha256", "")).lower():
+            key = (systems.get(package.get("platform")), package.get("arch"), package.get("backend"))
+            found[key] = verified
+    return found, manifest.get("whisper_version")
+
+
 def get_latest_release():
-    """Las versiones estables pueden enlazar otra publicación aparte con los binarios nativos."""
+    """Lo más nuevo para este sistema: el motor base (oficial, o de dowp-runtimes en macOS)
+    y las aceleraciones (CUDA oficial, Vulkan de dowp-runtimes). Las versiones estables
+    oficiales pueden enlazar otra publicación aparte con los binarios nativos."""
+    key = _platform_key()
+    result = {"version": None, "asset": None, "accel_assets": {}}
+    runtimes, runtimes_version = ({}, None)
+    if key in _RUNTIMES_BASE or (*key, "vulkan") in _RUNTIMES:
+        try:
+            runtimes, runtimes_version = _latest_runtimes()
+        except Exception:
+            runtimes, runtimes_version = {}, None
+    if key in _RUNTIMES_BASE:
+        result["version"] = runtimes_version
+        found = runtimes.get((*key, _RUNTIMES_BASE[key]))
+        if found:
+            result["asset"] = dict(found, beta=True)
+        return result
+    vulkan = runtimes.get((*key, "vulkan"))
+    if vulkan:
+        result["accel_assets"]["vulkan"] = dict(vulkan, beta=accel_is_beta("vulkan"))
+
     base = "https://api.github.com/repos/ggml-org/whisper.cpp/releases"
     def fetch(endpoint):
         response = requests.get(base + endpoint, timeout=20)
@@ -88,25 +315,26 @@ def get_latest_release():
     version = release["tag_name"]
     if not re.fullmatch(r"v?\d+\.\d+\.\d+", version):
         raise ValueError("La publicación estable de whisper.cpp no tiene una versión reconocible.")
-    result = {"version": version, "asset": None}
+    result["version"] = version
     native = runtime_asset()
     if not native:
         return result
     assets = release.get("assets", [])
-    if not any(a.get("name") == native[0] for a in assets):
+    if not any(a.get("name") == native["name"] for a in assets):
         match = re.search(r"https://github\.com/ggml-org/whisper\.cpp/releases/tag/(b\d+)\b", release.get("body", ""))
         if match:
             assets = fetch("/tags/" + match.group(1)).get("assets", [])
+    prefix = "https://github.com/ggml-org/whisper.cpp/releases/download/"
     for asset in assets:
-        if asset.get("name") != native[0]:
-            continue
-        digest = asset.get("digest") or ""
-        url = asset.get("browser_download_url", "")
-        if (re.fullmatch(r"sha256:[0-9a-fA-F]{64}", digest)
-                and url.startswith("https://github.com/ggml-org/whisper.cpp/releases/download/")):
-            result["asset"] = {"name": native[0], "size": int(asset["size"]),
-                               "sha256": digest[7:].lower(), "url": url}
-        break
+        if asset.get("name") == native["name"]:
+            result["asset"] = _verified_asset(asset, prefix)
+        # Los paquetes CUDA de la misma publicación (su versión de CUDA puede cambiar:
+        # se busca por la versión mayor).
+        for cuda in CUDA_KEYS:
+            if native["name"] == "whisper-bin-x64.zip" and re.fullmatch(ACCEL_VARIANTS[cuda]["pattern"], asset.get("name", "")):
+                found = _verified_asset(asset, prefix)
+                if found:
+                    result["accel_assets"][cuda] = found
     return result
 
 
@@ -220,6 +448,11 @@ def runtime_environment(binary):
     if platform.system() == "Linux":
         folder = str(Path(binary).parent)
         env["LD_LIBRARY_PATH"] = folder + (os.pathsep + env["LD_LIBRARY_PATH"] if env.get("LD_LIBRARY_PATH") else "")
+    if binary and binary == accel_runtime_path() and accel_variant() == "vulkan":
+        # whisper.cpp toma la primera GPU que lista Vulkan, que en un portátil con dos puede
+        # ser la integrada: se le indica la dedicada (ver vulkan_devices.gpu_env).
+        from core.utils.vulkan_devices import gpu_env
+        env = gpu_env(env)
     return env
 
 
@@ -238,8 +471,8 @@ def _validate_runtime(folder):
         raise ValueError("whisper-cli no pudo ejecutarse. Comprueba arquitectura y bibliotecas del paquete.")
 
 
-def install_archive(archive):
-    root = runtime_dir()
+def install_archive(archive, root=None):
+    root = Path(root) if root else runtime_dir()
     root.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="whisper-install-", dir=root.parent) as temporary:
         staged = Path(temporary) / "runtime"
@@ -257,25 +490,69 @@ def install_archive(archive):
             raise
 
 
-def download_runtime(_info=None, progress_callback=None):
-    release = (_info or {}).get("release")
+def _base_asset(release=None):
     asset = release.get("asset") if release else None
-    if release is None and runtime_asset():
-        name, size, sha = runtime_asset()
-        asset = {"name": name, "size": size, "sha256": sha,
-                 "url": f"https://github.com/ggml-org/whisper.cpp/releases/download/{BUILD}/{name}"}
-    if not asset:
-        return False, "No hay un CLI oficial descargable para este sistema. Importa un paquete nativo de whisper.cpp."
+    return asset or runtime_asset()
+
+
+def _install_from(asset, root, progress_callback, progress_range):
+    low, high = progress_range
+    with tempfile.TemporaryDirectory(prefix="dowp-whisper-") as temporary:
+        archive = Path(temporary) / asset["name"]
+        download_file(asset["url"], str(archive), progress_callback=progress_callback,
+                      progress_range=(low, low + (high - low) * 0.9))
+        verify_file(archive, asset["size"], asset["sha256"])
+        install_archive(archive, root)
+
+
+def download_runtime(_info=None, progress_callback=None):
+    """Instala el motor. `_info["variants"]`: "cpu" (el motor base) y/o una aceleración
+    ("vulkan", "cuda12", "cuda11"), en ese orden; sin "variants", solo el base.
+    `_info["release"]` (de la búsqueda de actualizaciones) da las URL más nuevas."""
+    info = _info or {}
+    release = info.get("release")
+    variants = list(info.get("variants") or ["cpu"])
+    steps = []
+    for variant in variants:
+        if variant == "cpu":
+            asset = _base_asset(release)
+            if not asset:
+                return False, "No hay un CLI descargable para este sistema. Importa un paquete nativo de whisper.cpp."
+            steps.append((variant, asset, runtime_dir()))
+        elif variant in ACCEL_VARIANTS:
+            asset = accel_asset(variant, release)
+            if not asset:
+                return False, "No hay un paquete de aceleración para este sistema."
+            steps.append((variant, asset, accel_dir()))
+    # El progreso se reparte según el tamaño de cada paquete.
+    total = sum(asset["size"] for _v, asset, _r in steps) or 1
+    done = 0
     try:
-        with tempfile.TemporaryDirectory(prefix="dowp-whisper-") as temporary:
-            archive = Path(temporary) / asset["name"]
-            download_file(asset["url"],
-                          str(archive), progress_callback=progress_callback, progress_range=(0, 90))
-            verify_file(archive, asset["size"], asset["sha256"])
-            install_archive(archive)
+        for variant, asset, root in steps:
+            start = done / total * 100
+            done += asset["size"]
+            _install_from(asset, root, progress_callback, (start, done / total * 100))
+            if variant in ACCEL_VARIANTS:
+                (accel_dir() / "variant.txt").write_text(variant, encoding="utf-8")
         if progress_callback:
             progress_callback(100)
         return True, "whisper.cpp instalado."
+    except Exception as exc:
+        return False, str(exc)
+
+
+def uninstall_accel(_info=None, progress_callback=None):
+    """Desinstala solo la aceleración por GPU; el motor base y los modelos se conservan."""
+    root = accel_dir()
+    expected_parent = (Path(get_bin_root_dir()) / "bin" / "dependences").resolve()
+    try:
+        if root.is_symlink() or root.resolve() != expected_parent / "whisper.cpp-gpu":
+            raise ValueError("La ruta de la aceleración no está dentro de la carpeta de dependencias.")
+        if root.exists():
+            shutil.rmtree(root)
+        if progress_callback:
+            progress_callback(100)
+        return True, "Aceleración por GPU desinstalada. El motor base se conservó."
     except Exception as exc:
         return False, str(exc)
 
@@ -289,6 +566,9 @@ def uninstall_runtime(_info=None, progress_callback=None):
             raise ValueError("La ruta del motor no está dentro de la carpeta de dependencias.")
         if root.exists():
             shutil.rmtree(root)
+        ok, message = uninstall_accel()
+        if not ok:
+            return False, message
         if progress_callback:
             progress_callback(100)
         return True, "Motor desinstalado. Los modelos se conservaron."

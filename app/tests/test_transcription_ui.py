@@ -8,6 +8,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Las pruebas no escriben en el log real del usuario (ver logger_manager).
+os.environ.setdefault("DOWP_NO_FILE_LOG", "1")
 from PySide6.QtWidgets import QApplication
 from core.utils.preset_manager import PresetManager, IA_TOOLS_NAMESPACE, IA_POST_DOWNLOAD_FUNCTIONS
 from gui.tabs.ai_tools.ai_tools_view import AIToolsOptions, AIToolsTab

@@ -12,7 +12,9 @@ from core.utils import startup_timer
 from core.utils.scaling import apply_ui_scaling, flush_scaling_logs
 ui_scale_factor = apply_ui_scaling()
 
-from core.logger.logger_manager import logger
+from core.logger.logger_manager import logger, install_exception_logging
+# Errores no capturados (en eventos de Qt o hilos) también al log: el .exe no tiene consola.
+install_exception_logging()
 
 # Enviar los logs de escalado al logger real 
 flush_scaling_logs()

@@ -10,6 +10,8 @@ from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Las pruebas no escriben en el log real del usuario (ver logger_manager).
+os.environ.setdefault("DOWP_NO_FILE_LOG", "1")
 from core.setup import whisper_setup as whisper, optional_dependencies as optional
 
 
@@ -21,14 +23,14 @@ class OptionalDependencyTests(unittest.TestCase):
         asset = {"name": name, "size": 3, "digest": "sha256:" + "a" * 64,
                  "browser_download_url": "https://github.com/ggml-org/whisper.cpp/releases/download/b6000/" + name}
         response = lambda data: SimpleNamespace(raise_for_status=lambda: None, json=lambda: data)
-        with patch.object(whisper, "runtime_asset", return_value=(name, 1, "old")), patch.object(whisper.requests, "get", side_effect=[response(stable), response({"assets": [asset]})]) as get:
+        with patch.object(whisper, "runtime_asset", return_value={"name": name, "size": 1, "sha256": "old", "url": "u"}), patch.object(whisper, "_latest_runtimes", return_value=({}, None)), patch.object(whisper.requests, "get", side_effect=[response(stable), response({"assets": [asset]})]) as get:
             release = whisper.get_latest_release()
         self.assertEqual(release["version"], "v1.10.0")
         self.assertIn("b6000", release["asset"]["url"])
         self.assertTrue(get.call_args.args[0].endswith("/tags/b6000"))
         asset.pop("digest")
         stable["assets"] = [asset]
-        with patch.object(whisper, "runtime_asset", return_value=(name, 1, "old")), patch.object(whisper.requests, "get", return_value=response(stable)):
+        with patch.object(whisper, "runtime_asset", return_value={"name": name, "size": 1, "sha256": "old", "url": "u"}), patch.object(whisper, "_latest_runtimes", return_value=({}, None)), patch.object(whisper.requests, "get", return_value=response(stable)):
             self.assertIsNone(whisper.get_latest_release()["asset"])
         self.assertTrue(whisper.is_newer_version("v1.10.0", "1.9.5"))
         self.assertFalse(whisper.is_newer_version("v1.9.5", "1.10.0"))

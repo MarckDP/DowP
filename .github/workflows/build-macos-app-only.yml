@@ -1,0 +1,110 @@
+name: Build macOS .app (solo compilar, manual)
+
+# Compila DowP.app para probar y lo deja como artifact descargable. NADA MAS: no
+# publica chunks, no toca manifest.json, no arma .dmg ni sube nada a un release.
+#
+# A proposito, sin forma de publicar aunque se quiera:
+#   - permisos de solo lectura (el GITHUB_TOKEN no puede escribir en el repo),
+#   - no lee el secret UPDATER_PRIVATE_KEY.
+# Para publicar estan build-macos.yml (arm64) y build-macos-intel.yml (x64).
+#
+# Corre en paralelo con esos dos sin problema: tiene su propio grupo de
+# concurrencia, porque no comparte manifiesto con nadie.
+#
+# El artifact lleva la version y el commit (DowP-1.9.4-a1b2c3d-arm64-app), para
+# distinguir compilaciones de prueba de la misma version. El .zip se arma con
+# ditto: preserva la firma ad-hoc y los symlinks del bundle. Quien lo pruebe en
+# una Mac tiene que quitar la cuarentena (xattr -dr com.apple.quarantine DowP.app)
+# o abrirlo con clic derecho > Abrir, como cualquier build sin notarizar.
+on:
+  workflow_dispatch:
+    inputs:
+      arm64:
+        description: "Compilar Apple Silicon (arm64)"
+        type: boolean
+        default: true
+      x64:
+        description: "Compilar Intel (x64)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-macos-app-only-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Arma la lista de arquitecturas marcadas: una desmarcada ni siquiera enciende un
+  # runner de macOS (cada minuto ahi cuenta 10x en la bolsa gratis de Actions).
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - id: plan
+        run: |
+          items=()
+          if [ "${{ inputs.arm64 }}" = "true" ]; then
+            items+=('{"arch":"arm64","runner":"macos-14","file_arch":"arm64"}')
+          fi
+          if [ "${{ inputs.x64 }}" = "true" ]; then
+            items+=('{"arch":"x64","runner":"macos-15-intel","file_arch":"x86_64"}')
+          fi
+          if [ ${#items[@]} -eq 0 ]; then
+            echo "No se marco ninguna arquitectura."
+            exit 1
+          fi
+          echo "matrix={\"include\":[$(IFS=,; echo "${items[*]}")]}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: DowP.app ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}   # macos-14 = Apple Silicon; macos-15-intel = ultimo runner Intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          # --prefer-binary: igual que build-macos-intel.yml (paquetes sin wheel
+          # x86_64 en su ultima version, ej. rawpy). En arm64 no cambia nada.
+          pip install --prefer-binary -r app/requirements.txt
+          pip install pyinstaller==6.22.2
+
+      - name: Compilar DowP (DowP.app + helper de swap, firma ad-hoc incluida)
+        working-directory: app
+        run: python build_cross_platform.py
+
+      - name: "Nombre del artifact (version de core/version.py + commit)"
+        id: name
+        working-directory: app
+        run: |
+          VERSION=$(python -c "import sys; sys.path.insert(0,'src'); from core.version import APP_VERSION; print(APP_VERSION)")
+          echo "base=DowP-$VERSION-${GITHUB_SHA::7}-${{ matrix.arch }}-app" >> "$GITHUB_OUTPUT"
+
+      - name: Comprobar el bundle (arquitectura, helper y firma)
+        run: |
+          file app/dist/DowP.app/Contents/MacOS/DowP | grep -q ${{ matrix.file_arch }}
+          test -f app/dist/DowP.app/Contents/MacOS/DowP_Updater
+          codesign --verify --deep --strict app/dist/DowP.app
+          echo "Bundle OK"
+
+      - name: Empaquetar el .app preservando firma/atributos (ditto, no zip normal)
+        working-directory: app/dist
+        run: ditto -c -k --keepParent DowP.app ${{ steps.name.outputs.base }}.zip
+
+      - name: Subir el .app como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.base }}
+          path: app/dist/${{ steps.name.outputs.base }}.zip
+          retention-days: 7

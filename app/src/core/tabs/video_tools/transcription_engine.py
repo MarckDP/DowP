@@ -18,8 +18,10 @@ import time
 from collections import deque
 from pathlib import Path
 
+from core.logger.logger_manager import logger
 from core.setup.ffmpeg_setup import get_ffmpeg_path, get_ffprobe_path
-from core.setup.whisper_setup import runtime_path, model_path, model_ready, runtime_environment, vad_path, vad_local_version
+from core.setup.whisper_setup import (runtime_path, model_path, model_ready, runtime_environment, vad_path,
+                                      vad_local_version, select_binary, accel_runtime_path, accel_variant)
 from core.tabs.video_tools import transcript_formats
 from core.whisper_catalog import WHISPER_MODELS, WHISPER_LANGUAGES, VAD_MODEL, VAD_PRESETS, dtw_preset
 
@@ -251,7 +253,27 @@ def _embed_command(ffmpeg, input_file, subtitle_file, output_file, mode, setting
     return cmd, None
 
 
-def _run(cmd, cancellation_event, report=None, cwd=None, parse=_whisper_progress):
+_GPU_NAME = re.compile(r"ggml_vulkan: \d+ = (.+?) \(|^\s*Device \d+: (.+?), compute capability")
+_GPU_BACKEND = re.compile(r"whisper_backend_init_gpu: (?:using (\S+) backend|(no GPU found))")
+
+
+def _device_used(lines):
+    """Con qué calculó whisper.cpp, sacado de su propia salida: "GPU Vulkan0 (AMD Radeon
+    RX 6600)" o "CPU". Con el binario Vulkan sin un driver que exponga la GPU, whisper.cpp
+    calcula con la CPU sin dar error: solo esta línea lo deja ver en el log de un tester."""
+    names = [m.group(1) or m.group(2) for m in map(_GPU_NAME.search, lines) if m]
+    for line in lines:
+        m = _GPU_BACKEND.search(line)
+        if m and m.group(1):
+            return f"GPU {m.group(1)}" + (f" ({', '.join(names)})" if names else "")
+        if m:
+            break
+    return "CPU" + (f" (GPU visible sin usar: {', '.join(names)})" if names else "")
+
+
+def _run(cmd, cancellation_event, report=None, cwd=None, parse=_whisper_progress, seen=None):
+    """seen: lista donde se guardan las líneas del dispositivo (ver _device_used), que
+    salen al principio y no quedan en la cola de 25 líneas para los errores."""
     if cancellation_event.is_set():
         return False, "Cancelado"
     tail = deque(maxlen=25)
@@ -263,6 +285,8 @@ def _run(cmd, cancellation_event, report=None, cwd=None, parse=_whisper_progress
         for raw in iter(process.stdout.readline, b""):
             line = raw.decode("utf-8", errors="replace").strip()
             tail.append(line)
+            if seen is not None and (_GPU_NAME.search(line) or _GPU_BACKEND.search(line)):
+                seen.append(line)
             if report:
                 value = parse(line)
                 if value is not None:
@@ -294,7 +318,9 @@ def run_transcription(input_file, output_file, settings, fps=0, duration_sec=0,
         if progress_callback:
             progress_callback(pct, eta)
     try:
-        binary = runtime_path()
+        # "Aceleración de Hardware (GPU)" marcada: el de CUDA si está instalado; si no, CPU.
+        prefer_gpu = settings.get("transcription_device") != "cpu"
+        binary = select_binary(prefer_gpu)
         info = WHISPER_MODELS.get(settings.get("transcription_model"))
         if not binary or not model_ready(info):
             return False, "Descarga el motor whisper.cpp y el modelo antes de iniciar."
@@ -331,7 +357,24 @@ def run_transcription(input_file, output_file, settings, fps=0, duration_sec=0,
             progress(10)
             # Al quemar, la recodificación del video se lleva buena parte del tiempo.
             whisper_span = {"none": 89, "track": 80, "burn": 50}[mode]
-            ok, error = _run(cmd, cancellation_event, lambda p: progress(10 + p * whisper_span / 100), os.path.dirname(binary))
+            device_lines = []
+            whisper_started = time.monotonic()
+            ok, error = _run(cmd, cancellation_event, lambda p: progress(10 + p * whisper_span / 100),
+                             os.path.dirname(binary), seen=device_lines)
+            engine = "acelerado (" + (accel_variant() or "?") + ")" if binary == accel_runtime_path() else "base"
+            cpu_binary = runtime_path()
+            if (not ok and not cancellation_event.is_set() and binary == accel_runtime_path()
+                    and cpu_binary and cpu_binary != binary):
+                # Respaldo: si la aceleración falla (driver, memoria de video, una GPU sin
+                # probar), se repite con el motor base
+                # en vez de entregar un error. El subtítulo sale igual, solo más lento.
+                logger.warning(f"Transcripción: whisper.cpp con aceleración por GPU falló, se repite con el motor base. {error[-300:]}")
+                cmd = whisper_command(cpu_binary, model_path(info), wav, output_base, settings, cpu=True)
+                device_lines.clear()
+                whisper_started = time.monotonic()
+                engine = "base (respaldo)"
+                ok, error = _run(cmd, cancellation_event, lambda p: progress(10 + p * whisper_span / 100),
+                                 os.path.dirname(cpu_binary), seen=device_lines)
             if not ok:
                 version = vad_local_version() if settings.get("transcription_vad") else None
                 if version and "v" + version != VAD_MODEL["variant"] and not cancellation_event.is_set():
@@ -341,6 +384,10 @@ def run_transcription(input_file, output_file, settings, fps=0, duration_sec=0,
                 return False, "whisper.cpp: " + error
             if cancellation_event.is_set():
                 return False, "Cancelado"
+            # Para los testers de GPU: qué motor y qué dispositivo se usaron, y cuánto tardó.
+            logger.info(f"Transcripción: motor {engine} · {_device_used(device_lines)} · "
+                        f"modelo {settings.get('transcription_model')} · "
+                        f"whisper {time.monotonic() - whisper_started:.1f} s")
             produced = output_base + ".json"
             # Un resultado vacío es válido (silencio); que falte el archivo no es un éxito.
             if not os.path.isfile(produced):
