@@ -4,6 +4,7 @@ Módulo de resiliencia inspirado en Xomacito para reintentar descargas y anális
 ante bloqueos temporales de YouTube (HTTP 403, HTTP 429, bot-check).
 """
 import copy
+import re
 from core.logger.logger_manager import logger
 
 # Marcadores de deteccion: se comparan contra el texto de error crudo de yt-dlp/red, que
@@ -27,12 +28,44 @@ YOUTUBE_ACCESS_MARKERS = (
 )
 
 
+# Códigos de salida de ffmpeg que son errores del propio equipo, no de YouTube: el código
+# es el errno negado (-5 = EIO), que Mac y Linux truncan a un byte (251) y Windows deja en
+# 32 bits (4294967291). Los errores HTTP de ffmpeg son otros (403: 8 en Mac y Linux,
+# 3436169992 en Windows) y siguen contando como bloqueo. Caso real: en Mac, el ffmpeg sin
+# certificados para https salía con 251 en todos los fragmentos, y DowP reintentaba con
+# los otros perfiles (abriendo Chrome para wpc) sin ninguna posibilidad de que funcionara.
+_LOCAL_FFMPEG_ERRNOS = {
+    2: "ENOENT",    # no existe el archivo o la carpeta
+    5: "EIO",       # entrada/salida: disco, o la conexión https que ffmpeg no pudo abrir
+    13: "EACCES",   # sin permiso
+    28: "ENOSPC",   # disco lleno
+    30: "EROFS",    # disco de solo lectura
+}
+_LOCAL_FFMPEG_CODES = {code for errno in _LOCAL_FFMPEG_ERRNOS for code in ((-errno) & 0xFF, (-errno) & 0xFFFFFFFF)}
+_FFMPEG_EXIT_RE = re.compile(r"ffmpeg exited with code (\d+)")
+
+
+def local_ffmpeg_error(error_msg: object) -> str | None:
+    """Nombre del errno ("EIO") si ffmpeg falló por algo del equipo; None si no."""
+    match = _FFMPEG_EXIT_RE.search(str(error_msg or "").lower())
+    if not match or int(match.group(1)) not in _LOCAL_FFMPEG_CODES:
+        return None
+    code = int(match.group(1))
+    return next(name for errno, name in _LOCAL_FFMPEG_ERRNOS.items()
+                if code in ((-errno) & 0xFF, (-errno) & 0xFFFFFFFF))
+
+
 def is_youtube_access_error(url: str, error_msg: object) -> bool:
     """Detecta si el error es un bloqueo temporal de YouTube que admite un cliente alternativo."""
     if not url:
         return False
     lowered = str(error_msg or "").lower()
-    return any(marker in lowered for marker in YOUTUBE_ACCESS_MARKERS)
+    markers = [marker for marker in YOUTUBE_ACCESS_MARKERS if marker in lowered]
+    if markers == ["ffmpeg exited with code"] and local_ffmpeg_error(lowered):
+        logger.warning(f"Resiliencia: ffmpeg falló por un error del equipo ({local_ffmpeg_error(lowered)}), "
+                       "no de YouTube: no se reintenta con otros clientes.")
+        return False
+    return bool(markers)
 
 
 CDN_FORBIDDEN_MARKERS = (

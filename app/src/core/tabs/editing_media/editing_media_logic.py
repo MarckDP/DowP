@@ -41,6 +41,52 @@ VALID_AUDIO_EXTS = {
 }
 VALID_EXTS = VALID_IMAGE_EXTS | VALID_VECTOR_EXTS | VALID_VIDEO_EXTS | VALID_AUDIO_EXTS
 
+# Lo que crean los sistemas en un disco compartido entre Mac y Windows (exFAT, FAT32,
+# NTFS, unidades de red). El caso grave son los "._nombre.jpg" de macOS (AppleDouble):
+# guardan metadatos, no la imagen, pero tienen la extensión del original, así que se
+# indexaban como medios rotos (miniaturas que fallan, videos que no se reproducen).
+_SYSTEM_FILES = {".ds_store", "thumbs.db", "ehthumbs.db", "desktop.ini", ".localized"}
+_SYSTEM_DIRS = {
+    "$recycle.bin", "system volume information", "recycler",               # Windows
+    ".spotlight-v100", ".trashes", ".fseventsd", ".temporaryitems",        # macOS
+    ".documentrevisions-v100", ".appledouble", "__macosx",
+    "@eadir",                                                              # NAS Synology
+}
+
+# Cabecera de AppleSingle/AppleDouble (RFC 1740): firma (00 05 16 00 / 00 05 16 07) y
+# versión (00 01 00 00 / 00 02 00 00). Hacen falta los 8 bytes: en MP4/MOV los 4 primeros
+# son el tamaño del primer bloque y podrían coincidir con la firma, pero los 4 siguientes
+# son siempre su nombre en letras ("ftyp", "moov"...), nunca una versión de AppleDouble.
+_APPLE_MAGICS = {b"\x00\x05\x16\x00", b"\x00\x05\x16\x07"}
+_APPLE_VERSIONS = {b"\x00\x01\x00\x00", b"\x00\x02\x00\x00"}
+
+
+def _is_apple_metadata(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            head = f.read(8)
+    except OSError:
+        return True  # Ilegible: tampoco se podría mostrar como medio.
+    # Vacío o más corto que la cabecera: no es un medio en ningún caso.
+    return len(head) < 8 or (head[:4] in _APPLE_MAGICS and head[4:] in _APPLE_VERSIONS)
+
+
+def is_system_file(name: str, path: str | None = None) -> bool:
+    """Archivo de sistema (de Mac o de Windows), no un medio del usuario.
+
+    "._nombre" es metadato de macOS solo si su contenido lo confirma (con `path`): un
+    medio real que alguien llamó así se sigue mostrando. Sin `path` (la vigilancia de
+    cambios, donde el archivo puede estar a medio escribir) basta el nombre: como mucho
+    se pierde un rescaneo automático."""
+    if name.startswith("._"):
+        return path is None or _is_apple_metadata(path)
+    return name.lower() in _SYSTEM_FILES
+
+
+def is_system_dir(name: str) -> bool:
+    """Carpeta de sistema (papelera, índices de Spotlight...), no una carpeta del usuario."""
+    return name.lower() in _SYSTEM_DIRS
+
 FILTER_TYPE_MAP = {
     "todos": None,
     "all": None,
@@ -153,8 +199,10 @@ if WATCHDOG_AVAILABLE:
                 self._throttle_trigger()
                 return
 
+            # Al copiar en un disco compartido, macOS crea un "._archivo" por cada archivo:
+            # no son medios y no deben provocar un rescaneo.
             ext = os.path.splitext(event.src_path)[1].lower()
-            if ext in VALID_EXTS:
+            if ext in VALID_EXTS and not is_system_file(os.path.basename(event.src_path)):
                 self._throttle_trigger()
 
         def _throttle_trigger(self):
@@ -669,9 +717,9 @@ class EditingMediaController(QObject):
                     for entry in it:
                         try:
                             if entry.is_dir(follow_symlinks=False):
-                                if recursive:
+                                if recursive and not is_system_dir(entry.name):
                                     dirs_to_visit.append(entry.path)
-                            elif entry.is_file(follow_symlinks=False):
+                            elif entry.is_file(follow_symlinks=False) and not is_system_file(entry.name, entry.path):
                                 ext = os.path.splitext(entry.name)[1].lower()
                                 if ext in VALID_EXTS:
                                     try:

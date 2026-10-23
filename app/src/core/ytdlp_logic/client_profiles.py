@@ -144,7 +144,13 @@ def should_try_next_profile(error_msg):
     lowered = str(error_msg or "").lower()
     if "http error 429" in lowered or "too many requests" in lowered:
         return False
-    return any(marker in lowered for marker in _NEXT_PROFILE_MARKERS)
+    markers = [marker for marker in _NEXT_PROFILE_MARKERS if marker in lowered]
+    if markers == ["ffmpeg exited with code"]:
+        # Un error del equipo (EIO, disco lleno...) no lo arregla otro cliente.
+        from core.ytdlp_logic.resilient_downloader import local_ffmpeg_error
+        if local_ffmpeg_error(lowered):
+            return False
+    return bool(markers)
 
 
 def youtube_video_id(url):

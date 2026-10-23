@@ -24,7 +24,7 @@ from gui.tabs.editing_media.editing_media_icons import (
 )
 
 from core.tabs.editing_media.folder_color_manager import get_item_color, set_item_color, get_random_label_color
-from core.tabs.editing_media.editing_media_logic import VALID_EXTS, resolve_filter_type
+from core.tabs.editing_media.editing_media_logic import VALID_EXTS, resolve_filter_type, is_system_dir, is_system_file
 from core.tabs.editing_media.thumbnail_cache_manager import ThumbnailCacheManager
 from gui.styles import set_themed_style
 from gui.styles import apply_shapes
@@ -218,7 +218,7 @@ class TreeListMixin:
             subdirs = []
             with os.scandir(folder_path) as it:
                 for entry in it:
-                    if entry.is_dir(follow_symlinks=False):
+                    if entry.is_dir(follow_symlinks=False) and not is_system_dir(entry.name):
                         subdirs.append((entry.name, entry.path.replace("\\", "/")))
 
             subdirs.sort(key=lambda x: x[0].lower())
@@ -244,7 +244,7 @@ class TreeListMixin:
         try:
             with os.scandir(folder_path) as it:
                 for entry in it:
-                    if entry.is_dir(follow_symlinks=False):
+                    if entry.is_dir(follow_symlinks=False) and not is_system_dir(entry.name):
                         return True
         except Exception:
             pass
@@ -537,6 +537,9 @@ class TreeListMixin:
             sort_by = getattr(self, "sort_by", "nombre")
             sort_asc = getattr(self, "sort_ascending", True)
             cache_key = (active_filter, search_query, sort_by, sort_asc)
+            # Fuera de la caché: también lo usa el mensaje de "no hay elementos" de abajo,
+            # y con la caché acertada quedaba sin definir (UnboundLocalError).
+            target_type = resolve_filter_type(active_filter)
 
             # OJO: comparar por identidad (`is`), no por id(media_items) -- id() se
             # puede RECICLAR si el objeto anterior ya fue liberado (p.ej. el []
@@ -551,7 +554,6 @@ class TreeListMixin:
                     and getattr(self, "_filtered_sort_cache_media_items", None) is media_items):
                 filtered_items = self._filtered_sort_cache
             else:
-                target_type = resolve_filter_type(active_filter)
                 filtered_items = []
                 for item in media_items:
                     item_type = item.get("tipo", "")
@@ -1426,7 +1428,7 @@ class TreeListMixin:
                     first_added_path = local_path.replace("\\", "/")
             elif os.path.isfile(local_path):
                 ext = os.path.splitext(local_path)[1].lower()
-                if ext in VALID_EXTS:
+                if ext in VALID_EXTS and not is_system_file(os.path.basename(local_path), local_path):
                     # Los archivos indexados individualmente (sueltos, no una carpeta entera)
                     # van a la carpeta virtual "Default" dentro de Directorios, no a la
                     # colección "Favoritos" (que el usuario reserva para organizar a mano).
