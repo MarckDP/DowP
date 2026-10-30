@@ -163,9 +163,13 @@ class ThemeManager(QObject):
 
         # El primer apply() es el del arranque: nada que actualizar todavía.
         if self._applied_once:
-            from gui.styles import refresh_themed_styles
+            from gui.styles import refresh_glass, refresh_themed_styles
             n = refresh_themed_styles()
             logger.debug(f"Temas: {n} estilos de widgets recalculados en vivo")
+            # Imagen de fondo: qué paneles van translúcidos (marca "glass", ver styles.py).
+            central = getattr(self._style_target, "centralWidget", lambda: None)()
+            if central is not None:
+                refresh_glass(central)
             self.theme_changed.emit(tokens)
         self._applied_once = True
 

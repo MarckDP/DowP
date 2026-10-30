@@ -16,7 +16,6 @@ from core.services.editor_integration_manager import EditorIntegrationManager
 from core.utils.subclip_export import export_subclip
 from core.logger.logger_manager import logger
 from gui.styles import set_themed_style
-from gui.styles import apply_shapes
 
 
 def _start_file_drag(source_widget, paths: list):
@@ -101,10 +100,10 @@ class SubclipItemWidget(QWidget):
         btn_del.setIconSize(QSize(15, 15))
         btn_del.setFixedSize(22, 22)
         btn_del.setToolTip(self.tr("Eliminar subclip"))
-        btn_del.setStyleSheet(apply_shapes("""
+        set_themed_style(btn_del, lambda: """
             QPushButton { background: transparent; border: none; border-radius: 6px; padding: 0px; }
             QPushButton:hover { background: rgba(229,57,53,160); }
-        """))
+        """)
         btn_del.clicked.connect(lambda: on_delete(index))
         top_row.addWidget(btn_del)
         layout.addLayout(top_row)
@@ -375,34 +374,29 @@ class SubclipEditorDialog(QDialog):
         right_layout.setSpacing(8)
 
         lbl_list_title = QLabel(self.tr("Subclips del Medio"))
-        lbl_list_title.setStyleSheet(apply_shapes("font-weight: bold; font-size: 13px; color: white;"))
+        set_themed_style(lbl_list_title, lambda: f"font-weight: bold; font-size: 13px; color: {get_theme_token('texto_principal', '#e0e0e0')};")
         right_layout.addWidget(lbl_list_title)
 
-        borde_norm = get_theme_token('borde_normal', '#222222')
-        bg_list = get_theme_token('fondo_secundario', '#121212')
-        bg_elem = get_theme_token('fondo_elemento', '#1a1a1a')
-        select_bg = get_theme_token('seleccion_fondo', '#222222')
-
         self.list_subclips = QListWidget()
-        self.list_subclips.setStyleSheet(apply_shapes("""
-            QListWidget {
-                background-color: %s;
-                border: 1px solid %s;
+        set_themed_style(self.list_subclips, lambda: f"""
+            QListWidget {{
+                background-color: {get_theme_token('fondo_secundario', '#121212')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 6px;
                 outline: none;
-            }
-            QListWidget::item {
-                background-color: %s;
-                border-bottom: 1px solid %s;
+            }}
+            QListWidget::item {{
+                background-color: {get_theme_token('fondo_elemento', '#1a1a1a')};
+                border-bottom: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 0px;
                 padding: 0px;
                 margin: 0px;
-            }
-            QListWidget::item:selected {
-                background-color: #1b3b22;
-                border-bottom: 1px solid #224;
-            }
-        """ % (bg_list, borde_norm, bg_elem, borde_norm)))
+            }}
+            QListWidget::item:selected {{
+                background-color: {get_theme_token('seleccion_fondo', '#222222')};
+                border-bottom: 1px solid {get_theme_token('acento_primario', '#B9E640')};
+            }}
+        """)
         right_layout.addWidget(self.list_subclips, 1)
 
         # Botón Split de Envío a Editores
@@ -412,25 +406,28 @@ class SubclipEditorDialog(QDialog):
         self.btn_send.setFixedHeight(32)
         self.btn_send.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        self.btn_send.setStyleSheet(apply_shapes("""
-            QToolButton {
-                background-color: %s;
-                border: 1px solid %s;
+        set_themed_style(self.btn_send, lambda: f"""
+            QToolButton {{
+                background-color: {get_theme_token('fondo_elemento', '#1a1a1a')};
+                border: 1px solid {get_theme_token('borde_normal', '#222222')};
                 border-radius: 6px;
-                color: #ffffff;
+                color: {get_theme_token('texto_principal', '#e0e0e0')};
                 font-weight: bold;
                 padding-left: 10px;
-            }
-            QToolButton::menu-button {
-                border-left: 1px solid %s;
+            }}
+            QToolButton::menu-button {{
+                border-left: 1px solid {get_theme_token('borde_normal', '#222222')};
                 width: 22px;
                 border-top-right-radius: 6px;
                 border-bottom-right-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: %s;
-            }
-        """ % (bg_elem, borde_norm, borde_norm, select_bg)))
+            }}
+            QToolButton:hover {{
+                background-color: {get_theme_token('seleccion_fondo', '#222222')};
+            }}
+            QToolButton:disabled {{
+                color: {get_theme_token('texto_deshabilitado', '#555555')};
+            }}
+        """)
 
         self.send_menu = QMenu(self.btn_send)
         self.action_send_single = self.send_menu.addAction(self.tr("Enviar solo subclip actual"))

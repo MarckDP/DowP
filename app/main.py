@@ -16,8 +16,13 @@ from core.logger.logger_manager import logger, install_exception_logging
 # Errores no capturados (en eventos de Qt o hilos) también al log: el .exe no tiene consola.
 install_exception_logging()
 
-# Enviar los logs de escalado al logger real 
+# Enviar los logs de escalado al logger real
 flush_scaling_logs()
+
+# macOS: certificados para el OpenSSL estático de ffmpeg (fragmentos por https). Antes de
+# lanzar cualquier subproceso, para que todos lo hereden.
+from core.utils.tls_certs import ensure_ssl_cert_file
+ensure_ssl_cert_file()
 
 
 from core.utils.i18n import load_language

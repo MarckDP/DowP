@@ -33,6 +33,7 @@ un chunk que cambio y volvio a un valor de hace varias versiones se resube
 import argparse
 import json
 import os
+import re
 import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -242,6 +243,12 @@ def main():
     version = args.version or version_ns["APP_VERSION"]
     min_updatable = args.min_updatable or version_ns["MIN_UPDATABLE_VERSION"]
     tag = f"v{version}"
+    # Una version con sufijo (1.9.5-beta.1) SIEMPRE va como prerelease, se pase o no
+    # --prerelease: si salia como release normal (los workflows de Mac no pasan el
+    # flag), pasaba a ser /releases/latest y les llegaba a todos los del canal estable.
+    if re.search(r"-(alpha|beta|rc)", version, re.IGNORECASE) and not args.prerelease:
+        print(f"Aviso: {version} es una version de prueba; se publica como prerelease.")
+        args.prerelease = True
 
     if not args.dry_run and not args.repo:
         print("ERROR: --repo es obligatorio salvo en --dry-run")

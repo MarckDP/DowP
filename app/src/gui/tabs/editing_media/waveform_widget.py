@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QWidget, QSizePolicy
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QColor, QPen
 
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, glass_fill
 
 class AudioWaveformWidget(QWidget):
     """Widget que dibuja una forma de onda de audio real e interactiva con barra de reproducción."""
@@ -160,7 +160,7 @@ class AudioWaveformWidget(QWidget):
         fondo_normal = get_theme_token('fondo_principal', '#0a0a0a')
 
         # Fondo del espectro
-        painter.fillRect(0, 0, width, height, QColor(fondo_normal))
+        painter.fillRect(0, 0, width, height, glass_fill(self, fondo_normal))  # con imagen de fondo: translúcido
 
         # Highlight de selección rápida (lite subclip)
         in_ratio, out_ratio = self.get_lite_selection()

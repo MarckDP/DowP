@@ -13,7 +13,7 @@ permanecen siempre visibles.
 from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea, QSplitter
 from PySide6.QtCore import Qt, QRect, QPoint, QSize, QEasingCurve, QPropertyAnimation, Signal
 from PySide6.QtGui import QPainter, QColor, QPolygon, QFont
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, glass_fill
 
 
 class EdgeTabButton(QWidget):
@@ -25,7 +25,8 @@ class EdgeTabButton(QWidget):
         self.edge = edge
         self.setObjectName("collapsiblePanelEdgeTab")
         self.setCursor(Qt.PointingHandCursor)
-        self.setFixedSize(20, 90)
+        # Más alta que ancha a propósito: llama la atención sin tapar el contenido de al lado.
+        self.setFixedSize(20, 140)
         self._hovered = False
         self._is_open = False
 
@@ -48,25 +49,31 @@ class EdgeTabButton(QWidget):
             self.clicked.emit()
         super().mouseReleaseEvent(event)
 
+    def _paint_lit_background(self, p: QPainter, w: int, h: int):
+        """Fondo de la pestaña, siempre "encendido": la franja de acento en el borde
+        exterior y el texto o la flecha en color de acento todo el tiempo, no solo al
+        pasar el mouse (los usuarios no encontraban estas pestañas). Al pasar el mouse
+        se aclara el fondo. Con imagen de fondo, translúcido como los controles."""
+        p.setPen(Qt.NoPen)
+        base = get_theme_token('fondo_hover', '#2a2a2a') if self._hovered else get_theme_token('fondo_elemento', '#1a1a1a')
+        p.setBrush(glass_fill(self, base, "control"))
+        # Lado plano pegado al borde exterior, lado redondeado hacia el contenido.
+        if self.edge == "left":
+            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
+        else:
+            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
+        p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
+        if self.edge == "left":
+            p.drawRect(0, 0, 3, h)
+        else:
+            p.drawRect(w - 3, 0, 3, h)
+
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
-        # Fondo: lado plano pegado al borde exterior, lado redondeado hacia el contenido.
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(get_theme_token('fondo_hover', '#2a2a2a') if self._hovered else get_theme_token('fondo_elemento', '#1a1a1a')))
-        if self.edge == "left":
-            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
-        else:
-            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
-
-        if self._hovered:
-            p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
-            if self.edge == "left":
-                p.drawRect(0, 0, 3, h)
-            else:
-                p.drawRect(w - 3, 0, 3, h)
+        self._paint_lit_background(p, w, h)
 
         # Flecha: cerrado invita a abrir (apunta hacia el contenido), abierto invita a cerrar.
         # Centrada en el ancho de la pestaña: con el ancho por defecto (20) queda en los mismos
@@ -74,7 +81,7 @@ class EdgeTabButton(QWidget):
         # hacia un costado.
         points_right = (self.edge == "left") != self._is_open
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(get_theme_token('acento_primario', '#B9E640')) if self._hovered else QColor(get_theme_token('texto_tenue', '#888888')))
+        p.setBrush(QColor(get_theme_token('acento_primario', '#B9E640')))
         cx = w // 2
         if points_right:
             triangle = QPolygon([QPoint(cx - 4, h // 2 - 8), QPoint(cx - 4, h // 2 + 8), QPoint(cx + 4, h // 2)])
@@ -98,24 +105,13 @@ class TextEdgeTabButton(EdgeTabButton):
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(get_theme_token('fondo_hover', '#2a2a2a') if self._hovered else get_theme_token('fondo_elemento', '#1a1a1a')))
-        if self.edge == "left":
-            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
-        else:
-            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
-        if self._hovered:
-            p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
-            if self.edge == "left":
-                p.drawRect(0, 0, 3, h)
-            else:
-                p.drawRect(w - 3, 0, 3, h)
+        self._paint_lit_background(p, w, h)
 
         from core.utils.font_manager import get_active_font_family
         font = QFont(get_active_font_family(), 9)
         font.setBold(True)
         p.setFont(font)
-        p.setPen(QColor(get_theme_token('acento_primario', '#B9E640')) if (self._hovered or self._is_open) else QColor(get_theme_token('texto_tenue', '#888888')))
+        p.setPen(QColor(get_theme_token('acento_primario', '#B9E640')))
         p.translate(w / 2, h / 2)
         p.rotate(-90.0)
         # Rect rotado: su ancho es el alto de la pestaña y su alto, el ancho.
@@ -262,6 +258,7 @@ class CollapsiblePanel(QFrame):
         else:
             self._dock_layout.insertWidget(self._dock_index, self, self._dock_stretch)
         self.show()
+        self._refresh_background_glass()
 
     def _enter_overlay(self):
         self._docked = False
@@ -281,6 +278,14 @@ class CollapsiblePanel(QFrame):
         self.edge_tab.show()
         self.edge_tab.raise_()
         self._position_edge_tab()
+        self._refresh_background_glass()
+
+    def _refresh_background_glass(self):
+        """Con imagen de fondo, acoplado y superpuesto se ven distinto (translúcido
+        normal o vidrio recortado, ver gui/styles.py): al cambiar de modo, este panel y
+        su contenido se recalculan. Sin imagen no hace nada."""
+        from gui.styles import refresh_glass
+        refresh_glass(self)
 
     def _on_edge_tab_clicked(self):
         if self._overlay_open:
@@ -342,11 +347,26 @@ class CollapsiblePanel(QFrame):
         except RuntimeError:
             pass
 
+    def set_edge_tab_span(self, span_fn):
+        """Hace de la pestaña una franja que ocupa un tramo vertical del host en vez de ir
+        centrada con su alto fijo: span_fn() -> (y, alto) en coordenadas del host. La usa
+        Herramientas Multimedia para que "OPCIONES" cubra todo el costado de la vista
+        previa, como la barra de "PROCESO POR LOTES". None vuelve a lo normal."""
+        self._edge_tab_span = span_fn
+        self._position_edge_tab()
+
     def _position_edge_tab(self):
         if not self._overlay_host:
             return
         host_rect = self._overlay_host.rect()
-        y = max((host_rect.height() - self.edge_tab.height()) // 2, 0)
+        span = getattr(self, "_edge_tab_span", None)
+        if span is not None:
+            top, height = span()
+            if height > 0:
+                self.edge_tab.setFixedHeight(height)
+            y = max(top, 0)
+        else:
+            y = max((host_rect.height() - self.edge_tab.height()) // 2, 0)
         if self.edge == "left":
             x = self.width() if self._overlay_open else 0
         else:

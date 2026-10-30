@@ -10,7 +10,6 @@ import re
 import subprocess
 import threading
 import time
-import multiprocessing
 
 from core.logger.logger_manager import logger
 from core.constants import (
@@ -20,13 +19,30 @@ from core.constants import (
 from core.setup.models_setup import get_engine_exe_path
 from core.utils.paths import get_models_dir
 
-_POWER_THREADS = {
-    "Seguro (Estabilidad)": "1:1:1",
-    "Equilibrado": "1:2:1",
-    "Máximo (Potente)": "2:4:2",
+# Potencia = el -j carga:proceso:guardado de los 3 binarios NCNN. Medido en una RTX 3060
+# (2026-10-25): los hilos de PROCESO no aceleran nada -- con un modelo pesado la GPU ya va
+# al 100 %, y más de 2 empeora --; lo que acelera son los de GUARDADO, cuando el modelo
+# es ligero y el cuello pasa a ser escribir el PNG (animevideov3 4K: 1:2:1 0,58 s ->
+# 1:2:4 0,37 s por fotograma). El tamaño de mosaico casi no cambia nada.
+POWER_AUTO = "Automático"
+POWER_LOW = "Bajo consumo"
+POWER_CUSTOM = "Personalizado"
+_LOW_POWER_THREADS = "1:1:1"   # un solo fotograma en GPU a la vez: lo mínimo de VRAM
+CUSTOM_DEFAULT_THREADS = "1:2:4"
+# Claves de las versiones anteriores, que siguen guardadas en preajustes: "Seguro" era
+# 1:1:1 (= Bajo consumo); "Equilibrado" y "Máximo" rendían igual o peor que el
+# Automático nuevo, así que pasan a él.
+_LEGACY_POWER = {
+    "Seguro (Estabilidad)": POWER_LOW,
+    "Equilibrado": POWER_AUTO,
+    "Máximo (Potente)": POWER_AUTO,
 }
+_THREADS_RE = re.compile(r"^\s*(\d{1,2}):(\d{1,2}):(\d{1,2})\s*$")
 
-_VULKAN_OOM_HINTS = ("vkQueueSubmit failed", "vkAllocateMemory failed", "invalid gpu device", "out of gpu memory")
+_VULKAN_OOM_HINTS = ("vkqueuesubmit failed", "vkallocatememory failed", "out of gpu memory")
+# Upscayl escribe "Invalid GPU Device" y SRMD "invalid gpu device": se compara en
+# minúsculas. Antes iba en la lista de memoria y con la mayúscula nunca coincidía.
+_NO_GPU_HINT = "invalid gpu device"
 
 _POLL_INTERVAL_SEC = 0.2
 
@@ -48,17 +64,42 @@ _DONE_LINE_RE = re.compile(r"->.+\bdone\b")
 
 
 def _auto_threads() -> str:
-    """"Automático": mismo criterio que _thread_args() de DowP1 -- conservador según
-    núcleos disponibles, no el máximo posible."""
+    """"Automático" según la GPU que usará el motor -- NCNN elige sola la primera
+    dedicada y si no la integrada (find_default_vulkan_device_index), la misma que
+    preferred_gpu():
+    - dedicada: 2 en proceso y 4 guardando, lo más rápido medido;
+    - integrada: 1 en proceso (su VRAM sale de la RAM del sistema) y 2 guardando;
+    - sin dato (macOS, donde no se enumera Vulkan, o un fallo al enumerar): el valor
+      por defecto de los propios binarios."""
     try:
-        cpu_count = multiprocessing.cpu_count()
-    except NotImplementedError:
-        cpu_count = 1
-    return "1:2:1" if cpu_count >= 12 else "1:1:1"
+        from core.utils.vulkan_devices import preferred_gpu
+        gpu = preferred_gpu()
+    except Exception:
+        gpu = None
+    if gpu is None:
+        return "1:2:2"
+    return "1:2:4" if gpu.is_discrete else "1:1:2"
 
 
-def _resolve_threads(power_label: str) -> str:
-    return _POWER_THREADS.get(power_label, _auto_threads())
+def valid_custom_threads(text) -> str | None:
+    """carga:proceso:guardado, cada uno entre 1 y 16. None si no es válido."""
+    match = _THREADS_RE.match(str(text or ""))
+    if not match or not all(1 <= int(n) <= 16 for n in match.groups()):
+        return None
+    return ":".join(match.groups())
+
+
+def _resolve_threads(power_label: str, custom_threads=None) -> str:
+    power = _LEGACY_POWER.get(power_label, power_label)
+    if power == POWER_LOW:
+        return _LOW_POWER_THREADS
+    if power == POWER_CUSTOM:
+        threads = valid_custom_threads(custom_threads)
+        if threads:
+            return threads
+        logger.warning(f"Reescalar IA: hilos personalizados no válidos ({custom_threads!r}) "
+                       f"-- se usa Automático.")
+    return _auto_threads()
 
 
 # Rango de -n aceptado por cada motor, comprobado pasándole valores fuera de rango
@@ -131,7 +172,7 @@ def _build_cmd(exe: str, input_path: str, output_path: str, options: dict, verbo
     model_key = options.get("upscale_model") or ""
     scale = _clamp_scale(engine, model_key, options.get("upscale_scale") or "4x")
     tile = str(options.get("upscale_tile") or "0")
-    threads = _resolve_threads(options.get("upscale_power", "Automático"))
+    threads = _resolve_threads(options.get("upscale_power", POWER_AUTO), options.get("upscale_threads"))
     tta = bool(options.get("upscale_tta"))
     # -v (verbose): solo en modo lote -- es lo único que hace que los 3 motores
     # impriman la línea "-> ... done" por archivo terminado (confirmado en vivo:
@@ -287,7 +328,14 @@ def run_upscale(input_path: str, output_path: str, options: dict, cancellation_e
 
     if proc.returncode != 0:
         tail = stderr_output[-500:]
-        if any(hint in stderr_output for hint in _VULKAN_OOM_HINTS):
+        stderr_lower = stderr_output.lower()
+        if _NO_GPU_HINT in stderr_lower:
+            return False, QCoreApplication.translate(
+                "upscale_engine",
+                "'{0}' no encontró una GPU compatible con Vulkan. Actualiza el driver "
+                "de video e inténtalo de nuevo."
+            ).format(tool_info["name"])
+        if any(hint in stderr_lower for hint in _VULKAN_OOM_HINTS):
             return False, QCoreApplication.translate(
                 "upscale_engine",
                 "'{0}' se quedó sin memoria de GPU -- prueba bajar el "

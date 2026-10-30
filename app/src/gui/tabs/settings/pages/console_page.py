@@ -1,5 +1,6 @@
 # src/gui/tabs/settings/pages/console_page.py
 import json
+import os
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QPushButton,
@@ -129,10 +130,14 @@ class ConsolePage(QWidget):
         QApplication.clipboard().setText(text)
 
     def on_export_clicked(self):
+        # Ruta completa: con un nombre suelto el diálogo lo resuelve contra la carpeta de
+        # trabajo, que en la .app de macOS es "/" (solo lectura: "[Errno 30] Read-only
+        # file system: '/dowp_console.txt'").
+        from core.tabs.advanced_process.output_logic import get_default_download_path
         path, selected_filter = QFileDialog.getSaveFileName(
             self,
             self.tr("Exportar consola"),
-            "dowp_console.txt",
+            os.path.join(get_default_download_path(), "dowp_console.txt"),
             self.tr("Texto plano (*.txt);;JSON (*.json)")
         )
         if not path:

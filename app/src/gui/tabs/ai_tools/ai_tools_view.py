@@ -67,7 +67,7 @@ class AIToolsOptions(QFrame):
             }}
             QTabWidget#aiOptionsTabs > QTabBar::tab:selected {{
                 background: transparent;
-                color: #ffffff;
+                color: {get_theme_token('texto_activo', '#ffffff')};
             }}
         """)
         layout = QVBoxLayout(self)

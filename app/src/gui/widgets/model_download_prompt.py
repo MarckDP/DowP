@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QMessageBox, QPushBu
 
 from core.logger.logger_manager import logger
 from core.utils.cache_manager import format_bytes, format_bytes_compact
-from gui.styles import get_theme_token, set_button_variant
+from gui.styles import get_theme_token, set_button_variant, register_theme_callback
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 
 _ICON_SIZE = 14
@@ -344,15 +344,21 @@ class ModelStatusRow(QWidget):
         self.setVisible(False)
 
     def _set(self, icon_name: str, token: str, fallback: str, text: str, clickable: bool = False):
-        color = get_theme_token(token, fallback)
-        icon = get_colored_svg_icon(icon_name, color, size=_ICON_SIZE)
-        self.lbl_icon.setPixmap(icon.pixmap(_ICON_SIZE, _ICON_SIZE))
         self.lbl_text.setText(text)
         decoration = "text-decoration: underline;" if clickable else ""
-        self.lbl_text.setStyleSheet(f"color: {color}; font-size: {self._font_size}px; {decoration}")
+        self._paint_theme(icon_name, token, fallback, decoration)
+        register_theme_callback(self, "estado_tema",
+                                lambda: self._paint_theme(icon_name, token, fallback, decoration))
         self._clickable = clickable
         self.setCursor(Qt.PointingHandCursor if clickable else Qt.ArrowCursor)
         self.setVisible(True)
+
+    def _paint_theme(self, icon_name: str, token: str, fallback: str, decoration: str):
+        # Repintar sin cambiar el mensaje, el progreso ni la visibilidad de la fila.
+        color = get_theme_token(token, fallback)
+        icon = get_colored_svg_icon(icon_name, color, size=_ICON_SIZE)
+        self.lbl_icon.setPixmap(icon.pixmap(_ICON_SIZE, _ICON_SIZE))
+        self.lbl_text.setStyleSheet(f"color: {color}; font-size: {self._font_size}px; {decoration}")
 
     def mouseReleaseEvent(self, event):
         if self._clickable and event.button() == Qt.LeftButton and self.rect().contains(event.pos()):

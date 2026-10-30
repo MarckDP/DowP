@@ -47,10 +47,35 @@ class UpdateInfo:
     extra_local_files: list = field(default_factory=list)
 
 
-def _version_tuple(v: str) -> tuple:
-    """"2.10.1" -> (2, 10, 1). Suficiente para el esquema X.Y.Z de este
-    proyecto (ver core/version.py) -- no hace falta packaging.version para eso."""
-    return tuple(int(p) for p in v.split("."))
+# "1.9.5", "v1.9.5", "1.9.5-beta.2", "2.0.0-rc1"... (ver plan de versiones -beta).
+_VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+){0,3})(?:-(alpha|beta|rc)\.?(\d*))?$", re.IGNORECASE)
+_STAGE_RANK = {"alpha": 0, "beta": 1, "rc": 2}
+_FINAL_RANK = 3
+# Lo que no se entiende queda por debajo de todo: nunca se ofrece como
+# actualizacion ni bloquea nada (nunca lanza, a diferencia del int() de antes).
+_UNPARSEABLE = ((-1,), -1, -1)
+
+
+def version_key(v: str) -> tuple:
+    """Clave ordenable de una version: 1.9.5-alpha.1 < 1.9.5-beta.1 < 1.9.5-beta.2
+    < 1.9.5-rc.1 < 1.9.5 < 1.9.6. "1.9" y "1.9.0" son iguales. Una version que no
+    sigue el esquema da la clave mas baja posible (ver _UNPARSEABLE)."""
+    m = _VERSION_RE.match((v or "").strip())
+    if not m:
+        return _UNPARSEABLE
+    nums = [int(p) for p in m.group(1).split(".")]
+    while len(nums) > 1 and nums[-1] == 0:
+        nums.pop()  # 1.9.0 == 1.9
+    stage = m.group(2)
+    if not stage:
+        return (tuple(nums), _FINAL_RANK, 0)
+    return (tuple(nums), _STAGE_RANK[stage.lower()], int(m.group(3) or 0))
+
+
+def is_prerelease_version(v: str) -> bool:
+    """True para 1.9.5-beta.1, 2.0.0-rc1, etc."""
+    key = version_key(v)
+    return key != _UNPARSEABLE and key[1] != _FINAL_RANK
 
 
 def compute_diff(manifest: dict, install_dir: str | None = None,
@@ -66,12 +91,12 @@ def compute_diff(manifest: dict, install_dir: str | None = None,
     remote_version = manifest.get("app_version", "0.0.0")
 
     unsupported_format = manifest.get("format") != SUPPORTED_FORMAT
-    below_min = _version_tuple(current_version) < _version_tuple(
+    below_min = version_key(current_version) < version_key(
         manifest.get("min_updatable_version", MIN_UPDATABLE_VERSION)
     )
     must_full_install = unsupported_format or below_min
 
-    if _version_tuple(remote_version) <= _version_tuple(current_version):
+    if version_key(remote_version) <= version_key(current_version):
         return UpdateInfo(
             available=False, must_full_install=False,
             current_version=current_version, remote_version=remote_version,

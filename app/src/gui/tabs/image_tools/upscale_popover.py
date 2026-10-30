@@ -54,6 +54,10 @@ from core.setup.models_setup import (
 )
 from gui.styles import set_themed_style
 from gui.styles import apply_shapes
+from core.tabs.image_tools.upscale_engine import (
+    POWER_AUTO, POWER_LOW, POWER_CUSTOM, CUSTOM_DEFAULT_THREADS,
+    valid_custom_threads,
+)
 
 _TILE_TOOLTIP = QCoreApplication.translate(
     "UpscalePopoverContent",
@@ -63,9 +67,16 @@ _TILE_TOOLTIP = QCoreApplication.translate(
 )
 _POWER_TOOLTIP = QCoreApplication.translate(
     "UpscalePopoverContent",
-    "Control de hilos (concurrencia).\n"
-    "'Seguro' evita crashes en GPUs modestas.\n"
-    "'Máximo' usa toda la potencia pero puede colgar el PC."
+    "Cuántos hilos usa el motor para cargar, procesar y guardar.\n"
+    "'Automático' lo ajusta según tu GPU (recomendado).\n"
+    "'Bajo consumo' procesa una imagen a la vez: para GPUs con poca memoria.\n"
+    "'Personalizado' permite escribir los valores a mano."
+)
+_CUSTOM_THREADS_TOOLTIP = QCoreApplication.translate(
+    "UpscalePopoverContent",
+    "Formato carga:proceso:guardado (de 1 a 16 cada uno). Ejemplo: 1:2:4.\n"
+    "Más hilos de proceso no aceleran si la GPU ya va al máximo, y pueden\n"
+    "agotar su memoria. Los de guardado ayudan con modelos ligeros."
 )
 _SCALE_TOOLTIP = QCoreApplication.translate(
     "UpscalePopoverContent",
@@ -149,14 +160,33 @@ class UpscalePopoverContent(QFrame):
         power_row = QHBoxLayout()
         power_row.addWidget(self._label(self.tr("Potencia:")))
         self.combo_power = AutoPopupComboBox(fit_contents=True)
-        for _pw_label, _pw_key in ((self.tr("Automático"), "Automático"),
-                                  (self.tr("Seguro (Estabilidad)"), "Seguro (Estabilidad)"),
-                                  (self.tr("Equilibrado"), "Equilibrado"),
-                                  (self.tr("Máximo (Potente)"), "Máximo (Potente)")):
+        for _pw_label, _pw_key in ((self.tr("Automático"), POWER_AUTO),
+                                  (self.tr("Bajo consumo"), POWER_LOW),
+                                  (self.tr("Personalizado"), POWER_CUSTOM)):
             self.combo_power.addItem(_pw_label, _pw_key)
         self.combo_power.setToolTip(_POWER_TOOLTIP)
+        self.combo_power.currentIndexChanged.connect(self._on_power_changed)
         power_row.addWidget(self.combo_power, 1)
         layout.addLayout(power_row)
+
+        # Personalizado: hilos a mano + aviso. Solo visibles con esa opción.
+        custom_row = QHBoxLayout()
+        custom_row.addWidget(self._label(self.tr("Hilos:")))
+        self.entry_threads = QLineEdit(CUSTOM_DEFAULT_THREADS)
+        self.entry_threads.setPlaceholderText("1:2:4")
+        self.entry_threads.setFixedWidth(80)
+        self.entry_threads.setToolTip(_CUSTOM_THREADS_TOOLTIP)
+        self.entry_threads.textChanged.connect(self._on_threads_text_changed)
+        custom_row.addWidget(self.entry_threads)
+        custom_row.addStretch()
+        layout.addLayout(custom_row)
+        self.lbl_custom_warning = QLabel(self.tr("Solo cámbialo si sabes lo que haces."))
+        self.lbl_custom_warning.setWordWrap(True)
+        set_themed_style(self.lbl_custom_warning,
+                         lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
+        layout.addWidget(self.lbl_custom_warning)
+        self._custom_widgets = (custom_row.itemAt(0).widget(), self.entry_threads, self.lbl_custom_warning)
+        self._set_custom_visible(False)
 
         # Reducir Ruido -- visibilidad/label cambia según el motor (ver _on_engine_changed)
         self.lbl_denoise = self._label(self.tr("Reducir Ruido:"))
@@ -271,6 +301,22 @@ class UpscalePopoverContent(QFrame):
     def _set_denoise_visible(self, visible: bool):
         for w in self._denoise_widgets:
             w.setVisible(visible)
+
+    def _set_custom_visible(self, visible: bool):
+        for w in self._custom_widgets:
+            w.setVisible(visible)
+
+    def _on_power_changed(self, _index: int):
+        self._set_custom_visible(self.combo_power.currentData() == POWER_CUSTOM)
+
+    def _on_threads_text_changed(self, text: str):
+        """Borde rojo mientras el valor no sea válido: el motor lo ignoraría y usaría
+        Automático (ver upscale_engine._resolve_threads)."""
+        if valid_custom_threads(text):
+            self.entry_threads.setStyleSheet("")
+        else:
+            self.entry_threads.setStyleSheet(
+                f"border: 1px solid {get_theme_token('estado_error', '#ff6b5f')};")
 
     def _add_model_items(self, models: dict):
         """Los modelos de Waifu2x/SRMD llevan sus escalas en el tooltip, no pegadas
@@ -546,6 +592,7 @@ class UpscalePopoverContent(QFrame):
             "upscale_scale": self.combo_scale.currentText(),
             "upscale_tile": self.entry_tile.text(),
             "upscale_power": self.combo_power.currentData() or self.combo_power.currentText(),
+            "upscale_threads": self.entry_threads.text().strip(),
             "upscale_denoise": self.combo_denoise.currentText(),
             "upscale_tta": self.check_tta.isChecked(),
         }

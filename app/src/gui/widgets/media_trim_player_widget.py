@@ -24,7 +24,7 @@ from gui.widgets.volume_control import VolumeControlWidget
 from core.tabs.editing_media.waveform_cache_manager import WaveformCacheManager
 from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager, ALPHA_PREVIEW_DIVISOR
 from core.logger.logger_manager import logger
-from gui.styles import set_themed_style
+from gui.styles import glass_fill, set_themed_style
 
 # Opciones del selector de calidad de previsualización: (etiqueta, modo, divisor).
 # modo "auto" recalcula el divisor según la resolución nativa real del video (ver
@@ -392,7 +392,7 @@ class TrimWaveformWidget(QWidget):
                 self.loading_timer.stop()
 
         # Fondo oscuro
-        painter.fillRect(0, 0, w, h, QColor(get_theme_token('onda_fondo', '#0d0d0d')))
+        painter.fillRect(0, 0, w, h, glass_fill(self, get_theme_token('onda_fondo', '#0d0d0d')))
 
         mid_y = h / 2.0
         x_in = int(self.in_ratio * w)
@@ -572,8 +572,9 @@ class _CheckerboardFrame(QFrame):
                     color = color_a if (row + col) % 2 == 0 else color_b
                     painter.fillRect(col * size, row * size, size, size, color)
         else:
+            # Sin medio (o solo audio): con imagen de fondo, translúcido como un panel.
             bg_dark = get_theme_token('fondo_principal', '#0a0a0a')
-            painter.fillRect(rect, QColor(bg_dark))
+            painter.fillRect(rect, glass_fill(self, bg_dark))
 
         painter.setClipping(False)
         painter.setRenderHint(QPainter.Antialiasing, True)
@@ -1536,6 +1537,9 @@ class MediaTrimPlayerWidget(QWidget):
         # sus esquinas SUPERIORES (ver _CheckerboardFrame.paintEvent) y esta etiqueta solo
         # las INFERIORES, al mismo radio, unidas sin espacio en una columna propia.
         self.lbl_time_info = QLabel("00:00:00.000 / 00:00:00.000")
+        # Con imagen de fondo se transparenta junto con el reproductor (ver
+        # gui/styles.py, _GLASS_PREVIEW_NAMES).
+        self.lbl_time_info.setObjectName("playerTimeInfo")
         self.lbl_time_info.setAlignment(Qt.AlignCenter)
         self.lbl_time_info.setFixedHeight(20)
         set_themed_style(self.lbl_time_info, lambda: f"""
@@ -1684,6 +1688,9 @@ class MediaTrimPlayerWidget(QWidget):
         self.waveform_widget.seek_requested.connect(self._on_waveform_seek)
         self.waveform_widget.range_changed.connect(self._on_waveform_range_changed)
         self.scroll_area.setWidget(self.waveform_widget)
+        # setWidget activa el relleno con la paleta (opaco); la onda ya pinta todo su
+        # fondo en paintEvent, así que sin imagen se ve igual y con imagen no tapa.
+        self.waveform_widget.setAutoFillBackground(False)
 
         timeline_waveform_col.addWidget(self.scroll_area)
         wave_container.addLayout(timeline_waveform_col, 1)

@@ -33,6 +33,36 @@ def output_supports_cover_art(output_file: str) -> bool:
     return os.path.splitext(output_file or "")[1].lower() in COVER_ART_CONTAINERS
 
 
+_VIDEO_TYPE_OPTION = re.compile(r"^-[A-Za-z_]+:v$")
+
+
+def scope_video_args_to_main(video_args: list) -> list:
+    """Limita al video principal (v:0) las opciones de video que no llevan índice, para
+    cuando la carátula se copia como segundo video de salida (v:1).
+
+    Sin índice, ffmpeg aplica la opción a TODOS los videos de salida, también a la
+    carátula copiada, y aborta antes de escribir nada (probado con ffmpeg 9):
+      -profile:v main    "Unable to parse profile option value main" (cualquier perfil
+                         con nombre: VideoToolbox, DNxHR; los numéricos de ProRes pasan)
+      -vf scale=...      "Filtering and streamcopy cannot be used together"
+      -tag:v hvc1        "Tag hvc1 incompatible ... Could not write header"
+    -vf sale del panel al escalar, recortar o cambiar aspecto/fps, y el reintento por CPU
+    lo conserva: el trabajo entero fallaba, con GPU o sin ella.
+
+    "-X:v" pasa a "-X:v:0" (también -c:v, que da igual: el "-c:v:1 copy" de la carátula
+    es más preciso y manda) y "-vf" a "-filter:v:0". Las opciones sin especificador
+    (-pix_fmt, -r, -crf, -preset...) no molestan: con un stream copiado ffmpeg las ignora."""
+    scoped = []
+    for arg in video_args or []:
+        if arg == "-vf":
+            scoped.append("-filter:v:0")
+        elif _VIDEO_TYPE_OPTION.match(arg):
+            scoped.append(arg + ":0")
+        else:
+            scoped.append(arg)
+    return scoped
+
+
 def probe_video_streams(input_file: str) -> tuple[bool, int | None]:
     """(tiene_video_real, índice_absoluto_de_la_carátula) del archivo, con UN solo ffprobe.
 
@@ -1303,11 +1333,9 @@ class QueueWorker(QThread):
             else:
                 v_args = adapt_video_args_for_alpha(settings.get("video_args", []), source_alpha["has_alpha"], keep_alpha)
                 if conservar_caratula:
-                    # "-tag:v" (ej. hvc1 en los perfiles H.265) se aplica a TODOS los
-                    # videos de salida, también a la carátula copiada (v:1): ffmpeg no
-                    # puede etiquetar un JPEG como HEVC y aborta con "Tag hvc1
-                    # incompatible ... Could not write header". Se limita al principal.
-                    v_args = ["-tag:v:0" if a == "-tag:v" else a for a in v_args]
+                    # -tag:v, -profile:v, -vf... sin índice alcanzan también a la carátula
+                    # copiada (v:1) y ffmpeg aborta: se limitan al video principal.
+                    v_args = scope_video_args_to_main(v_args)
                 if v_args:
                     cmd.extend(v_args)
                 else:

@@ -284,6 +284,9 @@ class ImageConverter:
             pdf.close()
         if target_size:
             img = self._resize_raster_image(img, target_size, maintain_aspect, options)
+        else:
+            # Sin esto, PDF -> PDF volvía a 96 ppp y una hoja A4 salía de 65 x 92 cm.
+            img.info["dpi"] = (_DEFAULT_VECTOR_DPI, _DEFAULT_VECTOR_DPI)
         return img
 
     def _load_eps_ps(self, filepath, target_size, maintain_aspect, options):
@@ -671,17 +674,22 @@ class ImageConverter:
         save_img.save(output_path, "AVIF", quality=options.get("avif_quality", 80))
 
     def _save_as_pdf(self, img, output_path, options):
+        """Sin pérdida (PNG adentro); la compresión, si se pidió, la aplica después
+        ImageConvertWorker con pdf_tools.compress_pdf. Los ppp de la imagen viajan
+        en el PNG temporal para que page_layout calcule el tamaño real de la hoja."""
         import img2pdf
+        from core.tabs.image_tools.pdf_tools import page_layout
         keep_transparency = options.get("pdf_transparency", False) and "A" in img.getbands()
         if keep_transparency:
             save_img = img if img.mode == "RGBA" else img.convert("RGBA")
         else:
             save_img = img if img.mode in ("RGB", "L") else self._flatten_to_rgb_white(img)
         temp_png = output_path + ".tmp.png"
+        dpi = img.info.get("dpi")
         try:
-            save_img.save(temp_png, "PNG")
+            save_img.save(temp_png, "PNG", **({"dpi": dpi} if dpi else {}))
             with open(output_path, "wb") as f:
-                f.write(img2pdf.convert(temp_png))
+                f.write(img2pdf.convert(temp_png, layout_fun=page_layout(options)))
         finally:
             if os.path.exists(temp_png):
                 os.remove(temp_png)

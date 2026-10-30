@@ -30,6 +30,51 @@ def get_whats_new_items(version: str) -> list:
     que cambia es el aviso de beta, agregado arriba segun IS_BETA. Cuando
     salgan mas betas (1.9.2, 1.9.3...) van a necesitar contenido propio, no
     reusar esto sin mas (ver ACTUALIZACIONES.md, "Lo que falta")."""
+    if version == "1.9.4":
+        # Quien la ve viene de la 1.9.3. El problema conocido sigue al final.
+        return [
+            (
+                QCoreApplication.translate("WhatsNewContent", "Nueva pestaña Herramientas IA"),
+                QCoreApplication.translate("WhatsNewContent", "Reescalado, profundidad, normales y transcripción de video en su propia pestaña, con vista previa y recorte de tramos como en el Gestor de Medios. Los procesos de IA esperan su turno para no competir por la GPU con otras tareas."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Transcripción con IA"),
+                QCoreApplication.translate("WhatsNewContent", "Convierte el audio de un video en subtítulos o texto, directamente en tu equipo: SRT, VTT, ASS, LRC, TXT, Markdown, JSON o CSV, como archivo, como pista o quemados en el video. Aprovecha tu GPU y puede saltarse los silencios. En Proceso Avanzado también puedes crear los subtítulos con IA al descargar."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "PDF más livianos"),
+                QCoreApplication.translate("WhatsNewContent", "Nueva opción Compresión al convertir a PDF: Baja, Recomendada, Extrema o Personalizado. Un documento escaneado puede pesar hasta 10 veces menos, sin tocar el texto ni la transparencia. También puedes elegir el tamaño de página (A4, Carta u Oficio), y un PDF convertido a PDF conserva todas sus páginas."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Arranque mucho más rápido"),
+                QCoreApplication.translate("WhatsNewContent", "DowP abre en un par de segundos: las pestañas y las páginas de Ajustes se cargan cuando hacen falta."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Ajustes > Modelos renovado"),
+                QCoreApplication.translate("WhatsNewContent", "Los modelos van agrupados en secciones plegables, con buscador y filtro de descargados. Los modelos importados ya no se copian, y al eliminarlos eliges si quitarlos de la lista o mandarlos a la Papelera. Si a un preajuste le falta su modelo, DowP te ofrece descargarlo."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Potencia del reescalado"),
+                QCoreApplication.translate("WhatsNewContent", "Automático ajusta el reescalado a tu GPU, Bajo consumo es para equipos con poca memoria de video, y Personalizado permite elegir los hilos a mano. Si no hay una GPU compatible, DowP te lo dice claramente."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Subtítulos de YouTube sin líneas repetidas"),
+                QCoreApplication.translate("WhatsNewContent", "La opción \"Limpiar y convertir a SRT\" quita las líneas duplicadas que traen algunos subtítulos con estilo, sin borrar diálogos reales. Si prefieres el archivo original, desmárcala: DowP recuerda tu elección."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Correcciones en Mac"),
+                QCoreApplication.translate("WhatsNewContent", "Los fragmentos ya no fallan al cortarlos, desaparecen las líneas raras de la interfaz, y DowP ya no se cierra de golpe al recodificar por GPU."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Correcciones"),
+                QCoreApplication.translate("WhatsNewContent", "Recodificar un video con carátula ya no falla. En Proceso Avanzado, la recodificación y la IA después de descargar un solo video vuelven a funcionar. Arrastrar una descarga o abrirla desde el historial ya no mezcla archivos de otras descargas. Al exportar la consola o un preajuste, DowP propone tu carpeta de descargas o tu carpeta personal."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Problema conocido: subtítulos de YouTube"),
+                QCoreApplication.translate("WhatsNewContent", "Sin cookies, YouTube a veces limita la descarga de subtítulos (error 429) y eso cancela toda la descarga, no solo los subtítulos. Mientras lo solucionamos: espera unos minutos antes de reintentar, usa las cookies de tu navegador (Ajustes > Cookies), o descarga el video sin subtítulos y bájalos después con el botón \"Descargar subtítulos\"."),
+            ),
+        ]
+
     if version == "1.9.3":
         # Quien la ve viene de la 1.9.2. Las novedades de esta versión se agregan arriba
         # del problema conocido, que conviene dejar al final.

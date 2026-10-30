@@ -307,13 +307,583 @@ def apply_shapes(qss: str) -> str:
     return qss
 
 
+# ── Imagen de fondo: paneles translúcidos ─────────────────────────────────────
+# Con una imagen de fondo general puesta (core/utils/background_images.py), la
+# interfaz deja ver la imagen con la opacidad que eligió el usuario. Sin imagen, nada
+# de esto cambia nada: la app queda exactamente como siempre. Cada widget dentro del
+# lienzo tiene un estado (glass_status):
+#   "outer"   panel más externo de su zona: la opacidad elegida.
+#   "nested"  panel dentro de otro panel translúcido: un 30 % de esa opacidad. Si no,
+#             las capas se suman (dos al 80 % tapan el 96 % de la imagen).
+#   "control" campo, botón, combo, barra...: más sólido que su panel, en proporción
+#             (paneles al 50 % -> controles al 70 %), así se distinguen y se leen.
+#   "frosted" lo que flota encima del contenido (paneles ocultables superpuestos,
+#             popovers, Posprocesar): "vidrio recortado", pinta el pedazo de la imagen
+#             de fondo que tiene detrás, desenfocado, y su color translúcido encima.
+#             Se ve el fondo, pero no la interfaz que tapa.
+#   None      sólido: fuera de la ventana (diálogos, listas desplegables, menús),
+#             etiquetas, indicadores, botones de acción con color, excluidos.
+GLASS_CANVAS_NAME = "dowpCanvas"  # el widget central que dibuja la imagen
+_GLASS_NESTED_FACTOR = 0.3
+_GLASS_CONTROL_SHARE = 0.4   # control = panel + 40 % de lo que le falta para 100 %
+# Botones de acción (degradados y colores de acento o de estado): translúcidos pero más
+# fuertes que un control normal, para no perder su color (paneles al 50 % -> 85 %).
+_GLASS_ACTION_SHARE = 0.7
+_GLASS_ALT_ROW_FACTOR = 0.35  # el color alterno de las filas va encima del de la lista
+
+# Tipos que cuentan como "panel" en un selector de QSS.
+_GLASS_CONTAINER_TYPES = {
+    "QFrame", "QWidget", "QScrollArea", "QStackedWidget", "QGroupBox", "QSplitter",
+    "QAbstractItemView", "QAbstractScrollArea", "QTreeView", "QListView", "QTableView",
+    "QTreeWidget", "QListWidget", "QTableWidget", "QDockWidget",
+}
+# Tipos que cuentan como "control".
+_GLASS_CONTROL_TYPES = {
+    "QLineEdit", "QPushButton", "QToolButton", "QComboBox", "QSpinBox", "QDoubleSpinBox",
+    "QAbstractSpinBox", "QDateTimeEdit", "QProgressBar", "QScrollBar", "QHeaderView", "QTabBar",
+    "QCheckBox", "QRadioButton",
+}
+# Subcontroles que se transparentan (el resto, como ::indicator o ::handle, no).
+_GLASS_PANEL_SUBCONTROLS = ("QTabWidget::pane",)
+_GLASS_CONTROL_SUBCONTROLS = ("QHeaderView::section", "QTabBar::tab", "QComboBox::drop-down",
+                              "QCheckBox::indicator", "QRadioButton::indicator")
+# Vistas previas: aunque sean QLabel, con imagen de fondo se comportan como un panel
+# (vacías, dejan ver la imagen en vez de un bloque sólido).
+_GLASS_PREVIEW_NAMES = ("thumbnailLabel", "playerTimeInfo")
+# Siempre sólidos: tarjetas de las colas (su opacidad será un ajuste aparte), video,
+# el modal de Ajustes y su velo, el indicador de pestaña, la consola.
+_GLASS_SOLID_NAMES = (
+    "queueItemCard", "fragmentVideoContainer", "mediaSearchPreviewContainer",
+    "settingsModalCard", "settingsModalOverlay", "animatedTabIndicator", "modeIndicator",
+    "consoleContent", "bottomConsolePanel", "consoleOverlayPanel",
+)
+# Tokens de los botones de acción: su color es lo que indica la acción, quedan sólidos.
+_GLASS_ACTION_TOKENS = (
+    "acento_primario", "acento_secundario", "estado_error", "estado_exito", "estado_aviso",
+    "estado_progreso", "progreso_inicio",
+)
+_GLASS_RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+_GLASS_BG_RE = re.compile(r"((?:alternate-)?background(?:-color)?\s*:\s*)([^;}]+)")
+_GLASS_RGBA_RE = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)", re.IGNORECASE)
+_GLASS_RADIUS_RE = re.compile(r"border-radius\s*:\s*(\d+(?:\.\d+)?)px")
+
+_THEMED_RAW = _weakref.WeakKeyDictionary()     # widget -> hoja sin transparencia (ver set_themed_style)
+_GLASS_STATUS = _weakref.WeakKeyDictionary()   # widget -> estado (caché, ver glass_status)
+_GLASS_PAINTS = _weakref.WeakKeyDictionary()   # widget -> pinta un fondo liso (caché)
+_GLASS_FROSTED_HOOKED = _weakref.WeakSet()      # widgets con el pintor de vidrio instalado
+_GLASS_MAIN = {"names": set(), "types": set()}  # paneles con fondo en la hoja de la ventana
+_GLASS_ACTION_RGB: list = []                   # colores de acción del tema activo
+
+
+def glass_alpha_for(status: str, panel_alpha: float) -> float:
+    if status == "nested":
+        return panel_alpha * _GLASS_NESTED_FACTOR
+    if status == "control":
+        return panel_alpha + (1.0 - panel_alpha) * _GLASS_CONTROL_SHARE
+    if status == "action":
+        return panel_alpha + (1.0 - panel_alpha) * _GLASS_ACTION_SHARE
+    return panel_alpha
+
+
+def _parse_color(value: str):
+    """(r, g, b, a 0-255) de un color de QSS, o None si no es un color liso."""
+    from PySide6.QtGui import QColor
+    v = value.strip()
+    low = v.lower()
+    if low in ("transparent", "none") or "gradient" in low or "url(" in low or low.startswith("palette("):
+        return None
+    m = _GLASS_RGBA_RE.fullmatch(v)
+    if m:
+        a = m.group(4)
+        # Como Qt: con decimales es una fracción (0.08), sin decimales va de 0 a 255.
+        a = 255 if a is None else (round(float(a) * 255) if "." in a else int(a))
+        return int(m.group(1)), int(m.group(2)), int(m.group(3)), a
+    c = QColor(v)
+    return (c.red(), c.green(), c.blue(), c.alpha()) if c.isValid() else None
+
+
+def _is_action_color(r, g, b) -> bool:
+    if not _GLASS_ACTION_RGB:
+        from PySide6.QtGui import QColor
+        for token in _GLASS_ACTION_TOKENS:
+            c = QColor(get_theme_token(token, ""))
+            if c.isValid():
+                _GLASS_ACTION_RGB.append((c.red(), c.green(), c.blue()))
+    return any(abs(r - ar) + abs(g - ag) + abs(b - ab) <= 36 for ar, ag, ab in _GLASS_ACTION_RGB)
+
+
+_GLASS_GRADIENT_STOP_RE = re.compile(r"(stop\s*:\s*[\d.]+\s+)(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[a-zA-Z]+)")
+
+
+def _glass_gradient(value: str, alpha: float) -> str:
+    """El degradado con la opacidad de cada parada multiplicada por `alpha`: se vuelve
+    translúcido sin perder sus colores."""
+    def stop(m):
+        c = _parse_color(m.group(2))
+        if c is None:
+            return m.group(0)
+        r, g, b, a = c
+        return f"{m.group(1)}rgba({r}, {g}, {b}, {max(0, min(255, round(a * alpha)))})"
+    return _GLASS_GRADIENT_STOP_RE.sub(stop, value)
+
+
+def _glass_color(value: str, alpha: float, control: bool = False, allow_black: bool = False,
+                 action_alpha: float | None = None) -> str | None:
+    """El color con su opacidad multiplicada por `alpha`, o None si no conviene tocarlo
+    (transparente, imagen, negro puro -los reproductores siguen negros- y, en un
+    control, los colores que ya traen su propia transparencia). Los degradados y, en un
+    control, los colores de acción usan `action_alpha` (más alta) si se da: se vuelven
+    translúcidos sin perder fuerza."""
+    if "gradient" in value.lower():
+        return _glass_gradient(value, action_alpha if action_alpha is not None else alpha)
+    parsed = _parse_color(value)
+    if parsed is None:
+        return None
+    r, g, b, a = parsed
+    if (r, g, b) == (0, 0, 0) and a == 255 and not allow_black:
+        return None
+    if control and a < 255:
+        return None
+    if control and _is_action_color(r, g, b):
+        if action_alpha is None:
+            return None
+        alpha = action_alpha
+    return f"rgba({r}, {g}, {b}, {max(0, min(255, round(a * alpha)))})"
+
+
+def _glass_kind(selector: str) -> str | None:
+    """"panel", "control", "unknown" (#nombre suelto: depende del widget) o None (no
+    se toca: excluidos, lo que flota, indicadores, botones de acción)."""
+    sel = selector.strip()
+    if not sel or any(name in sel for name in _GLASS_SOLID_NAMES):
+        return None
+    if any(mark in sel for mark in ("QMenu", "QToolTip", "QCompleter")):
+        return None
+    parts = sel.split()
+    if any(p.startswith("QComboBox") for p in parts[:-1]):
+        return None  # la lista desplegable de un combo (otra ventana)
+    last = parts[-1]
+    if "::" in last:
+        if last.startswith(_GLASS_PANEL_SUBCONTROLS):
+            return "panel"
+        return "control" if last.startswith(_GLASS_CONTROL_SUBCONTROLS) else None
+    m = re.match(r"[A-Za-z_]\w*", last)
+    if not m:
+        return "unknown"
+    if m.group(0) in _GLASS_CONTAINER_TYPES or any(n in last for n in _GLASS_PREVIEW_NAMES):
+        return "panel"
+    return "control" if m.group(0) in _GLASS_CONTROL_TYPES else None
+
+
+def _glass_body(body: str, alpha: float, control: bool = False, allow_black: bool = False,
+                action_alpha: float | None = None) -> str:
+    def one(m):
+        a = alpha * _GLASS_ALT_ROW_FACTOR if m.group(1).startswith("alternate") else alpha
+        new = _glass_color(m.group(2), a, control, allow_black, action_alpha)
+        return m.group(0) if new is None else m.group(1) + new
+    return _GLASS_BG_RE.sub(one, body)
+
+
+def _has_solid_background(qss: str) -> bool:
+    for m in _GLASS_BG_RE.finditer(qss or ""):
+        if m.group(1).startswith("alternate"):
+            continue
+        color = _parse_color(m.group(2))
+        if color is not None and color[3] > 0:
+            return True
+    return False
+
+
+def _is_control_widget(widget) -> bool:
+    from PySide6.QtWidgets import (QAbstractSpinBox, QCheckBox, QComboBox, QHeaderView, QLineEdit,
+                                   QProgressBar, QPushButton, QRadioButton, QScrollBar, QTabBar,
+                                   QToolButton)
+    return isinstance(widget, (QLineEdit, QAbstractSpinBox, QComboBox, QPushButton, QToolButton,
+                               QProgressBar, QScrollBar, QHeaderView, QTabBar, QCheckBox, QRadioButton))
+
+
+def _is_panel_widget(widget) -> bool:
+    from PySide6.QtWidgets import (QAbstractButton, QAbstractSlider, QAbstractSpinBox, QComboBox,
+                                   QHeaderView, QLabel, QLineEdit, QMenu, QPlainTextEdit,
+                                   QProgressBar, QTabBar, QTextEdit)
+    controls = (QAbstractButton, QAbstractSlider, QAbstractSpinBox, QComboBox, QHeaderView, QLabel,
+                QLineEdit, QMenu, QPlainTextEdit, QProgressBar, QTabBar, QTextEdit)
+    return not isinstance(widget, controls)
+
+
+def _layout_has(layout, widget) -> bool:
+    """Si `widget` está en `layout` o en alguno de sus sub-layouts. Con indexOf y
+    findChildren a propósito, nunca con itemAt(): Python se quedaba con los
+    QLayoutItem que devuelve y, al soltarlos, Qt perdía el widget (pasó con la barra
+    de scroll del Gestor)."""
+    from PySide6.QtWidgets import QLayout
+    if layout.indexOf(widget) >= 0:
+        return True
+    return any(sub.indexOf(widget) >= 0 for sub in layout.findChildren(QLayout))
+
+
+def _is_floating(widget) -> bool:
+    """Flota encima del contenido: su padre tiene layout pero él no está en él (lo
+    posicionan a mano, como los popovers, Posprocesar o el modal de Ajustes)."""
+    from PySide6.QtWidgets import QWidget
+    parent = widget.parentWidget()
+    # QWidget.layout(...) y no parent.layout(): algunas clases de DowP guardan su
+    # layout en un atributo "self.layout", que tapa el método.
+    layout = QWidget.layout(parent) if parent is not None else None
+    return layout is not None and not _layout_has(layout, widget)
+
+
+def _is_frosted_candidate(widget, floating: bool) -> bool:
+    """Lo que flota y lleva vidrio recortado: popovers, paneles ocultables en modo
+    superpuesto y Posprocesar del Modo Rápido. Otras cosas que flotan (velos, chips
+    sobre el video, indicadores) quedan sólidas."""
+    if widget.objectName().endswith("Popover") or widget.property("dockMode") == "overlay":
+        return True
+    return floating and widget.inherits("RecodeOptionsWidget")
+
+
+def _paints_glass_background(widget) -> bool:
+    """Si el widget pinta un fondo liso propio (que con imagen se vuelve translúcido)."""
+    cached = _GLASS_PAINTS.get(widget)
+    if cached is not None:
+        return cached
+    name = widget.objectName()
+    paints = bool(name and name in _GLASS_MAIN["names"]) or any(widget.inherits(t) for t in _GLASS_MAIN["types"])
+    if not paints:
+        raw = _THEMED_RAW.get(widget)
+        try:
+            paints = _has_solid_background(raw() if raw is not None else widget.styleSheet())
+        except Exception:
+            paints = False
+    _GLASS_PAINTS[widget] = paints
+    return paints
+
+
+def glass_status(widget) -> str | None:
+    """Estado del widget con imagen de fondo (ver el comentario de arriba)."""
+    if widget is None:
+        return None
+    try:
+        if widget in _GLASS_STATUS:
+            return _GLASS_STATUS[widget]
+    except TypeError:
+        return None
+    status = None
+    name = widget.objectName()
+    if not widget.isWindow() and name != GLASS_CANVAS_NAME and name not in _GLASS_SOLID_NAMES:
+        floating = _is_floating(widget)
+        frosted = _is_frosted_candidate(widget, floating)
+        control = _is_control_widget(widget)
+        panel = _is_panel_widget(widget) or name in _GLASS_PREVIEW_NAMES
+        if (control or panel) and (frosted or not floating):
+            a = widget.parentWidget()
+            nested = reached = False
+            while a is not None:
+                if a.objectName() == GLASS_CANVAS_NAME:
+                    reached = True
+                    break
+                if a.isWindow():  # otra ventana (diálogo, lista desplegable): fuera del lienzo
+                    break
+                if glass_status(a) in ("outer", "nested", "frosted") and _paints_glass_background(a):
+                    nested = reached = True  # ese panel ya está dentro del lienzo
+                    break
+                a = a.parentWidget()
+            if reached:
+                if control:
+                    status = "control"
+                elif frosted:
+                    status = "frosted"
+                else:
+                    status = "nested" if nested else "outer"
+    _GLASS_STATUS[widget] = status
+    if status == "frosted" and widget not in _GLASS_FROSTED_HOOKED:
+        widget.installEventFilter(_frosted_painter())
+        _GLASS_FROSTED_HOOKED.add(widget)
+    return status
+
+
+def _glass_forget():
+    _GLASS_STATUS.clear()
+    _GLASS_PAINTS.clear()
+    _GLASS_ACTION_RGB.clear()
+    _GLASS_ALPHA_CACHE.clear()
+
+
+_GLASS_ALPHA_CACHE: list = []  # [opacidad de paneles o None]: glass_fill corre en cada repintado
+
+
+def _has_glass_ancestor(widget) -> bool:
+    a = widget.parentWidget()
+    while a is not None and a.objectName() != GLASS_CANVAS_NAME:
+        if a.isWindow():
+            return False
+        if glass_status(a) in ("outer", "nested", "frosted") and _paints_glass_background(a):
+            return True
+        a = a.parentWidget()
+    return False
+
+
+def glass_fill(widget, color, kind: str = "panel"):
+    """El color de fondo que un widget pintado a mano (QPainter) tiene que usar con
+    imagen de fondo: el mismo color, con la opacidad de un panel ("panel", menor si
+    está dentro de otro panel translúcido) o de un control ("control"). Sin imagen, o
+    fuera de la ventana principal, devuelve el color tal cual. Para la barra de
+    progreso, el botón de lotes, la onda de audio, el reproductor vacío..."""
+    from PySide6.QtGui import QColor
+    c = QColor(color)
+    if not _GLASS_ALPHA_CACHE:
+        from core.utils.background_images import glass_alpha
+        _GLASS_ALPHA_CACHE.append(glass_alpha())
+    alpha = _GLASS_ALPHA_CACHE[0]
+    if alpha is None or widget is None or not _inside_glass_area(widget):
+        return c
+    if kind == "control":
+        f = glass_alpha_for("control", alpha)
+    else:
+        f = alpha * _GLASS_NESTED_FACTOR if _has_glass_ancestor(widget) else alpha
+    c.setAlpha(round(c.alpha() * f))
+    return c
+
+
+def _inside_glass_area(widget) -> bool:
+    w = widget
+    while w is not None:
+        if w.objectName() == GLASS_CANVAS_NAME:
+            return True
+        if w.isWindow():
+            return False
+        w = w.parentWidget()
+    return False
+
+
+def _glass_canvas_of(widget):
+    w = widget.parentWidget()
+    while w is not None and w.objectName() != GLASS_CANVAS_NAME:
+        if w.isWindow():
+            return None
+        w = w.parentWidget()
+    return w
+
+
+_FROSTED_PAINTER = None
+
+
+def _frosted_painter():
+    """Filtro de pintado del vidrio recortado: antes de los hijos, pinta el pedazo
+    desenfocado de la imagen de fondo que le toca al widget y vuelve a pintar su fondo
+    translúcido encima (Qt ya lo pintó antes de este filtro y quedaría tapado)."""
+    global _FROSTED_PAINTER
+    if _FROSTED_PAINTER is None:
+        from PySide6.QtCore import QEvent, QObject, QRectF
+        from PySide6.QtGui import QPainter, QPainterPath
+        from PySide6.QtWidgets import QStyle, QStyleOption
+
+        class _FrostedPainter(QObject):
+            def eventFilter(self, obj, event):
+                if event.type() != QEvent.Paint or glass_status(obj) != "frosted":
+                    return False
+                canvas = _glass_canvas_of(obj)
+                if canvas is None or not hasattr(canvas, "paint_backdrop") or not canvas.has_image():
+                    return False
+                m = _GLASS_RADIUS_RE.search(_THEMED_RAW[obj]() if obj in _THEMED_RAW else obj.styleSheet())
+                radius = float(m.group(1)) if m else 8.0
+                p = QPainter(obj)
+                path = QPainterPath()
+                path.addRoundedRect(QRectF(obj.rect()), radius, radius)
+                p.setClipPath(path)
+                canvas.paint_backdrop(p, obj)
+                p.setClipping(False)
+                opt = QStyleOption()
+                opt.initFrom(obj)
+                obj.style().drawPrimitive(QStyle.PE_Widget, opt, p, obj)
+                p.end()
+                return False
+
+        _FROSTED_PAINTER = _FrostedPainter()
+    return _FROSTED_PAINTER
+
+
+def apply_glass(qss: str, widget) -> str:
+    """Hoja local de un widget con sus fondos translúcidos según su estado (ver
+    glass_status). Sin imagen de fondo, o si el widget queda sólido, la deja intacta."""
+    from core.utils.background_images import glass_alpha
+    panel_alpha = glass_alpha()
+    if panel_alpha is None or not qss or widget is None:
+        return qss
+    status = glass_status(widget)
+    if status is None:
+        return qss
+    own = glass_alpha_for(status, panel_alpha)
+    action = glass_alpha_for("action", panel_alpha)
+    preview = widget.objectName() in _GLASS_PREVIEW_NAMES
+    if "{" not in qss:  # declaraciones sueltas: se aplican al propio widget
+        return _glass_body(qss, own, control=status == "control", allow_black=preview, action_alpha=action)
+    panel_own = glass_alpha_for(status if status != "control" else "outer", panel_alpha)
+
+    def rule(m):
+        if preview and not any(n in m.group(1) for n in _GLASS_SOLID_NAMES):
+            # Vista previa: su propia hoja (selector "QLabel", etc.) va como panel.
+            return m.group(1) + "{" + _glass_body(m.group(2), panel_own, allow_black=True) + "}"
+        kinds = [_glass_kind(s) for s in m.group(1).split(",")]
+        if any(k is None for k in kinds):
+            return m.group(0)
+        if all(k == "control" for k in kinds) or (status == "control" and "panel" not in kinds):
+            return m.group(1) + "{" + _glass_body(m.group(2), glass_alpha_for("control", panel_alpha), True,
+                                                  action_alpha=action) + "}"
+        if "control" in kinds:
+            return m.group(0)  # mezcla rara de panel y control: se deja como está
+        return m.group(1) + "{" + _glass_body(m.group(2), panel_own, allow_black=preview) + "}"
+    return _GLASS_RULE_RE.sub(rule, qss)
+
+
+def _with_glass_attr(selector: str, value: str) -> str:
+    """'QFrame#x:hover' -> 'QFrame#x[glass="outer"]:hover' (la condición va en el
+    último elemento, antes de sus pseudo-estados o subcontroles)."""
+    head, _, last = selector.rpartition(" ")
+    cut = last.find(":")
+    last = (last + f'[glass="{value}"]') if cut < 0 else (last[:cut] + f'[glass="{value}"]' + last[cut:])
+    return f"{head} {last}".strip()
+
+
+def glass_main_rules(qss: str) -> str:
+    """Reglas extra para la hoja de la ventana: cada regla de panel o control con fondo
+    liso se repite, limitada a lo que está dentro del lienzo (#dowpCanvas ...) y al
+    estado que refresh_glass marca en cada widget (propiedad "glass"). Al ser más
+    específicas ganan, y lo que no está marcado (diálogos, listas desplegables) no se
+    toca. Vacío si no hay imagen de fondo."""
+    from core.utils.background_images import glass_alpha
+    _GLASS_MAIN["names"].clear()
+    _GLASS_MAIN["types"].clear()
+    _GLASS_ACTION_RGB.clear()
+    alpha = glass_alpha()
+    if alpha is None:
+        return ""
+    # Sin comentarios: el que va antes de una regla quedaba pegado a su selector, y la
+    # copia salía con un selector inválido que Qt descartaba entera.
+    qss = re.sub(r"/\*.*?\*/", "", qss, flags=re.S)
+    extra = []
+    for m in _GLASS_RULE_RE.finditer(qss):
+        by_kind = {"panel": [], "control": []}
+        for s in m.group(1).split(","):
+            k = _glass_kind(s)
+            if k in by_kind:
+                by_kind[k].append(s.strip())
+        for kind, selectors in by_kind.items():
+            if not selectors:
+                continue
+            variants = (("outer", "outer"), ("nested", "nested"), ("frosted", "frosted")) if kind == "panel" \
+                else (("control", "control"),)
+            rules = []
+            changed = False
+            for value, status in variants:
+                decls = []
+                for d in _GLASS_BG_RE.finditer(m.group(2)):
+                    a = glass_alpha_for(status, alpha)
+                    if d.group(1).startswith("alternate"):
+                        a *= _GLASS_ALT_ROW_FACTOR
+                    new = _glass_color(d.group(2), a, control=kind == "control",
+                                       action_alpha=glass_alpha_for("action", alpha))
+                    prop = d.group(1).split(":")[0].strip()
+                    # Lo que no se transparenta (transparente, tintes, negro) se copia igual:
+                    # la copia tiene que existir para no perder contra la copia de una regla
+                    # más general.
+                    decls.append(f"{prop}: {new if new is not None else d.group(2).strip()};")
+                    changed = changed or new is not None
+                if decls:
+                    scoped = ", ".join(f"QWidget#{GLASS_CANVAS_NAME} {_with_glass_attr(s, value)}" for s in selectors)
+                    rules.append(f"{scoped} {{ {' '.join(decls)} }}")
+            if rules and kind == "panel" and changed:
+                for s in selectors:
+                    last = s.split()[-1]
+                    name = re.search(r"#(\w+)", last)
+                    t = re.match(r"[A-Za-z_]\w*", last)
+                    if name:
+                        _GLASS_MAIN["names"].add(name.group(1))
+                    elif t and t.group(0) not in ("QWidget", "QFrame"):
+                        _GLASS_MAIN["types"].add(t.group(0))
+            extra.extend(rules)
+    # Las cabeceras de las listas pintan un fondo propio debajo de sus secciones, y las
+    # áreas con scroll, el color de la paleta en su viewport, detrás de su contenido
+    # (tapaba, por ejemplo, todo el panel de Opciones de Multimedia). El fondo de un
+    # QScrollArea se controla en él, no en su viewport. Su contenido tiene el suyo.
+    extra.append(f"QWidget#{GLASS_CANVAS_NAME} QHeaderView {{ background: transparent; }}")
+    extra.append(f"QWidget#{GLASS_CANVAS_NAME} QScrollArea {{ background: transparent; }}")
+    return "\n/* Imagen de fondo: paneles translúcidos */\n" + "\n".join(extra)
+
+
+def refresh_glass(root=None) -> int:
+    """Recalcula qué va translúcido bajo `root` (el lienzo, una pestaña recién
+    construida o un panel que cambió de modo): marca la propiedad "glass" que usan las
+    reglas de la ventana y vuelve a calcular las hojas registradas con
+    set_themed_style. Hace falta después de meter widgets en la ventana (cuando se
+    crearon todavía no estaban dentro del lienzo) y al poner o quitar la imagen. Solo
+    toca lo que cambia."""
+    import shiboken6
+    from PySide6.QtWidgets import QWidget
+    from core.utils.background_images import glass_alpha
+    _glass_forget()
+    active = glass_alpha() is not None
+    marked = 0
+    if root is not None:
+        for w in [root] + root.findChildren(QWidget):
+            value = (glass_status(w) or "") if active else ""
+            if (w.property("glass") or "") != value:
+                w.setProperty("glass", value or None)
+                w.style().unpolish(w)
+                w.style().polish(w)
+                marked += 1
+            if value == "frosted":
+                w.update()
+        # Los ayudantes con estado (apply_*_button_style) también pasan por la
+        # transparencia. Sin imagen no hace falta: al quitarla, el cambio de tema ya los
+        # vuelve a llamar a todos (y así el arranque normal no paga nada extra).
+        if active:
+            for widget, calls in list(_THEMED_CALLS.items()):
+                try:
+                    if not shiboken6.isValid(widget) or not (widget is root or root.isAncestorOf(widget)):
+                        continue
+                    for fn, args, kwargs in list(calls.values()):
+                        fn() if args is None else fn(widget, *args, **kwargs)
+                except RuntimeError:
+                    _THEMED_CALLS.pop(widget, None)
+        if active or marked:
+            root.update()  # lo que se dibuja a mano (barra de progreso, onda...) usa glass_fill
+    updated = 0
+    for widget, (builder, qss) in list(_THEMED_STYLES.items()):
+        if not shiboken6.isValid(widget):
+            _THEMED_STYLES.pop(widget, None)
+            continue
+        try:
+            if root is not None and widget is not root and not root.isAncestorOf(widget):
+                continue
+            if widget.styleSheet() != qss:
+                continue
+            new_qss = builder()
+            if new_qss != qss:
+                widget.setStyleSheet(new_qss)
+                _THEMED_STYLES[widget] = (builder, new_qss)
+                updated += 1
+        except RuntimeError:
+            _THEMED_STYLES.pop(widget, None)
+    if updated or marked:
+        logger.debug(f"Fondo: {updated} hojas y {marked} marcas recalculadas "
+                     f"({'con' if active else 'sin'} transparencia)")
+    return updated
+
+
 def set_themed_style(widget, builder):
     """Aplica builder() como hoja de estilos del widget y la recuerda para recalcularla
     cuando cambie el tema o el modo (ThemeManager -> refresh_themed_styles).
 
     builder es una función sin argumentos que solo debe depender de get_theme_token(...):
     así, volver a llamarla con el tema nuevo da el estilo correcto."""
-    shaped = lambda: apply_shapes(builder())
+    # Referencia débil: la entrada vive en un WeakKeyDictionary con el widget de clave,
+    # y un lambda que lo retuviera impediría liberarlo.
+    ref = _weakref.ref(widget)
+    raw = lambda: apply_shapes(builder())
+    shaped = lambda: apply_glass(raw(), ref())
+    _THEMED_RAW[widget] = raw
+    _GLASS_PAINTS.pop(widget, None)
     qss = shaped()
     widget.setStyleSheet(qss)
     _THEMED_STYLES[widget] = (shaped, qss)
@@ -370,6 +940,7 @@ def refresh_themed_styles() -> int:
     destruidos y los que otro código cambió después con setStyleSheet() (por ejemplo,
     un estado de 'descargando'): pisarlos con el estilo registrado sería un error."""
     import shiboken6
+    _glass_forget()
     updated = 0
     for widget, calls in list(_THEMED_CALLS.items()):
         if not shiboken6.isValid(widget):
@@ -393,8 +964,9 @@ def refresh_themed_styles() -> int:
             if widget.styleSheet() != qss:
                 continue
             new_qss = builder()
-            widget.setStyleSheet(new_qss)
-            _THEMED_STYLES[widget] = (builder, new_qss)
+            if new_qss != qss:  # re-aplicar una hoja idéntica solo cuesta tiempo
+                widget.setStyleSheet(new_qss)
+                _THEMED_STYLES[widget] = (builder, new_qss)
             updated += 1
         except RuntimeError:
             _THEMED_STYLES.pop(widget, None)
@@ -421,7 +993,7 @@ def load_stylesheet(theme_name: str = None, font_family: str = None, tokens: dic
     5. Reemplaza todas las {{variables}} por sus valores
     6. Retorna el QSS listo para aplicar
     """
-    from core.utils.font_manager import get_active_font_family
+    from core.utils.font_manager import get_active_font_family, system_ui_family
     from core.utils.theme_loader import get_active_tokens
 
     # 1. Cargar template base
@@ -439,6 +1011,7 @@ def load_stylesheet(theme_name: str = None, font_family: str = None, tokens: dic
     # 3. Inyectar tipografía activa
     active_font = font_family or get_active_font_family(theme_name)
     tokens["fuente_principal"] = active_font
+    tokens["fuente_sistema"] = system_ui_family()
 
     # 4. Generar SVGs dinámicos con el color de acento primario
     triangle_color = tokens.get("acento_primario", "#B9E640")
@@ -462,6 +1035,7 @@ def load_stylesheet(theme_name: str = None, font_family: str = None, tokens: dic
         logger.warning(f"Temas: Variables sin resolver: {unresolved}")
 
     result = apply_shapes(result)
+    result += glass_main_rules(result)
     logger.info(f"Temas: estilos generados con tipografía '{active_font}'")
     return result
 
@@ -642,7 +1216,7 @@ def apply_cut_button_style(btn, status="normal", icon_size=18, shape="circular",
             radius = btn.fixedSize().height() // 2
 
 
-    btn.setStyleSheet(f"""
+    btn.setStyleSheet(apply_glass(f"""
         QPushButton {{
             background-color: {cfg['bg']};
             border: {cfg['border']};
@@ -655,7 +1229,7 @@ def apply_cut_button_style(btn, status="normal", icon_size=18, shape="circular",
         QPushButton:disabled {{
             background-color: {get_theme_token('borde_fuerte', '#555')};
         }}
-    """)
+    """, btn))
 
 
 def apply_player_play_button_style(btn, is_playing: bool = False, icon_size: int = 14):

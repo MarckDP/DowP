@@ -139,8 +139,9 @@ class DependencyDialog(QDialog):
         main_dialog_layout.setContentsMargins(0, 0, 0, 0)
         main_dialog_layout.setSpacing(0)
 
-        from core.utils.font_manager import get_active_font_family
+        from core.utils.font_manager import get_active_font_family, system_ui_family
         active_font = get_active_font_family()
+        system_font = system_ui_family()
 
         # Contenedor central (Frame con bordes redondeados y fondo oscuro)
         self.central_widget = QFrame()
@@ -153,7 +154,7 @@ class DependencyDialog(QDialog):
             }}
             QLabel {{
                 color: {texto_principal};
-                font-family: '{active_font}', 'Segoe UI', sans-serif;
+                font-family: '{active_font}', '{system_font}', sans-serif;
             }}
             QProgressBar {{
                 background-color: {bg_principal};
@@ -172,7 +173,7 @@ class DependencyDialog(QDialog):
                 border: none;
                 border-radius: 8px;
                 padding: 6px 12px;
-                font-family: '{active_font}', 'Segoe UI', sans-serif;
+                font-family: '{active_font}', '{system_font}', sans-serif;
                 font-weight: bold;
                 font-size: 11px;
             }}

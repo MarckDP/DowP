@@ -283,7 +283,10 @@ class PresetBar(QWidget):
             return
         name = self._active_name
         file_path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Exportar Preset"), f"{name}.json", self.tr("Preset JSON (*.json)")
+            self, self.tr("Exportar Preset"),
+            # Ruta completa (ver console_page.on_export_clicked): en la .app de macOS la
+            # carpeta de trabajo es "/", de solo lectura.
+            os.path.join(os.path.expanduser("~"), f"{name}.json"), self.tr("Preset JSON (*.json)")
         )
         if file_path:
             get_preset_manager().export_preset(self.namespace, name, file_path)

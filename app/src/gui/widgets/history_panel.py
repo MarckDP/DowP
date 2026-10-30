@@ -42,9 +42,10 @@ from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
 from gui.styles import set_themed_style
 
 PANEL_WIDTH = 390
-# Más grande que la pestaña por defecto de CollapsiblePanel (20x90): es el único acceso al
-# historial, y en ese espacio va su nombre en vertical (ver HistoryEdgeTab).
-EDGE_TAB_SIZE = (28, 120)
+# Más grande que la pestaña por defecto de CollapsiblePanel: es el único acceso al
+# historial, y en ese espacio va su nombre en vertical (ver HistoryEdgeTab). Alta para
+# que se vea (los usuarios no la encontraban), sin ser más ancha.
+EDGE_TAB_SIZE = (28, 170)
 CARD_HEIGHT = 76
 THUMB_W, THUMB_H = 96, 54
 _ROLE_ENTRY = Qt.UserRole + 1

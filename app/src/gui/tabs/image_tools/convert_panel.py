@@ -16,6 +16,11 @@ from core.tabs.image_tools.convert_options import (
     SVG_PRESET_OPTIONS, SVG_CURVE_MODE_OPTIONS, SVG_CLUSTERING_OPTIONS,
     default_options_for_format,
 )
+from core.tabs.image_tools.pdf_tools import (
+    COMPRESS_NONE, COMPRESS_LOW, COMPRESS_RECOMMENDED, COMPRESS_EXTREME, COMPRESS_CUSTOM,
+    MAX_SIDE_OPTIONS, CUSTOM_DEFAULT_QUALITY, CUSTOM_DEFAULT_MAX_SIDE,
+    PAGE_SIZE_IMAGE, PAGE_SIZE_A4, PAGE_SIZE_LETTER, PAGE_SIZE_LEGAL,
+)
 from gui.styles import set_themed_style
 
 _MAX_VISIBLE_COMBO_ITEMS = 12
@@ -251,11 +256,85 @@ class ConvertPanel(QWidget):
         self.widget_pdf_merge.setVisible(False)
         v.addWidget(self.widget_pdf_merge)
 
+        v.addWidget(QLabel(self.tr("Tamaño de página:"), page))
+        self.combo_pdf_page_size = AutoPopupComboBox(page)
+        self._setup_fixed_combo(self.combo_pdf_page_size)
+        for label, key in ((self.tr("Según la imagen"), PAGE_SIZE_IMAGE), ("A4", PAGE_SIZE_A4),
+                           (self.tr("Carta"), PAGE_SIZE_LETTER), (self.tr("Oficio (Legal)"), PAGE_SIZE_LEGAL)):
+            self.combo_pdf_page_size.addItem(label, key)
+        self.combo_pdf_page_size.setToolTip(self.tr(
+            "Según la imagen: usa la resolución que guardó el escáner, así un A4 escaneado "
+            "sale de 21 x 29,7 cm.\nCon una hoja fija, cada imagen se ajusta adentro sin "
+            "deformarse y la hoja gira sola si la imagen es apaisada."))
+        v.addWidget(self.combo_pdf_page_size)
+
+        v.addWidget(QLabel(self.tr("Compresión:"), page))
+        self.combo_pdf_compression = AutoPopupComboBox(page)
+        self._setup_fixed_combo(self.combo_pdf_compression)
+        for label, key in ((self.tr("Sin compresión"), COMPRESS_NONE),
+                           (self.tr("Baja"), COMPRESS_LOW),
+                           (self.tr("Recomendada"), COMPRESS_RECOMMENDED),
+                           (self.tr("Extrema"), COMPRESS_EXTREME),
+                           (self.tr("Personalizado"), COMPRESS_CUSTOM)):
+            self.combo_pdf_compression.addItem(label, key)
+        self.combo_pdf_compression.setToolTip(self.tr(
+            "Recomprime las imágenes del PDF; el texto y los vectores no se tocan.\n"
+            "Baja: casi sin diferencia visible.\n"
+            "Recomendada: para leer en pantalla y compartir (unas 10 veces más liviano).\n"
+            "Extrema: para chat o correo; se nota la pérdida.\n"
+            "Si eliges un PDF, se comprime el documento entero."))
+        self.combo_pdf_compression.currentIndexChanged.connect(self._on_pdf_compression_changed)
+        v.addWidget(self.combo_pdf_compression)
+
+        self.widget_pdf_custom = QWidget(page)
+        cv = QVBoxLayout(self.widget_pdf_custom)
+        cv.setContentsMargins(20, 0, 0, 0)
+        cv.setSpacing(4)
+        self.lbl_pdf_quality = QLabel(self.widget_pdf_custom)
+        cv.addWidget(self.lbl_pdf_quality)
+        self.slider_pdf_quality = QSlider(Qt.Horizontal, self.widget_pdf_custom)
+        self.slider_pdf_quality.setRange(10, 100)
+        self.slider_pdf_quality.valueChanged.connect(self._on_pdf_quality_changed)
+        self.slider_pdf_quality.setValue(CUSTOM_DEFAULT_QUALITY)
+        cv.addWidget(self.slider_pdf_quality)
+        cv.addWidget(QLabel(self.tr("Tamaño máximo (lado más largo):"), self.widget_pdf_custom))
+        self.combo_pdf_max_side = AutoPopupComboBox(self.widget_pdf_custom)
+        self._setup_fixed_combo(self.combo_pdf_max_side)
+        for side in MAX_SIDE_OPTIONS:
+            self.combo_pdf_max_side.addItem(self.tr("Original") if side == 0 else f"{side} px", side)
+        self.combo_pdf_max_side.setCurrentIndex(MAX_SIDE_OPTIONS.index(CUSTOM_DEFAULT_MAX_SIDE))
+        cv.addWidget(self.combo_pdf_max_side)
+        self.chk_pdf_grayscale = QCheckBox(self.tr("Convertir a escala de grises"), self.widget_pdf_custom)
+        self.chk_pdf_grayscale.setToolTip(self.tr("Ahorra cerca de un 10 % más. Útil en escaneos de texto."))
+        cv.addWidget(self.chk_pdf_grayscale)
+        self.chk_pdf_keep_if_larger = QCheckBox(self.tr("Conservar la original si no mejora"), self.widget_pdf_custom)
+        self.chk_pdf_keep_if_larger.setToolTip(self.tr(
+            "Si una imagen comprimida pesa más que la original (pasa con JPEG que ya "
+            "venían bien comprimidos), se deja la original."))
+        self.chk_pdf_keep_if_larger.setChecked(True)
+        cv.addWidget(self.chk_pdf_keep_if_larger)
+        self.chk_pdf_strip_metadata = QCheckBox(self.tr("Quitar metadatos"), self.widget_pdf_custom)
+        self.chk_pdf_strip_metadata.setToolTip(self.tr("Borra el autor, el programa y las fechas guardados en el PDF."))
+        cv.addWidget(self.chk_pdf_strip_metadata)
+        lbl_warning = QLabel(self.tr("Con calidad o tamaño muy bajos, la letra chica puede no leerse."),
+                             self.widget_pdf_custom)
+        lbl_warning.setWordWrap(True)
+        set_themed_style(lbl_warning, lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
+        cv.addWidget(lbl_warning)
+        self.widget_pdf_custom.setVisible(False)
+        v.addWidget(self.widget_pdf_custom)
+
         v.addStretch()
         return page
 
     def _on_pdf_merge_toggled(self, checked: bool):
         self.widget_pdf_merge.setVisible(checked)
+
+    def _on_pdf_compression_changed(self, _index):
+        self.widget_pdf_custom.setVisible(self.combo_pdf_compression.currentData() == COMPRESS_CUSTOM)
+
+    def _on_pdf_quality_changed(self, value: int):
+        self.lbl_pdf_quality.setText(self.tr("Calidad: {0}").format(value))
 
 
     def _build_svg_page(self, parent) -> QWidget:
@@ -521,5 +600,13 @@ class ConvertPanel(QWidget):
             settings["pdf_transparency"] = self.chk_pdf_transparency.isChecked()
             settings["pdf_merge"] = self.chk_pdf_merge.isChecked()
             settings["pdf_merged_name"] = self.entry_pdf_merged_name.text().strip()
+            settings["pdf_page_size"] = self.combo_pdf_page_size.currentData()
+            settings["pdf_compression"] = self.combo_pdf_compression.currentData()
+            if settings["pdf_compression"] == COMPRESS_CUSTOM:
+                settings["pdf_quality"] = self.slider_pdf_quality.value()
+                settings["pdf_max_side"] = self.combo_pdf_max_side.currentData()
+                settings["pdf_grayscale"] = self.chk_pdf_grayscale.isChecked()
+                settings["pdf_keep_if_larger"] = self.chk_pdf_keep_if_larger.isChecked()
+                settings["pdf_strip_metadata"] = self.chk_pdf_strip_metadata.isChecked()
 
         return settings

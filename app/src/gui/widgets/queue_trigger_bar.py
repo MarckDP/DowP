@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal, QRect
 from PySide6.QtGui import QPainter, QColor, QFont, QPen, QPainterPath, QFontDatabase
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, glass_fill
 
 class QueueTriggerBar(QWidget):
     """
@@ -73,6 +73,7 @@ class QueueTriggerBar(QWidget):
         
         # Dibujar fondo de la barra usando el path redondeado
         bg_color = QColor(bg_hover) if self._hovered else QColor(bg_base)
+        bg_color = glass_fill(self, bg_color, "control")  # con imagen de fondo: translúcido
         painter.fillPath(path, bg_color)
         
         # Dibujar borde usando el mismo path

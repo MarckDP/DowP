@@ -13,6 +13,7 @@ from Cryptodome.Signature import eddsa
 
 from core.logger.logger_manager import logger
 from core.updater.public_key import UPDATER_PUBLIC_KEY_PEM
+from core.updater.update_checker import is_prerelease_version, version_key
 
 API_BASE = "https://api.github.com"
 TIMEOUT = 30
@@ -38,7 +39,7 @@ def _verify_signature(data: bytes, signature: bytes) -> bool:
 
 def _list_assets(repo: str, release_id: int) -> list:
     """Todos los assets de un release, paginando de a 100 -- nunca confiar en
-    el campo "assets" embebido en la respuesta de _get_latest_release() para
+    el campo "assets" embebido en la respuesta de la API de releases para
     saber que esta ahi de verdad (ver tools/updater/github_release.py, mismo
     criterio del lado del publicador: esa lista no demostro ser confiable en
     un release con muchos assets)."""
@@ -58,59 +59,91 @@ def _list_assets(repo: str, release_id: int) -> list:
     return assets
 
 
-def _find_asset(repo: str, release: dict, name: str) -> dict | None:
-    for asset in _list_assets(repo, release["id"]):
-        if asset["name"] == name:
-            return asset
-    return None
+def _manifest_assets(repo: str, release: dict) -> tuple[dict, dict] | None:
+    """(manifest.json, manifest.json.sig) del release, o None si no los trae (por
+    ejemplo, una beta publicada solo con instaladores). Una sola pasada por los
+    assets: antes se listaban dos veces, y con ~400 assets eso eran ~10 llamadas
+    a la API (el limite sin token es de 60 por hora)."""
+    by_name = {asset["name"]: asset for asset in _list_assets(repo, release["id"])}
+    manifest, sig = by_name.get("manifest.json"), by_name.get("manifest.json.sig")
+    if manifest is None or sig is None:
+        return None
+    return manifest, sig
 
 
-def _get_latest_release(repo: str, channel: str) -> dict:
-    """El release mas nuevo de `repo`, segun el canal.
+# Cuantos releases se prueban como mucho buscando uno con manifiesto.
+_MAX_CANDIDATES = 5
 
-    "stable" usa /releases/latest -- GitHub EXCLUYE ahi cualquier release marcado
-    prerelease, por diseño de su API. "beta" en cambio lista los releases (sin ese
-    filtro, mas nuevo primero) y toma el primero, prerelease o no -- es la unica
-    forma de que un cliente en canal beta vea builds marcados prerelease en GitHub.
 
-    Sin token en ningun caso (repo publico, mismo criterio que el resto de este
-    archivo). Lanza requests.HTTPError si no hay ninguno (equivalente al 404 de
-    /latest) para que el llamador lo trate igual en los dos canales."""
-    if channel == "beta":
-        res = requests.get(
-            f"{API_BASE}/repos/{repo}/releases", params={"per_page": 1}, timeout=TIMEOUT
-        )
-        res.raise_for_status()
-        releases = res.json()
-        if not releases:
-            # La peticion en si tuvo éxito (200, lista vacia) -- no hay un 404 natural
-            # que relanzar como en /latest. UpdateCheckWorker atrapa esto igual con su
-            # except Exception generico, tratandolo como "sin novedades".
-            raise requests.HTTPError(f"Sin releases todavia en {repo} (canal beta).")
-        return releases[0]
-
-    res = requests.get(f"{API_BASE}/repos/{repo}/releases/latest", timeout=TIMEOUT)
+def _list_releases(repo: str) -> list:
+    """Releases publicados (sin borradores), de la version mas alta a la mas baja
+    segun su etiqueta -- no por fecha: una estable publicada despues de una beta
+    mas alta no debe pasar por delante de ella en el canal beta, ni al reves."""
+    res = requests.get(f"{API_BASE}/repos/{repo}/releases", params={"per_page": 30}, timeout=TIMEOUT)
     res.raise_for_status()
-    return res.json()
+    releases = [r for r in res.json() if not r.get("draft")]
+    releases.sort(key=lambda r: version_key(r.get("tag_name", "")), reverse=True)
+    return releases
+
+
+def _candidate_releases(repo: str, channel: str):
+    """Releases a probar, en orden, segun el canal.
+
+    "stable": primero /releases/latest (GitHub EXCLUYE ahi los marcados prerelease),
+    que es el caso normal y cuesta una sola llamada. Solo si ese no sirve (no trae
+    manifiesto, o su etiqueta es una beta subida sin marcar como prerelease) se
+    listan los releases y se prueban las estables de version mas alta.
+
+    "beta": la version mas alta de todas, estable o prerelease. Si no trae
+    manifiesto (una beta solo con instaladores), la siguiente: asi el canal beta
+    nunca se queda sin las estables.
+
+    Sin token en ningun caso (repo publico)."""
+    tried = set()
+    if channel != "beta":
+        res = requests.get(f"{API_BASE}/repos/{repo}/releases/latest", timeout=TIMEOUT)
+        if res.status_code != 404:
+            res.raise_for_status()
+            latest = res.json()
+            if not is_prerelease_version(latest.get("tag_name", "")):
+                tried.add(latest["id"])
+                yield latest
+
+    count = len(tried)
+    for release in _list_releases(repo):
+        if count >= _MAX_CANDIDATES:
+            return
+        if release["id"] in tried:
+            continue
+        if channel != "beta" and (release.get("prerelease")
+                                  or is_prerelease_version(release.get("tag_name", ""))):
+            continue
+        count += 1
+        yield release
 
 
 def fetch_and_verify_manifest(repo: str, channel: str = "stable") -> dict:
-    """Descarga manifest.json + manifest.json.sig del release mas nuevo de
+    """Descarga manifest.json + manifest.json.sig del release que corresponde a
     `repo` ("owner/nombre") segun `channel` ("stable" | "beta", ver
-    _get_latest_release) y devuelve el manifiesto ya parseado, solo si la
+    _candidate_releases) y devuelve el manifiesto ya parseado, solo si la
     firma es valida.
 
-    Lanza ManifestVerificationError si la firma no verifica, y
-    requests.HTTPError / requests.ConnectionError si falla la red -- ninguno
-    de los dos casos debe interpretarse silenciosamente como "sin novedades"."""
-    release = _get_latest_release(repo, channel)
-
-    manifest_asset = _find_asset(repo, release, "manifest.json")
-    sig_asset = _find_asset(repo, release, "manifest.json.sig")
-    if manifest_asset is None or sig_asset is None:
-        raise ManifestVerificationError(
-            f"El release {release.get('tag_name')} de {repo} no trae manifest.json/.sig todavia."
-        )
+    Lanza ManifestVerificationError si la firma no verifica o si ningun release
+    trae manifiesto, y requests.HTTPError / requests.ConnectionError si falla la
+    red -- ninguno de los casos debe interpretarse silenciosamente como "sin
+    novedades". Una firma invalida corta la busqueda: nunca se cae a un release
+    mas viejo por eso."""
+    release = None
+    assets = None
+    for candidate in _candidate_releases(repo, channel):
+        assets = _manifest_assets(repo, candidate)
+        if assets is not None:
+            release = candidate
+            break
+        logger.info(f"Updater: {candidate.get('tag_name')} no trae manifiesto (solo instaladores); se prueba el siguiente.")
+    if release is None:
+        raise ManifestVerificationError(f"Ningun release de {repo} trae manifest.json/.sig (canal {channel}).")
+    manifest_asset, sig_asset = assets
 
     manifest_bytes = requests.get(manifest_asset["browser_download_url"], timeout=TIMEOUT).content
     signature = requests.get(sig_asset["browser_download_url"], timeout=TIMEOUT).content

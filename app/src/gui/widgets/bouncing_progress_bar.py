@@ -10,7 +10,7 @@ from PySide6.QtCore import (
     QEasingCurve, Qt,
 )
 from PySide6.QtGui import QPainter, QColor, QLinearGradient, QPainterPath
-from gui.styles import get_theme_token
+from gui.styles import get_theme_token, glass_fill
 
 
 class BouncingProgressBar(QProgressBar):
@@ -99,7 +99,9 @@ class BouncingProgressBar(QProgressBar):
 
         # 1. Fondo de la barra
         p.setPen(Qt.NoPen)
-        p.setBrush(self._bg_color_token)
+        # Con imagen de fondo, la pista es translúcida como los demás controles; el
+        # relleno de progreso queda sólido.
+        p.setBrush(glass_fill(self, self._bg_color_token, "control"))
         p.drawRoundedRect(0, 0, w, h, radius, radius)
 
         # 2. Chunk (Bouncing o Normal)

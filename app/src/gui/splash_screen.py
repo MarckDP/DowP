@@ -25,7 +25,7 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from gui.styles import get_theme_token
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
-from core.utils.font_manager import get_active_font_family
+from core.utils.font_manager import get_active_font_family, system_ui_family
 from core.utils import startup_timer
 from core.version import get_display_version
 from gui.styles import set_themed_style
@@ -271,7 +271,7 @@ class SplashScreen(QWidget):
         error = get_theme_token("estado_error", "#ff6b5f")
 
         # Guardar colores y fuente para uso posterior
-        self._font_family = f"'{get_active_font_family()}', 'Segoe UI', sans-serif"
+        self._font_family = f"'{get_active_font_family()}', '{system_ui_family()}', sans-serif"
         self._colors = {
             "bg": bg, "text_main": text_main,
             "text_sec": text_sec, "accent": accent,

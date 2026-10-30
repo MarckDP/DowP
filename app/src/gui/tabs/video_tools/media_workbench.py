@@ -32,8 +32,8 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QProgressDialog,
 )
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QThread, Signal, QCoreApplication
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Qt, QEvent, QPoint, QSize, QUrl, QTimer, QThread, Signal, QCoreApplication
+from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPolygon
 
 from gui.widgets.animated_button import AnimatedButton
 from gui.widgets.bouncing_progress_bar import BouncingProgressBar
@@ -41,6 +41,7 @@ from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
 from gui.widgets.resettable_splitter import ResettableSplitter
 from gui.styles import apply_folder_browse_button_style, apply_folder_open_button_style, create_colored_circle_icon, update_label_combobox_style
+from gui.styles import get_theme_token
 from gui.widgets.media_trim_player_widget import MediaTrimPlayerWidget
 from gui.tabs.video_tools.media_queue_widget import MediaQueueWidget, entry_path
 from core.logger.logger_manager import logger
@@ -92,6 +93,24 @@ class OptionsEdgeTab(TextEdgeTabButton):
 
     def label_text(self) -> str:
         return QCoreApplication.translate("OptionsEdgeTab", "OPCIONES")
+
+    def paintEvent(self, event):
+        """Además del nombre, una flecha arriba (como la barra de "PROCESO POR LOTES"):
+        esta pestaña es una franja de todo el alto de la vista previa, y la flecha dice
+        si abre o cierra."""
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(get_theme_token("acento_primario", "#B9E640")))
+        cx, cy = self.width() // 2, 22
+        points_right = (self.edge == "left") != self._is_open
+        if points_right:
+            arrow = QPolygon([QPoint(cx - 3, cy - 6), QPoint(cx - 3, cy + 6), QPoint(cx + 3, cy)])
+        else:
+            arrow = QPolygon([QPoint(cx + 3, cy - 6), QPoint(cx + 3, cy + 6), QPoint(cx - 3, cy)])
+        p.drawPolygon(arrow)
+        p.end()
 
 
 class MediaWorkbenchTab(QWidget):
@@ -467,12 +486,17 @@ class MediaWorkbenchTab(QWidget):
             overlay_max_width=self.OPTIONS_OVERLAY_MAX_WIDTH,
             edge_tab_class=OptionsEdgeTab,
         )
-        # Mismo tamaño que la pestaña "HISTORIAL" (history_panel.EDGE_TAB_SIZE): el texto
-        # vertical no cabe en la de la flecha (20x90).
-        self.right_panel.edge_tab.setFixedSize(28, 120)
+        # Alta y angosta: el texto vertical se lee y llama la atención sin tapar la vista
+        # previa (más angosta que la del historial; además se le reserva el hueco, ver
+        # _reserve_edge_tab_gutter).
+        self.right_panel.edge_tab.setFixedSize(24, 170)
         self.right_panel.edge_tab.setToolTip(QCoreApplication.translate("VideoToolsTab", "Mostrar u ocultar las opciones"))
 
         self.preview_center_wrapper = QWidget()
+        # "OPCIONES" plegado es una franja de todo el alto de la vista previa (como
+        # "PROCESO POR LOTES" en Avanzado): sigue su tamaño y su posición.
+        self.right_panel.set_edge_tab_span(self._options_tab_span)
+        self.preview_center_wrapper.installEventFilter(self)
         center_layout = QHBoxLayout(self.preview_center_wrapper)
         center_layout.setContentsMargins(0, 0, 0, 0)
         # El preview debe crecer primero hasta su propio tope (setMaximumWidth) y sólo
@@ -591,6 +615,39 @@ class MediaWorkbenchTab(QWidget):
         # automáticos: los decide el usuario con los separadores (ver _apply_layout_sizes).
         self.right_panel.set_dock_max_width(16777215)
         self.right_panel.sync_overlay_geometry()
+        QTimer.singleShot(0, self._reserve_edge_tab_gutter)
+
+    def _options_tab_span(self):
+        """(y, alto) de la vista previa en coordenadas de esta pestaña (el host del
+        panel de Opciones superpuesto)."""
+        wrapper = self.preview_center_wrapper
+        return wrapper.mapTo(self, QPoint(0, 0)).y(), wrapper.height()
+
+    def eventFilter(self, obj, event):
+        if (obj is getattr(self, "preview_center_wrapper", None) and hasattr(self, "right_panel")
+                and event.type() in (QEvent.Resize, QEvent.Move)):
+            self.right_panel._position_edge_tab()
+        return super().eventFilter(obj, event)
+
+    def _reserve_edge_tab_gutter(self):
+        """Con Opciones oculto, su pestaña del borde se dibujaba encima de la vista previa
+        (la pisaba 18 px). Se le reserva el hueco con un margen derecho dentro del
+        contenedor de la vista previa: el margen no mueve el contenedor, así que la cuenta
+        no se retroalimenta. Acoplado no hay pestaña y el margen vuelve a 0."""
+        layout = self.preview_center_wrapper.layout()
+        tab = self.right_panel.edge_tab
+        right = 0
+        if not self.right_panel.is_docked() and tab.isVisible():
+            wrapper = self.preview_center_wrapper
+            # Donde queda la pestaña con el panel cerrado (abierto se corre a la izquierda,
+            # y el hueco no debe cambiar al abrir y cerrar: la vista previa saltaría).
+            host = tab.parentWidget()
+            closed_left = QPoint(host.width() - tab.width(), 0)
+            tab_left = wrapper.mapFrom(host, closed_left).x()
+            right = max(0, wrapper.width() - tab_left + 4)  # + un respiro de 4 px
+        margins = layout.contentsMargins()
+        if margins.right() != right:
+            layout.setContentsMargins(margins.left(), margins.top(), right, margins.bottom())
 
     # ------------------------------------------------------------------
     # Paneles ajustables (separadores)

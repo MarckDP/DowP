@@ -3,7 +3,7 @@ import os
 import threading
 import tempfile
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QCoreApplication, QThread, Signal
 
 from core.logger.logger_manager import logger
 from core.utils import onnx_sessions
@@ -118,6 +118,52 @@ class ImageConvertWorker(QThread):
             return os.path.join(output_folder, filename)
         return os.path.join(os.path.dirname(self.filepaths[0]), filename)
 
+    # ── Compresión de PDF (ver core/tabs/image_tools/pdf_tools.py) ─────────────
+    def _compression(self) -> dict | None:
+        if str(self.options.get("format", "")).upper() != "PDF":
+            return None
+        from core.tabs.image_tools.pdf_tools import compression_settings
+        return compression_settings(self.options)
+
+    def _compress(self, src: str, dst: str, compression: dict):
+        from core.tabs.image_tools.pdf_tools import compress_pdf
+        return compress_pdf(src, dst, compression, self.cancellation_event)
+
+    def _compress_in_place(self, path: str, compression: dict):
+        """Comprime un PDF recién armado. Si falla o se cancela, queda el PDF sin
+        pérdida que ya estaba escrito: es un resultado válido, no un error."""
+        try:
+            return self._compress(path, path, compression)
+        except Exception as e:
+            logger.warning(f"ImageConvertWorker: no se pudo comprimir {path}, queda sin comprimir: {e}")
+            return None
+
+    def _plain_document_to_pdf(self, filepath: str, read_path: str) -> bool:
+        """PDF/AI sin ediciones con salida PDF: va el documento entero en vez de
+        pasar su primera página a imagen."""
+        if str(self.options.get("format", "")).upper() != "PDF":
+            return False
+        if filepath in self.source_overrides:
+            return False
+        if any(self.options.get(key) for key in self._EDIT_OPTIONS):
+            return False
+        if os.path.splitext(filepath)[1].lower() not in (".pdf", ".ai"):
+            return False
+        try:
+            import pikepdf
+            with pikepdf.open(read_path) as pdf:
+                return len(pdf.pages) >= 1
+        except Exception:
+            return False  # .ai antiguos (PostScript), cifrados...: se convierten
+
+    def _completed_text(self, sizes) -> str:
+        """"Completado" o "Completado · 27.3 MB → 2.1 MB (−92 %)". Con "·" y no con
+        paréntesis: "Completado (" es el estado de advertencia (ver
+        image_queue_widget._status_color_map)."""
+        if not sizes:
+            return self.tr("Completado")
+        from core.tabs.image_tools.pdf_tools import savings_text
+        return self.tr("Completado · {0}").format(savings_text(*sizes))
 
     def run(self):
         # Precarga la sesión ONNX de Eliminar Fondo antes del lote (si aplica) --
@@ -200,13 +246,34 @@ class ImageConvertWorker(QThread):
                     self.file_progress.emit(_filepath, int(round(pct)), stage_str)
 
             info = {}
+            compression = self._compression()
+            sizes = None
             try:
-                success, message = self._converter.convert_file(
-                    read_path, output_path, self.options,
-                    progress_callback=progress_cb,
-                    cancellation_event=self.cancellation_event,
-                    info=info,
-                )
+                if self._plain_document_to_pdf(filepath, read_path):
+                    # PDF -> PDF sin ediciones: el documento entero, con todas sus
+                    # páginas y el texto y los vectores tal cual (antes se pasaba solo
+                    # la primera página a imagen). Con compresión, además se
+                    # recomprimen sus imágenes.
+                    if compression:
+                        self.busy_indeterminate.emit(filepath, True, "compressing")
+                        sizes = self._compress(read_path, output_path, compression)
+                        success = sizes is not None
+                        message = "" if success else QCoreApplication.translate(
+                            "ImageConverter", "Cancelado por el usuario.")
+                    else:
+                        from core.tabs.image_tools.pdf_tools import copy_document
+                        copy_document(read_path, output_path)
+                        success, message = True, ""
+                else:
+                    success, message = self._converter.convert_file(
+                        read_path, output_path, self.options,
+                        progress_callback=progress_cb,
+                        cancellation_event=self.cancellation_event,
+                        info=info,
+                    )
+                    if success and compression:
+                        self.busy_indeterminate.emit(filepath, True, "compressing")
+                        sizes = self._compress_in_place(output_path, compression)
             except Exception as e:
                 logger.error(f"ImageConvertWorker: fallo inesperado con {filepath}: {e}")
                 success, message = False, str(e)
@@ -214,7 +281,7 @@ class ImageConvertWorker(QThread):
             if success:
                 commit_backup(backup_path)
                 completed += 1
-                self.file_status_changed.emit(filepath, self.tr("Completado"))
+                self.file_status_changed.emit(filepath, self._completed_text(sizes))
                 depth_size = info.get("depth_process_size")
                 if depth_size:
                     self.file_depth_info.emit(filepath, int(depth_size[0]), int(depth_size[1]))
@@ -313,7 +380,7 @@ class ImageConvertWorker(QThread):
 
     def _write_merged_pdf(self, entries: list[dict], output_path: str, tmp_dir: str):
         """Escribe el PDF final. `entries`, en orden: {"kind": "image", "path"} o
-        {"kind": "pdf", "path"} (un documento PDF/AI: se copia su primera página).
+        {"kind": "pdf", "path"} (un documento PDF/AI: se copian todas sus páginas).
 
         Solo imágenes -> img2pdf directo al archivo (outputstream: armarlo en memoria
         con 15 fotos ocupaba cientos de MB de RAM). Con documentos -> cada tramo de
@@ -321,11 +388,12 @@ class ImageConvertWorker(QThread):
         del documento tal cual: el texto sigue siendo seleccionable y los vectores
         nítidos (convertirla a imagen los perdía).
 
-        Imágenes a 96 ppp, como antes: los JPEG originales traen su propia resolución
-        (72, 300...) y sin esto cada página saldría de un tamaño físico distinto."""
+        Tamaño de las hojas: ver pdf_tools.page_layout (los ppp de la imagen si son
+        de escáner, 96 si no dicen nada o dicen 72, o una hoja fija A4/Carta/Oficio)."""
         # Diferido: img2pdf arrastra pikepdf y PIL, y solo hace falta al unir en un PDF.
         import img2pdf
-        layout = img2pdf.get_fixed_dpi_layout_fun((96, 96))
+        from core.tabs.image_tools.pdf_tools import page_layout
+        layout = page_layout(self.options)
         try:
             if all(e["kind"] == "image" for e in entries):
                 with open(output_path, "wb") as f:
@@ -353,11 +421,12 @@ class ImageConvertWorker(QThread):
                     if e["kind"] == "pdf":
                         src = pikepdf.open(e["path"])
                         opened.append(src)
-                        dst.pages.append(src.pages[0])
-                        page = dst.pages[-1]
-                        # Datos privados de Illustrator: pesan mucho y no se ven
-                        if "/PieceInfo" in page.obj:
-                            del page.obj["/PieceInfo"]
+                        first = len(dst.pages)
+                        dst.pages.extend(src.pages)
+                        for page in dst.pages[first:]:
+                            # Datos privados de Illustrator: pesan mucho y no se ven
+                            if "/PieceInfo" in page.obj:
+                                del page.obj["/PieceInfo"]
                 dst.save(output_path)
             finally:
                 for src in opened:
@@ -481,10 +550,19 @@ class ImageConvertWorker(QThread):
                         entries[i] = {"fp": fp, "kind": "image", "path": temp_page, "original": False}
                     self._write_merged_pdf(entries, output_path, tmp_dir)
 
+                compression = self._compression()
+                sizes = None
+                if compression and not self.cancellation_event.is_set():
+                    self.busy_indeterminate.emit(self.filepaths[0], True, "compressing")
+                    sizes = self._compress_in_place(output_path, compression)
+
                 commit_backup(backup_path)
                 n_orig = sum(1 for ent in entries if ent["original"])
                 logger.info(f"ImageConvertWorker: PDF fusionado con éxito en {output_path} "
-                            f"({len(entries)} páginas, {n_orig} sin recomprimir)")
+                            f"({len(entries)} archivos, {n_orig} sin recomprimir)")
+                if sizes:
+                    for fp in done_files:
+                        self.file_status_changed.emit(fp, self._completed_text(sizes))
                 for fp in self.filepaths:
                     self.file_completed.emit(fp, output_path)
                 self.finished_signal.emit(total, total)

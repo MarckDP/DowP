@@ -13,7 +13,7 @@ QMainWindow {
 
 QWidget {
     color: {{texto_principal}};
-    font-family: "{{fuente_principal}}", "Segoe UI", sans-serif;
+    font-family: "{{fuente_principal}}", "{{fuente_sistema}}", sans-serif;
     font-size: 13px;
 }
 

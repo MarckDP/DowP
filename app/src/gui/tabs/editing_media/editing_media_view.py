@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
-    QSplitter,
     QLabel,
     QTreeWidget,
     QTreeWidgetItem,
@@ -179,7 +178,9 @@ class _FolderPrewarmThread(QThread):
 
 class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
     """Pestaña 'Medios de Edición' con una distribución visual de tres paneles de 20/40/40."""
-    
+
+    DEFAULT_SPLITTER_SIZES = [240, 480, 480]  # 20/40/40; también al hacer doble clic en un tirador
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
@@ -345,8 +346,14 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         self.main_layout.setSpacing(8)
 
         # ── Splitter Horizontal Principal ─────────────────────────────────────
-        self.splitter = QSplitter(Qt.Horizontal)
+        # El mismo separador que Herramientas Multimedia e IA: los tiradores muestran la
+        # franja de acento al pasar el mouse y un doble clic vuelve a los anchos por
+        # defecto. Se mantienen el ancho de 6 px y las columnas colapsables de siempre.
+        from gui.widgets.resettable_splitter import ResettableSplitter
+        self.splitter = ResettableSplitter(Qt.Horizontal)
         self.splitter.setHandleWidth(6)
+        self.splitter.setChildrenCollapsible(True)
+        self.splitter.reset_requested.connect(self._reset_splitter_sizes)
         self.main_layout.addWidget(self.splitter, 1)
 
         # 1. Columna Izquierda (20%): Carpetas Indexadas (Acordeón)
@@ -363,7 +370,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
 
         # Restaurar tamaños del splitter desde la configuración guardada
         cfg = get_config()
-        saved_sizes = cfg.get("editing_media_splitter_sizes", [240, 480, 480])
+        saved_sizes = cfg.get("editing_media_splitter_sizes", self.DEFAULT_SPLITTER_SIZES)
         self.splitter.setSizes(saved_sizes)
 
         # Conectar señal para persistir cambios de tamaño del splitter
@@ -1259,7 +1266,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             }}
         """
         if hasattr(self, "media_table"):
-            self.media_table.setStyleSheet(apply_shapes(table_style))
+            set_themed_style(self.media_table, lambda s=table_style: s)
 
         list_style = f"""
             QListView {{
@@ -1288,7 +1295,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                 font-weight: bold;
             }}
         """
-        self.media_list.setStyleSheet(apply_shapes(list_style))
+        set_themed_style(self.media_list, lambda s=list_style: s)
 
         # Obtener rutas absolutas para las imágenes del árbol
         src_dir = get_src_dir()
@@ -1331,7 +1338,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
                 background-color: {get_theme_token('seleccion_fondo', '#2d2d2d')};
             }}
         """
-        self.tree_folders.setStyleSheet(apply_shapes(tree_style))
+        set_themed_style(self.tree_folders, lambda s=tree_style: s)
 
     def _update_edit_subclip_button_state(self, has_subclips: bool):
         """Actualiza la apariencia 'encendida/apagada' de los botones de editar subclips
@@ -1524,6 +1531,14 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
     def _on_splitter_moved(self, pos, index):
         """Reinicia el temporizador de debounce al mover el splitter."""
         self._splitter_save_timer.start()
+
+    def _reset_splitter_sizes(self):
+        """Doble clic en un tirador: vuelve a la proporción por defecto (20/40/40) del
+        ancho actual y la guarda."""
+        total = sum(self.splitter.sizes()) or sum(self.DEFAULT_SPLITTER_SIZES)
+        base = sum(self.DEFAULT_SPLITTER_SIZES)
+        self.splitter.setSizes([round(total * s / base) for s in self.DEFAULT_SPLITTER_SIZES])
+        self._save_splitter_sizes_to_config()
 
     def _save_splitter_sizes_to_config(self):
         """Persiste los tamaños del splitter al archivo de configuración (llamado con debounce)."""

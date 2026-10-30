@@ -82,8 +82,8 @@ class GeneralPage(QWidget):
         card_info_btn = QToolButton()
         card_info_btn.setText("?")
         card_info_btn.setFixedSize(20, 20)
-        set_themed_style(card_info_btn, lambda: "QToolButton { border: 1px solid #555; border-radius: 10px;"
-            f" color: {get_theme_token('texto_gris', '#AAA')}; font-size: 11px; background: #2a2a2a; }}")
+        set_themed_style(card_info_btn, lambda: f"QToolButton {{ border: 1px solid {get_theme_token('borde_fuerte', '#555')}; border-radius: 10px;"
+            f" color: {get_theme_token('texto_principal', '#e0e0e0')}; font-size: 11px; background: {get_theme_token('fondo_control', '#2a2a2a')}; }}")
         card_info_btn.setToolTip(self.tr(
             "Solo releases oficiales: recibe únicamente versiones estables, ya probadas.\n"
             "Todas (incluye experimentales): recibe también compilaciones de prueba, antes de "
@@ -217,7 +217,7 @@ class GeneralPage(QWidget):
         self.content_layout.addLayout(self.font_size_row)
 
         self.font_size_warning = QLabel(self.tr("⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados."))
-        set_themed_style(self.font_size_warning, lambda: f"color: {get_theme_token('estado_alerta', '#ffa500')}; font-size: 11px;")
+        set_themed_style(self.font_size_warning, lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
         self.font_size_warning.setWordWrap(True)
         self.font_size_warning.hide()
         self.content_layout.addWidget(self.font_size_warning)
@@ -240,6 +240,8 @@ class GeneralPage(QWidget):
         hint_row.addWidget(self.btn_theme_restart)
         self.theme_restart_hint.hide()
         self.content_layout.addWidget(self.theme_restart_hint)
+
+        self._build_background_section()
 
         # --- SECCIÓN: COMPORTAMIENTO ---
         self.comp_label = QLabel(self.tr("Comportamiento"))
@@ -360,6 +362,214 @@ class GeneralPage(QWidget):
         self.adobe_switch.toggled.connect(self.on_adobe_compat_toggled)
         self.combo_wheel_switch.toggled.connect(self.on_combo_wheel_toggled)
 
+
+    # ── IMAGEN DE FONDO (ver core/utils/background_images.py) ─────────────────
+    def _build_background_section(self):
+        from PySide6.QtWidgets import QSlider
+        from core.utils import background_images as bg
+
+        title = QLabel(self.tr("Imagen de fondo"))
+        title.setObjectName("settingsLabel")
+        desc = QLabel(self.tr("Una imagen tuya detrás de la ventana. Los PNG con transparencia se "
+                              "respetan, para poner solo un personaje o un logo."))
+        desc.setWordWrap(True)
+        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        self.content_layout.addWidget(title)
+        self.content_layout.addWidget(desc)
+
+        def row(label_text, *widgets, align_with_folder=False):
+            layout = QHBoxLayout()
+            label = QLabel(label_text)
+            label.setObjectName("settingsLabel")
+            layout.addWidget(label)
+            layout.addStretch()
+            for w in widgets:
+                layout.addWidget(w)
+            if align_with_folder:  # como la fila de Modo: alineado con los combos de arriba
+                layout.addSpacing(30 + self.theme_row.spacing())
+            self.content_layout.addLayout(layout)
+            return label
+
+        # Lugar: por ahora solo el fondo general (las vistas previas y las listas vienen después).
+        self.bg_place_combo = AutoPopupComboBox()
+        self.bg_place_combo.setFixedWidth(180)
+        self.bg_place_combo.addItem(self.tr("Fondo general"), bg.PLACE_GENERAL)
+        row(self.tr("Lugar"), self.bg_place_combo, align_with_folder=True)
+
+        self.bg_file_label = QLabel()
+        set_themed_style(self.bg_file_label, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        self.btn_bg_choose = QPushButton(self.tr("Elegir…"))
+        self.btn_bg_choose.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self.btn_bg_choose, "secondary")
+        self.btn_bg_choose.clicked.connect(self._on_bg_choose)
+        self.btn_bg_remove = QPushButton(self.tr("Quitar"))
+        self.btn_bg_remove.setCursor(Qt.PointingHandCursor)
+        set_button_variant(self.btn_bg_remove, "secondary")
+        self.btn_bg_remove.clicked.connect(self._on_bg_remove)
+        row(self.tr("Imagen"), self.bg_file_label, self.btn_bg_choose, self.btn_bg_remove)
+
+        self.bg_opacity_slider = QSlider(Qt.Horizontal)
+        self.bg_opacity_slider.setRange(0, 100)
+        self.bg_opacity_slider.setFixedWidth(150)
+        self.bg_opacity_value = QLabel()
+        self.bg_opacity_value.setFixedWidth(40)
+        self.bg_opacity_slider.valueChanged.connect(self._on_bg_opacity_changed)
+        self.bg_opacity_slider.sliderReleased.connect(lambda: save_config(get_config()))
+        row(self.tr("Opacidad de la imagen"), self.bg_opacity_slider, self.bg_opacity_value)
+
+        self.bg_fit_combo = AutoPopupComboBox()
+        self.bg_fit_combo.setFixedWidth(180)
+        for label, key in ((self.tr("Rellenar"), bg.FIT_FILL), (self.tr("Ajustar"), bg.FIT_FIT),
+                           (self.tr("Estirar"), bg.FIT_STRETCH), (self.tr("Tamaño original"), bg.FIT_ORIGINAL),
+                           (self.tr("Mosaico"), bg.FIT_TILE)):
+            self.bg_fit_combo.addItem(label, key)
+        self.bg_fit_combo.setToolTip(self.tr(
+            "Rellenar: cubre todo sin deformar; recorta lo que sobra.\n"
+            "Ajustar: la imagen entera siempre visible.\n"
+            "Estirar: cubre todo deformando la imagen.\n"
+            "Tamaño original: sin escalar; ideal para un personaje o un logo.\n"
+            "Mosaico: repite la imagen."))
+        self.bg_fit_combo.currentIndexChanged.connect(self._on_bg_fit_changed)
+        row(self.tr("Ajuste"), self.bg_fit_combo, align_with_folder=True)
+
+        self.bg_align_combo = AutoPopupComboBox()
+        self.bg_align_combo.setFixedWidth(180)
+        vertical = {"top": self.tr("Arriba"), "center": self.tr("Centro"), "bottom": self.tr("Abajo")}
+        horizontal = {"left": self.tr("izquierda"), "center": self.tr("centro"), "right": self.tr("derecha")}
+        for key in bg.ALIGNS:
+            v, h = key.split("-")
+            label = self.tr("Centro") if key == "center-center" else f"{vertical[v]} {horizontal[h]}"
+            self.bg_align_combo.addItem(label, key)
+        self.bg_align_combo.setToolTip(self.tr("Qué parte queda a la vista al recortar, o dónde se ubica la imagen."))
+        self.bg_align_combo.currentIndexChanged.connect(self._on_bg_align_changed)
+        row(self.tr("Posición"), self.bg_align_combo, align_with_folder=True)
+
+        self.bg_blur_switch = ToggleSwitch()
+        self.bg_blur_switch.toggled.connect(self._on_bg_blur_toggled)
+        row(self.tr("Desenfocar la imagen"), self.bg_blur_switch)
+
+        self.bg_panel_slider = QSlider(Qt.Horizontal)
+        self.bg_panel_slider.setRange(bg.MIN_PANEL_OPACITY, 100)
+        self.bg_panel_slider.setFixedWidth(150)
+        self.bg_panel_value = QLabel()
+        self.bg_panel_value.setFixedWidth(40)
+        self.bg_panel_slider.setToolTip(self.tr(
+            "Cuánto tapan los paneles a la imagen. El texto, los botones y los campos siguen sólidos."))
+        self.bg_panel_slider.valueChanged.connect(self._on_bg_panel_value_changed)
+        self.bg_panel_slider.sliderReleased.connect(self._on_bg_panel_released)
+        self.bg_panel_label = row(self.tr("Opacidad de los paneles"), self.bg_panel_slider, self.bg_panel_value)
+
+    def _bg_place(self) -> str:
+        return self.bg_place_combo.currentData()
+
+    def _load_background_settings(self):
+        from core.utils import background_images as bg
+        s = bg.get_place(self._bg_place())
+        path = bg.image_path(self._bg_place())
+        name = s["name"] or (os.path.basename(path) if path else "")
+        self.bg_file_label.setText(self.bg_file_label.fontMetrics().elidedText(name, Qt.ElideMiddle, 220)
+                                   if path else self.tr("Ninguna"))
+        self.bg_file_label.setToolTip(name if path else "")
+        for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
+                  self.bg_panel_slider):
+            w.blockSignals(True)
+        self.bg_opacity_slider.setValue(s["opacity"])
+        self.bg_opacity_value.setText(f"{s['opacity']} %")
+        self.bg_fit_combo.setCurrentIndex(max(0, self.bg_fit_combo.findData(s["fit"])))
+        self.bg_align_combo.setCurrentIndex(max(0, self.bg_align_combo.findData(s["align"])))
+        self.bg_blur_switch.setChecked(s["blur"])
+        self.bg_panel_slider.setValue(bg.get_panel_opacity())
+        self.bg_panel_value.setText(f"{bg.get_panel_opacity()} %")
+        for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
+                  self.bg_panel_slider):
+            w.blockSignals(False)
+        self._update_bg_controls_enabled()
+
+    def _update_bg_controls_enabled(self):
+        from core.utils import background_images as bg
+        has = bg.image_path(self._bg_place()) is not None
+        for w in (self.btn_bg_remove, self.bg_opacity_slider, self.bg_fit_combo, self.bg_blur_switch,
+                  self.bg_panel_slider):
+            w.setEnabled(has)
+        # La posición no cambia nada al estirar ni en mosaico.
+        self.bg_align_combo.setEnabled(has and self.bg_fit_combo.currentData() not in (bg.FIT_STRETCH, bg.FIT_TILE))
+
+    def _notify_background(self):
+        from gui.widgets.background_canvas import background_notifier
+        background_notifier().changed.emit(self._bg_place())
+
+    def _apply_glass_if_changed(self, before):
+        """La transparencia de los paneles cambia la hoja de estilos: eso pasa por el
+        tema (con su aviso de unos segundos), y solo si de verdad cambió algo."""
+        from core.utils.background_images import glass_alpha
+        if glass_alpha() != before:
+            from gui.theme_manager import get_theme_manager
+            get_theme_manager().apply()
+
+    def _on_bg_choose(self):
+        from PySide6.QtWidgets import QFileDialog
+        from core.utils import background_images as bg
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Elegir imagen de fondo"), os.path.expanduser("~"),
+            self.tr("Imágenes") + " (*.png *.jpg *.jpeg *.webp *.bmp *.gif)")
+        if not path:
+            return
+        before = bg.glass_alpha()
+        try:
+            _name, animated = bg.import_image(self._bg_place(), path)
+        except Exception as e:
+            logger.error(f"Fondo: no se pudo usar {path}: {e}")
+            QMessageBox.warning(self, self.tr("Imagen de fondo"),
+                                self.tr("No se pudo abrir la imagen: {0}").format(e))
+            return
+        if animated:
+            QMessageBox.information(self, self.tr("Imagen de fondo"), self.tr(
+                "Las imágenes animadas todavía no se admiten como fondo: se usa su primer fotograma."))
+        self._load_background_settings()
+        self._notify_background()
+        self._apply_glass_if_changed(before)
+
+    def _on_bg_remove(self):
+        from core.utils import background_images as bg
+        before = bg.glass_alpha()
+        bg.remove_image(self._bg_place())
+        self._load_background_settings()
+        self._notify_background()
+        self._apply_glass_if_changed(before)
+
+    def _on_bg_opacity_changed(self, value):
+        from core.utils import background_images as bg
+        self.bg_opacity_value.setText(f"{value} %")
+        # En vivo mientras se arrastra; se guarda en disco al soltar.
+        bg.set_place(self._bg_place(), save=not self.bg_opacity_slider.isSliderDown(), opacity=value)
+        self._notify_background()
+
+    def _on_bg_fit_changed(self, _index):
+        from core.utils import background_images as bg
+        bg.set_place(self._bg_place(), fit=self.bg_fit_combo.currentData())
+        self._update_bg_controls_enabled()
+        self._notify_background()
+
+    def _on_bg_align_changed(self, _index):
+        from core.utils import background_images as bg
+        bg.set_place(self._bg_place(), align=self.bg_align_combo.currentData())
+        self._notify_background()
+
+    def _on_bg_blur_toggled(self, checked):
+        from core.utils import background_images as bg
+        bg.set_place(self._bg_place(), blur=bool(checked))
+        self._notify_background()
+
+    def _on_bg_panel_value_changed(self, value):
+        self.bg_panel_value.setText(f"{value} %")
+        if not self.bg_panel_slider.isSliderDown():  # teclado o clic en la barra: no hay "soltar"
+            self._on_bg_panel_released()
+
+    def _on_bg_panel_released(self):
+        from core.utils import background_images as bg
+        before = bg.glass_alpha()
+        bg.set_panel_opacity(self.bg_panel_slider.value())
+        self._apply_glass_if_changed(before)
 
     # ── SECCIÓN: SONIDOS (ver core/utils/sound_notifier.py) ──────────────────
     def _build_sounds_section(self):
@@ -750,6 +960,7 @@ class GeneralPage(QWidget):
         self.adobe_switch.setChecked(config.get("adobe_compat_default", True))
         self.combo_wheel_switch.setChecked(config.get("combobox_wheel_scroll", False))
         self._load_sound_settings()
+        self._load_background_settings()
 
     def _make_radio(self, text, code):
         rb = QRadioButton(text)

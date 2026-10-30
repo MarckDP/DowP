@@ -778,7 +778,12 @@ class MainWindow(QMainWindow):
         get_theme_manager().apply()
 
         # ── Layout principal ──────────────────────────────────────────────────
-        central_widget = QWidget()
+        # El widget central dibuja la imagen de fondo del usuario, si eligió una (sin
+        # imagen no pinta nada). Su nombre es el que usan los paneles translúcidos.
+        from gui.styles import GLASS_CANVAS_NAME
+        from gui.widgets.background_canvas import BackgroundCanvas
+        central_widget = BackgroundCanvas()
+        central_widget.setObjectName(GLASS_CANVAS_NAME)
         self.setCentralWidget(central_widget)
         self.main_layout = QVBoxLayout(central_widget)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -831,6 +836,15 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.tabs)
 
+        # Imagen de fondo: la franja de arriba (barra de título y pestañas) va esmerilada,
+        # hasta donde empieza el contenido de las pestañas (ver BackgroundCanvas).
+        def _header_bottom():
+            from PySide6.QtCore import QPoint
+            from PySide6.QtWidgets import QStackedWidget
+            stack = self.tabs.findChild(QStackedWidget, "qt_tabwidget_stackedwidget")
+            return stack.mapTo(central_widget, QPoint(0, 0)).y() if stack is not None else 0
+        central_widget.set_frosted_header(_header_bottom)
+
         self._main_tabs_indicator = AnimatedTabIndicator(self.tabs)
 
         # ── Modal Overlay de Ajustes ──────────────────────────────────────────
@@ -851,6 +865,12 @@ class MainWindow(QMainWindow):
         # (no bloquea, y evita competir con el resto de la construccion de la
         # ventana). No-op en modo fuente -- ver SettingsTab.start_update_check().
         QTimer.singleShot(0, self.tab_settings.start_update_check)
+
+        # Con imagen de fondo: los paneles se estilaron antes de entrar en la ventana
+        # (fuera del lienzo); ahora que están adentro toman su transparencia. Sin imagen
+        # no cambia nada y no cuesta nada.
+        from gui.styles import refresh_glass
+        refresh_glass(central_widget)
 
         logger.info("MainWindow: Sistema de pestañas inicializado")
 

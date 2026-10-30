@@ -2504,6 +2504,7 @@ class ImageToolsTab(QWidget):
             "saving": self.tr("Guardando"),
             "processing": self.tr("Procesando"),
             "merging": self.tr("Fusionando PDF"),
+            "compressing": self.tr("Comprimiendo PDF"),
         }
         return stages.get(stage, stage if stage else self.tr("Procesando"))
 

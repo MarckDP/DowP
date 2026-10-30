@@ -98,7 +98,9 @@ class TutorialOverlay(QWidget):
         
         self.btn_skip = QPushButton(self.tr("Omitir"))
         self.btn_skip.setCursor(Qt.PointingHandCursor)
-        self.btn_skip.setStyleSheet("background: transparent; color: #a0a0a0; border: none; font-weight: bold; text-decoration: underline;")
+        set_themed_style(self.btn_skip, lambda: (
+            f"background: transparent; color: {get_theme_token('texto_gris', '#aaaaaa')}; "
+            "border: none; font-weight: bold; text-decoration: underline;"))
         self.btn_skip.clicked.connect(self.finish_tutorial)
         
         self.btn_next = QPushButton(self.tr("Siguiente"))
@@ -106,13 +108,13 @@ class TutorialOverlay(QWidget):
         set_themed_style(self.btn_next, lambda: f"""
             QPushButton {{
                 background-color: {get_theme_token('acento_primario', '#B9E640')};
-                color: #000000;
+                color: {get_theme_token('boton_acento_texto', '#000000')};
                 border-radius: 4px;
                 font-weight: bold;
                 padding: 6px 12px;
             }}
             QPushButton:hover {{
-                background-color: #c5f050;
+                background-color: {get_theme_token('acento_secundario', '#1DC038')};
             }}
         """)
         self.btn_next.clicked.connect(self.next_step)

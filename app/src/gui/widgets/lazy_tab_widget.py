@@ -63,6 +63,10 @@ class LazyTabWidget(QTabWidget):
         real.resize(placeholder.size())
         self._built[placeholder] = real
         placeholder.layout().addWidget(real)
+        # Imagen de fondo: sus paneles recién ahora están dentro del lienzo (ver
+        # gui/styles.py, refresh_glass). Sin imagen no hace nada.
+        from gui.styles import refresh_glass
+        refresh_glass(real)
         return real
 
     def built_tab(self, placeholder: QWidget) -> QWidget | None:

@@ -35,7 +35,6 @@ from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.styles import set_themed_style
-from gui.styles import apply_shapes
 
 ITEM_ROLE = Qt.UserRole + 1
 
@@ -205,7 +204,9 @@ class _PreviewPanel(QWidget):
         self.video_container = QWidget()
         self.video_container.setObjectName("mediaSearchPreviewContainer")
         self.video_container.setFixedSize(self.PLAYER_WIDTH, self.PLAYER_HEIGHT)
-        self.video_container.setStyleSheet(apply_shapes("background-color: #000000; border-radius: 6px;"))
+        # Negro fijo a propósito (fondo de video); set_themed_style solo para que la
+        # esquina siga a las formas del tema si cambian con la ventana abierta.
+        set_themed_style(self.video_container, lambda: "background-color: #000000; border-radius: 6px;")
         block_layout.addWidget(self.video_container)
 
         self.video_widget = QVideoWidget(self.video_container)
@@ -221,7 +222,8 @@ class _PreviewPanel(QWidget):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setWordWrap(True)
         self.status_label.setFixedWidth(self.PLAYER_WIDTH - 40)
-        set_themed_style(self.status_label, lambda: f"color: {get_theme_token('texto_principal', '#eeeeee')}; background-color: rgba(0,0,0,170); "
+        # El mensaje va sobre el vídeo negro en ambos modos, no sobre el fondo del tema.
+        set_themed_style(self.status_label, lambda: "color: #eeeeee; background-color: rgba(0,0,0,170); "
             "padding: 10px 16px; border-radius: 8px; font-size: 12px;")
         self.status_label.hide()
 
@@ -1089,7 +1091,7 @@ class MediaSearchDialog(QDialog):
                 }}
                 QPushButton:checked {{
                     background-color: {get_theme_token('acento_primario', '#B9E640')};
-                    color: {get_theme_token('fondo_principal', '#0a0a0a')};
+                    color: {get_theme_token('boton_acento_texto', '#000000')};
                     font-weight: bold;
                 }}
             """)

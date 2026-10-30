@@ -45,7 +45,8 @@ def default_options_for_format(fmt: str) -> dict:
     if fmt == "BMP":
         return {"bmp_rle": False}
     if fmt == "PDF":
-        return {"pdf_transparency": False, "pdf_merge": False, "pdf_merged_name": ""}
+        return {"pdf_transparency": False, "pdf_merge": False, "pdf_merged_name": "",
+                "pdf_page_size": "image", "pdf_compression": "none"}
     if fmt == "SVG":
         return {
             "svg_mode": "quick",

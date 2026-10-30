@@ -81,6 +81,64 @@ def stamp_importer_version(version):
     print(f"DowP Importer estampado a v{version}")
 
 
+VERSION_COMPANY = "MarckDP"
+VERSION_COPYRIGHT = "(c) 2026 MarckDP - GPL-3.0"
+
+
+def write_windows_version_file(path, version, description, internal_name, original_filename):
+    """Escribe el recurso de version (VERSIONINFO) que PyInstaller incrusta con
+    --version-file: es lo que muestra Propiedades > Detalles del .exe.
+
+    Sin el, el ejecutable no declara ni producto ni autor, y eso es una de las senales
+    que suben la puntuacion de la deteccion heuristica de Defender (Trojan:...!ml, ver
+    el falso positivo de la 1.9.3). No es un pase libre: ayuda, nada mas.
+
+    La version numerica sale de APP_VERSION. Lo que no son digitos (un sufijo
+    -beta.N) se descarta en la numerica y se conserva en las cadenas de texto."""
+    import re
+
+    numeros = [int(n) for n in re.findall(r"\d+", version.split("-")[0])[:4]]
+    numeros += [0] * (4 - len(numeros))
+    tupla = tuple(numeros)
+    cadenas = {
+        "CompanyName": VERSION_COMPANY,
+        "FileDescription": description,
+        "FileVersion": version,
+        "InternalName": internal_name,
+        "LegalCopyright": VERSION_COPYRIGHT,
+        "OriginalFilename": original_filename,
+        "ProductName": APP_NAME,
+        "ProductVersion": version,
+    }
+    entradas = ",\n            ".join(f"StringStruct({k!r}, {v!r})" for k, v in cadenas.items())
+    contenido = f"""# Generado por build_cross_platform.py -- no editar a mano.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers={tupla},
+    prodvers={tupla},
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable('040904B0', [
+            {entradas}
+      ])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
+"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(contenido)
+    return path
+
+
 def prune_bundle(dist_root):
     """Quita del bundle YA CONSTRUIDO los __pycache__ que arrastra --add-data.
 
@@ -175,6 +233,10 @@ def build_updater_helper(dist_root, work_root):
     ]
     if HELPER_ICON_FILE and os.path.exists(HELPER_ICON_FILE):
         helper_args.extend(["--icon", HELPER_ICON_FILE])
+    if IS_WINDOWS:
+        helper_args.extend(["--version-file", write_windows_version_file(
+            os.path.join(work_root, "helper", "version_info.txt"), APP_VERSION,
+            "DowP Updater", HELPER_NAME, helper_exe_name)])
     if not IS_MACOS:
         # En Windows suprime el flash de una consola al lanzar el helper. En
         # macOS, --onefile + --windowed hace que PyInstaller genere ADEMAS un
@@ -376,6 +438,11 @@ if ICON_FILE and os.path.exists(ICON_FILE):
     args.extend(["--icon", ICON_FILE])
 else:
     print(f"Icono no encontrado para {CURRENT_SYSTEM} ({ICON_FILE}), se compila sin --icon.")
+
+if IS_WINDOWS:
+    args.extend(["--version-file", write_windows_version_file(
+        os.path.join(BUILD_DIR, "version_info.txt"), APP_VERSION,
+        "DowP - Media downloader and toolkit", APP_NAME, f"{APP_NAME}.exe")])
 
 stamp_importer_version(APP_VERSION)
 

@@ -65,7 +65,8 @@ class ThumbnailRunnable(QRunnable):
         finally:
             self.manager._task_finished(self.file_path, self)
 
-class PreviewWorkerSignals(QObject):
+
+class PreviewWorkerSignals(QObject):
     """Señales para el trabajador de preview de alta resolución en segundo plano."""
     finished = Signal(str, str)  # (file_path, preview_path)
     failed = Signal(str)         # (file_path)
@@ -684,19 +685,21 @@ class ThumbnailCacheManager(QObject):
             painter.setBrush(QBrush(QColor("#202024")))
             painter.drawRoundedRect(16, 16, 224, 224, 12, 12)
 
+            from core.utils.font_manager import system_ui_family
+            ui_family = system_ui_family()
             ext_label = "EPS" if src_path.lower().endswith(".eps") else "PS"
-            font_badge = QFont("Segoe UI", 26, QFont.Weight.Bold)
+            font_badge = QFont(ui_family, 26, QFont.Weight.Bold)
             painter.setFont(font_badge)
             painter.setPen(QColor("#e67e22"))
             painter.drawText(QRectF(16, 50, 224, 45), Qt.AlignmentFlag.AlignCenter, ext_label)
 
             if dim_str:
-                font_dim = QFont("Segoe UI", 12)
+                font_dim = QFont(ui_family, 12)
                 painter.setFont(font_dim)
                 painter.setPen(QColor("#aaaaaa"))
                 painter.drawText(QRectF(16, 110, 224, 30), Qt.AlignmentFlag.AlignCenter, dim_str)
 
-            font_desc = QFont("Segoe UI", 10)
+            font_desc = QFont(ui_family, 10)
             painter.setFont(font_desc)
             painter.setPen(QColor("#666666"))
             painter.drawText(QRectF(16, 155, 224, 24), Qt.AlignmentFlag.AlignCenter, "Vector PostScript")

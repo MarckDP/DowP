@@ -762,19 +762,23 @@ class PreviewContainerWidget(QFrame):
         painter.setBrush(QBrush(QColor("#202024")))
         painter.drawRoundedRect(8, 8, card_w - 16, card_h - 16, 8, 8)
 
+        from core.utils.font_manager import system_ui_family
+        ui_family = system_ui_family()
         ext_name = "EPS" if ext == ".eps" else "PS"
-        font_badge = QFont("Segoe UI", 18, QFont.Weight.Bold)
+        font_badge = QFont(ui_family, 18, QFont.Weight.Bold)
         painter.setFont(font_badge)
         painter.setPen(QColor(get_theme_token('estado_aviso', '#e67e22')))
         painter.drawText(QRectF(8, 20, card_w - 16, 32), Qt.AlignmentFlag.AlignCenter, f"Vector {ext_name}")
 
-        font_name = QFont("Segoe UI", 10)
+        font_name = QFont(ui_family, 10)
         painter.setFont(font_name)
-        painter.setPen(QColor(get_theme_token('texto_medio', '#cccccc')))
+        # Esta tarjeta se conserva como imagen sobre un fondo oscuro fijo.
+        # Su nombre debe seguir siendo legible también al cambiar al modo claro.
+        painter.setPen(QColor('#cccccc'))
         painter.drawText(QRectF(16, 60, card_w - 32, 40), Qt.AlignmentFlag.AlignCenter, os.path.basename(path))
 
         if dim_str:
-            font_dim = QFont("Segoe UI", 11, QFont.Weight.DemiBold)
+            font_dim = QFont(ui_family, 11, QFont.Weight.DemiBold)
             painter.setFont(font_dim)
             painter.setPen(QColor(get_theme_token("acento_primario", "#B9E640")))
             painter.drawText(QRectF(8, 110, card_w - 16, 25), Qt.AlignmentFlag.AlignCenter, f"Lienzo: {dim_str}")

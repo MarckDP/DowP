@@ -29,6 +29,22 @@ _INITIALIZED_FULL = False
 _FAMILY_TO_PATH = {}
 
 DEFAULT_FALLBACK_FONT = "Google Sans Flex"
+
+
+def system_ui_family() -> str:
+    """Fuente de interfaz del sistema, como respaldo cuando falta la activa.
+
+    Antes era "Segoe UI" fijo en todas partes, pero solo existe en Windows: en macOS Qt
+    avisaba "Populating font family aliases took 189 ms. Replace uses of missing font
+    family 'Segoe UI'..." (un costo en cada arranque) y terminaba en otra fuente igual."""
+    import sys
+    if sys.platform == "win32":
+        return "Segoe UI"
+    if sys.platform == "darwin":
+        return "Helvetica Neue"
+    return "Sans Serif"
+
+
 PRIORITY_FAMILIES = [
     "Google Sans Flex", "Google Sans", "Raleway", "Roboto",
     "Inter", "Outfit", "Plus Jakarta Sans", "JetBrains Mono"
@@ -155,7 +171,7 @@ def _ensure_active_font(theme_name: str = None) -> str:
             if reg:
                 return reg
 
-    return target_family or "Segoe UI"
+    return target_family or system_ui_family()
 
 
 def init_fonts(lazy: bool = True) -> list:

@@ -191,6 +191,11 @@ def _detect_screen_info() -> tuple[int, int, float]:
 #  Logica principal
 # ========================================================================
 
+# Alto mínimo de la ventana principal (setMinimumSize(800, 600) en main_window.py; las
+# pestañas piden menos, ~500, medido con minimumSizeHint).
+MACOS_MIN_WINDOW_HEIGHT = 600
+
+
 def apply_ui_scaling() -> float:
     """
     Calcula y aplica QT_SCALE_FACTOR optimo. LLAMAR ANTES de QApplication.
@@ -232,6 +237,18 @@ def apply_ui_scaling() -> float:
 
     _log("INFO", f"Calculo: ({native_h}-{TASKBAR_MARGIN}) / ({COMFORT_HEIGHT}*{dpi_scale:.2f}) "
                   f"= {raw_scale:.3f} -> clamped {qt_scale}")
+
+    # macOS: escala 1 mientras la ventana quepa. En Retina (2 píxeles por punto)
+    # cualquier escala < 1 deja una proporción fraccionaria (0.97 -> 1.94) y los bordes
+    # caen entre píxeles: la UI se llenaba de líneas (confirmado en una MacBook Air de
+    # 1470x956, que con QT_SCALE_FACTOR=1 se veía bien y entraba entera). La resolución
+    # de macOS ya es lógica, elegida por el usuario en Ajustes > Pantallas, y la ventana
+    # mínima (800x600, ver main_window.py) cabe en cualquier Mac; solo se escala si no.
+    if sys.platform == "darwin" and qt_scale < 1.0:
+        if native_h - TASKBAR_MARGIN >= MACOS_MIN_WINDOW_HEIGHT:
+            _log("INFO", f"macOS: la ventana cabe a escala 1 ({native_h}-{TASKBAR_MARGIN} >= "
+                          f"{MACOS_MIN_WINDOW_HEIGHT}); sin escala propia para no dejar líneas en Retina")
+            qt_scale = 1.0
 
     # 3. Aplicar
     os.environ["QT_SCALE_FACTOR"] = str(qt_scale)

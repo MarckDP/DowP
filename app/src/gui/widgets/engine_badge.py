@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt, Signal
 from gui.styles import get_theme_token
 from gui.styles import set_themed_style
-from gui.styles import apply_shapes, token_rgba
+from gui.styles import token_rgba
 
 
 class EngineBadge(QPushButton):
@@ -39,7 +39,7 @@ class EngineBadge(QPushButton):
 
         if active_hw:
             self.setText(self.tr("GPU Acelerado"))
-            self.setStyleSheet(apply_shapes(f"""
+            set_themed_style(self, lambda: f"""
                 QPushButton {{
                     background-color: {token_rgba('acento_primario', '#B9E640', 38)};
                     color: {get_theme_token('acento_primario', '#B9E640')};
@@ -50,21 +50,21 @@ class EngineBadge(QPushButton):
                     font-weight: bold;
                 }}
                 QPushButton:hover {{ background-color: {token_rgba('acento_primario', '#B9E640', 64)}; }}
-            """))
+            """)
             self.setToolTip(self.tr("Clic para usar codificación por CPU"))
         else:
             self.setText(self.tr("CPU"))
             set_themed_style(self, lambda: f"""
                 QPushButton {{
-                    background-color: rgba(255, 255, 255, 0.08);
+                    background-color: {token_rgba('texto_principal', '#e0e0e0', 20)};
                     color: {get_theme_token('texto_gris', '#aaaaaa')};
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border: 1px solid {token_rgba('texto_principal', '#e0e0e0', 38)};
                     border-radius: 4px;
                     padding: 2px 8px;
                     font-size: 11px;
                     font-weight: bold;
                 }}
-                QPushButton:hover {{ background-color: rgba(255, 255, 255, 0.15); }}
+                QPushButton:hover {{ background-color: {token_rgba('texto_principal', '#e0e0e0', 38)}; }}
             """)
             self.setToolTip(locked_reason or (self.tr("Clic para usar aceleración por GPU") if has_hw else ""))
 

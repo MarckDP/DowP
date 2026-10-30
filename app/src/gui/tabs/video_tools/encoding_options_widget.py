@@ -46,7 +46,7 @@ class EncodingOptionsWidget(QFrame):
             }}
             QTabWidget#encodingTabs > QTabBar::tab:selected {{
                 background: transparent;
-                color: #ffffff;
+                color: {get_theme_token('texto_activo', '#ffffff')};
             }}
         """)
 
