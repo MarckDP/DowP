@@ -414,10 +414,16 @@ class MediaQueueWidget(QFrame):
         self.btn_add_folder.setToolTip(self.tr("Agregar todos los medios de una carpeta"))
         self.btn_add_folder.clicked.connect(self._on_add_folder_clicked)
 
-        self.btn_clear = QPushButton(self.tr("Limpiar Todo"))
+        self.btn_clear = QPushButton(self.tr("Limpiar"))
         self.btn_clear.setProperty("variant", "danger")
         self.btn_clear.setCursor(Qt.PointingHandCursor)
+        self.btn_clear.setToolTip(self.tr("Quitar todos los medios de la lista"))
         self.btn_clear.clicked.connect(self.clear_queue)
+
+        # La cola puede quedar en QUEUE_MIN_WIDTH: con el margen normal de estas variantes
+        # (14 px) los tres botones no caben y Qt los aplasta, cortando el texto.
+        for btn in (self.btn_add_files, self.btn_add_folder, self.btn_clear):
+            btn.setStyleSheet("padding: 6px 6px;")
 
         btn_layout.addWidget(self.btn_add_files)
         btn_layout.addWidget(self.btn_add_folder)

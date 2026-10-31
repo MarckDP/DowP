@@ -269,7 +269,8 @@ def main():
         sys.stderr.flush()
     except Exception:
         pass
-    os._exit(exit_code)
+    from core.utils.process_exit import hard_exit
+    hard_exit(exit_code)
 
 if __name__ == "__main__":
     try:

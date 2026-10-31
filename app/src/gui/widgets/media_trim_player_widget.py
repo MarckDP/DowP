@@ -24,7 +24,8 @@ from gui.widgets.volume_control import VolumeControlWidget
 from core.tabs.editing_media.waveform_cache_manager import WaveformCacheManager
 from core.tabs.video_tools.proxy_cache_manager import ProxyCacheManager, ALPHA_PREVIEW_DIVISOR
 from core.logger.logger_manager import logger
-from gui.styles import glass_fill, set_themed_style
+from gui.styles import glass_checker_colors, glass_fill, glass_preview_fill, set_themed_style
+from gui.widgets.background_canvas import hide_with_preview_image, install_preview_backdrop
 
 # Opciones del selector de calidad de previsualización: (etiqueta, modo, divisor).
 # modo "auto" recalcula el divisor según la resolución nativa real del video (ver
@@ -560,21 +561,23 @@ class _CheckerboardFrame(QFrame):
         painter.setClipPath(path)
 
         if self._show_checkerboard:
-            c1_hex = get_theme_token('ajedrez_c1', '#2a2a2a')
-            c2_hex = get_theme_token('ajedrez_c2', '#181818')
-            color_a = QColor(c1_hex)
-            color_b = QColor(c2_hex)
-            size = self.SQUARE
-            cols = int(rect.width() // size) + 2
-            rows = int(rect.height() // size) + 2
-            for row in range(rows):
-                for col in range(cols):
-                    color = color_a if (row + col) % 2 == 0 else color_b
-                    painter.fillRect(col * size, row * size, size, size, color)
+            colors = glass_checker_colors(self, get_theme_token('ajedrez_c1', '#2a2a2a'),
+                                          get_theme_token('ajedrez_c2', '#181818'))
+            if colors is not None:  # None: "Transparentar vistas previas"
+                color_a, color_b = colors
+                size = self.SQUARE
+                cols = int(rect.width() // size) + 2
+                rows = int(rect.height() // size) + 2
+                for row in range(rows):
+                    for col in range(cols):
+                        color = color_a if (row + col) % 2 == 0 else color_b
+                        painter.fillRect(col * size, row * size, size, size, color)
         else:
             # Sin medio (o solo audio): con imagen de fondo, translúcido como un panel.
             bg_dark = get_theme_token('fondo_principal', '#0a0a0a')
-            painter.fillRect(rect, glass_fill(self, bg_dark))
+            fill = glass_preview_fill(self, bg_dark)
+            if fill is not None:
+                painter.fillRect(rect, fill)
 
         painter.setClipping(False)
         painter.setRenderHint(QPainter.Antialiasing, True)
@@ -1462,6 +1465,7 @@ class MediaTrimPlayerWidget(QWidget):
         # Widget para estado vacío cuando no hay medio cargado
         self.empty_preview_widget = QWidget(self.preview_container)
         self.empty_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        install_preview_backdrop(self.empty_preview_widget)
         empty_outer = QVBoxLayout(self.empty_preview_widget)
         empty_outer.setContentsMargins(0, 0, 0, 0)
         empty_outer.setSpacing(0)
@@ -1493,8 +1497,10 @@ class MediaTrimPlayerWidget(QWidget):
         self.lbl_empty_subtitle.setWordWrap(True)
         set_themed_style(self.lbl_empty_subtitle, lambda: f"font-size: 11px; color: {get_theme_token('texto_deshabilitado', '#555555')}; background: transparent;")
         empty_layout.addWidget(self.lbl_empty_subtitle)
+        self._empty_hint = empty_inner
 
         empty_outer.addWidget(empty_inner, 0, Qt.AlignCenter)
+        hide_with_preview_image(empty_inner)
         empty_outer.addStretch(1)
 
         prev_layout.addWidget(self.empty_preview_widget, 1)

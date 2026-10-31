@@ -663,7 +663,6 @@ class SettingsModalOverlay(QWidget):
         self.card = QFrame()
         self.card.setObjectName("settingsModalCard")
         self.card.setMinimumSize(740, 480)
-        self.card.setMaximumSize(980, 660)
 
         card_layout = QVBoxLayout(self.card)
         card_layout.setContentsMargins(0, 0, 0, 0)
@@ -698,22 +697,27 @@ class SettingsModalOverlay(QWidget):
         overlay_layout.addWidget(self.card)
         self.hide()
 
+    # Hasta acá la tarjeta mide lo de siempre; en una ventana grande crece, sin llenarla.
+    CARD_BASE = (980, 660)
+    CARD_LIMIT = (1500, 1100)
+    CARD_SHARE = (0.72, 0.8)
+
+    def card_size_for(self, width: int, height: int) -> tuple:
+        margins = self.layout().contentsMargins()
+        room = (width - margins.left() - margins.right(), height - margins.top() - margins.bottom())
+        size = (width, height)
+        return tuple(max(low, min(room[i], limit, max(base, int(size[i] * share))))
+                     for i, (low, limit, base, share) in enumerate(zip((740, 480), self.CARD_LIMIT, self.CARD_BASE, self.CARD_SHARE)))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.card.setFixedSize(*self.card_size_for(self.width(), self.height()))
+
     def open_page(self, page_index: int = 0):
         # Seleccionar subpestaña correspondiente
-        buttons = [
-            self.settings_tab.btn_general,
-            self.settings_tab.btn_memory_cache,
-            self.settings_tab.btn_downloads,
-            self.settings_tab.btn_cookies,
-            self.settings_tab.btn_deps,
-            self.settings_tab.btn_labels,
-            self.settings_tab.btn_integrations,
-            self.settings_tab.btn_system,
-            self.settings_tab.btn_models,
-            self.settings_tab.btn_console
-        ]
-        if 0 <= page_index < len(buttons):
-            buttons[page_index].click()
+        button = self.settings_tab.btn_group.button(page_index)
+        if button is not None:
+            button.click()
 
         if self.parent():
             self.setGeometry(0, 0, self.parent().width(), self.parent().height())

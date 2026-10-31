@@ -81,8 +81,8 @@ class ActivityPanel(QFrame):
             self.btn_cancel_all.setIconSize(QSize(12, 12))
         set_themed_style(self.btn_cancel_all, lambda: f"""
             QPushButton {{
-                background-color: transparent;
-                color: {get_theme_token('texto_secundario', '#888888')};
+                background-color: {get_theme_token('fondo_elemento', '#1a1a1a')};
+                color: {get_theme_token('texto_principal', '#e0e0e0')};
                 border: 1px solid {get_theme_token('borde', '#2d2d2d')};
                 border-radius: 6px;
                 padding: 2px 10px;
@@ -107,8 +107,8 @@ class ActivityPanel(QFrame):
             self.btn_clear_all.setIconSize(QSize(14, 14))
         set_themed_style(self.btn_clear_all, lambda: f"""
             QPushButton {{
-                background-color: transparent;
-                color: {get_theme_token('texto_secundario', '#888888')};
+                background-color: {get_theme_token('fondo_elemento', '#1a1a1a')};
+                color: {get_theme_token('texto_principal', '#e0e0e0')};
                 border: 1px solid {get_theme_token('borde', '#2d2d2d')};
                 border-radius: 6px;
                 padding: 2px 10px;

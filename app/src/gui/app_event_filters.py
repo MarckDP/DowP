@@ -20,11 +20,15 @@ import shiboken6
 from PySide6.QtCore import QObject, QEvent, Qt, QPointF
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import (
-    QApplication, QPushButton, QCheckBox, QRadioButton, QComboBox,
+    QAbstractItemView, QApplication, QPushButton, QCheckBox, QRadioButton, QComboBox, QMenu,
     QTabBar, QStyledItemDelegate, QWidget
 )
 
 from core.utils.config_manager import get_config
+from gui.styles import (
+    glass_prepare_popup, paint_combo_scroll_frame, paint_combo_scroller_arrow, prepare_menu_window,
+    set_combo_scroll_frame,
+)
 from gui.widgets.combo_box import CheckmarkComboDelegate
 
 
@@ -42,6 +46,48 @@ class _ComboPopupMaskFilter(QObject):
         return False
 
 
+class _ComboScrollFrame(QObject):
+    """Listas largas: Qt agrega franjas con flechas (QComboBoxPrivateScroller) afuera de la
+    lista. Mientras haya alguna, lista y franjas se pintan como una sola pieza. Solo se
+    cambia lo que se ve: desplazarse sigue siendo cosa de Qt. Si otra versión de Qt le
+    cambia el nombre a esa clase, aquí no coincide nada y las franjas se ven como antes."""
+
+    _SCROLLER_CLASS = "QComboBoxPrivateScroller"
+
+    def _scrollers(self, container):
+        return [w for w in container.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+                if w.metaObject().className() == self._SCROLLER_CLASS]
+
+    def _sync(self, container):
+        view = container.findChild(QAbstractItemView)
+        if view is None:
+            return
+        set_combo_scroll_frame(view, any(not s.isHidden() for s in self._scrollers(container)))
+        container.update()
+
+    def eventFilter(self, obj, event):
+        ev_type = event.type()
+        if obj.metaObject().className() == self._SCROLLER_CLASS:
+            if ev_type == QEvent.Type.Paint:
+                paint_combo_scroller_arrow(obj, obj.y() > obj.parent().height() / 2)
+                return True
+            if ev_type in (QEvent.Type.Show, QEvent.Type.Hide):
+                self._sync(obj.parent())
+            elif ev_type in (QEvent.Type.Enter, QEvent.Type.Leave):
+                obj.update()
+            return False
+        if ev_type == QEvent.Type.Paint:
+            view = obj.findChild(QAbstractItemView)
+            if view is not None and view.property("scrollFrame"):
+                paint_combo_scroll_frame(obj)
+        elif ev_type in (QEvent.Type.Show, QEvent.Type.Resize):
+            for scroller in self._scrollers(obj):
+                scroller.removeEventFilter(self)  # sin duplicar si se abre otra vez
+                scroller.installEventFilter(self)
+            self._sync(obj)
+        return False
+
+
 _DEFAULT_COMBO_DELEGATE_TYPE = None
 
 class HandCursorInstaller(QObject):
@@ -55,6 +101,7 @@ class HandCursorInstaller(QObject):
         if _DEFAULT_COMBO_DELEGATE_TYPE is None:
             _DEFAULT_COMBO_DELEGATE_TYPE = type(QComboBox().itemDelegate())
         self._mask_filter = _ComboPopupMaskFilter(self)
+        self._scroll_frame = _ComboScrollFrame(self)
 
     def _setup_combo(self, combo: QComboBox):
         if type(combo.itemDelegate()) is _DEFAULT_COMBO_DELEGATE_TYPE or type(combo.itemDelegate()) is QStyledItemDelegate:
@@ -64,6 +111,7 @@ class HandCursorInstaller(QObject):
             container.setAttribute(Qt.WA_TranslucentBackground, True)
             container.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
             container.installEventFilter(self._mask_filter)
+            container.installEventFilter(self._scroll_frame)
 
     def setup_existing(self, root: QWidget):
         """Lo mismo que el filtro hace al ver nacer cada widget (ChildAdded), aplicado de
@@ -124,6 +172,15 @@ class HandCursorInstaller(QObject):
         elif ev_type in (QEvent.Type.Show, QEvent.Type.Polish):
             if isinstance(obj, QComboBox):
                 self._setup_combo(obj)
+            elif ev_type == QEvent.Type.Polish:
+                if isinstance(obj, QMenu):
+                    prepare_menu_window(obj)
+            else:
+                # Imagen de fondo: vidrio recortado en menús y listas desplegables.
+                if isinstance(obj, QMenu):
+                    glass_prepare_popup(obj)
+                elif isinstance(obj, QWidget) and obj.isWindow() and isinstance(obj.parent(), QComboBox):
+                    glass_prepare_popup(obj, obj.parent().view())
         return False
 
 

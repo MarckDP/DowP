@@ -10,15 +10,17 @@ from PySide6.QtGui import QPixmap, QIcon, QPainter, QColor, QImage, QResizeEvent
 from core.logger.logger_manager import logger
 from core.utils.paths import get_src_dir
 from core.tabs.editing_media.editing_media_logic import RAW_EXTS
+from gui.styles import theme_radius
 from gui.styles import (
     register_theme_callback,
     get_theme_token,
     apply_player_play_button_style,
     apply_player_loop_button_style,
     apply_edit_subclip_button_style,
-    create_checkerboard_pixmap,
+    create_checkerboard_pixmap, glass_checker_colors,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
+from gui.widgets.background_canvas import hide_with_preview_image, install_preview_backdrop
 from gui.widgets.volume_control import VolumeControlWidget
 from gui.widgets.zoomable_image_viewer import ZoomableImageViewer
 from gui.widgets.compare_viewer import CompareViewer
@@ -65,8 +67,12 @@ class _PreviewVideoView(QGraphicsView):
         if self._show_checkerboard:
             painter.save()
             # Colores de la cuadrícula del tema (ajedrez_c1/c2), leídos al pintar
-            color_a = QColor(get_theme_token('ajedrez_c1', '#2a2a2a'))
-            color_b = QColor(get_theme_token('ajedrez_c2', '#1e1e1e'))
+            colors = glass_checker_colors(self, get_theme_token('ajedrez_c1', '#2a2a2a'),
+                                          get_theme_token('ajedrez_c2', '#1e1e1e'))
+            if colors is None:  # "Transparentar vistas previas"
+                painter.restore()
+                return
+            color_a, color_b = colors
             size = self.SQUARE
             r = self.sceneRect() if self.sceneRect().isValid() and not self.sceneRect().isEmpty() else rect
             cols = int(r.width() // size) + 2
@@ -139,6 +145,7 @@ class PreviewContainerWidget(QFrame):
         # 1. Widget de Estado Vacío Estilizado (Centrado Absoluto)
         self.empty_state_widget = QWidget()
         self.empty_state_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        install_preview_backdrop(self.empty_state_widget)
         empty_outer = QVBoxLayout(self.empty_state_widget)
         empty_outer.setContentsMargins(0, 0, 0, 0)
         empty_outer.setSpacing(0)
@@ -168,6 +175,8 @@ class PreviewContainerWidget(QFrame):
         empty_inner_layout.addWidget(self.lbl_empty_desc)
 
         empty_outer.addWidget(empty_inner, 0, Qt.AlignCenter)
+        self._empty_hint = empty_inner
+        hide_with_preview_image(empty_inner)
         empty_outer.addStretch(1)
 
         self.layout.addWidget(self.empty_state_widget, 1)
@@ -375,7 +384,7 @@ class PreviewContainerWidget(QFrame):
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation
                 )
-                bg = create_checkerboard_pixmap(scaled.width(), scaled.height(), square_size=10)
+                bg = create_checkerboard_pixmap(scaled.width(), scaled.height(), square_size=10, widget=self)
                 painter = QPainter(bg)
                 painter.drawPixmap(0, 0, scaled)
                 painter.end()
@@ -456,7 +465,7 @@ class PreviewContainerWidget(QFrame):
         self.zoom_viewer.setVisible(False)
         self.placeholder_label.setVisible(True)
         scaled = pix.scaled(avail_w, avail_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        bg = create_checkerboard_pixmap(scaled.width(), scaled.height(), square_size=10)
+        bg = create_checkerboard_pixmap(scaled.width(), scaled.height(), square_size=10, widget=self)
         painter = QPainter(bg)
         painter.drawPixmap(0, 0, scaled)
         painter.end()
@@ -760,7 +769,7 @@ class PreviewContainerWidget(QFrame):
         pen = QPen(QColor("#2d2d30"), 1.5)
         painter.setPen(pen)
         painter.setBrush(QBrush(QColor("#202024")))
-        painter.drawRoundedRect(8, 8, card_w - 16, card_h - 16, 8, 8)
+        painter.drawRoundedRect(8, 8, card_w - 16, card_h - 16, theme_radius(8), theme_radius(8))
 
         from core.utils.font_manager import system_ui_family
         ui_family = system_ui_family()

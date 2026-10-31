@@ -29,10 +29,11 @@ from PySide6.QtGui import (
     QBitmap, QRegion,
 )
 
+from gui.styles import theme_radius
 from gui.tabs.image_tools.layers.text_item import EditableTextItem, DEFAULT_TEXT_STYLE
 from gui.styles import (
     register_theme_callback,
-    VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip,
+    VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip, glass_preview_fill,
     get_theme_token,
 )
 
@@ -209,7 +210,7 @@ class ZoomableImageViewer(QGraphicsView):
         # Tile de 2x2 cuadros (no 1x1): así el patrón alterna correctamente al
         # repetirse con drawTiledPixmap, en vez de verse como un color sólido.
         square = 10
-        return create_checkerboard_pixmap(square * 2, square * 2, square)
+        return create_checkerboard_pixmap(square * 2, square * 2, square, widget=self)
 
     def refresh_checker_theme(self):
         """Llamar si el tema/tokens de color cambian en caliente."""
@@ -232,7 +233,9 @@ class ZoomableImageViewer(QGraphicsView):
         # la app). De paso, si el tiling de la cuadrícula llega a fallar en algún
         # frame (bug esporádico de drawTiledPixmap), nunca se ve "vacío": como
         # mínimo queda el oscuro de siempre, no un hueco en blanco/negro plano.
-        painter.fillRect(viewport_rect, self._dark_bg_color)
+        fill = glass_preview_fill(self, self._dark_bg_color)  # con imagen de fondo: translúcido
+        if fill is not None:
+            painter.fillRect(viewport_rect, fill)
         if self._canvas_rect is not None and self._pixmap_item is not None:
             canvas_vp = self._scene_rect_to_viewport(self._canvas_rect)
             painter.setClipRect(canvas_vp)
@@ -377,7 +380,7 @@ class ZoomableImageViewer(QGraphicsView):
         badge_rect = QRect(badge_x, badge_y, badge_w, badge_h)
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(0, 0, 0, 190))
-        painter.drawRoundedRect(badge_rect, 5, 5)
+        painter.drawRoundedRect(badge_rect, theme_radius(5), theme_radius(5))
         painter.setPen(QColor("#ffffff"))
         painter.drawText(badge_rect, Qt.AlignCenter, text)
 

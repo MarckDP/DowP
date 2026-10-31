@@ -1,5 +1,5 @@
 # src/core/utils/background_images.py
-"""Imágenes de fondo elegidas por el usuario (Ajustes > General > Imagen de fondo).
+"""Imágenes de fondo elegidas por el usuario (Ajustes > Apariencia > Imagen de fondo).
 
 Cada lugar tiene su propia imagen y sus ajustes, y DowP viene sin ninguna. Es un
 ajuste del usuario, NO del tema: los temas se comparten como .json y una ruta de
@@ -23,7 +23,8 @@ from core.utils.paths import get_app_data_dir
 
 # Lugares. Fase 1: solo el fondo general de la ventana.
 PLACE_GENERAL = "general"
-PLACES = (PLACE_GENERAL,)
+PLACE_PREVIEWS = "previews"  # vistas previas sin ningún medio cargado
+PLACES = (PLACE_GENERAL, PLACE_PREVIEWS)
 
 # Modos de ajuste (como el fondo de pantalla de Windows).
 FIT_FILL = "fill"          # cubre todo sin deformar; recorta lo que sobra
@@ -45,6 +46,7 @@ MAX_SIDE = 3840
 
 _CONFIG_KEY = "background_images"
 _PANEL_KEY = "background_panel_opacity"
+_PREVIEWS_KEY = "background_previews_transparent"
 
 
 def backgrounds_dir() -> str:
@@ -53,16 +55,19 @@ def backgrounds_dir() -> str:
     return path
 
 
-def default_settings() -> dict:
+def default_settings(place: str = PLACE_GENERAL) -> dict:
     # "file": la copia de DowP; "name": el nombre del archivo que eligió el usuario.
-    return {"file": "", "name": "", "opacity": DEFAULT_OPACITY, "fit": FIT_FILL, "align": "center-center",
-            "blur": False}
+    # Las vistas previas arrancan en Ajustar, a plena opacidad: suelen ser un personaje o
+    # un logo, y sobre el panel no hace falta atenuarlos.
+    previews = place == PLACE_PREVIEWS
+    return {"file": "", "name": "", "opacity": 100 if previews else DEFAULT_OPACITY,
+            "fit": FIT_FIT if previews else FIT_FILL, "align": "center-center", "blur": False}
 
 
 def get_place(place: str) -> dict:
     """Ajustes de un lugar, siempre completos y válidos."""
     saved = (get_config().get(_CONFIG_KEY) or {}).get(place) or {}
-    settings = default_settings()
+    settings = default_settings(place)
     settings.update({k: v for k, v in saved.items() if k in settings})
     settings["opacity"] = max(0, min(100, int(settings["opacity"])))
     if settings["fit"] not in FITS:
@@ -106,6 +111,19 @@ def get_panel_opacity() -> int:
 def set_panel_opacity(value: int):
     config = get_config()
     config[_PANEL_KEY] = max(MIN_PANEL_OPACITY, min(100, int(value)))
+    save_config(config)
+
+
+def get_previews_transparent() -> bool:
+    """Opción "Transparentar vistas previas": sin relleno ni cuadrícula, lo único sólido
+    es el medio. Desactivada por defecto: las zonas transparentes de una imagen se
+    mezclan con el fondo y ya no se distinguen."""
+    return bool(get_config().get(_PREVIEWS_KEY, False))
+
+
+def set_previews_transparent(value: bool):
+    config = get_config()
+    config[_PREVIEWS_KEY] = bool(value)
     save_config(config)
 
 

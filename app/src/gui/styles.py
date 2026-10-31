@@ -9,7 +9,7 @@ del triángulo del ComboBox.
 Los temas (con sus dos modos, claro y oscuro) los carga y resuelve
 core/utils/theme_loader.py; el que los aplica a la app es gui/theme_manager.py.
 
-Para crear un tema: Ajustes > General > botón junto a "Tema visual" > Exportar tema
+Para crear un tema: Ajustes > Apariencia > botón junto a "Tema visual" > Exportar tema
 actual, editar el JSON y volver a importarlo. El formato completo (colores en sus dos
 modos, formas y tipografía) está en gui/themes/TEMAS.md.
 """
@@ -269,6 +269,13 @@ _SIZE_RE = re.compile(r"(?:^|[;{\s])(?:min-|max-)?(?:width|height)\s*:\s*(\d+)px
 _BLOCK_RE = re.compile(r"\{[^{}]*\}")
 
 
+def theme_radius(px: float) -> float:
+    """Para lo que se pinta a mano: el radio escrito con las formas por defecto, adaptado
+    a las formas activas (tema o control de Redondez), como hace apply_shapes en las hojas."""
+    from core.utils.theme_loader import get_active_shapes
+    return _scaled_radius(px, get_active_shapes())
+
+
 def _scale_radii(qss: str, shapes: dict) -> str:
     """Escala los radios bloque a bloque: si en el mismo bloque hay un alto o ancho que
     es el doble del radio, es un círculo o una píldora y se deja como está."""
@@ -330,6 +337,7 @@ _GLASS_CONTROL_SHARE = 0.4   # control = panel + 40 % de lo que le falta para 10
 # fuertes que un control normal, para no perder su color (paneles al 50 % -> 85 %).
 _GLASS_ACTION_SHARE = 0.7
 _GLASS_ALT_ROW_FACTOR = 0.35  # el color alterno de las filas va encima del de la lista
+_GLASS_TAB_TEXT_MIX = 0.75    # cuánto del texto normal llevan las pestañas no seleccionadas
 
 # Tipos que cuentan como "panel" en un selector de QSS.
 _GLASS_CONTAINER_TYPES = {
@@ -548,6 +556,11 @@ def _paints_glass_background(widget) -> bool:
     if cached is not None:
         return cached
     name = widget.objectName()
+    if name == "collapsiblePanel" and widget.property("dockMode") != "overlay":
+        # Solo tiene fondo al flotar. Acoplado no es una capa: si contara, su contenido
+        # quedaba como "anidado" (casi transparente) sin nada detrás.
+        _GLASS_PAINTS[widget] = False
+        return False
     paints = bool(name and name in _GLASS_MAIN["names"]) or any(widget.inherits(t) for t in _GLASS_MAIN["types"])
     if not paints:
         raw = _THEMED_RAW.get(widget)
@@ -559,6 +572,55 @@ def _paints_glass_background(widget) -> bool:
     return paints
 
 
+# Construcción de una pestaña (ver glass_building): los widgets nacen sin padre, y si la
+# hoja sale sólida hay que rehacerla al meterlos en la ventana, lo que vuelve a estilizar
+# a todos sus hijos. Mientras se construye se supone cómo van a quedar; refresh_glass
+# solo rehace las que no acertaron.
+_GLASS_BUILDING = [False]
+_GLASS_ASSUMED = _weakref.WeakSet()
+
+
+def _assumed_status(widget) -> str | None:
+    """Estado probable de un widget todavía suelto. No se guarda en la caché."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QDialog, QMainWindow
+    name = widget.objectName()
+    if name == GLASS_CANVAS_NAME or name in _GLASS_SOLID_NAMES or isinstance(widget, (QDialog, QMainWindow)):
+        return None
+    # Sin padre Qt lo llama ventana, pero solo está suelto; con padre, sí es una ventana.
+    kind = widget.windowType()
+    if kind not in (Qt.Widget, Qt.Window) or (kind == Qt.Window and widget.parentWidget() is not None):
+        return None
+    # Sin mirar si flota: su padre puede tener layout y no haberlo agregado todavía.
+    control = _is_control_widget(widget)
+    if not control and not _is_panel_widget(widget) and name not in _GLASS_PREVIEW_NAMES:
+        return None
+    if control:
+        return "control"
+    if _is_frosted_candidate(widget, _is_floating(widget)):
+        return "frosted"
+    a = widget.parentWidget()
+    while a is not None:
+        if glass_status(a) in ("outer", "nested", "frosted") and _paints_glass_background(a):
+            return "nested"
+        a = a.parentWidget()
+    return "outer"
+
+
+def glass_building():
+    """Para envolver la construcción de una pestaña que irá dentro del lienzo."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def scope():
+        _GLASS_BUILDING[0] = True
+        try:
+            yield
+        finally:
+            _GLASS_BUILDING[0] = False
+    return scope()
+
+
 def glass_status(widget) -> str | None:
     """Estado del widget con imagen de fondo (ver el comentario de arriba)."""
     if widget is None:
@@ -568,6 +630,8 @@ def glass_status(widget) -> str | None:
             return _GLASS_STATUS[widget]
     except TypeError:
         return None
+    if _GLASS_BUILDING[0]:
+        return _assumed_status(widget)
     status = None
     name = widget.objectName()
     if not widget.isWindow() and name != GLASS_CANVAS_NAME and name not in _GLASS_SOLID_NAMES:
@@ -610,6 +674,260 @@ def _glass_forget():
 
 
 _GLASS_ALPHA_CACHE: list = []  # [opacidad de paneles o None]: glass_fill corre en cada repintado
+_GLASS_CHECKER_FLOOR = 0.35   # la cuadrícula nunca baja de esto: tiene que seguir viéndose
+
+
+def _cached_glass_alpha():
+    if not _GLASS_ALPHA_CACHE:
+        from core.utils.background_images import glass_alpha
+        _GLASS_ALPHA_CACHE.append(glass_alpha())
+    return _GLASS_ALPHA_CACHE[0]
+
+
+def glass_previews_transparent(widget) -> bool:
+    """Si está activa la opción "Transparentar vistas previas" para este widget."""
+    if widget is None or _cached_glass_alpha() is None or not _inside_glass_area(widget):
+        return False
+    from core.utils.background_images import get_previews_transparent
+    return get_previews_transparent()
+
+
+def glass_preview_fill(widget, color):
+    """Relleno alrededor del medio en una vista previa: el color translúcido como un
+    panel, o None (no pintar nada) con "Transparentar vistas previas"."""
+    return None if glass_previews_transparent(widget) else glass_fill(widget, color)
+
+
+def glass_checker_colors(widget, color_a, color_b):
+    """Los dos colores de la cuadrícula de transparencia para `widget`: translúcidos con
+    imagen de fondo (nunca menos que _GLASS_CHECKER_FLOOR), tal cual sin imagen, o None
+    con "Transparentar vistas previas"."""
+    from PySide6.QtGui import QColor
+    a, b = QColor(color_a), QColor(color_b)
+    if widget is None or _cached_glass_alpha() is None or not _inside_glass_area(widget):
+        return a, b
+    if glass_previews_transparent(widget):
+        return None
+    f = max(_cached_glass_alpha(), _GLASS_CHECKER_FLOOR)
+    a.setAlpha(round(255 * f))
+    b.setAlpha(round(255 * f))
+    return a, b
+
+
+# ── Vidrio recortado en ventanas aparte: menús y listas desplegables ──────────
+_GLASS_POPUP_PAINTER = None
+
+
+def _glass_canvas_for_popup(anchor):
+    """El lienzo con imagen del que cuelga un menú o un combo, o None: si está dentro de
+    un diálogo (detrás tiene el diálogo sólido, no la imagen) queda sólido. En Wayland
+    una ventana no conoce su posición en pantalla, así que también."""
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtWidgets import QMenu
+    if _cached_glass_alpha() is None or QGuiApplication.platformName().startswith("wayland"):
+        return None
+    w = anchor
+    while isinstance(w, QMenu):  # un submenú cuelga de otro menú: importa el de arriba
+        w = w.parentWidget()
+    while w is not None:
+        if w.objectName() == GLASS_CANVAS_NAME:
+            break
+        if w.isWindow():
+            central = getattr(w, "centralWidget", lambda: None)()
+            w = central if central is not None and central.objectName() == GLASS_CANVAS_NAME else None
+            break
+        w = w.parentWidget()
+    return w if w is not None and getattr(w, "has_image", lambda: False)() else None
+
+
+def _glass_popup_entry(popup):
+    """(lienzo, widget con la regla de vidrio) de una ventana con vidrio, o None. Se busca
+    al pintar: el objeto Python de la ventana de un combo es temporal, así que no sirve
+    como clave de un diccionario débil."""
+    from PySide6.QtWidgets import QAbstractItemView
+    styled = popup if popup.property("glass") == "menu" else popup.findChild(QAbstractItemView)
+    if styled is None or styled.property("glass") != "menu":
+        return None
+    canvas = _glass_canvas_for_popup(popup.parentWidget())
+    return (canvas, styled) if canvas is not None else None
+
+
+def _glass_popup_painter():
+    global _GLASS_POPUP_PAINTER
+    if _GLASS_POPUP_PAINTER is None:
+        from PySide6.QtCore import QEvent, QObject, QRectF
+        from PySide6.QtGui import QPainter, QPainterPath
+
+        class _PopupPainter(QObject):
+            def eventFilter(self, obj, event):
+                if event.type() == QEvent.Paint:
+                    entry = _glass_popup_entry(obj)
+                    if entry is not None:
+                        canvas, shaped = entry
+                        if shaped.property("scrollFrame"):
+                            return False  # lo pinta paint_combo_scroll_frame
+                        p = QPainter(obj)
+                        # Afuera de la forma redondeada, nada. La lista del combo además
+                        # es más chica que su ventana; un menú la ocupa entera.
+                        from core.utils.theme_loader import get_active_shapes
+                        radius = get_active_shapes()["radio"]
+                        path = QPainterPath()
+                        path.addRoundedRect(QRectF(obj.rect() if shaped is obj else shaped.geometry()),
+                                            radius, radius)
+                        p.setRenderHint(QPainter.Antialiasing)
+                        p.setClipPath(path)
+                        canvas.paint_backdrop_for_popup(p, obj)
+                        p.end()
+                return False
+
+        _GLASS_POPUP_PAINTER = _PopupPainter()
+    return _GLASS_POPUP_PAINTER
+
+
+def _relative_luminance(color) -> float:
+    def channel(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    return 0.2126 * channel(color.red()) + 0.7152 * channel(color.green()) + 0.0722 * channel(color.blue())
+
+
+def _contrast_ratio(a, b) -> float:
+    la, lb = _relative_luminance(a), _relative_luminance(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+def _blend_until_contrast(background, target_color, ratio: float) -> str:
+    """El primer color entre `background` y `target_color` que contrasta `ratio` contra
+    el fondo: así el resultado sale igual de visible en todos los temas."""
+    from PySide6.QtGui import QColor
+    bg, fg = QColor(background), QColor(target_color)
+    for step in range(1, 51):
+        t = step / 50
+        mix = QColor(round(bg.red() + (fg.red() - bg.red()) * t),
+                     round(bg.green() + (fg.green() - bg.green()) * t),
+                     round(bg.blue() + (fg.blue() - bg.blue()) * t))
+        if _contrast_ratio(mix, bg) >= ratio:
+            return mix.name()
+    return fg.name()
+
+
+_MENU_BORDER_CONTRAST = 1.8    # sin sombra, el borde es lo que separa el menú del fondo
+_MENU_DISABLED_CONTRAST = 3.2  # se lee, y sigue muy por debajo del texto normal (10:1 o más)
+_MENU_GLASS_DISABLED_CONTRAST = 4.0  # sobre vidrio: lo que hay detrás le resta contraste
+
+
+def menu_contrast_rules() -> str:
+    """Borde, separadores y opciones deshabilitadas de los menús, calculados a partir del
+    fondo y el texto del tema activo. Los tokens borde_normal y texto_deshabilitado sirven
+    para botones y campos, pero en un menú casi no se ven (contraste de 1,1 y de 2)."""
+    from PySide6.QtGui import QColor
+    bg = get_theme_token("fondo_secundario", "#121212")
+    text = get_theme_token("texto_principal", "#e0e0e0")
+    if not QColor(bg).isValid() or not QColor(text).isValid():  # un degradado: queda el del tema
+        return ""
+    border = _blend_until_contrast(bg, text, _MENU_BORDER_CONTRAST)
+    disabled = _blend_until_contrast(bg, text, _MENU_DISABLED_CONTRAST)
+    glass_disabled = _blend_until_contrast(bg, text, _MENU_GLASS_DISABLED_CONTRAST)
+    return (f"\nQMenu {{ border-color: {border}; }}"
+            f"\nQMenu::separator {{ background-color: {border}; }}"
+            f"\nQMenu::item:disabled {{ color: {disabled}; }}"
+            f'\nQMenu[glass="menu"]::item:disabled {{ color: {glass_disabled}; }}\n')
+
+
+def prepare_menu_window(menu):
+    """Ventana transparente y sin marco para que el menú tome la forma del tema, igual que
+    la lista de un combo. Windows redondea por su cuenta las ventanas opacas, con un radio
+    fijo que ignora el tema. Debe correr antes de que exista la ventana nativa (al evento
+    Polish): más tarde quedan esquinas negras."""
+    from PySide6.QtCore import Qt
+    if menu.testAttribute(Qt.WA_TranslucentBackground) or menu.isVisible():
+        return
+    menu.setAttribute(Qt.WA_TranslucentBackground, True)
+    menu.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
+
+
+def glass_prepare_popup(popup, styled=None):
+    """Al abrirse un menú o una lista desplegable: con imagen de fondo lleva vidrio
+    recortado, con la opacidad de los paneles flotantes. `popup` es la ventana y `styled`
+    el widget al que se aplica la regla [glass="menu"] (la vista, en un combo)."""
+    styled = styled if styled is not None else popup
+    canvas = _glass_canvas_for_popup(popup.parentWidget())
+    if canvas is not None:
+        popup.removeEventFilter(_glass_popup_painter())  # sin duplicar si se abre otra vez
+        popup.installEventFilter(_glass_popup_painter())
+    value = "menu" if canvas is not None else None
+    if styled.property("glass") != value:
+        styled.setProperty("glass", value)
+        styled.style().unpolish(styled)
+        styled.style().polish(styled)
+    if styled is not popup:
+        _glass_clear_list_palette(styled, value is not None or bool(styled.property("scrollFrame")))
+
+
+def set_combo_scroll_frame(view, active: bool):
+    """Lista con flechas: la vista deja de pintar marco y fondo, y los pone su ventana."""
+    if bool(view.property("scrollFrame")) == active:
+        return
+    view.setProperty("scrollFrame", True if active else None)
+    view.style().unpolish(view)
+    view.style().polish(view)
+    _glass_clear_list_palette(view, active or view.property("glass") is not None)
+
+
+def paint_combo_scroll_frame(container):
+    """Fondo y borde de una lista con flechas: una sola pieza redondeada que abarca la
+    lista y las franjas. Con imagen de fondo lleva el mismo vidrio que el resto."""
+    from PySide6.QtCore import QRectF
+    from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
+    from core.utils.theme_loader import get_active_shapes
+    radius = get_active_shapes()["radio"]
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(container.rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius)
+    fill = QColor(get_theme_token("fondo_terciario", "#161616"))
+    p = QPainter(container)
+    p.setRenderHint(QPainter.Antialiasing)
+    entry = _glass_popup_entry(container)
+    if entry is not None:
+        p.save()
+        p.setClipPath(path)
+        entry[0].paint_backdrop_for_popup(p, container)
+        p.restore()
+        fill.setAlphaF(_cached_glass_alpha())
+    p.fillPath(path, fill)
+    p.setPen(QPen(QColor(get_theme_token("acento_primario", "#B9E640")), 1))
+    p.drawPath(path)
+    p.end()
+
+
+def paint_combo_scroller_arrow(scroller, down: bool):
+    """La flecha de una franja de desplazamiento, sin fondo: se ve el marco de detrás."""
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QColor, QPainter, QPolygonF
+    token = "texto_principal" if scroller.underMouse() else "texto_secundario"
+    cx, cy = scroller.width() / 2, scroller.height() / 2
+    tip = 2.5 if down else -2.5
+    p = QPainter(scroller)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(get_theme_token(token, "#c2c2c2")))
+    p.drawPolygon(QPolygonF([QPointF(cx - 5, cy - tip), QPointF(cx + 5, cy - tip), QPointF(cx, cy + tip)]))
+    p.end()
+
+
+def _glass_clear_list_palette(view, clear: bool):
+    """La lista de un combo (QComboBoxListView) borra su viewport con el color de la
+    paleta antes de pintar las filas, y eso tapaba el vidrio: con la paleta transparente
+    ese borrado no pinta nada."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPalette
+    viewport = view.viewport()
+    if not clear:
+        viewport.setPalette(QPalette())
+        return
+    palette = viewport.palette()
+    for role in (QPalette.Window, QPalette.Base):
+        palette.setColor(role, Qt.transparent)
+    viewport.setPalette(palette)
 
 
 def _has_glass_ancestor(widget) -> bool:
@@ -631,10 +949,7 @@ def glass_fill(widget, color, kind: str = "panel"):
     progreso, el botón de lotes, la onda de audio, el reproductor vacío..."""
     from PySide6.QtGui import QColor
     c = QColor(color)
-    if not _GLASS_ALPHA_CACHE:
-        from core.utils.background_images import glass_alpha
-        _GLASS_ALPHA_CACHE.append(glass_alpha())
-    alpha = _GLASS_ALPHA_CACHE[0]
+    alpha = _cached_glass_alpha()
     if alpha is None or widget is None or not _inside_glass_area(widget):
         return c
     if kind == "control":
@@ -646,6 +961,7 @@ def glass_fill(widget, color, kind: str = "panel"):
 
 
 def _inside_glass_area(widget) -> bool:
+    """Si el widget está dentro del lienzo de la ventana principal (no en un diálogo)."""
     w = widget
     while w is not None:
         if w.objectName() == GLASS_CANVAS_NAME:
@@ -736,6 +1052,17 @@ def apply_glass(qss: str, widget) -> str:
     return _GLASS_RULE_RE.sub(rule, qss)
 
 
+def _glass_inactive_tab_color() -> str:
+    """Mezcla del texto normal (75 %) y el de pestaña inactiva: se lee sobre la imagen,
+    pero sigue siendo más apagado que la pestaña activa."""
+    from PySide6.QtGui import QColor
+    strong = QColor(get_theme_token("texto_principal", "#e0e0e0"))
+    weak = QColor(get_theme_token("tab_texto_inactivo", "#666666"))
+    mix = lambda a, b: round(a * _GLASS_TAB_TEXT_MIX + b * (1 - _GLASS_TAB_TEXT_MIX))
+    return QColor(mix(strong.red(), weak.red()), mix(strong.green(), weak.green()),
+                  mix(strong.blue(), weak.blue())).name()
+
+
 def _with_glass_attr(selector: str, value: str) -> str:
     """'QFrame#x:hover' -> 'QFrame#x[glass="outer"]:hover' (la condición va en el
     último elemento, antes de sus pseudo-estados o subcontroles)."""
@@ -808,6 +1135,17 @@ def glass_main_rules(qss: str) -> str:
     # QScrollArea se controla en él, no en su viewport. Su contenido tiene el suyo.
     extra.append(f"QWidget#{GLASS_CANVAS_NAME} QHeaderView {{ background: transparent; }}")
     extra.append(f"QWidget#{GLASS_CANVAS_NAME} QScrollArea {{ background: transparent; }}")
+    # Igual en los visores (QGraphicsView): el relleno y la cuadrícula los pintan ellos.
+    extra.append(f"QWidget#{GLASS_CANVAS_NAME} QGraphicsView {{ background: transparent; }}")
+    # Pestañas no seleccionadas (principales e internas): su color tenue se pierde sobre
+    # una imagen, así que van casi con el color de texto normal.
+    extra.append(f"QWidget#{GLASS_CANVAS_NAME} QTabBar::tab:!selected {{ color: {_glass_inactive_tab_color()}; }}")
+    # Menús y listas desplegables con vidrio recortado (ver glass_prepare_popup). Sin
+    # "#dowpCanvas": son ventanas aparte; lo que limita es la propiedad.
+    menu_bg = _glass_color(get_theme_token("fondo_secundario", "#121212"), alpha, allow_black=True)
+    list_bg = _glass_color(get_theme_token("fondo_terciario", "#161616"), alpha, allow_black=True)
+    extra.append(f'QMenu[glass="menu"] {{ background-color: {menu_bg}; }}')
+    extra.append(f'QComboBox QAbstractItemView[glass="menu"] {{ background-color: {list_bg}; }}')
     return "\n/* Imagen de fondo: paneles translúcidos */\n" + "\n".join(extra)
 
 
@@ -823,15 +1161,14 @@ def refresh_glass(root=None) -> int:
     from core.utils.background_images import glass_alpha
     _glass_forget()
     active = glass_alpha() is not None
-    marked = 0
+    marked = []
+    restyled = set()
     if root is not None:
         for w in [root] + root.findChildren(QWidget):
             value = (glass_status(w) or "") if active else ""
             if (w.property("glass") or "") != value:
                 w.setProperty("glass", value or None)
-                w.style().unpolish(w)
-                w.style().polish(w)
-                marked += 1
+                marked.append(w)
             if value == "frosted":
                 w.update()
         # Los ayudantes con estado (apply_*_button_style) también pasan por la
@@ -849,12 +1186,18 @@ def refresh_glass(root=None) -> int:
         if active or marked:
             root.update()  # lo que se dibuja a mano (barra de progreso, onda...) usa glass_fill
     updated = 0
+    # Lo construido suponiendo que iba dentro y que al final quedó fuera de `root` (un
+    # diálogo, un widget suelto): también hay que corregirlo.
+    assumed = set(_GLASS_ASSUMED)
+    if not _GLASS_BUILDING[0]:
+        _GLASS_ASSUMED.clear()
     for widget, (builder, qss) in list(_THEMED_STYLES.items()):
         if not shiboken6.isValid(widget):
             _THEMED_STYLES.pop(widget, None)
             continue
         try:
-            if root is not None and widget is not root and not root.isAncestorOf(widget):
+            if (root is not None and widget is not root and not root.isAncestorOf(widget)
+                    and (_GLASS_BUILDING[0] or widget not in assumed)):
                 continue
             if widget.styleSheet() != qss:
                 continue
@@ -862,11 +1205,22 @@ def refresh_glass(root=None) -> int:
             if new_qss != qss:
                 widget.setStyleSheet(new_qss)
                 _THEMED_STYLES[widget] = (builder, new_qss)
+                restyled.add(widget)
                 updated += 1
         except RuntimeError:
             _THEMED_STYLES.pop(widget, None)
+    # Poner una hoja ya vuelve a estilizar al widget y a todo lo que cuelga de él: las
+    # marcas nuevas solo piden repulir lo que ninguna hoja alcanzó (es lo caro: cada
+    # repulido recalcula tamaños y reglas).
+    for w in marked:
+        a = w
+        while a is not None and a not in restyled and a is not root:
+            a = a.parentWidget()
+        if a is None or a not in restyled:
+            w.style().unpolish(w)
+            w.style().polish(w)
     if updated or marked:
-        logger.debug(f"Fondo: {updated} hojas y {marked} marcas recalculadas "
+        logger.debug(f"Fondo: {updated} hojas y {len(marked)} marcas recalculadas "
                      f"({'con' if active else 'sin'} transparencia)")
     return updated
 
@@ -885,6 +1239,8 @@ def set_themed_style(widget, builder):
     _THEMED_RAW[widget] = raw
     _GLASS_PAINTS.pop(widget, None)
     qss = shaped()
+    if _GLASS_BUILDING[0]:
+        _GLASS_ASSUMED.add(widget)
     widget.setStyleSheet(qss)
     _THEMED_STYLES[widget] = (shaped, qss)
 
@@ -1391,16 +1747,23 @@ def apply_volume_control_style(btn_mute, slider):
     """)
 
 
-def create_checkerboard_pixmap(width: int, height: int, square_size: int = 10):
+def create_checkerboard_pixmap(width: int, height: int, square_size: int = 10, widget=None):
     """
     Genera una cuadrícula de transparencia (patrón de ajedrez) para diferenciar fondos transparentes.
     Utiliza los tokens de color del tema activo ('ajedrez_c1', 'ajedrez_c2').
+    `widget`: quién la va a mostrar. Con imagen de fondo sale translúcida, o vacía con
+    "Transparentar vistas previas" (ver glass_checker_colors).
     """
-    from PySide6.QtGui import QPixmap, QPainter, QColor
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPixmap, QPainter
     pix = QPixmap(width, height)
+    pix.fill(Qt.transparent)
+    colors = glass_checker_colors(widget, get_theme_token('ajedrez_c1', '#2a2a2a'),
+                                  get_theme_token('ajedrez_c2', '#181818'))
+    if colors is None:
+        return pix
     painter = QPainter(pix)
-    c1 = QColor(get_theme_token('ajedrez_c1', '#2a2a2a'))
-    c2 = QColor(get_theme_token('ajedrez_c2', '#181818'))
+    c1, c2 = colors
 
     rows = (height + square_size - 1) // square_size
     cols = (width + square_size - 1) // square_size

@@ -248,18 +248,28 @@ def sync_legacy_theme_key(config: dict) -> bool:
 
 # ── Tokens del tema activo ───────────────────────────────────────────────────
 
-def resolve_shapes(theme_id: str, _depth: int = 0) -> dict:
+def radius_shapes(radio: int) -> dict:
+    """Los tres radios a partir de uno, en la proporción de las formas por defecto."""
+    d = DEFAULT_SHAPES
+    limit = lambda key, value: max(SHAPE_LIMITS[key][0], min(SHAPE_LIMITS[key][1], round(value)))
+    return {"radio": limit("radio", radio),
+            "radio_chico": limit("radio_chico", radio * d["radio_chico"] / d["radio"]),
+            "radio_grande": limit("radio_grande", radio * d["radio_grande"] / d["radio"])}
+
+
+def resolve_shapes(theme_id: str, _depth: int = 0, use_overrides: bool = True) -> dict:
     """Formas y tamaño de letra del tema, completados con su tema base. Son iguales en
-    claro y en oscuro. Nunca lanza: un valor inválido se ignora con aviso en el log."""
+    claro y en oscuro. Nunca lanza: un valor inválido se ignora con aviso en el log.
+    use_overrides=False: lo que dice el tema, sin los controles de Ajustes."""
     theme_id = LEGACY_ALIASES.get(theme_id, (theme_id, None))[0]
     data = read_theme(theme_id)
     if not data and theme_id != DEFAULT_THEME:
-        return resolve_shapes(DEFAULT_THEME, _depth + 1)
+        return resolve_shapes(DEFAULT_THEME, _depth + 1, use_overrides)
 
     shapes = dict(DEFAULT_SHAPES)
     base = _base_of(theme_id, data)
     if base and _depth < _MAX_BASE_DEPTH:
-        shapes.update(resolve_shapes(base, _depth + 1))
+        shapes.update(resolve_shapes(base, _depth + 1, use_overrides))
 
     raw = dict(data.get("formas") or {}) if isinstance(data.get("formas"), dict) else {}
     tipografia = data.get("tipografia") if isinstance(data.get("tipografia"), dict) else {}
@@ -269,9 +279,13 @@ def resolve_shapes(theme_id: str, _depth: int = 0) -> dict:
 
     try:
         from core.utils.config_manager import get_config
-        font_size_override = get_config().get("font_size_override", "default")
+        font_size_override = get_config().get("font_size_override", "default") if use_overrides else "default"
         if font_size_override != "default" and isinstance(font_size_override, int):
             raw["tamano_fuente"] = font_size_override
+        # Control "Redondez" de Ajustes: None o ausente = lo que diga el tema.
+        radius_override = get_config().get("radius_override") if use_overrides else None
+        if isinstance(radius_override, int) and not isinstance(radius_override, bool):
+            raw.update(radius_shapes(radius_override))
     except Exception:
         pass
 

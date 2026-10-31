@@ -58,14 +58,14 @@ class LazyTabWidget(QTabWidget):
         stack = placeholder.parentWidget()
         if stack is not None:
             placeholder.resize(stack.size())
-        with startup_timer.measure(f"pestaña diferida construida: {name}"):
+        from gui.styles import glass_building, refresh_glass
+        with startup_timer.measure(f"pestaña diferida construida: {name}"), glass_building():
             real = build_without_app_filters(lambda: factory(placeholder))
         real.resize(placeholder.size())
         self._built[placeholder] = real
         placeholder.layout().addWidget(real)
         # Imagen de fondo: sus paneles recién ahora están dentro del lienzo (ver
         # gui/styles.py, refresh_glass). Sin imagen no hace nada.
-        from gui.styles import refresh_glass
         refresh_glass(real)
         return real
 

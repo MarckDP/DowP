@@ -589,6 +589,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         # Botones de filtro rápido + Selector de vista
         btn_bar = QHBoxLayout()
         btn_bar.setSpacing(4)
+        self._filter_bar = btn_bar
         self.filter_buttons = []
         # Mapeo con llamadas self.tr(...) literales -- lupdate solo extrae strings
         # cuando el argumento es un literal escrito ahí mismo, no una variable de loop.
@@ -1532,6 +1533,13 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
         """Reinicia el temporizador de debounce al mover el splitter."""
         self._splitter_save_timer.start()
 
+    def _fit_list_column_to_filters(self):
+        """La columna de la lista nunca más angosta que su barra de filtros: el mínimo fijo
+        (ver setMinimumWidth) es menor, y Qt aplastaría los botones cortando su texto. Se
+        mide ya visible, con la letra y el idioma reales."""
+        left = self.filter_buttons[0].mapTo(self.col2_container, QPoint(0, 0)).x()
+        self.col2_container.setMinimumWidth(max(220, self._filter_bar.sizeHint().width() + 2 * left))
+
     def _reset_splitter_sizes(self):
         """Doble clic en un tirador: vuelve a la proporción por defecto (20/40/40) del
         ancho actual y la guarda."""
@@ -1710,6 +1718,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             self._update_media_list()
 
     def showEvent(self, event):
+        self._fit_list_column_to_filters()
         super().showEvent(event)
         from core.utils.config_manager import get_config, save_config
         config = get_config()

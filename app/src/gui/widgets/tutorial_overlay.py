@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QRect, QPoint, Signal, QPropertyAnimation, QEasingCurve, QEvent
 from PySide6.QtGui import QPainter, QPainterPath, QColor, QRegion
 
+from gui.styles import theme_radius
 from gui.styles import get_theme_token
 from gui.styles import set_themed_style
 
@@ -165,7 +166,7 @@ class TutorialOverlay(QWidget):
             # Ajustar padding
             w_rect.adjust(-padding, -padding, padding, padding)
             
-            hole_path.addRoundedRect(w_rect, 8, 8)
+            hole_path.addRoundedRect(w_rect, theme_radius(8), theme_radius(8))
             
         # Restar los agujeros
         final_path = path.subtracted(hole_path)

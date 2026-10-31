@@ -9,10 +9,11 @@ compartirlo: no depende de "dowp" para nada que falte.
 """
 import json
 import os
+import shutil
 import re
 import unicodedata
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QFile
 
 from core.logger.logger_manager import logger
 from core.utils.paths import get_user_themes_dir
@@ -40,6 +41,11 @@ def builtin_theme_ids() -> set:
 
 def user_theme_path(theme_id: str) -> str:
     return os.path.join(get_user_themes_dir(), f"{theme_id}.json")
+
+
+def user_theme_ids() -> set:
+    folder = get_user_themes_dir()
+    return {os.path.splitext(f)[0] for f in os.listdir(folder) if f.endswith(".json")} if os.path.isdir(folder) else set()
 
 
 def is_user_theme(theme_id: str) -> bool:
@@ -260,6 +266,33 @@ def save_imported(theme_id: str, data: dict) -> str:
     return path
 
 
+def apply_color_edits(theme_id: str, edits: dict) -> str:
+    """Guarda colores editados, {modo: {color: valor}}, y devuelve el tema donde quedaron. Un
+    tema de usuario se actualiza; uno de DowP no se toca: se crea una copia personalizada."""
+    data = TL.read_theme(theme_id) or {}
+    target = theme_id
+    if not is_user_theme(theme_id):
+        name = (data.get("meta") or {}).get("nombre") or theme_id.replace("_", " ").title()
+        number, target = 1, f"{theme_id}_personalizado"
+        while is_user_theme(target):
+            number += 1
+            target = f"{theme_id}_personalizado_{number}"
+        suffix = QCoreApplication.translate("ThemeIO", "personalizado")
+        label = f"{name} ({suffix})" if number == 1 else f"{name} ({suffix} {number})"
+        data = {"meta": {"nombre": label, "autor": "DowP", "version": "1.0", "formato": 2}, "basado_en": theme_id,
+                "colores": {}}
+    data = dict(data)
+    colors = dict(data.get("colores") or {})
+    light, dark = TL.resolve_theme(theme_id, "light"), TL.resolve_theme(theme_id, "dark")
+    for token in {t for changes in edits.values() for t in changes}:
+        colors[token] = [edits.get("light", {}).get(token, light.get(token)),
+                         edits.get("dark", {}).get(token, dark.get(token))]
+    data["colores"] = colors
+    _write_json(user_theme_path(target), data)
+    logger.info(f"Temas: colores editados guardados en '{target}'")
+    return target
+
+
 # ── Exportar ──────────────────────────────────────────────────────────────────
 def build_export(theme_id: str) -> dict:
     """El tema completo y autónomo: cada color en sus dos modos ([claro, oscuro], o un
@@ -277,6 +310,11 @@ def build_export(theme_id: str) -> dict:
     shapes = TL.resolve_shapes(theme_id)
     tipografia = {"tamano": shapes["tamano_fuente"]}
     family = TL.get_theme_font(theme_id)
+    # Del tema activo se exporta lo que se ve: también la fuente elegida en Ajustes.
+    from core.utils.config_manager import get_config
+    config = get_config()
+    if config.get("theme_id") == theme_id and config.get("font_family", "theme_default") != "theme_default":
+        family = config["font_family"]
     if family:
         tipografia["familia"] = family
     return {
@@ -293,8 +331,43 @@ def export_theme(theme_id: str, dest_path: str):
 
 
 # ── Eliminar ──────────────────────────────────────────────────────────────────
-def delete_user_theme(theme_id: str):
+def delete_user_theme(theme_id: str, to_trash: bool = False):
+    """to_trash: a la Papelera, para poder recuperarlo. Si no se puede, queda un OSError."""
     path = user_theme_path(theme_id)
+    assets = path[:-len(".json")] + "_assets"  # imágenes de una apariencia
+    if to_trash:
+        for target in (path, assets):
+            if os.path.exists(target) and not QFile.moveToTrash(target):
+                raise OSError(QCoreApplication.translate("ThemeIO", "No se pudo enviar a la Papelera: {0}").format(target))
+        logger.info(f"Temas: tema de usuario '{theme_id}' enviado a la Papelera")
+        return
     if os.path.isfile(path):
         os.remove(path)
         logger.info(f"Temas: eliminado el tema de usuario '{theme_id}'")
+    shutil.rmtree(assets, ignore_errors=True)
+
+
+def rename_user_theme(theme_id: str, name: str):
+    data = dict(TL.read_theme(theme_id) or {})
+    data["meta"] = dict(data.get("meta") or {}, nombre=name)
+    _write_json(user_theme_path(theme_id), data)
+
+
+def duplicate_theme(theme_id: str) -> str:
+    """Una copia de usuario, con sus imágenes si las tiene. De un tema de DowP copia sus colores."""
+    data = dict(TL.read_theme(theme_id) or {})
+    if not is_user_theme(theme_id):
+        data = build_export(theme_id)
+    name = (data.get("meta") or {}).get("nombre") or theme_id
+    suffix = QCoreApplication.translate("ThemeIO", "copia")
+    number, target = 1, slugify(f"{theme_id}_{suffix}")
+    while is_user_theme(target) or target in builtin_theme_ids():
+        number += 1
+        target = slugify(f"{theme_id}_{suffix}_{number}")
+    label = f"{name} ({suffix})" if number == 1 else f"{name} ({suffix} {number})"
+    data["meta"] = dict(data.get("meta") or {}, nombre=label)
+    assets = user_theme_path(theme_id)[:-len(".json")] + "_assets"
+    if os.path.isdir(assets):
+        shutil.copytree(assets, user_theme_path(target)[:-len(".json")] + "_assets")
+    _write_json(user_theme_path(target), data)
+    return target

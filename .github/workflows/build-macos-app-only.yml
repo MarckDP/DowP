@@ -108,3 +108,19 @@ jobs:
           name: ${{ steps.name.outputs.base }}
           path: app/dist/${{ steps.name.outputs.base }}.zip
           retention-days: 7
+
+      # Despues de subir, y sin hacer fallar la corrida: el build ya esta disponible
+      # aunque esta prueba falle, y aqui se ve el motivo (modulo o libreria faltante).
+      - name: Prueba de arranque (sin pantalla, 25 s)
+        continue-on-error: true
+        run: |
+          QT_QPA_PLATFORM=offscreen app/dist/DowP.app/Contents/MacOS/DowP &
+          PID=$!
+          sleep 25
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Sigue abierto a los 25 s: arranca."
+            kill "$PID"
+          else
+            wait "$PID"; echo "Se cerro solo, codigo $?"
+            exit 1
+          fi

@@ -615,6 +615,15 @@ QComboBox QAbstractItemView {
     min-width: 50px;
 }
 
+/* Lista larga, con flechas: el marco lo pinta la ventana que las contiene a las dos
+   (ver _ComboScrollFrame en app_event_filters.py). */
+QComboBox QAbstractItemView[scrollFrame="true"],
+QComboBox QAbstractItemView[scrollFrame="true"][glass="menu"] {
+    background-color: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
 QComboBox QAbstractItemView::item {
     padding: 4px 8px;
     border-radius: 6px;

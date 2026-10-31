@@ -2,14 +2,11 @@ import os
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
                                  QSpacerItem, QSizePolicy, QStyledItemDelegate, QScrollArea,
                                  QPushButton, QMessageBox, QToolButton, QRadioButton, QButtonGroup)
-from PySide6.QtCore import Signal, Qt, QUrl
+from PySide6.QtCore import Signal, Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from core.logger.logger_manager import logger
 from core.utils.config_manager import get_config, save_config
-from core.utils.paths import get_user_themes_dir, get_user_fonts_dir
-from core.utils.font_manager import get_available_fonts, init_fonts
-from gui.styles import get_available_themes, apply_folder_open_button_style, get_theme_token, set_button_variant
-from core.utils.theme_loader import sync_legacy_theme_key
+from gui.styles import get_theme_token, set_button_variant
 from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
@@ -17,8 +14,6 @@ from gui.styles import set_themed_style
 
 class GeneralPage(QWidget):
     language_changed = Signal(str)
-    theme_changed = Signal(str)
-    font_changed = Signal(str)
     update_channel_changed = Signal(str)
 
     def __init__(self):
@@ -113,7 +108,7 @@ class GeneralPage(QWidget):
         self.content_layout.addWidget(self.update_channel_card)
 
         # --- SECCIÓN: ASPECTO ---
-        self.aspecto_label = QLabel(self.tr("Aspecto"))
+        self.aspecto_label = QLabel(self.tr("Idioma"))
         self.aspecto_label.setObjectName("settingsSectionTitle")
         self.content_layout.addWidget(self.aspecto_label)
 
@@ -132,116 +127,6 @@ class GeneralPage(QWidget):
         self.lang_row.addStretch()
         self.lang_row.addWidget(self.lang_combo)
         self.content_layout.addLayout(self.lang_row)
-
-        # 2. Tema
-        self.theme_row = QHBoxLayout()
-        self.theme_label = QLabel(self.tr("Tema visual"))
-        self.theme_label.setObjectName("settingsLabel")
-        
-        self.theme_combo = AutoPopupComboBox()
-        self.theme_combo.setFixedWidth(180)
-        
-        self.btn_open_themes = QPushButton()
-        self.btn_open_themes.setFixedSize(30, 30)
-        apply_folder_open_button_style(self.btn_open_themes, tooltip=self.tr("Importar, exportar o eliminar temas"), icon_size=15)
-        self.btn_open_themes.clicked.connect(self._show_themes_menu)
-
-        self.theme_row.addWidget(self.theme_label)
-        self.theme_row.addStretch()
-        self.theme_row.addWidget(self.theme_combo)
-        self.theme_row.addWidget(self.btn_open_themes)
-        self.content_layout.addLayout(self.theme_row)
-
-        # 2b. Modo (claro / oscuro / según el sistema) del tema elegido
-        self.mode_row = QHBoxLayout()
-        self.mode_label = QLabel(self.tr("Modo"))
-        self.mode_label.setObjectName("settingsLabel")
-
-        self.mode_combo = AutoPopupComboBox()
-        self.mode_combo.setFixedWidth(180)
-        self.mode_combo.addItem(self.tr("Oscuro"), "dark")
-        self.mode_combo.addItem(self.tr("Claro"), "light")
-        self.mode_combo.addItem(self.tr("Según el sistema"), "system")
-
-        self.mode_row.addWidget(self.mode_label)
-        self.mode_row.addStretch()
-        self.mode_row.addWidget(self.mode_combo)
-        # Mismo ancho que el botón de carpeta de la fila de Tema, para alinear los combos.
-        self.mode_row.addSpacing(30 + self.theme_row.spacing())
-        self.content_layout.addLayout(self.mode_row)
-
-
-        # 3. Tipografía / Fuente
-        self.font_row = QHBoxLayout()
-        self.font_label = QLabel(self.tr("Tipografía / Fuente"))
-        self.font_label.setObjectName("settingsLabel")
-        
-        self.font_combo = AutoPopupComboBox()
-        self.font_combo.setFixedWidth(180)
-
-        self.btn_open_fonts = QPushButton()
-        self.btn_open_fonts.setFixedSize(30, 30)
-        apply_folder_open_button_style(self.btn_open_fonts, tooltip=self.tr("Abrir carpeta de fuentes personalizadas (%APPDATA%/DowP2/fonts)"), icon_size=15)
-        self.btn_open_fonts.clicked.connect(self._open_user_fonts_dir)
-
-        self.font_row.addWidget(self.font_label)
-        self.font_row.addStretch()
-        self.font_row.addWidget(self.font_combo)
-        self.font_row.addWidget(self.btn_open_fonts)
-        self.content_layout.addLayout(self.font_row)
-
-        # 3b. Tamaño de texto
-        self.font_size_row = QHBoxLayout()
-        self.font_size_label = QLabel(self.tr("Tamaño de texto (requiere reinicio para ver todo)"))
-        self.font_size_label.setObjectName("settingsLabel")
-        
-        from PySide6.QtWidgets import QSpinBox
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setFixedWidth(80)
-        self.font_size_spin.setRange(8, 22)
-        self.font_size_spin.setSuffix(" px")
-        
-        self.btn_apply_font_size = QPushButton(self.tr("Aplicar"))
-        self.btn_apply_font_size.setFixedWidth(80)
-        self.btn_apply_font_size.setFixedHeight(30)
-        self.btn_apply_font_size.setCursor(Qt.PointingHandCursor)
-        set_button_variant(self.btn_apply_font_size, "secondary")
-        self.btn_apply_font_size.clicked.connect(lambda: self.on_font_size_selection(self.font_size_spin.value()))
-        
-        self.font_size_row.addWidget(self.font_size_label)
-        self.font_size_row.addStretch()
-        self.font_size_row.addWidget(self.font_size_spin)
-        self.font_size_row.addWidget(self.btn_apply_font_size)
-        # Mismo ancho que el botón de carpeta de la fila de Fuente, para alinear los controles.
-        self.font_size_row.addSpacing(30 + self.font_row.spacing())
-        self.content_layout.addLayout(self.font_size_row)
-
-        self.font_size_warning = QLabel(self.tr("⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados."))
-        set_themed_style(self.font_size_warning, lambda: f"color: {get_theme_token('estado_aviso', '#d8c94a')}; font-size: 11px;")
-        self.font_size_warning.setWordWrap(True)
-        self.font_size_warning.hide()
-        self.content_layout.addWidget(self.font_size_warning)
-        
-        self.font_size_spin.valueChanged.connect(lambda v: self.font_size_warning.setVisible(v > 18))
-
-        # Aviso tras cambiar tema o modo: la mayor parte se actualiza en vivo, pero algunos
-        # estilos se calculan al crear cada widget y solo cambian del todo al reiniciar.
-        # Sin diálogo (a diferencia del idioma) para no interrumpir mientras se prueban modos.
-        self.theme_restart_hint = QWidget()
-        hint_row = QHBoxLayout(self.theme_restart_hint)
-        hint_row.setContentsMargins(0, 0, 0, 0)
-        self.theme_restart_label = QLabel(self.tr("Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza."))
-        self.theme_restart_label.setWordWrap(True)
-        set_themed_style(self.theme_restart_label, lambda: f"color: {get_theme_token('texto_secundario', '#666666')}; font-size: 11px;")
-        self.btn_theme_restart = QPushButton(self.tr("Reiniciar ahora"))
-        set_button_variant(self.btn_theme_restart, "accent-solid")
-        self.btn_theme_restart.clicked.connect(self._restart_for_theme)
-        hint_row.addWidget(self.theme_restart_label, 1)
-        hint_row.addWidget(self.btn_theme_restart)
-        self.theme_restart_hint.hide()
-        self.content_layout.addWidget(self.theme_restart_hint)
-
-        self._build_background_section()
 
         # --- SECCIÓN: COMPORTAMIENTO ---
         self.comp_label = QLabel(self.tr("Comportamiento"))
@@ -351,225 +236,16 @@ class GeneralPage(QWidget):
 
         # Configuración de colores del switch (basado en tema)
         self.update_switch_colors()
+        from gui.theme_manager import get_theme_manager
+        get_theme_manager().theme_changed.connect(lambda _tokens: self.update_switch_colors())
 
         # Connections
         self.lang_combo.currentIndexChanged.connect(self.on_language_selection)
-        self.theme_combo.currentIndexChanged.connect(self.on_theme_selection)
-        self.mode_combo.currentIndexChanged.connect(self.on_mode_selection)
-        self.font_combo.currentIndexChanged.connect(self.on_font_selection)
         self.auto_switch.toggled.connect(self.on_auto_analyze_toggled)
         self.paste_switch.toggled.connect(self.on_auto_paste_toggled)
         self.adobe_switch.toggled.connect(self.on_adobe_compat_toggled)
         self.combo_wheel_switch.toggled.connect(self.on_combo_wheel_toggled)
 
-
-    # ── IMAGEN DE FONDO (ver core/utils/background_images.py) ─────────────────
-    def _build_background_section(self):
-        from PySide6.QtWidgets import QSlider
-        from core.utils import background_images as bg
-
-        title = QLabel(self.tr("Imagen de fondo"))
-        title.setObjectName("settingsLabel")
-        desc = QLabel(self.tr("Una imagen tuya detrás de la ventana. Los PNG con transparencia se "
-                              "respetan, para poner solo un personaje o un logo."))
-        desc.setWordWrap(True)
-        set_themed_style(desc, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
-        self.content_layout.addWidget(title)
-        self.content_layout.addWidget(desc)
-
-        def row(label_text, *widgets, align_with_folder=False):
-            layout = QHBoxLayout()
-            label = QLabel(label_text)
-            label.setObjectName("settingsLabel")
-            layout.addWidget(label)
-            layout.addStretch()
-            for w in widgets:
-                layout.addWidget(w)
-            if align_with_folder:  # como la fila de Modo: alineado con los combos de arriba
-                layout.addSpacing(30 + self.theme_row.spacing())
-            self.content_layout.addLayout(layout)
-            return label
-
-        # Lugar: por ahora solo el fondo general (las vistas previas y las listas vienen después).
-        self.bg_place_combo = AutoPopupComboBox()
-        self.bg_place_combo.setFixedWidth(180)
-        self.bg_place_combo.addItem(self.tr("Fondo general"), bg.PLACE_GENERAL)
-        row(self.tr("Lugar"), self.bg_place_combo, align_with_folder=True)
-
-        self.bg_file_label = QLabel()
-        set_themed_style(self.bg_file_label, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
-        self.btn_bg_choose = QPushButton(self.tr("Elegir…"))
-        self.btn_bg_choose.setCursor(Qt.PointingHandCursor)
-        set_button_variant(self.btn_bg_choose, "secondary")
-        self.btn_bg_choose.clicked.connect(self._on_bg_choose)
-        self.btn_bg_remove = QPushButton(self.tr("Quitar"))
-        self.btn_bg_remove.setCursor(Qt.PointingHandCursor)
-        set_button_variant(self.btn_bg_remove, "secondary")
-        self.btn_bg_remove.clicked.connect(self._on_bg_remove)
-        row(self.tr("Imagen"), self.bg_file_label, self.btn_bg_choose, self.btn_bg_remove)
-
-        self.bg_opacity_slider = QSlider(Qt.Horizontal)
-        self.bg_opacity_slider.setRange(0, 100)
-        self.bg_opacity_slider.setFixedWidth(150)
-        self.bg_opacity_value = QLabel()
-        self.bg_opacity_value.setFixedWidth(40)
-        self.bg_opacity_slider.valueChanged.connect(self._on_bg_opacity_changed)
-        self.bg_opacity_slider.sliderReleased.connect(lambda: save_config(get_config()))
-        row(self.tr("Opacidad de la imagen"), self.bg_opacity_slider, self.bg_opacity_value)
-
-        self.bg_fit_combo = AutoPopupComboBox()
-        self.bg_fit_combo.setFixedWidth(180)
-        for label, key in ((self.tr("Rellenar"), bg.FIT_FILL), (self.tr("Ajustar"), bg.FIT_FIT),
-                           (self.tr("Estirar"), bg.FIT_STRETCH), (self.tr("Tamaño original"), bg.FIT_ORIGINAL),
-                           (self.tr("Mosaico"), bg.FIT_TILE)):
-            self.bg_fit_combo.addItem(label, key)
-        self.bg_fit_combo.setToolTip(self.tr(
-            "Rellenar: cubre todo sin deformar; recorta lo que sobra.\n"
-            "Ajustar: la imagen entera siempre visible.\n"
-            "Estirar: cubre todo deformando la imagen.\n"
-            "Tamaño original: sin escalar; ideal para un personaje o un logo.\n"
-            "Mosaico: repite la imagen."))
-        self.bg_fit_combo.currentIndexChanged.connect(self._on_bg_fit_changed)
-        row(self.tr("Ajuste"), self.bg_fit_combo, align_with_folder=True)
-
-        self.bg_align_combo = AutoPopupComboBox()
-        self.bg_align_combo.setFixedWidth(180)
-        vertical = {"top": self.tr("Arriba"), "center": self.tr("Centro"), "bottom": self.tr("Abajo")}
-        horizontal = {"left": self.tr("izquierda"), "center": self.tr("centro"), "right": self.tr("derecha")}
-        for key in bg.ALIGNS:
-            v, h = key.split("-")
-            label = self.tr("Centro") if key == "center-center" else f"{vertical[v]} {horizontal[h]}"
-            self.bg_align_combo.addItem(label, key)
-        self.bg_align_combo.setToolTip(self.tr("Qué parte queda a la vista al recortar, o dónde se ubica la imagen."))
-        self.bg_align_combo.currentIndexChanged.connect(self._on_bg_align_changed)
-        row(self.tr("Posición"), self.bg_align_combo, align_with_folder=True)
-
-        self.bg_blur_switch = ToggleSwitch()
-        self.bg_blur_switch.toggled.connect(self._on_bg_blur_toggled)
-        row(self.tr("Desenfocar la imagen"), self.bg_blur_switch)
-
-        self.bg_panel_slider = QSlider(Qt.Horizontal)
-        self.bg_panel_slider.setRange(bg.MIN_PANEL_OPACITY, 100)
-        self.bg_panel_slider.setFixedWidth(150)
-        self.bg_panel_value = QLabel()
-        self.bg_panel_value.setFixedWidth(40)
-        self.bg_panel_slider.setToolTip(self.tr(
-            "Cuánto tapan los paneles a la imagen. El texto, los botones y los campos siguen sólidos."))
-        self.bg_panel_slider.valueChanged.connect(self._on_bg_panel_value_changed)
-        self.bg_panel_slider.sliderReleased.connect(self._on_bg_panel_released)
-        self.bg_panel_label = row(self.tr("Opacidad de los paneles"), self.bg_panel_slider, self.bg_panel_value)
-
-    def _bg_place(self) -> str:
-        return self.bg_place_combo.currentData()
-
-    def _load_background_settings(self):
-        from core.utils import background_images as bg
-        s = bg.get_place(self._bg_place())
-        path = bg.image_path(self._bg_place())
-        name = s["name"] or (os.path.basename(path) if path else "")
-        self.bg_file_label.setText(self.bg_file_label.fontMetrics().elidedText(name, Qt.ElideMiddle, 220)
-                                   if path else self.tr("Ninguna"))
-        self.bg_file_label.setToolTip(name if path else "")
-        for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
-                  self.bg_panel_slider):
-            w.blockSignals(True)
-        self.bg_opacity_slider.setValue(s["opacity"])
-        self.bg_opacity_value.setText(f"{s['opacity']} %")
-        self.bg_fit_combo.setCurrentIndex(max(0, self.bg_fit_combo.findData(s["fit"])))
-        self.bg_align_combo.setCurrentIndex(max(0, self.bg_align_combo.findData(s["align"])))
-        self.bg_blur_switch.setChecked(s["blur"])
-        self.bg_panel_slider.setValue(bg.get_panel_opacity())
-        self.bg_panel_value.setText(f"{bg.get_panel_opacity()} %")
-        for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
-                  self.bg_panel_slider):
-            w.blockSignals(False)
-        self._update_bg_controls_enabled()
-
-    def _update_bg_controls_enabled(self):
-        from core.utils import background_images as bg
-        has = bg.image_path(self._bg_place()) is not None
-        for w in (self.btn_bg_remove, self.bg_opacity_slider, self.bg_fit_combo, self.bg_blur_switch,
-                  self.bg_panel_slider):
-            w.setEnabled(has)
-        # La posición no cambia nada al estirar ni en mosaico.
-        self.bg_align_combo.setEnabled(has and self.bg_fit_combo.currentData() not in (bg.FIT_STRETCH, bg.FIT_TILE))
-
-    def _notify_background(self):
-        from gui.widgets.background_canvas import background_notifier
-        background_notifier().changed.emit(self._bg_place())
-
-    def _apply_glass_if_changed(self, before):
-        """La transparencia de los paneles cambia la hoja de estilos: eso pasa por el
-        tema (con su aviso de unos segundos), y solo si de verdad cambió algo."""
-        from core.utils.background_images import glass_alpha
-        if glass_alpha() != before:
-            from gui.theme_manager import get_theme_manager
-            get_theme_manager().apply()
-
-    def _on_bg_choose(self):
-        from PySide6.QtWidgets import QFileDialog
-        from core.utils import background_images as bg
-        path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Elegir imagen de fondo"), os.path.expanduser("~"),
-            self.tr("Imágenes") + " (*.png *.jpg *.jpeg *.webp *.bmp *.gif)")
-        if not path:
-            return
-        before = bg.glass_alpha()
-        try:
-            _name, animated = bg.import_image(self._bg_place(), path)
-        except Exception as e:
-            logger.error(f"Fondo: no se pudo usar {path}: {e}")
-            QMessageBox.warning(self, self.tr("Imagen de fondo"),
-                                self.tr("No se pudo abrir la imagen: {0}").format(e))
-            return
-        if animated:
-            QMessageBox.information(self, self.tr("Imagen de fondo"), self.tr(
-                "Las imágenes animadas todavía no se admiten como fondo: se usa su primer fotograma."))
-        self._load_background_settings()
-        self._notify_background()
-        self._apply_glass_if_changed(before)
-
-    def _on_bg_remove(self):
-        from core.utils import background_images as bg
-        before = bg.glass_alpha()
-        bg.remove_image(self._bg_place())
-        self._load_background_settings()
-        self._notify_background()
-        self._apply_glass_if_changed(before)
-
-    def _on_bg_opacity_changed(self, value):
-        from core.utils import background_images as bg
-        self.bg_opacity_value.setText(f"{value} %")
-        # En vivo mientras se arrastra; se guarda en disco al soltar.
-        bg.set_place(self._bg_place(), save=not self.bg_opacity_slider.isSliderDown(), opacity=value)
-        self._notify_background()
-
-    def _on_bg_fit_changed(self, _index):
-        from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), fit=self.bg_fit_combo.currentData())
-        self._update_bg_controls_enabled()
-        self._notify_background()
-
-    def _on_bg_align_changed(self, _index):
-        from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), align=self.bg_align_combo.currentData())
-        self._notify_background()
-
-    def _on_bg_blur_toggled(self, checked):
-        from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), blur=bool(checked))
-        self._notify_background()
-
-    def _on_bg_panel_value_changed(self, value):
-        self.bg_panel_value.setText(f"{value} %")
-        if not self.bg_panel_slider.isSliderDown():  # teclado o clic en la barra: no hay "soltar"
-            self._on_bg_panel_released()
-
-    def _on_bg_panel_released(self):
-        from core.utils import background_images as bg
-        before = bg.glass_alpha()
-        bg.set_panel_opacity(self.bg_panel_slider.value())
-        self._apply_glass_if_changed(before)
 
     # ── SECCIÓN: SONIDOS (ver core/utils/sound_notifier.py) ──────────────────
     def _build_sounds_section(self):
@@ -761,144 +437,6 @@ class GeneralPage(QWidget):
         sn.reset_custom_sound(kind)
         self._refresh_sound_names()
 
-    # ── Gestión de temas (importar / exportar / eliminar) ─────────────────────
-    def _show_themes_menu(self):
-        from PySide6.QtWidgets import QMenu
-        from core.utils import theme_io
-        current = self.theme_combo.currentData() or "dowp"
-        menu = QMenu(self)
-        menu.addAction(self.tr("Importar tema…"), self._import_theme)
-        menu.addAction(self.tr("Exportar tema actual…"), self._export_theme)
-        act_delete = menu.addAction(self.tr("Eliminar este tema"), self._delete_theme)
-        act_delete.setEnabled(theme_io.is_user_theme(current))
-        menu.addSeparator()
-        menu.addAction(self.tr("Abrir carpeta de temas"), self._open_user_themes_dir)
-        menu.exec(self.btn_open_themes.mapToGlobal(self.btn_open_themes.rect().bottomLeft()))
-
-    def _select_theme(self, theme_id):
-        """Recarga la lista y elige el tema (lo aplica on_theme_selection)."""
-        self._populate_themes()
-        index = self.theme_combo.findData(theme_id)
-        if index < 0:
-            index = self.theme_combo.findData("dowp")
-        if self.theme_combo.currentIndex() == index:
-            self.on_theme_selection(index)
-        else:
-            self.theme_combo.setCurrentIndex(index)
-
-    def _import_theme(self):
-        from PySide6.QtWidgets import QFileDialog
-        from core.utils import theme_io
-        path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Importar tema"), os.path.expanduser("~"), self.tr("Temas de DowP (*.json)"))
-        if not path:
-            return
-        try:
-            theme_id, data, report = theme_io.read_theme_file(path)
-        except theme_io.ThemeImportError as e:
-            QMessageBox.warning(self, self.tr("No se pudo importar el tema"), str(e))
-            return
-        if theme_io.is_user_theme(theme_id):
-            answer = QMessageBox.question(
-                self, self.tr("Importar tema"),
-                self.tr("Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?").format(theme_id))
-            if answer != QMessageBox.Yes:
-                return
-        try:
-            theme_io.save_imported(theme_id, data)
-        except OSError as e:
-            QMessageBox.warning(self, self.tr("No se pudo importar el tema"), str(e))
-            return
-
-        lines = [self.tr("Se importó el tema «{0}» y ya está aplicado.").format(report["name"])]
-        if report.get("converted"):
-            lines.append(self.tr("Era un tema de DowP 1: se convirtió al formato nuevo. "
-                                 "Lo que no tiene equivalente se toma del tema DowP."))
-        if report["invalid"]:
-            shown = ", ".join(report["invalid"][:5]) + ("…" if len(report["invalid"]) > 5 else "")
-            lines.append(self.tr("Se ignoraron {0} colores no válidos: {1}").format(len(report["invalid"]), shown))
-        self._select_theme(theme_id)
-        QMessageBox.information(self, self.tr("Tema importado"), "\n\n".join(lines))
-
-    def _export_theme(self):
-        from PySide6.QtWidgets import QFileDialog
-        from core.utils import theme_io
-        theme_id = self.theme_combo.currentData() or "dowp"
-        suggested = os.path.join(os.path.expanduser("~"), f"{theme_id}.json")
-        path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Exportar tema"), suggested, self.tr("Temas de DowP (*.json)"))
-        if not path:
-            return
-        if not path.lower().endswith(".json"):
-            path += ".json"
-        try:
-            theme_io.export_theme(theme_id, path)
-        except OSError as e:
-            QMessageBox.warning(self, self.tr("No se pudo exportar el tema"), str(e))
-            return
-        QMessageBox.information(
-            self, self.tr("Tema exportado"),
-            self.tr("Se guardó el tema completo, con sus dos modos, formas y tipografía. "
-                    "Puedes editarlo y volver a importarlo, o compartirlo.") + "\n\n" + path)
-
-    def _delete_theme(self):
-        from core.utils import theme_io
-        theme_id = self.theme_combo.currentData()
-        if not theme_id or not theme_io.is_user_theme(theme_id):
-            return
-        answer = QMessageBox.question(
-            self, self.tr("Eliminar tema"),
-            self.tr("¿Eliminar el tema «{0}»? Se volverá al tema DowP.").format(self.theme_combo.currentText()))
-        if answer != QMessageBox.Yes:
-            return
-        try:
-            theme_io.delete_user_theme(theme_id)
-        except OSError as e:
-            QMessageBox.warning(self, self.tr("No se pudo eliminar el tema"), str(e))
-            return
-        self._select_theme("dowp")
-
-    def _open_user_themes_dir(self):
-        """Abre la carpeta de temas personalizados del usuario en el explorador de archivos."""
-        themes_dir = get_user_themes_dir()
-        QDesktopServices.openUrl(QUrl.fromLocalFile(themes_dir))
-        logger.info(f"GeneralPage: Abierta carpeta de temas: {themes_dir}")
-
-    def _open_user_fonts_dir(self):
-        """Abre la carpeta de fuentes personalizadas del usuario en el explorador de archivos."""
-        fonts_dir = get_user_fonts_dir()
-        QDesktopServices.openUrl(QUrl.fromLocalFile(fonts_dir))
-        logger.info(f"GeneralPage: Abierta carpeta de fuentes: {fonts_dir}")
-
-    def _populate_themes(self):
-        """Carga los temas disponibles dinámicamente."""
-        self.theme_combo.blockSignals(True)
-        self.theme_combo.clear()
-        themes = get_available_themes()
-        self._theme_has_modes = {}
-        for t in themes:
-            self.theme_combo.addItem(t["name"], t["id"])
-            self._theme_has_modes[t["id"]] = t.get("has_modes", False)
-        self.theme_combo.blockSignals(False)
-
-    def _update_mode_combo_state(self, theme_id):
-        """Un tema sin parejas [claro, oscuro] se ve igual en cualquier modo: el selector
-        queda desactivado (pero conserva su valor, por si se vuelve a un tema con modos)."""
-        has_modes = getattr(self, "_theme_has_modes", {}).get(theme_id, True)
-        self.mode_combo.setEnabled(has_modes)
-        self.mode_combo.setToolTip("" if has_modes else self.tr("Este tema tiene un solo modo"))
-
-    def _populate_fonts(self):
-        """Carga las fuentes disponibles dinámicamente."""
-        self.font_combo.blockSignals(True)
-        self.font_combo.clear()
-        self.font_combo.addItem(self.tr("Por defecto del tema"), "theme_default")
-        
-        fonts = get_available_fonts()
-        for f in fonts:
-            self.font_combo.addItem(f, f)
-        self.font_combo.blockSignals(False)
-
     def update_switch_colors(self):
         accent = get_theme_token("acento_primario", "#B9E640")
         off = get_theme_token("switch_apagado", "#333333")
@@ -925,42 +463,12 @@ class GeneralPage(QWidget):
         if index >= 0:
             self.lang_combo.setCurrentIndex(index)
             
-        # Load Themes
-        self._populate_themes()
-        theme = config.get("theme_id", "dowp")
-        index = self.theme_combo.findData(theme)
-        if index >= 0:
-            self.theme_combo.setCurrentIndex(index)
-        mode_index = self.mode_combo.findData(config.get("theme_mode", "dark"))
-        if mode_index >= 0:
-            self.mode_combo.setCurrentIndex(mode_index)
-        self._update_mode_combo_state(theme)
-            
-        # Load Fonts
-        self._populate_fonts()
-        font_family = config.get("font_family", "theme_default")
-        index = self.font_combo.findData(font_family)
-        if index >= 0:
-            self.font_combo.setCurrentIndex(index)
-        else:
-            self.font_combo.setCurrentIndex(0) # fallback a por defecto
-            
-        # Load Font Size
-        font_size_override = config.get("font_size_override", "default")
-        if font_size_override == "default":
-            self.font_size_spin.setValue(13)
-        elif isinstance(font_size_override, int):
-            self.font_size_spin.setValue(font_size_override)
-        else:
-            self.font_size_spin.setValue(13)
-            
         # Load Switches
         self.auto_switch.setChecked(config.get("auto_analyze", True))
         self.paste_switch.setChecked(config.get("auto_paste_url", True))
         self.adobe_switch.setChecked(config.get("adobe_compat_default", True))
         self.combo_wheel_switch.setChecked(config.get("combobox_wheel_scroll", False))
         self._load_sound_settings()
-        self._load_background_settings()
 
     def _make_radio(self, text, code):
         rb = QRadioButton(text)
@@ -1028,71 +536,6 @@ class GeneralPage(QWidget):
                 self.tr("No se pudo reiniciar"),
                 self.tr("Cierra y vuelve a abrir DowP a mano para aplicar el idioma nuevo."),
             )
-
-    def on_theme_selection(self, index):
-        if self._is_loading: return
-        theme_code = self.theme_combo.itemData(index)
-        if not theme_code: return
-        config = get_config()
-        if config.get("theme_id") != theme_code:
-            config["theme_id"] = theme_code
-            sync_legacy_theme_key(config)
-            save_config(config)
-            logger.info(f"GeneralPage: Tema cambiado a {theme_code}")
-            self._update_mode_combo_state(theme_code)
-            # Primero se aplica el tema (MainWindow.update_theme) y después se leen sus
-            # colores: al revés, los interruptores tomaban los del tema anterior.
-            self.theme_changed.emit(theme_code)
-            self.update_switch_colors()
-            self.theme_restart_hint.show()
-
-    def on_mode_selection(self, index):
-        if self._is_loading: return
-        mode = self.mode_combo.itemData(index)
-        if not mode: return
-        config = get_config()
-        if config.get("theme_mode") != mode:
-            config["theme_mode"] = mode
-            sync_legacy_theme_key(config)
-            save_config(config)
-            logger.info(f"GeneralPage: Modo de tema cambiado a {mode}")
-            self.theme_changed.emit(config.get("theme_id", "dowp"))
-            self.update_switch_colors()
-            self.theme_restart_hint.show()
-
-    def _restart_for_theme(self):
-        """Mismo reinicio que el cambio de idioma (ver _prompt_language_restart)."""
-        from core.utils.app_restart import restart_app
-        if restart_app():
-            from PySide6.QtWidgets import QApplication
-            QApplication.instance().quit()
-        else:
-            QMessageBox.warning(
-                self,
-                self.tr("No se pudo reiniciar"),
-                self.tr("Cierra y vuelve a abrir DowP a mano para aplicar el tema por completo."),
-            )
-
-    def on_font_selection(self, index):
-        if self._is_loading: return
-        font_code = self.font_combo.itemData(index)
-        if font_code is None: return
-        config = get_config()
-        if config.get("font_family") != font_code:
-            config["font_family"] = font_code
-            save_config(config)
-            logger.info(f"GeneralPage: Tipografía cambiada a {font_code}")
-            self.font_changed.emit(font_code)
-
-    def on_font_size_selection(self, value):
-        if self._is_loading: return
-        config = get_config()
-        if config.get("font_size_override") != value:
-            config["font_size_override"] = value
-            save_config(config)
-            logger.info(f"GeneralPage: Tamaño de texto cambiado a {value}")
-            self.theme_changed.emit(config.get("theme_id", "dowp"))
-            self.theme_restart_hint.show()
 
     def on_auto_analyze_toggled(self, checked):
         if self._is_loading: return

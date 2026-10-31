@@ -141,7 +141,7 @@ class ThemeManager(QObject):
             overlay.deleteLater()
 
     def _apply_now(self):
-        from gui.styles import load_stylesheet
+        from gui.styles import load_stylesheet, menu_contrast_rules
 
         theme_id = self.current_theme()
         mode = self.current_mode()
@@ -153,7 +153,7 @@ class ThemeManager(QObject):
         if app is None:
             return
         app.setPalette(self._build_palette(tokens))
-        qss = load_stylesheet(theme_id, tokens=tokens)
+        qss = load_stylesheet(theme_id, tokens=tokens) + menu_contrast_rules()
         if self._style_target is not None:
             self._style_target.setStyleSheet(qss)
         else:

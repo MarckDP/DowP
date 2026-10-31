@@ -31,6 +31,7 @@ from core.utils.config_manager import get_config, save_config
 from core.utils.search_thumbnail_cache import SearchThumbnailCache
 from core.ytdlp_logic import media_search
 from core.ytdlp_logic.media_search import KIND_VIDEO, KIND_PLAYLIST, KIND_CHANNEL
+from gui.styles import theme_radius
 from gui.styles import get_theme_token
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox
@@ -547,7 +548,7 @@ class _ResultDelegate(QStyledItemDelegate):
         # Fondo de la tarjeta
         painter.setPen(QPen(self.c_accent if selected else self.c_border, 2 if selected else 1))
         painter.setBrush(self.c_card_hover if hovered else self.c_card)
-        painter.drawRoundedRect(rect, 8, 8)
+        painter.drawRoundedRect(rect, theme_radius(8), theme_radius(8))
 
         # "Carpeta" de playlist: un par de bordes desplazados detrás de la miniatura real,
         # simulando hojas apiladas -- sin pedir fotos de otros videos (ver conversación).
@@ -658,7 +659,7 @@ class _ResultDelegate(QStyledItemDelegate):
 
         painter.setPen(QPen(self.c_border, 1))
         painter.setBrush(self.c_card_hover if hovered else self.c_card)
-        painter.drawRoundedRect(rect, 8, 8)
+        painter.drawRoundedRect(rect, theme_radius(8), theme_radius(8))
 
         avatar = geo["avatar"]
         pix = self.dialog.pixmap_for(item.get("thumb_url"))

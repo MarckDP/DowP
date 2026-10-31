@@ -16,7 +16,7 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QPen
 
 from gui.styles import (
     register_theme_callback,
-    VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip,
+    VIEWER_CHIP_MARGIN, create_checkerboard_pixmap, create_viewer_info_chip, glass_preview_fill,
     get_theme_token,
 )
 from gui.styles import apply_shapes
@@ -119,7 +119,7 @@ class CompareViewer(QGraphicsView):
 
     def _build_checker_tile(self) -> QPixmap:
         square = 10
-        return create_checkerboard_pixmap(square * 2, square * 2, square)
+        return create_checkerboard_pixmap(square * 2, square * 2, square, widget=self)
 
     def refresh_checker_theme(self):
         """Llamar si el tema/tokens de color cambian en caliente."""
@@ -132,7 +132,9 @@ class CompareViewer(QGraphicsView):
         painter.save()
         painter.resetTransform()
         viewport_rect = self.viewport().rect()
-        painter.fillRect(viewport_rect, self._dark_bg_color)
+        fill = glass_preview_fill(self, self._dark_bg_color)  # con imagen de fondo: translúcido
+        if fill is not None:
+            painter.fillRect(viewport_rect, fill)
         if self._content_size is not None:
             w, h = self._content_size
             scene_rect = QRectF(0, 0, w, h)

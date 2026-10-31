@@ -37,6 +37,7 @@ from core.tabs.quick_mode.quick_mode_logic import reveal_in_file_manager
 from core.utils.download_history import (
     KIND_PLAYLIST, STATUS_DOWNLOADED, download_history, resolve_disk_files,
 )
+from gui.styles import theme_radius
 from gui.styles import get_theme_token, set_button_variant
 from gui.widgets.collapsible_panel import CollapsiblePanel, TextEdgeTabButton
 from gui.styles import set_themed_style
@@ -291,12 +292,12 @@ class HistoryCardDelegate(QStyledItemDelegate):
         # Mismo criterio que las listas de las pestañas: verde = terminado y en disco.
         painter.setPen(self.c_done if on_disk else self.c_border)
         painter.setBrush(self.c_hover if hovered else self.c_card)
-        painter.drawRoundedRect(card, 6, 6)
+        painter.drawRoundedRect(card, theme_radius(6), theme_radius(6))
 
         # Miniatura (o marcador si todavía no está / no se pudo bajar).
         thumb_rect = QRect(card.left() + 6, card.top() + (card.height() - THUMB_H) // 2, THUMB_W, THUMB_H)
         clip = QPainterPath()
-        clip.addRoundedRect(thumb_rect, 4, 4)
+        clip.addRoundedRect(thumb_rect, theme_radius(4), theme_radius(4))
         painter.save()
         painter.setClipPath(clip)
         painter.fillRect(thumb_rect, self.c_thumb_bg)
@@ -324,7 +325,7 @@ class HistoryCardDelegate(QStyledItemDelegate):
             brect = QRect(thumb_rect.right() - bw - 2, thumb_rect.bottom() - bh - 2, bw, bh)
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(0, 0, 0, 190))
-            painter.drawRoundedRect(brect, 3, 3)
+            painter.drawRoundedRect(brect, theme_radius(3), theme_radius(3))
             painter.setPen(QColor("#ffffff"))
             painter.drawText(brect, Qt.AlignCenter, badge)
 

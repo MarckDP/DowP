@@ -94,3 +94,6 @@ bin/
 importer_vegas/dist/
 importer_vegas/src/obj/
 importer_vegas/src/bin/
+
+# Tests: solo para desarrollo local (no se usan al compilar ni en los workflows).
+app/tests/

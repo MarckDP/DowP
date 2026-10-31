@@ -13,6 +13,7 @@ from core.logger.logger_manager import logger
 
 
 from PySide6.QtCore import Signal
+from gui.styles import theme_radius
 from gui.styles import get_theme_token
 
 class EdgeOpenButton(QWidget):
@@ -61,14 +62,14 @@ class EdgeOpenButton(QWidget):
             
         if self._pointing_left:
             # Pestaña redondeada a la izquierda
-            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
+            p.drawRoundedRect(0, 0, w + 10, h, theme_radius(8), theme_radius(8))
             if self.hovered:
                 p.setPen(Qt.NoPen)
                 p.setBrush(QColor("#1DC038"))
                 p.drawRect(w - 3, 0, 3, h)
         else:
             # Pestaña redondeada a la derecha
-            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
+            p.drawRoundedRect(-10, 0, w + 10, h, theme_radius(8), theme_radius(8))
             if self.hovered:
                 p.setPen(Qt.NoPen)
                 p.setBrush(QColor("#1DC038"))

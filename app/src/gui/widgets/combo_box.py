@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvg import QSvgRenderer
 
+from gui.styles import theme_radius
 from gui.styles import get_theme_token, generate_triangle_svg
 from core.utils.paths import get_src_dir
 
@@ -102,7 +103,7 @@ class CheckmarkComboDelegate(QStyledItemDelegate):
             active_bg.setAlpha(22)
             painter.setBrush(active_bg)
             painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(bg_rect, 4, 4)
+            painter.drawRoundedRect(bg_rect, theme_radius(4), theme_radius(4))
             painter.restore()
         else:
             style.drawControl(QStyle.CE_ItemViewItem, opt, painter, widget)

@@ -1,4 +1,5 @@
 # src/gui/widgets/native_file_drag.py
+from gui.styles import theme_radius
 from PySide6.QtCore import Qt, QMimeData, QUrl, QEvent, QRectF
 from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QApplication, QPushButton
@@ -18,7 +19,7 @@ def _build_badge_pixmap(text: str) -> QPixmap:
     painter.setRenderHint(QPainter.Antialiasing)
     painter.setBrush(QColor(0, 0, 0, 205))
     painter.setPen(QColor(255, 255, 255, 60))
-    painter.drawRoundedRect(QRectF(0.5, 0.5, width - 1, height - 1), 6, 6)
+    painter.drawRoundedRect(QRectF(0.5, 0.5, width - 1, height - 1), theme_radius(6), theme_radius(6))
     painter.setPen(QColor("#ffffff"))
     painter.setFont(font)
     painter.drawText(pixmap.rect(), Qt.AlignCenter, text)

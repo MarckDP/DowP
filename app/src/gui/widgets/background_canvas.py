@@ -11,13 +11,15 @@ La imagen escalada se guarda lista y solo se recalcula si cambia el tamaño o un
 ajuste. Mientras se arrastra el borde de la ventana se dibuja con escalado rápido, y
 al soltar (150 ms sin cambios) se recalcula con buena calidad."""
 
-from PySide6.QtCore import QObject, QRectF, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
+import weakref
+
+from PySide6.QtCore import QEvent, QObject, QRectF, QTimer, Qt, Signal
+from PySide6.QtGui import QGuiApplication, QColor, QImage, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import QWidget
 
 from core.logger.logger_manager import logger
 from core.utils import background_images as bg
-from gui.styles import get_theme_token
+from gui.styles import _inside_glass_area, get_theme_token
 
 _RESIZE_SETTLE_MS = 150
 
@@ -91,9 +93,149 @@ def _load_image(path: str, blur: bool, strength: int = 120) -> QImage:
     return image
 
 
+def _screen_cover_size() -> tuple[int, int]:
+    """Ancho y alto (en píxeles reales) que abarcan cualquiera de las pantallas."""
+    screens = QGuiApplication.screens()
+    return (max((round(s.size().width() * s.devicePixelRatio()) for s in screens), default=0),
+            max((round(s.size().height() * s.devicePixelRatio()) for s in screens), default=0))
+
+
+def _fit_source(image: QImage, cover: tuple[int, int]) -> QImage:
+    """Copia reducida lo justo para seguir cubriendo `cover`: una foto de 3840 px ocupa
+    37 MB y en una pantalla de 1920 nunca se ve entera. Como en _load_image, el
+    devicePixelRatio conserva el tamaño lógico del original."""
+    w, h = image.width(), image.height()
+    scale = max(cover[0] / max(w, 1), cover[1] / max(h, 1))
+    if scale <= 0 or scale >= 1:
+        return image
+    small = image.scaled(max(1, round(w * scale)), max(1, round(h * scale)),
+                         Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    small.setDevicePixelRatio(small.width() / w)
+    return small
+
+
 # Vidrio recortado (popovers, paneles superpuestos): más desenfocado que la opción
 # "Desenfocar", como el vidrio esmerilado, para que lo que flota se distinga.
 _FROSTED_STRENGTH = 60
+
+
+# ── Imagen de las vistas previas vacías ───────────────────────────────────────
+_PREVIEW = {"key": None, "source": None, "scaled": {}}
+_PREVIEW_WATCHED = weakref.WeakSet()
+_PREVIEW_HINTS = weakref.WeakSet()
+_PREVIEW_CONNECTED = [False]
+
+
+def _preview_source(path: str, settings: dict) -> QPixmap | None:
+    """Una sola copia para todas las vistas previas; se vuelve a cargar si cambia."""
+    reduce = settings["fit"] in (bg.FIT_FILL, bg.FIT_FIT, bg.FIT_STRETCH) and not settings["blur"]
+    key = (path, settings["blur"], reduce)
+    if _PREVIEW["key"] != key:
+        image = _load_image(path, settings["blur"])
+        if image.isNull():
+            logger.warning(f"Fondo: no se pudo cargar {path}")
+        elif reduce:
+            image = _fit_source(image, _screen_cover_size())
+        _PREVIEW.update(key=key, source=None if image.isNull() else QPixmap.fromImage(image), scaled={})
+    return _PREVIEW["source"]
+
+
+def paint_preview_image(painter: QPainter, area: QRectF, widget: QWidget):
+    """Dibuja en `area` la imagen elegida para las vistas previas vacías, si hay. Solo
+    dentro de la ventana principal: los diálogos de trabajo quedan como siempre."""
+    path = bg.image_path(bg.PLACE_PREVIEWS)
+    if path is None or area.isEmpty() or not _inside_glass_area(widget):
+        return
+    settings = bg.get_place(bg.PLACE_PREVIEWS)
+    source = _preview_source(path, settings)
+    if source is None:
+        return
+    dpr = widget.devicePixelRatioF()
+    fit = settings["fit"]
+    painter.save()
+    painter.setOpacity(settings["opacity"] / 100.0)
+    if fit == bg.FIT_TILE:
+        piece = source
+        if abs(dpr - 1.0) > 1e-3:
+            piece = QPixmap(source)
+            piece.setDevicePixelRatio(source.devicePixelRatioF() * dpr)
+        painter.drawTiledPixmap(area.toRect(), piece)
+    else:
+        src_w = source.width() / source.devicePixelRatioF()
+        src_h = source.height() / source.devicePixelRatioF()
+        if fit == bg.FIT_ORIGINAL:
+            src_w, src_h = src_w / dpr, src_h / dpr
+        rect = target_rect(src_w, src_h, area.width(), area.height(), fit, settings["align"])
+        rect.translate(area.topLeft())
+        key = (round(rect.width() * dpr), round(rect.height() * dpr))
+        pix = _PREVIEW["scaled"].get(key)
+        if pix is None:
+            if len(_PREVIEW["scaled"]) >= 4:  # una por cada tamaño de vista previa
+                _PREVIEW["scaled"].clear()
+            pix = source.scaled(key[0], key[1], Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            pix.setDevicePixelRatio(dpr)
+            _PREVIEW["scaled"][key] = pix
+        painter.drawPixmap(rect.topLeft(), pix)
+    painter.restore()
+
+
+def _on_preview_place_changed(place: str):
+    if place == bg.PLACE_PREVIEWS:
+        for widget in list(_PREVIEW_WATCHED):
+            widget.update()
+        for hint in list(_PREVIEW_HINTS):
+            hint.setVisible(bg.image_path(bg.PLACE_PREVIEWS) is None)
+
+
+def _connect_preview_notifier():
+    if not _PREVIEW_CONNECTED[0]:
+        background_notifier().changed.connect(_on_preview_place_changed)
+        _PREVIEW_CONNECTED[0] = True
+
+
+def watch_preview_image(widget: QWidget):
+    """Repinta `widget` cuando cambian la imagen o los ajustes de las vistas previas."""
+    _connect_preview_notifier()
+    _PREVIEW_WATCHED.add(widget)
+
+
+def hide_with_preview_image(hint: QWidget):
+    """El texto de ayuda de una vista previa vacía se oculta mientras haya imagen: caería
+    encima de ella. Llamar con `hint` ya dentro de su layout: mostrar un widget suelto
+    abriría una ventana."""
+    _connect_preview_notifier()
+    _PREVIEW_HINTS.add(hint)
+    hint.setVisible(bg.image_path(bg.PLACE_PREVIEWS) is None)
+
+
+class _PreviewBackdropFilter(QObject):
+    """Pinta la imagen debajo del contenido de un widget que solo se ve estando vacío. Un
+    widget que además muestra otras cosas la apaga con la propiedad "previewBackdropOff"."""
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Paint and not obj.property("previewBackdropOff"):
+            from core.utils.theme_loader import get_active_shapes
+            area = QRectF(obj.rect()).adjusted(1, 1, -1, -1)  # sin tapar el borde del contenedor
+            radius = get_active_shapes()["radio"]
+            path = QPainterPath()
+            path.addRoundedRect(area, radius, radius)
+            p = QPainter(obj)
+            p.setRenderHint(QPainter.Antialiasing)
+            p.setClipPath(path)
+            paint_preview_image(p, area, obj)
+            p.end()
+        return False
+
+
+_PREVIEW_FILTER = None
+
+
+def install_preview_backdrop(widget: QWidget):
+    global _PREVIEW_FILTER
+    if _PREVIEW_FILTER is None:
+        _PREVIEW_FILTER = _PreviewBackdropFilter()
+    widget.installEventFilter(_PREVIEW_FILTER)
+    watch_preview_image(widget)
 
 
 class BackgroundCanvas(QWidget):
@@ -111,6 +253,7 @@ class BackgroundCanvas(QWidget):
         self._settle.setInterval(_RESIZE_SETTLE_MS)
         self._settle.timeout.connect(self._on_resize_settled)
         background_notifier().changed.connect(self._on_changed)
+        QGuiApplication.instance().screenAdded.connect(self._on_screen_added)
         self.reload()
 
     # ── Datos ───────────────────────────────────────────────────────────────
@@ -127,11 +270,19 @@ class BackgroundCanvas(QWidget):
         self._source = None
         if path:
             image = _load_image(path, self._settings["blur"])
+            # "Tamaño original" y "Mosaico" muestran los píxeles tal cual: esos no se tocan.
+            if (not image.isNull() and not self._settings["blur"]
+                    and self._settings["fit"] in (bg.FIT_FILL, bg.FIT_FIT, bg.FIT_STRETCH)):
+                image = _fit_source(image, _screen_cover_size())
             if image.isNull():
                 logger.warning(f"Fondo: no se pudo cargar {path}")
             else:
                 self._source = QPixmap.fromImage(image)
         self.update()
+
+    def _on_screen_added(self, _screen):
+        if self.has_image():  # puede ser más grande: la copia reducida ya no alcanzaría
+            self.reload()
 
     def _on_changed(self, place: str):
         if place == self._place:
@@ -203,7 +354,11 @@ class BackgroundCanvas(QWidget):
     def _frosted_backdrop(self) -> QPixmap:
         """El lienzo entero con la imagen esmerilada, armado una vez por tamaño y ajustes."""
         if self._frosted_source is None:
-            image = _load_image(self._path, True, _FROSTED_STRENGTH) if self._path else QImage()
+            try:
+                image = _load_image(self._path, True, _FROSTED_STRENGTH) if self._path else QImage()
+            except OSError as e:  # se borró o reemplazó: esto corre al pintar y no debe romperlo
+                logger.warning(f"Fondo: no se pudo leer {self._path}: {e}")
+                image = QImage()
             self._frosted_source = QPixmap.fromImage(image) if not image.isNull() else self._source
         dpr = self.devicePixelRatioF()
         key = (self.width(), self.height(), dpr, tuple(sorted(self._settings.items())),
@@ -232,6 +387,36 @@ class BackgroundCanvas(QWidget):
         origin = widget.mapTo(self, widget.rect().topLeft())
         self._draw_backdrop_region(painter, QRectF(widget.rect()),
                                    QRectF(origin.x(), origin.y(), widget.width(), widget.height()))
+
+    def paint_backdrop_for_popup(self, painter: QPainter, popup: QWidget):
+        """Como paint_backdrop, para una ventana aparte (menú, lista desplegable): su
+        lugar en el lienzo sale de la posición en pantalla. Lo que queda fuera de la
+        ventana principal toma la imagen esmerilada reflejada contra el borde: a los dos
+        lados del borde hay los mismos colores, así que no se ve el corte."""
+        if not self.has_image():
+            return
+        backdrop = self._frosted_backdrop()
+        cw, ch = self.width(), self.height()
+        if cw <= 0 or ch <= 0:
+            return
+        origin = self.mapFromGlobal(popup.mapToGlobal(popup.rect().topLeft()))
+        x0, y0 = origin.x(), origin.y()
+        w, h = popup.width(), popup.height()
+        painter.save()
+        painter.setClipRect(popup.rect(), Qt.IntersectClip)  # respeta el recorte de quien llama
+        for iy in range(y0 // ch, (y0 + h - 1) // ch + 1):
+            for ix in range(x0 // cw, (x0 + w - 1) // cw + 1):
+                painter.save()
+                painter.translate(ix * cw - x0, iy * ch - y0)
+                if ix % 2:  # pieza reflejada en horizontal
+                    painter.translate(cw, 0)
+                    painter.scale(-1, 1)
+                if iy % 2:  # pieza reflejada en vertical
+                    painter.translate(0, ch)
+                    painter.scale(1, -1)
+                painter.drawPixmap(QRectF(0, 0, cw, ch), backdrop, QRectF(backdrop.rect()))
+                painter.restore()
+        painter.restore()
 
     # ── Barra superior esmerilada ───────────────────────────────────────────
     def set_frosted_header(self, bottom_fn):

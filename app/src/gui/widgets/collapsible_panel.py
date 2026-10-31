@@ -13,6 +13,7 @@ permanecen siempre visibles.
 from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QScrollArea, QSplitter
 from PySide6.QtCore import Qt, QRect, QPoint, QSize, QEasingCurve, QPropertyAnimation, Signal
 from PySide6.QtGui import QPainter, QColor, QPolygon, QFont
+from gui.styles import theme_radius
 from gui.styles import get_theme_token, glass_fill
 
 
@@ -59,9 +60,9 @@ class EdgeTabButton(QWidget):
         p.setBrush(glass_fill(self, base, "control"))
         # Lado plano pegado al borde exterior, lado redondeado hacia el contenido.
         if self.edge == "left":
-            p.drawRoundedRect(-10, 0, w + 10, h, 8, 8)
+            p.drawRoundedRect(-10, 0, w + 10, h, theme_radius(8), theme_radius(8))
         else:
-            p.drawRoundedRect(0, 0, w + 10, h, 8, 8)
+            p.drawRoundedRect(0, 0, w + 10, h, theme_radius(8), theme_radius(8))
         p.setBrush(QColor(get_theme_token('acento_secundario', '#1DC038')))
         if self.edge == "left":
             p.drawRect(0, 0, 3, h)

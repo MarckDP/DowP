@@ -12,6 +12,7 @@ from core.version import UPDATE_REPO, get_display_version
 from gui.widgets.circular_progress import CircularProgress
 
 from .pages.general_page import GeneralPage
+from .pages.appearance_page import AppearancePage
 from .pages.memory_cache_page import MemoryCachePage
 from .pages.downloads_page import DownloadsPage
 from .pages.cookies_page import CookiesPage
@@ -32,6 +33,7 @@ from gui.styles import apply_shapes
 # reordenan las páginas hay que actualizar esto.
 SETTINGS_PAGE_DEPENDENCIES = 4
 SETTINGS_PAGE_MODELS = 8
+SETTINGS_PAGE_APPEARANCE = 11
 
 
 class SidebarButton(QPushButton):
@@ -88,6 +90,7 @@ class SettingsTab(QWidget):
 
         # Buttons
         self.btn_general = SidebarButton(self.tr("General"))
+        self.btn_appearance = SidebarButton(self.tr("Apariencia"))
         self.btn_memory_cache = SidebarButton(self.tr("Memoria y Caché"))
         self.btn_downloads = SidebarButton(self.tr("Descargas"))
         self.btn_cookies = SidebarButton(self.tr("Cookies"))
@@ -110,8 +113,10 @@ class SettingsTab(QWidget):
         self.btn_group.addButton(self.btn_models, 8)
         self.btn_group.addButton(self.btn_console, 9)
         self.btn_group.addButton(self.btn_shortcuts, 10)
+        self.btn_group.addButton(self.btn_appearance, 11)
 
         sidebar_layout.addWidget(self.btn_general)
+        sidebar_layout.addWidget(self.btn_appearance)
         sidebar_layout.addWidget(self.btn_memory_cache)
         sidebar_layout.addWidget(self.btn_downloads)
         sidebar_layout.addWidget(self.btn_cookies)
@@ -176,6 +181,7 @@ class SettingsTab(QWidget):
             ("page_models", ModelsPage),                # 8
             ("page_console", ConsolePage),              # 9
             ("page_shortcuts", ShortcutsPage),          # 10
+            ("page_appearance", AppearancePage),        # 11: al final para no mover los otros índices
         ]
         self._page_built = [False] * len(self._page_specs)
         for _ in self._page_specs:
@@ -214,9 +220,9 @@ class SettingsTab(QWidget):
         if attr == "page_general":
             # Pass signals from general page
             page.language_changed.connect(self.language_changed.emit)
-            page.theme_changed.connect(self.theme_changed.emit)
-            page.font_changed.connect(self.font_changed.emit)
             page.update_channel_changed.connect(self._on_update_channel_changed)
+        elif attr == "page_appearance":
+            page.theme_changed.connect(self.theme_changed.emit)
         elif attr == "page_labels":
             # Pass signal from labels page
             page.labels_changed.connect(self.labels_changed.emit)

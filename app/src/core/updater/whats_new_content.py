@@ -42,6 +42,22 @@ def get_whats_new_items(version: str) -> list:
                 QCoreApplication.translate("WhatsNewContent", "Convierte el audio de un video en subtítulos o texto, directamente en tu equipo: SRT, VTT, ASS, LRC, TXT, Markdown, JSON o CSV, como archivo, como pista o quemados en el video. Aprovecha tu GPU y puede saltarse los silencios. En Proceso Avanzado también puedes crear los subtítulos con IA al descargar."),
             ),
             (
+                QCoreApplication.translate("WhatsNewContent", "Nueva página Apariencia"),
+                QCoreApplication.translate("WhatsNewContent", "Todo el aspecto de DowP en un solo lugar: tus temas en una galería, una vista previa al momento y un botón Aplicar que junta todos los cambios en una sola recarga."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Crea tus propios temas"),
+                QCoreApplication.translate("WhatsNewContent", "Crea un tema a partir de una imagen: DowP saca sus colores y te propone variantes para revisar antes de aplicar. También puedes cambiar cualquier color a mano, desde los básicos hasta la lista completa, y ajustar la redondez de la interfaz."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Guarda y comparte tu apariencia"),
+                QCoreApplication.translate("WhatsNewContent", "Guarda colores, imágenes, opacidades, letra y redondez en un tema, y vuelve a todo eligiéndolo en la galería. Exporta el tema completo, solo sus colores o un paquete .dthmp con sus imágenes y fuentes. Si algo va a reemplazar tu aspecto, DowP guarda antes una copia como Apariencia anterior."),
+            ),
+            (
+                QCoreApplication.translate("WhatsNewContent", "Imagen de fondo"),
+                QCoreApplication.translate("WhatsNewContent", "Pon una imagen tuya detrás de la ventana, con paneles translúcidos y vidrio en los menús. También puedes elegir otra para las vistas previas vacías."),
+            ),
+            (
                 QCoreApplication.translate("WhatsNewContent", "PDF más livianos"),
                 QCoreApplication.translate("WhatsNewContent", "Nueva opción Compresión al convertir a PDF: Baja, Recomendada, Extrema o Personalizado. Un documento escaneado puede pesar hasta 10 veces menos, sin tocar el texto ni la transparencia. También puedes elegir el tamaño de página (A4, Carta u Oficio), y un PDF convertido a PDF conserva todas sus páginas."),
             ),

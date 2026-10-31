@@ -8,7 +8,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QThread, QSize, QRect
 from PySide6.QtGui import QPixmap, QImage, QIcon, QPainter, QColor, QFontMetrics, QPalette
 from PySide6.QtSvg import QSvgRenderer
+from core.utils import background_images as bg
+from gui.styles import theme_radius
 from gui.styles import get_theme_token, apply_cut_button_style
+from gui.widgets.background_canvas import background_notifier, install_preview_backdrop
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.combo_box import AutoPopupComboBox, CheckmarkComboDelegate
 from core.utils.paths import get_src_dir
@@ -99,7 +102,7 @@ class RichTextDelegate(CheckmarkComboDelegate):
             active_bg.setAlpha(22)
             painter.setBrush(active_bg)
             painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(bg_rect, 4, 4)
+            painter.drawRoundedRect(bg_rect, theme_radius(4), theme_radius(4))
             painter.restore()
         else:
             style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, widget)
@@ -199,8 +202,12 @@ class ResponsiveThumbnail(QWidget):
         self.thumb_label = QLabel(self)
         self.thumb_label.setAlignment(Qt.AlignCenter)
         self.thumb_label.setObjectName("thumbnailLabel")
-        self.thumb_label.setText(self.tr("Sin Vista Previa"))
-        
+        self._empty_text = self.tr("Sin Vista Previa")
+        self._is_empty = True
+        install_preview_backdrop(self.thumb_label)
+        background_notifier().changed.connect(self._on_background_changed)
+        self._sync_empty_state()
+
         self.duration_label = QLabel("", self)
         self.duration_label.setObjectName("durationLabel")
         self.duration_label.hide()
@@ -235,8 +242,22 @@ class ResponsiveThumbnail(QWidget):
         else:
             self.btn_cut.hide()
 
+    def _on_background_changed(self, place):
+        if place == bg.PLACE_PREVIEWS:
+            self._sync_empty_state()
+
+    def _sync_empty_state(self):
+        """Vacía: la imagen de las vistas previas si hay, y si no el texto de siempre. Los
+        avisos ("Cargando...") y las miniaturas no la llevan."""
+        self.thumb_label.setProperty("previewBackdropOff", not self._is_empty)
+        if self._is_empty:
+            self.thumb_label.setText("" if bg.image_path(bg.PLACE_PREVIEWS) else self._empty_text)
+        self.thumb_label.update()
+
     def set_pixmap(self, pixmap):
         self._pixmap = pixmap
+        self._is_empty = False
+        self._sync_empty_state()
         self.thumb_label.setText("")
         if getattr(self, '_cut_button_allowed', True):
             self.btn_cut.show()
@@ -248,6 +269,8 @@ class ResponsiveThumbnail(QWidget):
         self._pixmap = None
         self.thumb_label.setPixmap(QPixmap())
         self.thumb_label.setText(text)
+        self._is_empty = text == self._empty_text
+        self._sync_empty_state()
         self.btn_cut.hide()
 
     def _update_pixmap(self):
