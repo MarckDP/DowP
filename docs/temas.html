@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DowP — temas de la comunidad</title>
+    <meta name="description" content="Descarga temas para DowP o comparte el tuyo.">
+    <link rel="icon" type="image/png" href="img/logo32.png">
+
+    <!-- Open Graph / Redes Sociales -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://marckdp.github.io/DowP/temas.html">
+    <meta property="og:title" content="DowP — temas de la comunidad">
+    <meta property="og:description" content="Descarga temas para DowP o comparte el tuyo.">
+    <meta property="og:image" content="https://marckdp.github.io/DowP/img/DowP_portada.jpg">
+
+    <!-- Color de tema -->
+    <meta name="theme-color" content="#b8e640">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="lang.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+    <div class="crt" aria-hidden="true"></div>
+
+    <header class="masthead masthead-center">
+        <div>
+            <h1 class="masthead-title"><a href="index.html" style="text-decoration:none;color:inherit">DowP</a></h1>
+            <p class="masthead-sub" data-i18n="temas_sub">temas · comunidad · <span class="nowrap">comparte · <span class="blink">_</span></span></p>
+        </div>
+        <div class="lang-selector">
+            <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
+        </div>
+    </header>
+
+    <main class="content single temas-ancha">
+        <p class="small"><a href="index.html" data-i18n="cred_back">« Volver al inicio</a></p>
+
+        <div class="temas-pestanas" role="tablist">
+            <a href="#galeria" class="temas-pestana" role="tab" data-panel="galeria" data-i18n="temas_tab_gallery">Galería</a>
+            <a href="#subir" class="temas-pestana" role="tab" data-panel="subir" data-i18n="temas_tab_share">Comparte tu tema</a>
+        </div>
+
+        <section class="win temas-panel" id="galeria">
+            <div class="win-bar"><span data-i18n="temas_gallery_title">Temas de la comunidad</span></div>
+            <div class="win-body prose">
+                <p data-i18n="temas_gallery_intro">Descarga un tema e impórtalo en DowP: <strong>Ajustes → Apariencia → Importar</strong>.</p>
+                <div class="temas-filtros" role="group">
+                    <button type="button" class="temas-filtro active" data-filtro="todos" data-i18n="temas_filter_all">Todos</button>
+                    <button type="button" class="temas-filtro" data-filtro="imagenes" data-i18n="temas_filter_images">Con imágenes</button>
+                    <button type="button" class="temas-filtro" data-filtro="colores" data-i18n="temas_filter_colors">Solo colores</button>
+                </div>
+                <p id="temas-aviso" class="muted" data-i18n="temas_loading">Cargando temas...</p>
+                <div id="temas-lista" class="temas-lista"></div>
+            </div>
+        </section>
+
+        <section class="win temas-panel" id="subir" hidden>
+            <div class="win-bar"><span data-i18n="temas_upload_title">Comparte tu tema</span></div>
+            <div class="win-body prose">
+                <p data-i18n="temas_upload_intro">En DowP, exporta tu tema desde <strong>Ajustes → Apariencia → Exportar</strong>. Se revisa antes de publicarse. Por ahora no se aceptan temas con fuentes propias.</p>
+                <form id="temas-form" class="temas-form">
+                    <label class="temas-zona" id="temas-zona" for="temas-archivo">
+                        <input type="file" id="temas-archivo" accept=".dthmp,.json">
+                        <strong data-i18n="temas_drop_title">Arrastra tu tema aquí</strong>
+                        <span data-i18n="temas_drop_hint">o haz clic para elegirlo · .dthmp o .json, hasta 20 MB</span>
+                        <span id="temas-elegido" class="temas-elegido" hidden></span>
+                    </label>
+                    <label class="temas-zona temas-zona-capturas" id="temas-zona-capturas" for="temas-capturas">
+                        <input type="file" id="temas-capturas" accept=".png,.jpg,.jpeg,.webp" multiple>
+                        <strong data-i18n="temas_captures_title">Capturas (opcional)</strong>
+                        <span data-i18n="temas_captures_hint">Hasta 3 imágenes de DowP con tu tema, de hasta 8 MB cada una. Cuida que no se vean datos personales.</span>
+                    </label>
+                    <ul id="temas-capturas-lista" class="temas-capturas-lista" hidden></ul>
+                    <label><span data-i18n="temas_nick_label">Tu nick (opcional)</span>
+                        <input type="text" id="temas-nick" maxlength="30" autocomplete="nickname">
+                    </label>
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAAFuoWc9Osjjjee-8" data-theme="dark"></div>
+                    <button type="submit" id="temas-subir" class="big-btn temas-boton" data-i18n="temas_submit">Subir tema</button>
+                </form>
+                <p id="temas-salida" class="temas-salida" role="status" hidden></p>
+                <div id="temas-progreso" class="temas-progreso" role="status" hidden>
+                    <ol>
+                        <li data-paso="recibido" data-i18n="temas_step_received">Recibido</li>
+                        <li data-paso="comprobado" data-i18n="temas_step_checked">Comprobado</li>
+                        <li data-paso="revision" data-i18n="temas_step_review">En revisión</li>
+                        <li data-paso="publicado" data-i18n="temas_step_published">Publicado</li>
+                    </ol>
+                    <p id="temas-progreso-texto"></p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <dialog id="tema-detalle" class="tema-detalle" aria-labelledby="tema-detalle-nombre">
+        <div class="win-bar">
+            <span id="tema-detalle-nombre"></span>
+            <button type="button" id="tema-detalle-cerrar" class="tema-detalle-cerrar" aria-label="Cerrar">×</button>
+        </div>
+        <div class="tema-detalle-cuerpo">
+            <a id="tema-detalle-enlace" target="_blank" rel="noopener"><img id="tema-detalle-imagen" alt=""></a>
+            <div id="tema-detalle-miniaturas" class="tema-detalle-miniaturas"></div>
+            <p id="tema-detalle-datos" class="muted"></p>
+            <div id="tema-detalle-colores" class="tema-detalle-colores"></div>
+            <p id="tema-detalle-incluye" class="muted"></p>
+            <a id="tema-detalle-descargar" class="big-btn temas-boton" data-i18n="temas_download">Descargar</a>
+        </div>
+    </dialog>
+
+    <footer class="footer">
+        <p class="tiny">
+            <a href="index.html" data-i18n="cred_back">Inicio</a>
+            · <a href="creditos.html" data-i18n="foot_credits">créditos y licencias</a>
+            · <span class="under-construction" data-i18n="foot_const">🚧 siempre en construcción 🚧</span>
+        </p>
+    </footer>
+    <script src="script.js"></script>
+    <script src="temas.js"></script>
+</body>
+</html>

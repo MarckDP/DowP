@@ -44,6 +44,10 @@
         <div class="lang-selector">
             <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
         </div>
+        <a href="temas.html" class="temas-tarjeta-portada">
+            <strong data-i18n="temas_card_title">★ TEMAS ★</strong>
+            <span data-i18n="temas_card_text">descarga o comparte el tuyo »</span>
+        </a>
     </header>
 
     <div class="ticker" aria-label="Novedades">
@@ -65,6 +69,7 @@
                     <li><a href="#que-es" data-i18n="nav_whatis">» ¿Qué es DowP?</a></li>
                     <li><a href="#funciones" data-i18n="nav_features">» Funciones</a></li>
                     <li><a href="#preguntas" data-i18n="nav_faq">» Preguntas</a></li>
+                    <li><a href="temas.html" data-i18n="nav_themes">» Temas</a></li>
                     <li><a href="creditos.html" data-i18n="nav_credits">» Créditos</a></li>
                     <li><a href="https://github.com/MarckDP/DowP" target="_blank" rel="noopener">» GitHub ↗</a></li>
                 </ul>
@@ -84,8 +89,8 @@
                 <ul class="win-body status-list">
                     <li><span class="led on"></span> Windows 10/11</li>
                     <li><span class="led on"></span> macOS Apple Silicon <span data-i18n="status_mac_beta"><em class="tag">beta</em></span></li>
-                    <li><span class="led off"></span> macOS Intel <span data-i18n="status_mac_soon"><em class="tag">pronto</em></span></li>
-                    <li><span class="led wait"></span> Linux <span data-i18n="status_linux"><em class="tag">algún día</em></span></li>
+                    <li><span class="led wait"></span> macOS Intel <span data-i18n="status_mac_beta"><em class="tag">beta</em></span></li>
+                    <li><span class="led wait"></span> Linux <span data-i18n="status_mac_beta"><em class="tag">beta</em></span></li>
                 </ul>
             </section>
         </aside>
@@ -102,12 +107,20 @@
                         <span class="big-btn-arrow" aria-hidden="true">▼</span>
                         <span id="btn-text" data-i18n="dl_detecting">Detectando tu sistema...</span>
                     </a>
+                    <p id="dl-aviso-principal" class="dl-aviso" hidden data-i18n="dl_untested">Sin probar: puede tener fallas o directamente no abrir.</p>
 
                     <p class="small" data-i18n="dl_other">Otras versiones:</p>
                     <div class="cards">
                         <a href="#" id="link-win" class="card" data-i18n="dl_win">Windows <span>.exe</span></a>
                         <a href="#" id="link-mac-silicon" class="card" data-i18n="dl_mac_silicon">macOS Apple Silicon <span>.dmg</span></a>
-                        <a href="#" id="link-mac-intel" class="card" hidden data-i18n="dl_mac_intel">macOS Intel <span>.dmg</span></a>
+                        <div class="card-aviso" id="tarjeta-mac-intel" hidden>
+                            <a href="#" id="link-mac-intel" class="card" data-i18n="dl_mac_intel">macOS Intel <span>.dmg</span></a>
+                            <p class="dl-aviso" data-i18n="dl_untested">Sin probar: puede tener fallas o directamente no abrir.</p>
+                        </div>
+                        <div class="card-aviso" id="tarjeta-linux" hidden>
+                            <a href="#" id="link-linux" class="card" data-i18n="dl_linux">Linux <span>.tar.gz</span></a>
+                            <p class="dl-aviso" data-i18n="dl_untested">Sin probar: puede tener fallas o directamente no abrir.</p>
+                        </div>
                     </div>
 
                     <p class="tiny" data-i18n="dl_note">
@@ -213,7 +226,7 @@
                     </details>
                     <details>
                         <summary data-i18n="q_3">¿Y mi Mac con Intel?</summary>
-                        <p data-i18n="a_3">Todavía no hay versión para Intel. Vuelve pronto: aparecerá aquí mismo.</p>
+                        <p data-i18n="a_3">Ya hay una versión beta para Intel, con macOS 14 o posterior. No se ha probado: puede tener fallas o directamente no abrir.</p>
                     </details>
                     <details id="preguntas-importer">
                         <summary data-i18n="q_4">¿Cómo conecto DowP con Premiere, After Effects o Photoshop?</summary>

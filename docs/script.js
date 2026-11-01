@@ -83,9 +83,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const linkWin = document.getElementById('link-win');
     const linkSilicon = document.getElementById('link-mac-silicon');
     const linkIntel = document.getElementById('link-mac-intel');
+    const linkLinux = document.getElementById('link-linux');
+    const avisoPrincipal = document.getElementById('dl-aviso-principal');
 
     // Mientras llega la respuesta (o si falla), todo lleva a Releases.
-    for (const el of [mainBtn, linkWin, linkSilicon, linkIntel]) el.href = RELEASES_PAGE;
+    for (const el of [mainBtn, linkWin, linkSilicon, linkIntel, linkLinux]) el.href = RELEASES_PAGE;
 
     // Detección de OS
     let osName = "Unknown";
@@ -96,26 +98,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (macosPlatforms.indexOf(platform) !== -1 || userAgent.includes("Mac")) {
         osName = 'Mac';
+    } else if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
+        osName = 'Linux';
     } else if (windowsPlatforms.indexOf(platform) !== -1 || userAgent.includes("Win")) {
         osName = 'Windows';
     }
 
     // Detección de arquitectura para Mac
-    let isAppleSilicon = false;
+    // Solo se ofrece Intel si hay señal clara: Safari oculta el chip, y un Mac con
+    // Apple Silicon no debe recibir por defecto la versión sin probar.
+    let isAppleSilicon = true;
 
     if (osName === 'Mac') {
         // Truco 1: UserAgentData API (Chromium-based)
         if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
             try {
                 const ua = await navigator.userAgentData.getHighEntropyValues(["architecture"]);
-                if (ua.architecture === 'arm') {
-                    isAppleSilicon = true;
+                if (ua.architecture === 'x86') {
+                    isAppleSilicon = false;
                 }
             } catch (e) { }
         }
 
         // Truco 2: WebGL Renderer (Safari, Firefox y fallback)
-        if (!isAppleSilicon) {
+        if (isAppleSilicon) {
             try {
                 const canvas = document.createElement('canvas');
                 const gl = canvas.getContext('webgl');
@@ -123,9 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
                     if (debugInfo) {
                         const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-                        // Los procesadores de Apple Silicon tienen "Apple M" en el renderer (ej: Apple M1)
-                        if (renderer && renderer.match(/Apple M/i)) {
-                            isAppleSilicon = true;
+                        if (renderer && renderer.match(/Intel|AMD|Radeon|NVIDIA/i)) {
+                            isAppleSilicon = false;
                         }
                     }
                 }
@@ -148,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlWindows = findAsset(latest, /\.exe$/i);
     const urlMacSilicon = findAsset(latest, /arm64\.dmg$/i);
     const urlMacIntel = findAsset(latest, /x64\.dmg$/i);
+    const urlLinux = findAsset(latest, /linux-x64\.tar\.gz$/i);
 
     if (latest) {
         // Número de versión en todos los textos marcados (hero, marquesina...).
@@ -159,28 +165,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (urlWindows) linkWin.href = urlWindows;
     if (urlMacSilicon) linkSilicon.href = urlMacSilicon;
-    // La tarjeta de Mac Intel solo aparece si esa versión trae su .dmg.
+    // Las tarjetas sin probar solo aparecen si esa versión trae su archivo.
     if (urlMacIntel) {
         linkIntel.href = urlMacIntel;
-        linkIntel.hidden = false;
+        document.getElementById('tarjeta-mac-intel').hidden = false;
+    }
+    if (urlLinux) {
+        linkLinux.href = urlLinux;
+        document.getElementById('tarjeta-linux').hidden = false;
     }
 
     // Configurar botón principal
     if (osName === 'Mac') {
-        // Sin .dmg de Intel, todo Mac recibe el de Apple Silicon (Safari no deja
-        // distinguir bien el chip, y un Intel sin versión propia no tiene otra opción).
+        // Sin .dmg de Intel, todo Mac recibe el de Apple Silicon.
         if (isAppleSilicon || !urlMacIntel) {
             setDynamicBtn('dl_mac_silicon_btn');
             mainBtn.href = urlMacSilicon || RELEASES_PAGE;
         } else {
             setDynamicBtn('dl_mac_intel_btn');
             mainBtn.href = urlMacIntel;
+            avisoPrincipal.hidden = false;
         }
     } else if (osName === 'Windows') {
         setDynamicBtn('dl_win_btn');
         mainBtn.href = urlWindows || RELEASES_PAGE;
+    } else if (osName === 'Linux' && urlLinux) {
+        setDynamicBtn('dl_linux_btn');
+        mainBtn.href = urlLinux;
+        avisoPrincipal.hidden = false;
     } else {
-        // Fallback genérico para Linux o desconocidos
+        // Fallback genérico para desconocidos, o Linux en una versión sin su archivo
         setDynamicBtn('dl_win_btn');
         mainBtn.href = urlWindows || RELEASES_PAGE;
     }
@@ -197,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let total = 0;
     for (const rel of releases) {
         for (const asset of rel.assets || []) {
-            if (/\.(exe|dmg)$/i.test(asset.name)) total += asset.download_count;
+            if (/\.(exe|dmg)$|linux-x64\.tar\.gz$/i.test(asset.name)) total += asset.download_count;
         }
     }
     const digits = String(total).padStart(6, '0').split('');

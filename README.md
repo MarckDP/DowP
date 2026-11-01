@@ -73,8 +73,8 @@ editor.
 |---|---|---|
 | Windows 10/11 (64 bits) | `DowP_Setup_<versión>.exe` | ✅ Disponible |
 | macOS 14 o posterior con Apple Silicon (M1, M2…) | `DowP-<versión>-arm64.dmg` | 🧪 Beta, con pocas pruebas |
-| macOS 14 o posterior con Intel | — | ⏳ Pronto |
-| Linux | — | Algún día |
+| macOS 14 o posterior con Intel | `DowP-<versión>-x64.dmg` | 🧪 Beta, sin probar: puede tener fallas o no abrir |
+| Linux x64 | `DowP-<versión>-linux-x64.tar.gz` | 🧪 Beta, sin probar: puede tener fallas o no abrir |
 
 Descárgalo desde la [página de DowP](https://marckdp.github.io/DowP/) o desde
 [Releases](https://github.com/MarckDP/DowP/releases). Solo hace falta instalarlo una vez:
@@ -183,7 +183,8 @@ DowP is free software released under the [GPL-3.0-or-later](LICENSE) license. Yo
 
 The interface is available in Spanish, English and Brazilian Portuguese.
 [Download it here](https://marckdp.github.io/DowP/). Windows 10/11 and Apple Silicon Macs (beta)
-are supported; Intel Macs are coming soon. macOS 14 or later is required.
+are supported. Intel Macs and Linux are in beta and untested: they may have bugs or not open.
+macOS 14 or later is required.
 
 </details>
 
