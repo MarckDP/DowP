@@ -151,7 +151,7 @@ def fetch_manifest_json(repo: str, release: dict | None, token: str) -> dict | N
 
 
 def build_platform_manifest(dist_dir: str, chunk_reuse_map: dict, staging_dir: str,
-                             find_existing_chunk_asset) -> tuple[dict, dict, list, int, int]:
+                             find_existing_chunk_asset, replace_chunks: bool = False) -> tuple[dict, dict, list, int, int]:
     """Hashea dist_dir, agrupa los CONTENIDOS UNICOS en chunks (chunk_id_for,
     por hash de contenido -- no de ruta, ver core.updater.chunking) y arma las
     entradas de esta plataforma.
@@ -166,6 +166,10 @@ def build_platform_manifest(dist_dir: str, chunk_reuse_map: dict, staging_dir: s
     Un chunk realmente nuevo (ni en chunk_reuse_map ni ya subido) todavia no sabe
     su URL final -- eso se decide recien al subirlo en main(), asi que su "url"
     queda en None aqui y se completa despues.
+
+    replace_chunks: no reutiliza nada, ni lo ya empaquetado en staging. Para reparar
+    chunks mal armados, que conservan su nombre porque este sale del hash de los
+    contenidos.
 
     Devuelve (files_dict, chunks_dict, pendientes_de_subir, cambia_bytes, total_bytes),
     donde pendientes_de_subir es [(chunk_hash, ruta_comprimida, nombre_asset), ...].
@@ -193,7 +197,7 @@ def build_platform_manifest(dist_dir: str, chunk_reuse_map: dict, staging_dir: s
         chunk_hash = compute_chunk_hash(hashes)
         chunk_size = sum(local_files[hash_to_relpath[h]]["size"] for h in hashes)
 
-        if chunk_hash in chunk_reuse_map:
+        if not replace_chunks and chunk_hash in chunk_reuse_map:
             reused = chunk_reuse_map[chunk_hash]
             chunks[cid] = {
                 "hash": chunk_hash, "compressed_size": reused["compressed_size"], "url": reused["url"],
@@ -203,7 +207,7 @@ def build_platform_manifest(dist_dir: str, chunk_reuse_map: dict, staging_dir: s
         changed_bytes += chunk_size
         asset_name = objectstore.chunk_asset_name(chunk_hash)
 
-        existing_asset = find_existing_chunk_asset(asset_name)
+        existing_asset = None if replace_chunks else find_existing_chunk_asset(asset_name)
         if existing_asset is not None:
             # Ya subido de verdad (esta corrida u otra anterior interrumpida):
             # no hace falta empaquetar de nuevo, solo referenciarlo con su URL real.
@@ -214,6 +218,10 @@ def build_platform_manifest(dist_dir: str, chunk_reuse_map: dict, staging_dir: s
             continue
 
         hash_to_path = {h: os.path.join(dist_dir, hash_to_relpath[h].replace("/", os.sep)) for h in hashes}
+        if replace_chunks:
+            stale = os.path.join(staging_dir, asset_name)
+            if os.path.exists(stale):
+                os.remove(stale)
         staged_path, compressed_size = objectstore.stage_chunk(hash_to_path, chunk_hash, staging_dir)
         chunks[cid] = {"hash": chunk_hash, "compressed_size": compressed_size, "url": None}
         pending.append((chunk_hash, staged_path, asset_name))
@@ -234,6 +242,9 @@ def main():
     parser.add_argument("--min-updatable", help="Por defecto, MIN_UPDATABLE_VERSION de version.py")
     parser.add_argument("--dry-run", action="store_true",
                          help="No toca GitHub: hashea, comprime y firma en local para validar el flujo")
+    parser.add_argument("--replace-chunks", action="store_true",
+                         help="Vuelve a empaquetar y subir todos los chunks de esta plataforma, aunque ya "
+                              "existan con el mismo nombre. Solo para reparar chunks mal armados.")
     parser.add_argument("--prerelease", action="store_true",
                          help="Marca el release como pre-release de GitHub -- invisible para clientes "
                               "en canal 'stable' (usan /releases/latest), solo lo ven quienes tengan "
@@ -331,7 +342,7 @@ def main():
         return existing_chunks_by_name.get(asset_name)
 
     files, chunks, pending, changed_bytes, total_bytes = build_platform_manifest(
-        args.dist, chunk_reuse_map, staging_dir, find_existing_chunk_asset,
+        args.dist, chunk_reuse_map, staging_dir, find_existing_chunk_asset, args.replace_chunks,
     )
 
     # Reutilizados-de-verdad (sin cambios respecto a la version anterior) vs el
@@ -354,13 +365,19 @@ def main():
         if current_release is None:
             current_release = gh.create_release(args.repo, tag, token, prerelease=args.prerelease)
 
+        def upload_chunk(staged_path: str, asset_name: str):
+            old_asset = existing_chunks_by_name.get(asset_name) if args.replace_chunks else None
+            if old_asset:
+                gh.delete_asset(args.repo, old_asset["id"], token)
+            return gh.upload_asset(current_release, staged_path, asset_name, token)
+
         if pending:
             log(f"Subiendo {len(pending)} chunk(s) nuevo(s) de {len(chunks)} totales "
                 f"(hasta {MAX_CONCURRENT_UPLOADS} en simultaneo). Log en: {log_path}")
             done = 0
             with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_UPLOADS) as pool:
                 futures = {
-                    pool.submit(gh.upload_asset, current_release, staged_path, asset_name, token): asset_name
+                    pool.submit(upload_chunk, staged_path, asset_name): asset_name
                     for _chunk_hash, staged_path, asset_name in pending
                 }
                 for future in as_completed(futures):

@@ -35,6 +35,10 @@ on:
           - prerelease
           - estable
         default: prerelease
+      reemplazar_chunks:
+        description: "Volver a subir todos los chunks de esta plataforma (solo para reparar una version publicada)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -127,9 +131,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TIPO: ${{ inputs.tipo }}
+          REEMPLAZAR: ${{ inputs.reemplazar_chunks }}
         run: |
           FLAG=""
           if [ "$TIPO" = "prerelease" ]; then FLAG="--prerelease"; fi
+          if [ "$REEMPLAZAR" = "true" ]; then FLAG="$FLAG --replace-chunks"; fi
           python tools/updater/publish.py \
             --dist app/dist/DowP.app \
             --platform macos-arm64 \

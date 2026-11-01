@@ -71,7 +71,9 @@ def stage_chunk(hash_to_path: dict, chunk_hash: str, staging_dir: str) -> tuple[
     compressor = zstandard.ZstdCompressor(level=19)
     tmp_path = dst_path + ".tmp"
     with open(tmp_path, "wb") as dst, compressor.stream_writer(dst) as zdst:
-        with tarfile.open(fileobj=zdst, mode="w|") as tar:
+        # dereference: en macOS y Linux la ruta puede ser un symlink, y el cliente solo
+        # extrae archivos reales. Sin esto, el chunk llevaba solo el enlace.
+        with tarfile.open(fileobj=zdst, mode="w|", dereference=True) as tar:
             for file_hash in sorted(hash_to_path):
                 tar.add(hash_to_path[file_hash], arcname=file_hash)
     os.replace(tmp_path, dst_path)
