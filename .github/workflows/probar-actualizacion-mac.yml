@@ -1,9 +1,9 @@
 name: Probar actualizacion en Mac arm64 (manual)
 
-# Instala el .dmg de una version ya publicada y la actualiza a la ultima estable, con
-# el codigo de cliente de esa version y su DowP_Updater real. Sin permisos de escritura
-# ni secretos: no publica nada, se puede lanzar las veces que haga falta.
-# Si falla, el log de DowP queda como artifact.
+# Instala el .dmg de una version ya publicada y hace la actualizacion con el codigo de
+# cliente del repo: manifiesto firmado, descarga verificada del .dmg y reemplazo de la
+# app. Sin permisos de escritura ni secretos: no publica nada, se puede lanzar las veces
+# que haga falta. El log de DowP queda como artifact.
 on:
   workflow_dispatch:
     inputs:
@@ -18,24 +18,19 @@ permissions:
 jobs:
   probar:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       DESDE: ${{ inputs.desde }}
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          ref: v${{ inputs.desde }}
-          path: cliente
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Instalar lo que necesita el codigo de cliente
-        run: pip install PySide6-Essentials requests zstandard pycryptodomex
+        run: pip install PySide6-Essentials requests pycryptodomex zstandard
 
       - name: Instalar el .dmg de partida
         run: |
@@ -49,7 +44,8 @@ jobs:
         run: |
           python tools/updater/probar_actualizacion_mac.py \
             --app /Applications/DowP.app \
-            --client-src cliente/app/src \
+            --from-version "$DESDE" \
+            --downloads "$RUNNER_TEMP/descargas" \
             --report "$RUNNER_TEMP/informe"
 
       - name: Guardar el log de DowP

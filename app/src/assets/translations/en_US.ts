@@ -12473,53 +12473,53 @@ You can download it again whenever you want.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/settings_view.py" line="335"/>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="405"/>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="421"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="404"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="420"/>
         <source>Descargar instalador</source>
         <translation>Download installer</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/settings_view.py" line="337"/>
-        <source>Esta versión no puede actualizarse sola: descarga e instala la nueva versión desde la página de releases.</source>
-        <translation>This version can&apos;t update itself: download and install the new version from the releases page.</translation>
+        <source>Esta versión se actualiza con el instalador: descárgalo e instálalo.</source>
+        <translation>This version updates with the installer: download it and install it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="347"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="346"/>
         <source>Actualizar</source>
         <translation>Update</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="407"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="406"/>
         <source>La actualización automática no funcionó: descarga la versión completa e instálala.</source>
         <translation>The automatic update did not work: download the full version and install it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="416"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="415"/>
         <source>No se pudo actualizar</source>
         <translation>Could not update</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="418"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="417"/>
         <source>No se pudo completar la actualización. Puedes reintentarla o descargar el instalador completo de la nueva versión.</source>
         <translation>The update could not be completed. You can try again or download the full installer of the new version.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="422"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="421"/>
         <source>Reintentar más tarde</source>
         <translation>Try again later</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="464"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="463"/>
         <source>Se abrirá el instalador. Cierra DowP y arrastra DowP a Aplicaciones para reemplazarlo.</source>
         <translation>The installer will open. Close DowP and drag DowP to Applications to replace it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="466"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="465"/>
         <source>Se abrirá la carpeta con la descarga. Cierra DowP y extrae el archivo sobre tu instalación.</source>
         <translation>The folder with the download will open. Close DowP and extract the file over your installation.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="467"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="466"/>
         <source>Instalador descargado</source>
         <translation>Installer downloaded</translation>
     </message>

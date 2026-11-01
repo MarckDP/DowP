@@ -261,6 +261,10 @@ def main():
     check_private_key_matches_client(args.private_key)
 
     platform_key = args.platform or get_platform_key()
+    if platform_key.startswith("macos"):
+        print("ERROR: macOS se actualiza con el .dmg, no con chunks: reemplazar un bundle "
+              "archivo por archivo lo rompe. Sube solo el .dmg al release.")
+        sys.exit(1)
 
     version_ns = read_version_module()
     version = args.version or version_ns["APP_VERSION"]

@@ -104,7 +104,17 @@ def compute_diff(manifest: dict, install_dir: str | None = None,
         )
 
     platform_key = get_platform_key()
-    plat_data = manifest.get("platforms", {}).get(platform_key)
+    # macOS se actualiza siempre con el .dmg: un bundle depende de symlinks y de su
+    # firma, y reemplazarlo archivo por archivo lo rompe. Linux lo usa si la version
+    # no trae sus chunks. Windows sigue exigiendo que su plataforma este publicada.
+    installer_only = platform_key.startswith("macos")
+    plat_data = None if installer_only else manifest.get("platforms", {}).get(platform_key)
+    if installer_only or (plat_data is None and platform_key.startswith("linux")):
+        return UpdateInfo(
+            available=True, must_full_install=True,
+            current_version=current_version, remote_version=remote_version,
+            platform_key=platform_key,
+        )
 
     if must_full_install or plat_data is None:
         return UpdateInfo(

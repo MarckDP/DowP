@@ -334,8 +334,7 @@ class SettingsTab(QWidget):
             self._update_state = "full_install"
             self.update_button.setText(self.tr("Descargar instalador"))
             self.update_button.setToolTip(self.tr(
-                "Esta versión no puede actualizarse sola: descarga e instala la nueva "
-                "versión desde la página de releases."
+                "Esta versión se actualiza con el instalador: descárgalo e instálalo."
             ))
             self._apply_update_button_style(gradient=True)
             self.version_label.setText(f"{update_info.current_version} - <b><i>{update_info.remote_version}</i></b>")

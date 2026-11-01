@@ -470,7 +470,9 @@ if os.path.exists(final_target):
         os.path.join(final_target, "Contents", "MacOS") if IS_MACOS
         else os.path.join(DIST_DIR, APP_NAME)
     )
-    build_updater_helper(helper_dist_root, BUILD_DIR)
+    # macOS se actualiza con el .dmg: su bundle no lleva helper.
+    if not IS_MACOS:
+        build_updater_helper(helper_dist_root, BUILD_DIR)
 
     # Firmar SIEMPRE despues de que el helper ya este dentro del bundle: la
     # firma del .app cubre todo su contenido, incluido el helper.

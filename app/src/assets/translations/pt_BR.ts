@@ -12471,53 +12471,53 @@ Você pode baixá-lo de novo quando quiser.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/settings_view.py" line="335"/>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="405"/>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="421"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="404"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="420"/>
         <source>Descargar instalador</source>
         <translation>Baixar instalador</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/settings_view.py" line="337"/>
-        <source>Esta versión no puede actualizarse sola: descarga e instala la nueva versión desde la página de releases.</source>
-        <translation>Esta versão não consegue se atualizar sozinha: baixe e instale a nova versão pela página de releases.</translation>
+        <source>Esta versión se actualiza con el instalador: descárgalo e instálalo.</source>
+        <translation>Esta versão é atualizada com o instalador: baixe-o e instale-o.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="347"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="346"/>
         <source>Actualizar</source>
         <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="407"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="406"/>
         <source>La actualización automática no funcionó: descarga la versión completa e instálala.</source>
         <translation>A atualização automática não funcionou: baixe a versão completa e instale-a.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="416"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="415"/>
         <source>No se pudo actualizar</source>
         <translation>Não foi possível atualizar</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="418"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="417"/>
         <source>No se pudo completar la actualización. Puedes reintentarla o descargar el instalador completo de la nueva versión.</source>
         <translation>Não foi possível concluir a atualização. Você pode tentar de novo ou baixar o instalador completo da nova versão.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="422"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="421"/>
         <source>Reintentar más tarde</source>
         <translation>Tentar mais tarde</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="464"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="463"/>
         <source>Se abrirá el instalador. Cierra DowP y arrastra DowP a Aplicaciones para reemplazarlo.</source>
         <translation>O instalador será aberto. Feche o DowP e arraste o DowP para Aplicativos para substituí-lo.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="466"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="465"/>
         <source>Se abrirá la carpeta con la descarga. Cierra DowP y extrae el archivo sobre tu instalación.</source>
         <translation>A pasta com o download será aberta. Feche o DowP e extraia o arquivo sobre a sua instalação.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="467"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="466"/>
         <source>Instalador descargado</source>
         <translation>Instalador baixado</translation>
     </message>

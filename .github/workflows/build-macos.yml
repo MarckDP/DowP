@@ -7,25 +7,15 @@ name: Build macOS arm64 (manual)
 # SOLO arm64 (Apple Silicon): es el unico build de macOS que el maintainer no
 # puede producir en su propia maquina. El x64 se compila en una VM local.
 #
-# Con "publish" activado (viene apagado), ademas de compilar:
-#   1. publica los chunks de macos-arm64 en el release v<APP_VERSION> con
-#      tools/updater/publish.py (crea el release si no existe; si ya existe,
-#      agrega/reemplaza solo la plataforma macos-arm64 del manifiesto),
-#   2. arma DowP-<version>-arm64.dmg y lo sube a ese mismo release.
-#
-# Requiere el secret UPDATER_PRIVATE_KEY (contenido completo de
-# tools/updater/secrets/private_key.pem). El token para subir lo pone GitHub
-# solo (GITHUB_TOKEN, con el permiso contents: write de abajo).
-#
-# NUNCA lanzarlo mientras corre otro publish.py (Windows o la VM; con el workflow
-# de Intel se encola solo, ver concurrency): cada
-# publicador baja manifest.json, agrega su plataforma y lo vuelve a subir, y
-# si dos lo hacen a la vez el ultimo borra la plataforma del otro.
+# Con "publish" activado (viene apagado), ademas de compilar arma
+# DowP-<version>-arm64.dmg y lo sube al release v<APP_VERSION>, creandolo si no existe.
+# macOS no publica chunks ni toca el manifiesto, asi que no necesita la clave de firma:
+# reemplazar un bundle archivo por archivo lo rompe, y la app se actualiza con el .dmg.
 on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publicar chunks de macos-arm64 y subir el .dmg al release (si no, solo compila)"
+        description: "Subir el .dmg al release (si no, solo compila)"
         type: boolean
         default: false
       tipo:
@@ -35,17 +25,11 @@ on:
           - prerelease
           - estable
         default: prerelease
-      reemplazar_chunks:
-        description: "Volver a subir todos los chunks de esta plataforma (solo para reparar una version publicada)"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
 
-# Nunca dos corridas a la vez (misma razon que arriba). IMPORTANTE: este grupo debe
-# ser el MISMO en build-macos-intel.yml (x64), asi los dos workflows se encolan
-# entre si en vez de pisarse el manifiesto.
+# El mismo grupo en los workflows que suben al release, para que se encolen.
 concurrency:
   group: publish-macos
   cancel-in-progress: false
@@ -69,7 +53,7 @@ jobs:
           pip install -r app/requirements.txt
           pip install pyinstaller==6.22.2
 
-      - name: Compilar DowP (DowP.app + helper de swap, firma ad-hoc incluida)
+      - name: Compilar DowP (DowP.app, firma ad-hoc incluida)
         working-directory: app
         run: python build_cross_platform.py
 
@@ -80,10 +64,9 @@ jobs:
           VERSION=$(python -c "import sys; sys.path.insert(0,'src'); from core.version import APP_VERSION; print(APP_VERSION)")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Comprobar el bundle (arquitectura, helper y firma)
+      - name: Comprobar el bundle (arquitectura y firma)
         run: |
           file app/dist/DowP.app/Contents/MacOS/DowP | grep -q arm64
-          test -f app/dist/DowP.app/Contents/MacOS/DowP_Updater
           codesign --verify --deep --strict app/dist/DowP.app
           echo "Bundle OK"
 
@@ -116,40 +99,6 @@ jobs:
             exit 1
           fi
 
-      - name: Escribir la clave privada de firma
-        if: ${{ inputs.publish }}
-        env:
-          UPDATER_PRIVATE_KEY: ${{ secrets.UPDATER_PRIVATE_KEY }}
-        run: |
-          if [ -z "$UPDATER_PRIVATE_KEY" ]; then
-            echo "Falta el secret UPDATER_PRIVATE_KEY (Settings > Secrets and variables > Actions)."
-            exit 1
-          fi
-          mkdir -p tools/updater/secrets
-          printf '%s\n' "$UPDATER_PRIVATE_KEY" > tools/updater/secrets/private_key.pem
-          chmod 600 tools/updater/secrets/private_key.pem
-
-      - name: Publicar chunks de macos-arm64
-        if: ${{ inputs.publish }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TIPO: ${{ inputs.tipo }}
-          REEMPLAZAR: ${{ inputs.reemplazar_chunks }}
-        run: |
-          FLAG=""
-          if [ "$TIPO" = "prerelease" ]; then FLAG="--prerelease"; fi
-          if [ "$REEMPLAZAR" = "true" ]; then FLAG="$FLAG --replace-chunks"; fi
-          python tools/updater/publish.py \
-            --dist app/dist/DowP.app \
-            --platform macos-arm64 \
-            --repo "${{ github.repository }}" \
-            --private-key tools/updater/secrets/private_key.pem \
-            $FLAG
-
-      - name: Borrar la clave privada del runner
-        if: ${{ always() }}
-        run: rm -f tools/updater/secrets/private_key.pem
-
       - name: Armar el .dmg (con acceso directo a Aplicaciones)
         if: ${{ inputs.publish }}
         run: |
@@ -160,17 +109,18 @@ jobs:
           hdiutil create -volname "DowP" -srcfolder "$DMG_DIR" -ov -format UDZO \
             "app/dist/DowP-${{ steps.appver.outputs.version }}-arm64.dmg"
 
-      - name: Subir el .dmg al release
+      - name: Crear el release si no existe y subir el .dmg
         if: ${{ inputs.publish }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TIPO: ${{ inputs.tipo }}
+          VERSION: ${{ steps.appver.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
-          gh release upload "v${{ steps.appver.outputs.version }}" \
-            "app/dist/DowP-${{ steps.appver.outputs.version }}-arm64.dmg" \
-            --clobber --repo "${{ github.repository }}"
-
-      - name: Comprobar el manifiesto publicado
-        if: ${{ inputs.publish }}
-        run: |
-          curl -sL "https://github.com/${{ github.repository }}/releases/download/v${{ steps.appver.outputs.version }}/manifest.json" \
-            | python -c "import json,sys; m=json.load(sys.stdin); p=sorted(m['platforms']); print(m['app_version'], p); sys.exit(0 if 'macos-arm64' in p else 1)"
+          if ! gh release view "v$VERSION" --repo "$REPO" > /dev/null 2>&1; then
+            FLAG=""
+            case "$VERSION" in *-*) FLAG="--prerelease" ;; esac
+            if [ "$TIPO" = "prerelease" ]; then FLAG="--prerelease"; fi
+            gh release create "v$VERSION" --repo "$REPO" --target "$GITHUB_SHA" --title "v$VERSION" --notes "" $FLAG
+          fi
+          gh release upload "v$VERSION" "app/dist/DowP-$VERSION-arm64.dmg" --clobber --repo "$REPO"

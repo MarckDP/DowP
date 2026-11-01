@@ -12,10 +12,8 @@ sobre un journal a medias) es seguro: las operaciones ya "done" se saltan, y
 las que no lo estan se comprueban por hash antes de repetir nada.
 """
 import os
-import platform
 import shutil
 
-from core.logger.logger_manager import logger
 from core.updater.hash_tree import hash_file
 from core.updater.journal import STATUS_DONE, STATUS_ROLLED_BACK, STATUS_SWAPPING, write_journal
 
@@ -24,27 +22,6 @@ class SwapError(Exception):
     """Una operacion se aplico pero el resultado no coincide con lo esperado.
     Quien llama a apply_journal debe atrapar esto y llamar a
     rollback_journal -- nunca dejar la instalacion en un estado a medias."""
-
-
-def find_app_bundle_root(path: str):
-    """Busca un directorio *.app subiendo desde `path` (hasta 4 niveles) --
-    cubre tanto install_dir == el propio .app como install_dir apuntando a
-    Contents/MacOS dentro de el. Devuelve None si no encuentra ninguno.
-
-    Publica (no `_privada`) porque `launcher.install_dir_from_executable()`
-    tambien la usa: es la misma pregunta ("¿donde esta la raiz del bundle?")
-    que resuelve tanto "que .app hay que re-firmar tras un swap" como "cual
-    es el install_dir real de una instalacion macOS en marcha" (ver
-    ACTUALIZACIONES.md, seccion de la particion Frameworks/Resources)."""
-    current = os.path.abspath(path)
-    for _ in range(4):
-        if current.lower().endswith(".app"):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            return None
-        current = parent
-    return None
 
 
 # Que hizo cada operacion sobre la instalacion, guardado en op["result"] -- es lo
@@ -116,17 +93,6 @@ def apply_journal(journal: dict, state_dir: str) -> None:
         _apply_one(op, install_dir)
         op["done"] = True
         write_journal(journal, state_dir)
-
-    if platform.system() == "Darwin":
-        from core.updater.macos_sign import SigningError, adhoc_sign
-        bundle = find_app_bundle_root(install_dir)
-        if bundle:
-            try:
-                adhoc_sign(bundle)
-            except SigningError as e:
-                raise SwapError(f"No se pudo re-firmar {bundle} tras el swap: {e}")
-        else:
-            logger.warning(f"Updater: no se encontro un .app dentro de {install_dir}, se omite la re-firma.")
 
     journal["status"] = STATUS_DONE
     write_journal(journal, state_dir)
