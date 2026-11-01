@@ -538,31 +538,50 @@ pre {
     padding: 0;
     border: 0;
     background: transparent;
-    max-width: min(1140px, calc(100vw - 24px));
+    max-width: min(1320px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
     width: 100%;
+    overflow: hidden;
 }
 
 .viewer::backdrop { background: rgba(0, 0, 0, .8); }
 
-.viewer img { max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid #000; }
-.viewer-foto { position: relative; }
-.viewer-flecha {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font: inherit;
-    font-size: 22px;
-    line-height: 1;
-    padding: 14px 10px;
-    color: var(--ink);
-    background: var(--lime);
-    border: 2px solid var(--deep);
-    cursor: pointer;
-    opacity: .85;
+.viewer-foto {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
 }
-.viewer-flecha:hover, .viewer-flecha:focus-visible { opacity: 1; }
-.viewer-anterior { left: 6px; }
-.viewer-siguiente { right: 6px; }
+/* Cabe siempre en la pantalla, descontando la barra, los margenes y el pie de foto. */
+.viewer img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100dvh - 150px);
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    border: 1px solid #000;
+}
+.viewer-flecha {
+    font-family: "Silkscreen", monospace;
+    font-size: 38px;
+    line-height: 1;
+    padding: 18px 12px;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--lime), var(--green));
+    border: 3px solid;
+    border-color: #e2ff9a var(--deep) var(--deep) #e2ff9a;
+    box-shadow: 3px 3px 0 #03280f;
+    cursor: pointer;
+}
+.viewer-flecha:hover { background: linear-gradient(180deg, #d6ff70, var(--lime)); }
+.viewer-flecha:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #03280f; }
+.viewer-flecha:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+@media (max-width: 520px) {
+    .viewer-foto { gap: 6px; }
+    .viewer-flecha { font-size: 26px; padding: 12px 4px; }
+    .viewer .win-body { padding: 8px; }
+}
 
 .win-close {
     font: inherit;
