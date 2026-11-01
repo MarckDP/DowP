@@ -22,7 +22,7 @@ const translations = {
         "masthead_sub": "download · organize · <span class=\"nowrap\">process · <span class=\"blink\">_</span></span>",
         
         // Ticker
-        "ticker_text": "★ DowP <span class=\"js-version\">1.9.1</span> IS OUT! ★ new interface ★ quick mode ★ integrated search ★ AI for image and video ★ now in english and portuguese ★ self-updating ★",
+        "ticker_text": "★ DowP <span class=\"js-version\">...</span> IS OUT! ★ new interface ★ quick mode ★ integrated search ★ AI for image and video ★ now in english and portuguese ★ self-updating ★",
         
         // Stats & Support
         "counter_title": "Counter",
@@ -39,7 +39,7 @@ const translations = {
         
         // Download Section
         "dl_title": "Download",
-        "dl_hero": "Version <strong class=\"js-version\">1.9.1</strong> <span class=\"new\">NEW!</span>",
+        "dl_hero": "Version <strong class=\"js-version\">...</strong> <span class=\"new\">NEW!</span>",
         "dl_detecting": "Detecting your system...",
         "dl_other": "Other versions:",
         "dl_win": "Windows <span>.exe</span>",
@@ -209,7 +209,7 @@ const translations = {
         "masthead_sub": "baixa · organiza · <span class=\"nowrap\">processa · <span class=\"blink\">_</span></span>",
         
         // Ticker
-        "ticker_text": "★ DowP <span class=\"js-version\">1.9.1</span> JÁ SAIU! ★ interface nova ★ modo rápido ★ busca integrada ★ IA para imagem e vídeo ★ agora em inglês e português ★ atualiza sozinho ★",
+        "ticker_text": "★ DowP <span class=\"js-version\">...</span> JÁ SAIU! ★ interface nova ★ modo rápido ★ busca integrada ★ IA para imagem e vídeo ★ agora em inglês e português ★ atualiza sozinho ★",
         
         // Stats & Support
         "counter_title": "Contador",
@@ -226,7 +226,7 @@ const translations = {
         
         // Download Section
         "dl_title": "Baixar",
-        "dl_hero": "Versão <strong class=\"js-version\">1.9.1</strong> <span class=\"new\">NOVO!</span>",
+        "dl_hero": "Versão <strong class=\"js-version\">...</strong> <span class=\"new\">NOVO!</span>",
         "dl_detecting": "Detectando seu sistema...",
         "dl_other": "Outras versões:",
         "dl_win": "Windows <span>.exe</span>",

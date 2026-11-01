@@ -66,6 +66,16 @@ function setLanguage(lang) {
 // descargas. Así no hay que tocar este archivo al publicar una versión nueva.
 // Sin API (sin red o cupo de 60 consultas/hora agotado): los botones llevan a la
 // página de Releases, donde siempre está todo.
+// La última versión vista, para mostrarla al instante mientras responde GitHub.
+function rememberedVersion(value) {
+    try {
+        if (value) localStorage.setItem('dowp_ultima_version', value);
+        return localStorage.getItem('dowp_ultima_version');
+    } catch (e) {
+        return null;
+    }
+}
+
 const RELEASES_PAGE = "https://github.com/MarckDP/DowP/releases";
 const releasesPromise = fetch("https://api.github.com/repos/MarckDP/DowP/releases?per_page=100")
     .then((res) => (res.ok ? res.json() : null))
@@ -78,6 +88,11 @@ function findAsset(release, pattern) {
 
 // ── Botones de descarga ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    const savedVersion = rememberedVersion();
+    if (savedVersion && !window.dowpLatestVersion) {
+        document.querySelectorAll('.js-version').forEach((el) => { el.textContent = savedVersion; });
+    }
+
     const btnText = document.getElementById('btn-text');
     const mainBtn = document.getElementById('main-download-btn');
     const linkWin = document.getElementById('link-win');
@@ -160,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const version = String(latest.tag_name || "").replace(/^v/i, "");
         if (version) {
             window.dowpLatestVersion = version;
+            rememberedVersion(version);
             document.querySelectorAll('.js-version').forEach((el) => { el.textContent = version; });
         }
     }
