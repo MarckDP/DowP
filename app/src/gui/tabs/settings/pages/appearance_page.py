@@ -6,7 +6,7 @@ cambios cuestan una sola recarga. Los ajustes de la imagen no recargan nada y si
 """
 import os
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import QThread, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
@@ -19,6 +19,7 @@ from core.utils import appearance_store, theme_io, theme_loader as TL
 from core.utils.theme_loader import sync_legacy_theme_key
 from gui.styles import (apply_folder_open_button_style, get_available_themes, get_theme_token, set_button_variant,
                         set_themed_style)
+from gui.widgets.animated_button import AnimatedButton
 from gui.widgets.color_editor import ColorEditor
 from gui.widgets.combo_box import AutoPopupComboBox
 from gui.widgets.theme_gallery import ThemeGallery
@@ -27,12 +28,44 @@ from gui.widgets.toggle_switch import ToggleSwitch
 from gui.widgets.top_aligned_layout import TopAlignedVBoxLayout
 
 
+class _PrepareImageThread(QThread):
+    """Comprime en segundo plano: una imagen de 8K tarda segundos."""
+    done = Signal(str, str)  # (ruta de la copia, error)
+
+    def __init__(self, place, source, parent=None):
+        super().__init__(parent)
+        self._place, self._source = place, source
+
+    def run(self):
+        from core.utils import background_images as bg
+        try:
+            self.done.emit(bg.prepare_image(self._place, self._source), "")
+        except Exception as e:
+            logger.error(f"Fondo: no se pudo usar {self._source}: {e}")
+            self.done.emit("", str(e))
+
+
+# Lo que queda dentro del tema. El modo no: un tema trae los dos y elegir uno es solo cómo se ve.
+_THEME_CONTENT = ("colors", "image_theme", "images", "panel", "previews", "checker",
+                  "font_family", "font_size_override", "radius_override")
+
+
+# Lo que un tema guarda además de los colores: pendiente -> (clave en la apariencia, valor si no lo trae).
+_THEME_LOOK = {"font_family": ("font_family", "theme_default"), "font_size_override": ("font_size_override", "default"),
+               "radius_override": ("radius_override", None), "panel": ("panel_opacity", None),
+               "previews": ("previews_transparent", False), "checker": ("preview_checker", True)}
+
+
 class AppearancePage(QWidget):
     theme_changed = Signal(str)
 
     def __init__(self):
         super().__init__()
         self._is_loading = True
+        self._preparing = {}  # lugar o "draft" -> hilo que comprime; solo vale el último
+        from core.utils import background_images as bg
+        bg.discard_prepared()  # las que quedaron de una sesión anterior
+        self._image_drafts = {}  # temas creados desde imagen y aún sin archivo: id -> borrador
         self._pending = {}  # clave de config -> valor elegido y aún sin aplicar
         self.init_ui()
         self.load_current_settings()
@@ -46,7 +79,16 @@ class AppearancePage(QWidget):
 
         self.title_label = QLabel(self.tr("Apariencia"))
         self.title_label.setObjectName("settingsTitle")
-        self.main_layout.addWidget(self.title_label)
+        self.btn_themes_gallery = AnimatedButton(self.tr("Temas de la comunidad"))
+        self.btn_themes_gallery.setCursor(Qt.PointingHandCursor)
+        self.btn_themes_gallery.setToolTip(self.tr("Abre la galería en tu navegador. Descarga un tema y usa Importar."))
+        set_button_variant(self.btn_themes_gallery, "primary")
+        self.btn_themes_gallery.clicked.connect(self._open_themes_gallery)
+        title_row = QHBoxLayout()
+        title_row.addWidget(self.title_label)
+        title_row.addStretch()
+        title_row.addWidget(self.btn_themes_gallery)
+        self.main_layout.addLayout(title_row)
 
         line = QFrame()
         line.setObjectName("settingsDivider")
@@ -73,19 +115,6 @@ class AppearancePage(QWidget):
         set_button_variant(self.btn_import, "secondary")
         self.btn_import.clicked.connect(self._import_theme)
         actions.addWidget(self.btn_import)
-        self.btn_pick = QPushButton(self.tr("Seleccionar"))
-        self.btn_pick.setCheckable(True)
-        self.btn_pick.setCursor(Qt.PointingHandCursor)
-        self.btn_pick.setToolTip(self.tr("Marcar varios temas para eliminarlos juntos"))
-        set_button_variant(self.btn_pick, "secondary")
-        self.btn_pick.toggled.connect(self._on_pick_toggled)
-        actions.addWidget(self.btn_pick)
-        self.btn_delete_picked = QPushButton()
-        self.btn_delete_picked.setCursor(Qt.PointingHandCursor)
-        set_button_variant(self.btn_delete_picked, "danger")
-        self.btn_delete_picked.clicked.connect(lambda: self._delete_themes(self.gallery.picked()))
-        self.btn_delete_picked.hide()
-        actions.addWidget(self.btn_delete_picked)
         actions.addStretch()
         self.btn_open_themes = QPushButton()
         self.btn_open_themes.setFixedSize(30, 30)
@@ -97,7 +126,6 @@ class AppearancePage(QWidget):
         self.gallery.selected.connect(self._on_gallery_selected)
         self.gallery.delete_requested.connect(self._delete_themes)
         self.gallery.action_requested.connect(self._on_gallery_action)
-        self.gallery.picking_changed.connect(self._on_picked_changed)
         themes_column.addWidget(self.gallery, 1)
         self.top_area.addLayout(themes_column, 1)
         self.top_widget = QWidget()
@@ -148,6 +176,9 @@ class AppearancePage(QWidget):
 
 
         # 2c. Colores
+        self.color_mode_label = QLabel()
+        set_themed_style(self.color_mode_label, lambda: f"color: {get_theme_token('texto_tenue', '#888888')}; font-size: 11px;")
+        self.content_layout.addWidget(self.color_mode_label)
         self.color_editor = ColorEditor()
         self.color_editor.edited.connect(self._on_colors_edited)
         self.color_editor.reverted.connect(self._on_colors_reverted)
@@ -255,9 +286,10 @@ class AppearancePage(QWidget):
         self.pending_bar = QWidget()
         bar = QHBoxLayout(self.pending_bar)
         bar.setContentsMargins(0, 0, 10, 0)
-        self.btn_save = QPushButton(self.tr("Guardar"))
+        self.btn_save = QPushButton(self.tr("Guardar como…"))
         self.btn_save.setCursor(Qt.PointingHandCursor)
         set_button_variant(self.btn_save, "secondary")
+        self.btn_save.setToolTip(self.tr("Guardar lo que ves en este tema o en uno nuevo"))
         self.btn_save.clicked.connect(self._save_appearance)
         bar.addWidget(self.btn_save)
         self.btn_export = QPushButton(self.tr("Exportar"))
@@ -265,9 +297,6 @@ class AppearancePage(QWidget):
         set_button_variant(self.btn_export, "secondary")
         self.btn_export.clicked.connect(self._export_theme)
         bar.addWidget(self.btn_export)
-        self.pending_label = QLabel()
-        self.pending_label.setObjectName("settingsLabel")
-        bar.addWidget(self.pending_label)
         bar.addStretch()
         self.btn_discard = QPushButton(self.tr("Descartar"))
         self.btn_discard.setCursor(Qt.PointingHandCursor)
@@ -342,7 +371,7 @@ class AppearancePage(QWidget):
         return label
 
     def _build_transparency_rows(self):
-        """Opacidad de los paneles y Transparentar vistas previas: dependen del fondo general."""
+        """Opacidad de los paneles y vistas previas. Las dos primeras dependen del fondo general."""
         from PySide6.QtWidgets import QSlider
         from core.utils import background_images as bg
         row = self._add_row
@@ -358,10 +387,15 @@ class AppearancePage(QWidget):
 
         self.bg_previews_switch = ToggleSwitch()
         self.bg_previews_switch.setToolTip(self.tr(
-            "Sin relleno ni cuadrícula: lo único sólido es la imagen o el video.\n"
-            "Las zonas transparentes de una imagen se mezclan con el fondo y ya no se distinguen."))
+            "Relleno y cuadrícula semitransparentes: tu fondo se ve a través. Apagada, son sólidos."))
         self.bg_previews_switch.toggled.connect(self._on_bg_previews_toggled)
         row(self.tr("Transparentar vistas previas"), self.bg_previews_switch)
+
+        self.bg_checker_switch = ToggleSwitch()
+        self.bg_checker_switch.setToolTip(self.tr(
+            "Muestra las zonas transparentes de una imagen sobre una cuadrícula. Apagada, se ven sobre el relleno."))
+        self.bg_checker_switch.toggled.connect(self._on_bg_checker_toggled)
+        row(self.tr("Mostrar cuadrícula de transparencia"), self.bg_checker_switch)
 
     def _build_background_section(self):
         from PySide6.QtWidgets import QSlider
@@ -397,7 +431,6 @@ class AppearancePage(QWidget):
         self.bg_opacity_value = QLabel()
         self.bg_opacity_value.setFixedWidth(40)
         self.bg_opacity_slider.valueChanged.connect(self._on_bg_opacity_changed)
-        self.bg_opacity_slider.sliderReleased.connect(lambda: save_config(get_config()))
         row(self.tr("Opacidad de la imagen"), self.bg_opacity_slider, self.bg_opacity_value)
 
         self.bg_fit_combo = AutoPopupComboBox()
@@ -436,67 +469,109 @@ class AppearancePage(QWidget):
 
     def _load_background_settings(self):
         from core.utils import background_images as bg
-        s = bg.get_place(self._bg_place())
-        path = bg.image_path(self._bg_place())
+        path, s = self._draft_place(self._bg_place())
         name = s["name"] or (os.path.basename(path) if path else "")
         self.bg_file_label.setText(self.bg_file_label.fontMetrics().elidedText(name, Qt.ElideMiddle, 220)
                                    if path else self.tr("Ninguna"))
         self.bg_file_label.setToolTip(name if path else "")
         for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
-                  self.bg_panel_slider, self.bg_previews_switch):
+                  self.bg_panel_slider, self.bg_previews_switch, self.bg_checker_switch):
             w.blockSignals(True)
-        self.bg_previews_switch.setChecked(self._pending.get("previews", bg.get_previews_transparent()))
+        self.bg_previews_switch.setChecked(self._draft("previews", False))
+        self.bg_checker_switch.setChecked(self._draft("checker", True))
         self.bg_opacity_slider.setValue(s["opacity"])
         self.bg_opacity_value.setText(f"{s['opacity']} %")
         self.bg_fit_combo.setCurrentIndex(max(0, self.bg_fit_combo.findData(s["fit"])))
         self.bg_align_combo.setCurrentIndex(max(0, self.bg_align_combo.findData(s["align"])))
         self.bg_blur_switch.setChecked(s["blur"])
-        panel = self._pending.get("panel", bg.get_panel_opacity())
+        panel = self._draft("panel", None)
         self.bg_panel_slider.setValue(panel)
         self.bg_panel_value.setText(f"{panel} %")
         for w in (self.bg_opacity_slider, self.bg_fit_combo, self.bg_align_combo, self.bg_blur_switch,
-                  self.bg_panel_slider, self.bg_previews_switch):
+                  self.bg_panel_slider, self.bg_previews_switch, self.bg_checker_switch):
             w.blockSignals(False)
         self._update_bg_controls_enabled()
 
     def _update_bg_controls_enabled(self):
         from core.utils import background_images as bg
-        has = bg.image_path(self._bg_place()) is not None
+        has = self._draft_place(self._bg_place())[0] is not None
         for w in (self.btn_bg_remove, self.bg_opacity_slider, self.bg_fit_combo, self.bg_blur_switch):
             w.setEnabled(has)
         # Estos dos dependen siempre del fondo general, sea cual sea el lugar elegido.
-        has_general = bg.image_path(bg.PLACE_GENERAL) is not None
+        has_general = self._draft_place(bg.PLACE_GENERAL)[0] is not None
         for w, tip in ((self.bg_panel_slider, self.tr("Cuánto tapan los paneles a la imagen. El texto, los botones y los campos siguen sólidos.")),
-                       (self.bg_previews_switch, self.tr("Sin relleno ni cuadrícula: lo único sólido es la imagen o el video.\n"
-                                                         "Las zonas transparentes de una imagen se mezclan con el fondo y ya no se distinguen."))):
+                       (self.bg_previews_switch, self.tr(
+                           "Relleno y cuadrícula semitransparentes: tu fondo se ve a través. Apagada, son sólidos."))):
             w.setEnabled(has_general)
             w.setToolTip(tip if has_general else self.tr("Necesita una imagen de fondo general"))
         # La posición no cambia nada al estirar ni en mosaico.
         self.bg_align_combo.setEnabled(has and self.bg_fit_combo.currentData() not in (bg.FIT_STRETCH, bg.FIT_TILE))
 
-    def _notify_background(self):
-        from gui.widgets.background_canvas import background_notifier
-        background_notifier().changed.emit(self._bg_place())
+    def _base_place(self, place: str) -> tuple:
+        """(ruta, ajustes) de ese lugar según el tema que se verá, sin los cambios de esta sección."""
+        from core.utils import background_images as bg
+        current = get_config().get("theme_id")
+        target = self._pending.get("theme_id")
+        unsaved = self._pending.get("image_theme")
+        if place == bg.PLACE_GENERAL and unsaved and unsaved.get("background"):
+            return unsaved["background"], {**bg.default_settings(place), "name": unsaved.get("background_name") or os.path.basename(unsaved["background"])}
+        if self._changes_images(target):
+            saved = appearance_store.saved_place(target, place)
+            if saved:
+                return saved[0], {**bg.default_settings(place), **saved[1]}
+            return None, bg.default_settings(place)
+        return bg.image_path(place), bg.get_place(place)
 
-    def _apply_glass_if_changed(self, before):
-        """La transparencia de los paneles cambia la hoja de estilos: eso pasa por el
-        tema (con su aviso de unos segundos), y solo si de verdad cambió algo."""
-        from core.utils.background_images import glass_alpha
-        if glass_alpha() != before:
-            from gui.theme_manager import get_theme_manager
-            get_theme_manager().apply()
+    def _draft_place(self, place: str) -> tuple:
+        """(ruta, ajustes) de lo que se verá en ese lugar al aplicar."""
+        path, settings = self._base_place(place)
+        entry = self._pending.get("images", {}).get(place, {})
+        if "source" in entry:
+            path = entry["source"]
+            settings = {**settings, "name": entry.get("name", "") if path else ""}
+        return path, {**settings, **entry.get("settings", {})}
+
+    def _pending_image_entry(self, place: str, change):
+        images = dict(self._pending.get("images", {}))
+        entry = dict(images.get(place, {}))
+        change(entry)
+        if entry:
+            images[place] = entry
+        else:
+            images.pop(place, None)
+        if images:
+            self._pending["images"] = images
+        else:
+            self._pending.pop("images", None)
+        self._refresh_pending()
+
+    def _set_bg_setting(self, key: str, value):
+        place = self._bg_place()
+        base = self._base_place(place)[1]
+
+        def change(entry):
+            settings = dict(entry.get("settings", {}))
+            if base.get(key) == value:
+                settings.pop(key, None)
+            else:
+                settings[key] = value
+            if settings:
+                entry["settings"] = settings
+            else:
+                entry.pop("settings", None)
+        self._pending_image_entry(place, change)
 
     def _on_bg_choose(self):
+        from PIL import Image
         from PySide6.QtWidgets import QFileDialog
-        from core.utils import background_images as bg
         path, _ = QFileDialog.getOpenFileName(
             self, self.tr("Elegir imagen de fondo"), os.path.expanduser("~"),
             self.tr("Imágenes") + " (*.png *.jpg *.jpeg *.webp *.bmp *.gif)")
         if not path:
             return
-        before = bg.glass_alpha()
         try:
-            _name, animated = bg.import_image(self._bg_place(), path)
+            with Image.open(path) as im:
+                animated = bool(getattr(im, "is_animated", False)) and getattr(im, "n_frames", 1) > 1
         except Exception as e:
             logger.error(f"Fondo: no se pudo usar {path}: {e}")
             QMessageBox.warning(self, self.tr("Imagen de fondo"),
@@ -505,49 +580,103 @@ class AppearancePage(QWidget):
         if animated:
             QMessageBox.information(self, self.tr("Imagen de fondo"), self.tr(
                 "Las imágenes animadas todavía no se admiten como fondo: se usa su primer fotograma."))
-        self._load_background_settings()
-        self._notify_background()
-        self._apply_glass_if_changed(before)
+        place = self._bg_place()
+        self._prepare(place, path, lambda copy: self._use_prepared(place, copy, path))
+
+    def _prepare(self, key, source, on_ready):
+        """Comprime en otro hilo; Aplicar espera, y lo que se descartó mientras tanto no se usa."""
+        from core.utils import background_images as bg
+        place = bg.PLACE_GENERAL if key == "draft" else key
+        thread = _PrepareImageThread(place, source, self)
+        self._preparing[key] = thread
+
+        def finished(copy, error):
+            if self._preparing.get(key) is not thread:
+                if copy:
+                    bg.discard_prepared(copy)
+                return
+            del self._preparing[key]
+            if error:
+                QMessageBox.warning(self, self.tr("Imagen de fondo"), self.tr("No se pudo abrir la imagen: {0}").format(error))
+                self._refresh_pending()
+            else:
+                on_ready(copy)
+        thread.done.connect(finished)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+        self._refresh_pending()
+
+    def _use_prepared(self, place, copy, source):
+        self._forget_prepared(place)
+
+        def change(entry):
+            entry.update(source=copy, name=os.path.basename(source))
+        self._pending_image_entry(place, change)
+
+    def _forget_prepared(self, place=None):
+        """Borra las copias preparadas que dejan de hacer falta, de un lugar o de todos."""
+        from core.utils import background_images as bg
+        for key, entry in self._pending.get("images", {}).items():
+            if (place is None or key == place) and entry.get("source"):
+                bg.discard_prepared(entry["source"])
 
     def _on_bg_remove(self):
-        from core.utils import background_images as bg
-        before = bg.glass_alpha()
-        bg.remove_image(self._bg_place())
-        self._load_background_settings()
-        self._notify_background()
-        self._apply_glass_if_changed(before)
+        place = self._bg_place()
+        has_base = self._base_place(place)[0] is not None
+        self._preparing.pop(place, None)
+        self._forget_prepared(place)
+
+        def change(entry):
+            if has_base:
+                entry["source"] = None
+            else:
+                entry.pop("source", None)
+        self._pending_image_entry(place, change)
 
     def _on_bg_opacity_changed(self, value):
-        from core.utils import background_images as bg
         self.bg_opacity_value.setText(f"{value} %")
-        # En vivo mientras se arrastra; se guarda en disco al soltar.
-        bg.set_place(self._bg_place(), save=not self.bg_opacity_slider.isSliderDown(), opacity=value)
-        self._notify_background()
+        self._set_bg_setting("opacity", value)
 
     def _on_bg_fit_changed(self, _index):
-        from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), fit=self.bg_fit_combo.currentData())
-        self._update_bg_controls_enabled()
-        self._notify_background()
+        self._set_bg_setting("fit", self.bg_fit_combo.currentData())
 
     def _on_bg_align_changed(self, _index):
-        from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), align=self.bg_align_combo.currentData())
-        self._notify_background()
+        self._set_bg_setting("align", self.bg_align_combo.currentData())
 
     def _on_bg_blur_toggled(self, checked):
+        self._set_bg_setting("blur", bool(checked))
+
+    def _apply_images(self, images: dict):
         from core.utils import background_images as bg
-        bg.set_place(self._bg_place(), blur=bool(checked))
-        self._notify_background()
+        from gui.widgets.background_canvas import background_notifier
+        for place, entry in images.items():
+            source = entry.get("source", "")
+            try:
+                if source is None:
+                    bg.remove_image(place)
+                elif source:
+                    bg.adopt_image(place, source, entry.get("name"))
+                    bg.discard_prepared(source)
+            except Exception as e:
+                logger.error(f"Fondo: no se pudo usar {source}: {e}")
+                QMessageBox.warning(self, self.tr("Imagen de fondo"),
+                                    self.tr("No se pudo abrir la imagen: {0}").format(e))
+            if entry.get("settings"):
+                bg.set_place(place, save=False, **entry["settings"])
+            background_notifier().changed.emit(place)
 
     def _on_bg_previews_toggled(self, checked):
         from core.utils import background_images as bg
-        self._set_pending("previews", bool(checked), bg.get_previews_transparent())
+        self._set_pending("previews", bool(checked), self._base_look("previews"))
+
+    def _on_bg_checker_toggled(self, checked):
+        from core.utils import background_images as bg
+        self._set_pending("checker", bool(checked), self._base_look("checker"))
 
     def _on_bg_panel_value_changed(self, value):
         from core.utils import background_images as bg
         self.bg_panel_value.setText(f"{value} %")
-        self._set_pending("panel", value, bg.get_panel_opacity())
+        self._set_pending("panel", value, self._base_look("panel"))
 
 
     # ── Gestión de temas (importar / exportar / eliminar) ─────────────────────
@@ -559,22 +688,30 @@ class AppearancePage(QWidget):
             self._stage_image_theme(*dialog.result_theme)
 
     def _stage_image_theme(self, theme_id, data, background):
-        """Queda como cambio pendiente, sin escribir nada: se revisa con la vista previa y el
-        editor de colores. Solo Aplicar crea el archivo."""
-        self._pending.pop("colors", None)
-        self._pending["image_theme"] = {"id": theme_id, "data": data, "background": background}
+        """Queda como borrador, sin escribir nada: se revisa con la vista previa y el editor de
+        colores, y sigue en la lista mientras se comparan otros temas. Solo Aplicar crea el
+        archivo."""
+        self._drop_theme_edits()
+        draft = {"id": theme_id, "data": data, "background": background}
+        self._image_drafts[theme_id] = draft
+        if background:
+            self._prepare_draft_background(draft, background)
+        self._pending["image_theme"] = draft
         self._pending["theme_id"] = theme_id
         self._populate_themes()
         self.theme_combo.blockSignals(True)
-        index = self.theme_combo.findData(theme_id)
-        if index < 0:
-            self.theme_combo.addItem(self.tr("{0} (sin aplicar)").format(data["meta"]["nombre"]), theme_id)
-            index = self.theme_combo.count() - 1
-        self.theme_combo.setCurrentIndex(index)
+        self.theme_combo.setCurrentIndex(self.theme_combo.findData(theme_id))
         self.theme_combo.blockSignals(False)
         self._update_mode_combo_state(theme_id)
         self._refresh_pending()
         self._sync_radius_control()
+
+    def _prepare_draft_background(self, draft, source):
+        def ready(copy):
+            draft.update(background=copy, background_name=os.path.basename(source))
+            self._refresh_gallery(force=True)
+            self._refresh_pending()
+        self._prepare("draft", source, ready)
 
     def _select_theme(self, theme_id):
         """Recarga la lista y elige el tema. Es el resultado de una acción (crear, importar,
@@ -643,8 +780,7 @@ class AppearancePage(QWidget):
         if contents.has_appearance:
             answer = QMessageBox.question(
                 self, self.tr("Importar tema"),
-                self.tr("Este tema trae sus imágenes y ajustes. ¿Usarlos también?\n\n"
-                        "Lo que tienes ahora se guarda como «Apariencia anterior»."))
+                self.tr("Este tema trae sus imágenes y ajustes. ¿Usarlos también?"))
             with_assets = answer == QMessageBox.Yes
         try:
             theme_id = theme_package.install(contents, with_assets)
@@ -659,7 +795,6 @@ class AppearancePage(QWidget):
         """Reimportar el tema activo no cambia el selector: igual hay que restaurar lo que trae."""
         same = get_config().get("theme_id") == theme_id
         if same and appearance_store.has_appearance(theme_id):
-            appearance_store.backup_previous()
             appearance_store.restore(theme_id)
             from core.utils import background_images as bg
             from gui.widgets.background_canvas import background_notifier
@@ -688,7 +823,12 @@ class AppearancePage(QWidget):
             path += extension
         try:
             if kind == dialog.PACKAGE:
-                theme_package.export_package(theme_id, path)
+                size = self._export_package(theme_id, path)
+                if size is None:
+                    return
+                QMessageBox.information(self, self.tr("Tema exportado"), self.tr(
+                    "Se guardó en:\n{0}\n\nPesa {1:.1f} MB.").format(path, size / (1024 * 1024)))
+                return
             elif kind == dialog.COLORS:
                 theme_package.export_colors_only(theme_id, path)
             else:
@@ -697,6 +837,25 @@ class AppearancePage(QWidget):
             QMessageBox.warning(self, self.tr("No se pudo exportar el tema"), str(e))
             return
         QMessageBox.information(self, self.tr("Tema exportado"), self.tr("Se guardó en:\n{0}").format(path))
+
+    def _export_package(self, theme_id, path):
+        """Cuánto pesa el paquete, o None si se canceló porque las fuentes no dejan que quepa."""
+        from core.utils import theme_package
+        try:
+            return theme_package.export_package(theme_id, path)
+        except theme_package.PackageTooLarge as e:
+            limit = theme_package.SHARE_LIMIT_BYTES // (1024 * 1024)
+            answer = QMessageBox.question(self, self.tr("Exportar tema"), self.tr(
+                "El paquete no cabe en {0} MB: la fuente ocupa {1:.1f} MB.\n\n"
+                "¿Exportarlo sin la fuente? Quien lo importe verá la letra predeterminada.").format(
+                    limit, e.fonts_bytes / (1024 * 1024)))
+            if answer != QMessageBox.Yes:
+                return None
+            return theme_package.export_package(theme_id, path, with_fonts=False)
+
+    def _open_themes_gallery(self):
+        from core.credits import THEMES_GALLERY_URL
+        QDesktopServices.openUrl(QUrl(THEMES_GALLERY_URL))
 
     def _open_user_themes_dir(self):
         """Abre la carpeta de temas personalizados del usuario en el explorador de archivos."""
@@ -720,6 +879,10 @@ class AppearancePage(QWidget):
         for t in themes:
             self.theme_combo.addItem(t["name"], t["id"])
             self._theme_has_modes[t["id"]] = t.get("has_modes", False)
+        for theme_id, draft in self._image_drafts.items():
+            if self.theme_combo.findData(theme_id) < 0:
+                self.theme_combo.addItem(self.tr("{0} (sin aplicar)").format(draft["data"]["meta"]["nombre"]), theme_id)
+                self._theme_has_modes[theme_id] = True
         self.theme_combo.blockSignals(False)
 
     def _update_mode_combo_state(self, theme_id):
@@ -744,13 +907,17 @@ class AppearancePage(QWidget):
         if self._is_loading: return
         theme_code = self.theme_combo.itemData(index)
         if not theme_code: return
-        if self._pending.pop("image_theme", None):  # el creado sin aplicar deja de existir
-            self._populate_themes()
-            self.theme_combo.blockSignals(True)
-            self.theme_combo.setCurrentIndex(max(0, self.theme_combo.findData(theme_code)))
-            self.theme_combo.blockSignals(False)
         self._update_mode_combo_state(theme_code)
-        self._pending.pop("colors", None)  # eran ajustes del tema anterior
+        leaving = self._pending.pop("image_theme", None)
+        edits = self._pending.get("colors")
+        if leaving:  # el borrador recupera sus colores al volver a él
+            leaving["colors"] = edits or {}
+        self._drop_theme_edits()
+        chosen = self._image_drafts.get(theme_code)
+        if chosen:
+            self._pending["image_theme"] = chosen
+            if chosen.get("colors"):
+                self._pending["colors"] = chosen["colors"]
         self._set_pending("theme_id", theme_code, get_config().get("theme_id"))
         self._sync_radius_control()
 
@@ -777,7 +944,7 @@ class AppearancePage(QWidget):
         if self._is_loading: return
         font_code = self.font_combo.itemData(index)
         if font_code is None: return
-        self._set_pending("font_family", font_code, get_config().get("font_family", "theme_default"))
+        self._set_pending("font_family", font_code, self._base_look("font_family"))
 
     def _sync_radius_control(self):
         """El control muestra lo que se verá: el valor elegido o el del tema."""
@@ -792,13 +959,52 @@ class AppearancePage(QWidget):
     def _set_radius(self, value):
         if self._is_loading:
             return
-        self._set_pending("radius_override", value, get_config().get("radius_override"))
+        self._set_pending("radius_override", value, self._base_look("radius_override"))
         self._sync_radius_control()
 
     # ── Cambios sin aplicar ─────────────────────────────────────────────────
     def _draft(self, key, default):
         """El valor que se verá: lo pendiente o, si no hay, lo guardado."""
+        if key in _THEME_LOOK:
+            return self._pending.get(key, self._base_look(key))
         return self._pending[key] if key in self._pending else get_config().get(key, default)
+
+    def _base_look(self, key):
+        """El valor según el tema que se verá, sin los cambios pendientes. Un tema sin apariencia
+        guardada trae los valores por defecto: los del tema anterior no se conservan."""
+        from core.utils import background_images as bg
+        target = self._pending.get("theme_id")
+        if self._changes_images(target):
+            saved_key, default = _THEME_LOOK[key]
+            value = (TL.read_theme(target).get("apariencia") or {}).get(saved_key)
+            if value is not None:
+                return value
+            return bg.DEFAULT_PANEL_OPACITY if key == "panel" else default
+        if key == "panel":
+            return bg.get_panel_opacity()
+        if key == "previews":
+            return bg.get_previews_transparent()
+        if key == "checker":
+            return bg.get_preview_checker()
+        return get_config().get(key, _THEME_LOOK[key][1])
+
+    def _drop_theme_edits(self):
+        """Elegir otro tema es querer verlo: lo retocado era para el anterior."""
+        self._forget_prepared()
+        self._preparing = {k: v for k, v in self._preparing.items() if k == "draft"}
+        for key in _THEME_CONTENT:
+            if key != "image_theme":
+                self._pending.pop(key, None)
+
+    def _load_look_controls(self):
+        """Letra y tamaño según lo que se verá."""
+        self.font_combo.blockSignals(True)
+        self.font_combo.setCurrentIndex(max(0, self.font_combo.findData(self._draft("font_family", "theme_default"))))
+        self.font_combo.blockSignals(False)
+        size = self._draft("font_size_override", "default")
+        self.font_size_spin.blockSignals(True)
+        self.font_size_spin.setValue(size if isinstance(size, int) else 13)
+        self.font_size_spin.blockSignals(False)
 
     def _draft_own_shapes(self) -> dict:
         """Las formas del tema elegido, sin el control de Redondez."""
@@ -811,12 +1017,16 @@ class AppearancePage(QWidget):
 
     def _draft_tokens(self, mode: str) -> dict:
         unsaved = self._pending.get("image_theme")
-        if unsaved:  # todavía no existe el archivo: su base y encima sus colores
-            tokens = dict(TL.resolve_theme(unsaved["data"]["basado_en"], mode))
-            index = 1 if mode == "dark" else 0
-            tokens.update({k: v[index] for k, v in unsaved["data"]["colores"].items()})
-            return tokens
+        if unsaved:
+            return self._image_draft_tokens(unsaved, mode)
         return dict(TL.resolve_theme(self._draft("theme_id", TL.DEFAULT_THEME), mode))
+
+    def _image_draft_tokens(self, draft: dict, mode: str) -> dict:
+        """Todavía no existe el archivo: su base y encima sus colores."""
+        tokens = dict(TL.resolve_theme(draft["data"]["basado_en"], mode))
+        index = 1 if mode == "dark" else 0
+        tokens.update({k: v[index] for k, v in draft["data"]["colores"].items()})
+        return tokens
 
     def _draft_mode(self) -> str:
         return TL.effective_mode(self._draft("theme_mode", "dark"))
@@ -844,18 +1054,43 @@ class AppearancePage(QWidget):
             self._pending[key] = value
         self._refresh_pending()
 
+    def _apply_button_text(self) -> str:
+        """Lo que va a pasar al aplicar. Según el tema elegido, no el activo."""
+        if not any(key in self._pending for key in _THEME_CONTENT):
+            return self.tr("Aplicar")
+        if "image_theme" in self._pending:
+            return self.tr("Aplicar y crear tema")
+        if theme_io.is_user_theme(self._draft("theme_id", TL.DEFAULT_THEME)):
+            return self.tr("Aplicar y guardar")
+        return self.tr("Aplicar y guardar como")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._update_apply_button()  # recién aquí la letra es la definitiva
+
+    def _update_apply_button(self):
+        """El ancho del texto más largo desde el principio: los botones no saltan al cambiar."""
+        button = self.btn_apply
+        text = self._apply_button_text()
+        widest = 0
+        for variant in (self.tr("Aplicar"), self.tr("Aplicar y guardar"), self.tr("Aplicar y crear tema"), self.tr("Aplicar y guardar como")):
+            button.setText(variant)
+            widest = max(widest, button.sizeHint().width())
+        button.setText(text)
+        button.setMinimumWidth(widest)
+
     def _refresh_pending(self):
         from core.utils import background_images as bg
+        self._update_apply_button()
         # Siempre visible, para que el área con scroll no cambie de alto y la página no salte.
         has_changes = bool(self._pending)
-        self.btn_apply.setEnabled(has_changes)
-        self.btn_discard.setEnabled(has_changes)
-        self.pending_label.setText(self.tr("Tienes cambios sin aplicar") if has_changes else "")
+        self.btn_apply.setEnabled(has_changes and not self._preparing)
+        self.btn_save.setEnabled(not self._preparing)
+        self.btn_bg_choose.setEnabled(self._bg_place() not in self._preparing)
+        self.btn_bg_choose.setText(self.tr("Comprimiendo…") if self._bg_place() in self._preparing else self.tr("Elegir…"))
+        self.btn_discard.setEnabled(has_changes or bool(self._image_drafts))
         # Se exporta el tema guardado: con colores o un tema nuevo sin aplicar saldría otra cosa.
-        self.btn_export.setEnabled(not any(k in self._pending for k in ("theme_id", "colors", "image_theme")))
-        self.btn_save.setEnabled(not has_changes)
-        self.btn_save.setToolTip(self.tr("Guardar colores, imágenes, opacidades, letra y redondez") if not has_changes
-                                 else self.tr("Aplica o descarta los cambios para guardar"))
+        self.btn_export.setEnabled(not any(k in self._pending for k in ("theme_id", "colors", "image_theme", "images")))
         self.btn_export.setToolTip(self.tr("Exportar el tema actual") if self.btn_export.isEnabled()
                                    else self.tr("Aplica o descarta los cambios del tema para exportarlo"))
         theme = self._draft("theme_id", TL.DEFAULT_THEME)
@@ -863,6 +1098,10 @@ class AppearancePage(QWidget):
         edits = self._pending.get("colors", {}).get(mode, {})
         tokens = {**self._draft_tokens(mode), **edits}
         self.color_editor.set_state(tokens, set(edits))
+        has_modes = getattr(self, "_theme_has_modes", {}).get(theme, True)
+        self.color_mode_label.setVisible(has_modes)
+        self.color_mode_label.setText(self.tr("Colores del modo claro: el modo oscuro conserva los suyos.") if mode == "light"
+                                      else self.tr("Colores del modo oscuro: el modo claro conserva los suyos."))
         shapes = self._draft_own_shapes()
         radius = self._draft("radius_override", None)
         if isinstance(radius, int):
@@ -873,32 +1112,60 @@ class AppearancePage(QWidget):
         family = self._draft("font_family", "theme_default")
         if family == "theme_default":
             family = TL.get_theme_font(theme)
-        panel = self._pending.get("panel", bg.get_panel_opacity())
-        new_image = (self._pending.get("image_theme") or {}).get("background")
-        if "theme_id" in self._pending and not new_image:
-            new_image = appearance_store.preview_image(self._pending["theme_id"])
-        has_image = new_image is not None or bg.image_path(bg.PLACE_GENERAL) is not None
+        panel = self._draft("panel", None)
+        general = self._draft_place(bg.PLACE_GENERAL)
+        previews = self._draft_place(bg.PLACE_PREVIEWS)
+        has_image = general[0] is not None
         self._refresh_gallery()
-        self.preview.set_draft(tokens, shapes, family, panel / 100 if has_image and panel < 100 else None, new_image)
+        self.preview.set_draft(tokens, shapes, family, panel / 100 if has_image and panel < 100 else None,
+                               general if has_image else None, previews if previews[0] else None,
+                               has_image and self._draft("previews", False), self._draft("checker", True))
+        if hasattr(self, "bg_blur_switch"):
+            self._load_background_settings()
+            self._load_look_controls()
 
-    def _apply_pending(self, force=False):
-        """Todo de golpe, con una sola recarga. force: aunque no quede nada pendiente (el tema
-        activo pudo cambiar por dentro, como al crearlo de nuevo con el mismo nombre)."""
+    def _changes_images(self, target) -> bool:
+        """Si aplicar ese tema reemplaza las imágenes actuales por las suyas (o por ninguna)."""
+        return bool(target and target != get_config().get("theme_id"))
+
+    def _apply_pending(self, force=False, save_as=None):
+        """Todo de golpe, con una sola recarga. Lo aplicado queda en el tema: en el propio si es
+        de usuario; uno de DowP no se toca, así que se pide un nombre. save_as: (id, nombre) del
+        tema donde guardar en vez de ese. force: aunque no quede nada pendiente (el tema activo
+        pudo cambiar por dentro, como al crearlo de nuevo con el mismo nombre)."""
         from core.utils import background_images as bg
-        if not self._pending and not force:
+        if not self._pending and not force and not save_as:
             return
-        pending, self._pending = self._pending, {}
         config = get_config()
-        # Una apariencia guardada trae sus imágenes y ajustes: lo actual se respalda antes, y lo
-        # que se haya tocado además de elegirla (más abajo) manda sobre lo que ella traía.
+        content = any(key in self._pending for key in _THEME_CONTENT)
+        chosen = self._pending.get("theme_id", config.get("theme_id", TL.DEFAULT_THEME))
+        if content and not force and not save_as and "image_theme" not in self._pending and not theme_io.is_user_theme(chosen):
+            save_as = self._ask_theme_name(chosen)
+            if not save_as:
+                return
+        pending, self._pending = self._pending, {}
+        images = pending.pop("images", {})
+        # Cambiar solo la imagen o guardar lo que ya se ve no recarga los estilos, salvo que
+        # cambie la transparencia.
+        quiet = not force and not pending
+        glass_before = bg.glass_alpha()
+        # Una apariencia guardada trae sus imágenes y ajustes; lo que se haya tocado además de
+        # elegirla (más abajo) manda sobre lo que ella traía.
         target = pending.get("theme_id")
         restoring = bool(target and appearance_store.has_appearance(target))
-        replacing_image = bool((pending.get("image_theme") or {}).get("background"))
-        if restoring or replacing_image:
-            if target != appearance_store.PREVIOUS_ID:
-                appearance_store.backup_previous()
+        # Un tema sin apariencia guardada no trae nada: lo del anterior no se conserva.
+        dropping = not restoring and self._changes_images(target)
         if restoring:
             appearance_store.restore(target)
+        elif dropping:
+            for place in bg.PLACES:
+                bg.remove_image(place)
+            for key in ("font_family", "font_size_override", "radius_override"):
+                config.pop(key, None)
+            bg.set_panel_opacity(bg.DEFAULT_PANEL_OPACITY)
+            bg.set_previews_transparent(False)
+            bg.set_preview_checker(True)
+        if restoring or dropping:
             # Antes de recargar: la imagen anterior ya no existe y el lienzo aún apuntaría a ella.
             from gui.widgets.background_canvas import background_notifier
             for place in bg.PLACES:
@@ -907,108 +1174,132 @@ class AppearancePage(QWidget):
             bg.set_panel_opacity(pending.pop("panel"))
         if "previews" in pending:
             bg.set_previews_transparent(pending.pop("previews"))
+        if "checker" in pending:
+            bg.set_preview_checker(pending.pop("checker"))
         unsaved = pending.pop("image_theme", None)
         edits = pending.pop("colors", None)
         if unsaved:
-            theme_io.save_imported(unsaved["id"], unsaved["data"])
+            self._image_drafts.pop(unsaved["id"], None)
+            chosen = save_as[0] if save_as else unsaved["id"]
+            theme_io.save_imported(chosen, unsaved["data"])
             if unsaved["background"]:
-                self._use_background(unsaved["background"])
-        if edits:
-            theme = pending.get("theme_id", config.get("theme_id", TL.DEFAULT_THEME))
-            pending["theme_id"] = theme_io.apply_color_edits(theme, edits)
-        if unsaved or edits:
-            self._populate_themes()
-            self.theme_combo.blockSignals(True)
-            self.theme_combo.setCurrentIndex(max(0, self.theme_combo.findData(pending["theme_id"])))
-            self.theme_combo.blockSignals(False)
-            self._update_mode_combo_state(pending["theme_id"])
+                self._use_background(unsaved["background"], unsaved.get("background_name"))
+                bg.discard_prepared(unsaved["background"])
+        self._apply_images(images)
         visual_reload = bool(pending)
+        destination = self._save_destination(chosen, save_as, content)
+        if destination:
+            pending["theme_id"] = destination[0]
+        elif edits:
+            pending["theme_id"] = theme_io.apply_color_edits(chosen, edits)
         config.update(pending)
         if "theme_id" in pending or "theme_mode" in pending:
             sync_legacy_theme_key(config)
+        if destination:
+            self._write_theme(destination, chosen, edits)
         save_config(config)
-        logger.info(f"AppearancePage: cambios aplicados: {sorted(pending)}")
-        self.theme_changed.emit(config.get("theme_id", "dowp"))
+        logger.info(f"AppearancePage: cambios aplicados: {sorted(pending)}{' + imágenes' if images else ''}")
+        if not quiet or bg.glass_alpha() != glass_before:
+            self.theme_changed.emit(config.get("theme_id", "dowp"))
         if visual_reload:
             self.theme_restart_hint.show()
-        if restoring or appearance_store.PREVIOUS_ID in theme_io.user_theme_ids():
+        if target or destination or edits or unsaved:
             self._populate_themes()
             self.theme_combo.blockSignals(True)
             self.theme_combo.setCurrentIndex(max(0, self.theme_combo.findData(config.get("theme_id"))))
             self.theme_combo.blockSignals(False)
-        if restoring:
+            self._update_mode_combo_state(config.get("theme_id"))
+        if restoring or dropping:
             self._reload_after_restore()
         self._sync_radius_control()
         self._refresh_pending()
 
-    def _save_appearance(self):
+    def _save_destination(self, chosen, save_as, content):
+        """(id, nombre) del tema donde queda lo aplicado, o None si no hay nada que guardar."""
+        if save_as:
+            return save_as
+        if content and theme_io.is_user_theme(chosen):
+            return chosen, (TL.read_theme(chosen).get("meta") or {}).get("nombre", chosen)
+        return None
+
+    def _write_theme(self, destination, source, edits):
+        """Primero la copia y luego los colores: un tema de DowP no admite cambios propios."""
+        theme_id, name = destination
+        try:
+            if edits and theme_id == source:
+                theme_io.apply_color_edits(theme_id, edits)
+            appearance_store.save(theme_id, name, source)
+            if edits and theme_id != source:
+                theme_io.apply_color_edits(theme_id, edits)
+        except OSError as e:
+            QMessageBox.warning(self, self.tr("Guardar como"), self.tr("No se pudo guardar: {0}").format(e))
+
+    def _ask_theme_name(self, theme) -> tuple | None:
+        """(id, nombre) elegidos para guardar, o None si se canceló."""
         from gui.dialogs.theme_from_image_dialog import SaveAppearanceDialog
-        config = get_config()
-        current = config.get("theme_id", TL.DEFAULT_THEME)
-        is_mine = theme_io.is_user_theme(current) and current != appearance_store.PREVIOUS_ID
-        default = (TL.read_theme(current).get("meta") or {}).get("nombre", "") if is_mine else ""
-        dialog = SaveAppearanceDialog(default, self.window())
+        draft = self._image_drafts.get(theme)
+        if draft:
+            default, current_id = draft["data"]["meta"]["nombre"], theme
+        elif theme_io.is_user_theme(theme):
+            default, current_id = (TL.read_theme(theme).get("meta") or {}).get("nombre", ""), theme
+        else:
+            base = (TL.read_theme(theme).get("meta") or {}).get("nombre") or theme.replace("_", " ").title()
+            default, current_id = self.tr("{0} personalizado").format(base), ""
+        dialog = SaveAppearanceDialog(default, self.window(), current_id=current_id)
         if not dialog.exec():
-            return
+            return None
         name = dialog.name_edit.text().strip()
         theme_id = theme_io.slugify(name)
         if theme_id in theme_io.builtin_theme_ids():
             theme_id = f"{theme_id}_usuario"
-        if theme_io.is_user_theme(theme_id) and theme_id != current:
+        if theme_io.is_user_theme(theme_id) and theme_id != theme:
             answer = QMessageBox.question(self, dialog.windowTitle(),
                                           self.tr("Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?").format(name))
             if answer != QMessageBox.Yes:
-                return
-        try:
-            appearance_store.save(theme_id, name, current)
-        except OSError as e:
-            QMessageBox.warning(self, dialog.windowTitle(), self.tr("No se pudo guardar: {0}").format(e))
-            return
-        config["theme_id"] = theme_id
-        sync_legacy_theme_key(config)
-        save_config(config)
-        self._populate_themes()
-        self.theme_combo.blockSignals(True)
-        self.theme_combo.setCurrentIndex(max(0, self.theme_combo.findData(theme_id)))
-        self.theme_combo.blockSignals(False)
-        self._update_mode_combo_state(theme_id)
-        self._refresh_pending()
+                return None
+        return theme_id, name
+
+    def _save_appearance(self):
+        save_as = self._ask_theme_name(self._draft("theme_id", TL.DEFAULT_THEME))
+        if save_as:
+            self._apply_pending(save_as=save_as)
 
     # ── Galería de temas ────────────────────────────────────────────────────
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Algo menos de la mitad de la página, sin aplastar los ajustes de abajo en una ventana chica.
         self.top_widget.setFixedHeight(max(224, min(420, int(self.height() * 0.42), self.height() - 300)))
+        # 3 columnas de temas si caben junto a una vista previa de tamaño útil; si no, 2 con scroll.
+        room = self.width() - self.top_area.spacing() - 280
+        self.gallery.set_minimum_columns(3 if room >= self.gallery.width_for_columns(3) else 2)
 
     def _gallery_tokens(self, theme_id):
         mode = self._draft_mode()
         if theme_id == "__modo__":
             return mode
-        unsaved = self._pending.get("image_theme")
-        if unsaved and unsaved["id"] == theme_id:
-            return self._draft_tokens(mode)
+        draft = self._image_drafts.get(theme_id)
+        if draft:
+            return {**self._image_draft_tokens(draft, mode), **draft.get("colors", {}).get(mode, {})}
         return TL.resolve_theme(theme_id, mode)
 
     def _refresh_gallery(self, force=False):
         builtin = self.tr("Temas de DowP")
         mine = self.tr("Mis temas")
-        backup = self.tr("Respaldo automático")
-        unsaved = self._pending.get("image_theme")
+        drafts = self._image_drafts
         items = []
         for i in range(self.theme_combo.count()):
             theme_id = self.theme_combo.itemData(i)
-            if theme_id == appearance_store.PREVIOUS_ID:
-                group = backup
-            elif (unsaved and unsaved["id"] == theme_id) or theme_io.is_user_theme(theme_id):
+            if theme_id in drafts or theme_io.is_user_theme(theme_id):
                 group = mine
             else:
                 group = builtin
             label = self._theme_names.get(theme_id) or self.theme_combo.itemText(i)
             items.append((theme_id, label, group))
-        order = {builtin: 0, mine: 1, backup: 2}
+        order = {builtin: 0, mine: 1}
         items.sort(key=lambda item: order[item[2]])
-        deletable = lambda t: theme_io.is_user_theme(t) and not (unsaved and unsaved["id"] == t)
-        image_for = lambda t: (unsaved["background"] if unsaved and unsaved["id"] == t else None) or appearance_store.preview_image(t)
+        deletable = lambda t: t in drafts or theme_io.is_user_theme(t)
+        self.gallery.unsaved_ids = set(drafts)
+        image_for = lambda t: (drafts[t]["background"] if t in drafts else None) or appearance_store.preview_image(t)
         self.gallery.set_themes(items, self._gallery_tokens, image_for, deletable,
                                 self._draft("theme_id", TL.DEFAULT_THEME), get_config().get("theme_id", TL.DEFAULT_THEME), force)
 
@@ -1046,26 +1337,15 @@ class AppearancePage(QWidget):
         self.theme_combo.blockSignals(False)
         self._refresh_gallery(force=True)
 
-    def _on_pick_toggled(self, picking):
-        self.gallery.set_picking(picking)
-        self.btn_delete_picked.setVisible(picking)
-        self.btn_create_from_image.setVisible(not picking)
-        self.btn_import.setVisible(not picking)
-
-    def _on_picked_changed(self, count):
-        self.btn_delete_picked.setText(self.tr("Eliminar ({0})").format(count))
-        self.btn_delete_picked.setEnabled(count > 0)
-
     def _delete_themes(self, ids):
-        """A la Papelera: se puede recuperar, así que una sola prueba no pide confirmación."""
+        """A la Papelera: se puede recuperar, así que no pide confirmación. Un borrador no tiene
+        archivo: simplemente deja de existir."""
+        for theme_id in [t for t in ids if t in self._image_drafts]:
+            self._remove_image_draft(theme_id)
+            ids = [t for t in ids if t != theme_id]
         ids = [t for t in ids if theme_io.is_user_theme(t)]
         if not ids:
             return
-        if len(ids) > 1:
-            answer = QMessageBox.question(self, self.tr("Eliminar temas"),
-                                          self.tr("¿Enviar {0} temas a la Papelera?").format(len(ids)))
-            if answer != QMessageBox.Yes:
-                return
         config = get_config()
         active_deleted = config.get("theme_id") in ids
         draft_deleted = self._pending.get("theme_id") in ids
@@ -1075,8 +1355,6 @@ class AppearancePage(QWidget):
             except OSError as e:
                 QMessageBox.warning(self, self.tr("No se pudo eliminar el tema"), str(e))
                 break
-        if self.btn_pick.isChecked():
-            self.btn_pick.setChecked(False)
         if active_deleted:
             self._pending.pop("colors", None)
             self._select_theme(TL.DEFAULT_THEME)
@@ -1090,16 +1368,32 @@ class AppearancePage(QWidget):
         self._repopulate_keeping_choice()
         self._refresh_pending()
 
+    def _remove_image_draft(self, theme_id):
+        from core.utils import background_images as bg
+        draft = self._image_drafts.pop(theme_id)
+        if draft.get("background_name"):
+            bg.discard_prepared(draft["background"])
+        if (self._pending.get("image_theme") or {}).get("id") == theme_id:
+            for key in ("image_theme", "colors", "theme_id"):
+                self._pending.pop(key, None)
+        self._populate_themes()
+        self.theme_combo.blockSignals(True)
+        self.theme_combo.setCurrentIndex(max(0, self.theme_combo.findData(self._draft("theme_id", TL.DEFAULT_THEME))))
+        self.theme_combo.blockSignals(False)
+        self._update_mode_combo_state(self.theme_combo.currentData())
+        self._sync_radius_control()
+        self._refresh_pending()
+
     def _reload_after_restore(self):
         self._is_loading = True
         self.load_current_settings()
         self._is_loading = False
 
-    def _use_background(self, path):
+    def _use_background(self, path, name=None):
         from core.utils import background_images as bg
         from gui.widgets.background_canvas import background_notifier
         try:
-            bg.import_image(bg.PLACE_GENERAL, path)
+            bg.adopt_image(bg.PLACE_GENERAL, path, name)
         except Exception as e:
             QMessageBox.warning(self, self.tr("Imagen de fondo"), self.tr("No se pudo abrir la imagen: {0}").format(e))
             return
@@ -1107,7 +1401,14 @@ class AppearancePage(QWidget):
         background_notifier().changed.emit(bg.PLACE_GENERAL)
 
     def _discard_pending(self):
+        from core.utils import background_images as bg
+        self._forget_prepared()
+        self._preparing = {}
+        for draft in self._image_drafts.values():
+            if draft.get("background_name"):
+                bg.discard_prepared(draft["background"])
         self._pending = {}
+        self._image_drafts = {}
         self._is_loading = True
         self.load_current_settings()
         self._is_loading = False
@@ -1115,5 +1416,5 @@ class AppearancePage(QWidget):
 
     def on_font_size_selection(self, value):
         if self._is_loading: return
-        current = get_config().get("font_size_override", "default")
+        current = self._base_look("font_size_override")
         self._set_pending("font_size_override", value, current if isinstance(current, int) else 13)

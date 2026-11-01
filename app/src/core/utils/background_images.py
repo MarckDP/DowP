@@ -15,6 +15,9 @@ fotograma: los fondos animados quedaron como idea aparte, por su consumo.
 Sin Qt: el lienzo que dibuja (gui/widgets/background_canvas.py) y la transparencia
 de los paneles (gui/styles.py, apply_glass) leen de aquí."""
 import hashlib
+import io
+import shutil
+import tempfile
 import os
 
 from core.logger.logger_manager import logger
@@ -41,12 +44,16 @@ DEFAULT_OPACITY = 30          # % de la imagen sobre el color de fondo del tema
 DEFAULT_PANEL_OPACITY = 80    # % de opacidad de los paneles con un fondo puesto
 MIN_PANEL_OPACITY = 30        # por debajo, los paneles dejan de leerse
 
-# Lado máximo de la copia guardada: cubre un 4K sin que pese de más.
+# Lado máximo de la copia guardada: el fondo cubre un 4K sin que pese de más; las vistas previas
+# se ven pequeñas. Medido con PNG de 8K: el fondo queda en 1-4 MB y la vista previa en unos 0,2 MB.
 MAX_SIDE = 3840
+MAX_SIDE_PREVIEWS = 1080
+IMAGE_QUALITY = 90
 
 _CONFIG_KEY = "background_images"
 _PANEL_KEY = "background_panel_opacity"
 _PREVIEWS_KEY = "background_previews_transparent"
+_CHECKER_KEY = "background_preview_checker"
 
 
 def backgrounds_dir() -> str:
@@ -115,15 +122,26 @@ def set_panel_opacity(value: int):
 
 
 def get_previews_transparent() -> bool:
-    """Opción "Transparentar vistas previas": sin relleno ni cuadrícula, lo único sólido
-    es el medio. Desactivada por defecto: las zonas transparentes de una imagen se
-    mezclan con el fondo y ya no se distinguen."""
+    """Opción "Transparentar vistas previas": relleno y cuadrícula semitransparentes, como un
+    panel. Desactivada por defecto: sólidos, y el fondo no se ve a través."""
     return bool(get_config().get(_PREVIEWS_KEY, False))
 
 
 def set_previews_transparent(value: bool):
     config = get_config()
     config[_PREVIEWS_KEY] = bool(value)
+    save_config(config)
+
+
+def get_preview_checker() -> bool:
+    """Opción "Mostrar cuadrícula de transparencia". Sin ella, las zonas transparentes de una
+    imagen se ven sobre el relleno."""
+    return bool(get_config().get(_CHECKER_KEY, True))
+
+
+def set_preview_checker(value: bool):
+    config = get_config()
+    config[_CHECKER_KEY] = bool(value)
     save_config(config)
 
 
@@ -136,29 +154,102 @@ def glass_alpha() -> float | None:
     return None if opacity >= 100 else opacity / 100.0
 
 
+def max_side(place: str) -> int:
+    return MAX_SIDE_PREVIEWS if place == PLACE_PREVIEWS else MAX_SIDE
+
+
+def _webp_available() -> bool:
+    """Con transparencia, WebP pesa unas 6 veces menos que PNG, pero Qt tiene que poder leerlo."""
+    from PIL import features
+    from PySide6.QtGui import QImageReader
+    return features.check("webp") and b"webp" in [bytes(f) for f in QImageReader.supportedImageFormats()]
+
+
+def prepare_frame(image, side: int):
+    """El primer fotograma derecho, con transparencia solo si la usa y sin pasar de `side`."""
+    from PIL import Image, ImageOps
+    image.seek(0)
+    frame = ImageOps.exif_transpose(image)  # fotos de celular giradas
+    has_alpha = frame.mode in ("RGBA", "LA", "PA") or (frame.mode == "P" and "transparency" in frame.info)
+    frame = frame.convert("RGBA" if has_alpha else "RGB")
+    if has_alpha and frame.getextrema()[3][0] == 255:
+        frame = frame.convert("RGB")  # canal alfa sin transparencia real
+    if max(frame.size) > side:
+        frame.thumbnail((side, side), Image.Resampling.LANCZOS)
+    return frame
+
+
+def encode_frame(frame, quality: int = IMAGE_QUALITY) -> tuple[bytes, str]:
+    """(contenido, extensión con punto)."""
+    out = io.BytesIO()
+    if frame.mode != "RGBA":
+        frame.save(out, "JPEG", quality=quality, optimize=True)
+        return out.getvalue(), ".jpg"
+    if _webp_available():
+        frame.save(out, "WEBP", quality=quality, method=4, alpha_quality=100)
+        return out.getvalue(), ".webp"
+    frame.save(out, "PNG", optimize=True)
+    return out.getvalue(), ".png"
+
+
+def _copy_name(place: str, source: str, extension: str) -> str:
+    digest = hashlib.sha1(f"{source}|{os.path.getsize(source)}|{os.path.getmtime(source)}".encode()).hexdigest()[:10]
+    return f"{place}_{digest}{extension}"
+
+
+def prepared_dir() -> str:
+    return os.path.join(backgrounds_dir(), "preparadas")
+
+
+def prepare_image(place: str, source: str) -> str:
+    """Comprime `source` a una copia aparte y devuelve su ruta, sin tocar la configuración: se
+    puede llamar desde otro hilo. La usa adopt_image al aplicar."""
+    from PIL import Image
+    with Image.open(source) as im:
+        frame = prepare_frame(im, max_side(place))
+    content, extension = encode_frame(frame)
+    os.makedirs(prepared_dir(), exist_ok=True)
+    handle, path = tempfile.mkstemp(prefix=f"{place}_", suffix=extension, dir=prepared_dir())
+    with os.fdopen(handle, "wb") as f:
+        f.write(content)
+    return path
+
+
+def discard_prepared(path: str | None = None):
+    """Borra una copia preparada, o todas (las que quedaron de otra sesión) si no se indica."""
+    if path:
+        if os.path.dirname(os.path.abspath(path)) == os.path.abspath(prepared_dir()):
+            _remove_quietly(path)
+    else:
+        shutil.rmtree(prepared_dir(), ignore_errors=True)
+
+
+def adopt_image(place: str, source: str, display: str | None = None):
+    """Usa una imagen ya preparada, como la que guarda un tema: se copia tal cual, porque
+    comprimirla cada vez que se elige el tema le quitaría calidad y tardaría segundos."""
+    name = _copy_name(place, source, os.path.splitext(source)[1].lower())
+    dest = os.path.join(backgrounds_dir(), name)
+    shutil.copyfile(source, dest)
+    old = image_path(place)
+    set_place(place, file=name, name=display or os.path.basename(source))
+    if old and os.path.normpath(old) != os.path.normpath(dest):
+        _remove_quietly(old)
+
+
 def import_image(place: str, source: str) -> tuple[str, bool]:
     """Guarda la copia de `source` para `place` y la deja elegida. Devuelve (nombre
     de la copia, era_animada). Lanza si Pillow no puede abrir el archivo."""
-    from PIL import Image, ImageOps
+    from PIL import Image
 
     with Image.open(source) as im:
         animated = bool(getattr(im, "is_animated", False)) and getattr(im, "n_frames", 1) > 1
-        im.seek(0)
-        frame = ImageOps.exif_transpose(im)  # fotos de celular giradas
-        has_alpha = frame.mode in ("RGBA", "LA", "PA") or (frame.mode == "P" and "transparency" in frame.info)
-        frame = frame.convert("RGBA" if has_alpha else "RGB")
-        if has_alpha and frame.getextrema()[3][0] == 255:
-            frame, has_alpha = frame.convert("RGB"), False  # canal alfa sin transparencia real
-        if max(frame.size) > MAX_SIDE:
-            frame.thumbnail((MAX_SIDE, MAX_SIDE), Image.Resampling.LANCZOS)
-
-        digest = hashlib.sha1(f"{source}|{os.path.getsize(source)}|{os.path.getmtime(source)}".encode()).hexdigest()[:10]
-        name = f"{place}_{digest}.{'png' if has_alpha else 'jpg'}"
-        dest = os.path.join(backgrounds_dir(), name)
-        if has_alpha:
-            frame.save(dest, "PNG", optimize=True)
-        else:
-            frame.save(dest, "JPEG", quality=92, optimize=True)
+        frame = prepare_frame(im, max_side(place))
+    content, extension = encode_frame(frame)
+    has_alpha = frame.mode == "RGBA"
+    name = _copy_name(place, source, extension)
+    dest = os.path.join(backgrounds_dir(), name)
+    with open(dest, "wb") as f:
+        f.write(content)
 
     old = image_path(place)
     set_place(place, file=name, name=os.path.basename(source))

@@ -2,9 +2,9 @@
 acento. Los colores los calcula core/utils/theme_palette.py; aquí solo se eligen."""
 import os
 
-from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtCore import QEvent, QRect, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
-from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QRadioButton, QLabel, QLayout,
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QRadioButton, QScrollArea, QLabel, QLayout,
                                QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QWidget)
 
 from core.utils import background_images as bg
@@ -171,13 +171,16 @@ class ExportThemeDialog(QDialog):
 
 
 class SaveAppearanceDialog(QDialog):
-    """Pide el nombre de la apariencia a guardar."""
+    """Pide el nombre del tema a guardar. current_id: el tema que se actualiza si el nombre se
+    deja igual; con otro nombre se crea uno nuevo, y el botón lo dice."""
 
-    def __init__(self, default_name: str, parent=None, renaming: bool = False):
+    def __init__(self, default_name: str, parent=None, renaming: bool = False, current_id: str = ""):
         super().__init__(parent)
+        self._renaming = renaming
+        self._current_id = current_id
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setWindowTitle(self.tr("Renombrar tema") if renaming else self.tr("Guardar apariencia"))
+        self.setWindowTitle(self.tr("Renombrar tema") if renaming else self.tr("Guardar como"))
         self.setFixedWidth(420)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -204,7 +207,7 @@ class SaveAppearanceDialog(QDialog):
         body.setContentsMargins(16, 8, 16, 16)
         body.setSpacing(12)
         info = QLabel(self.tr("Guarda colores, imágenes, opacidades, letra y redondez. "
-                              "Al elegir este tema en el selector, vuelve todo."))
+                              "Al elegir este tema en la galería, vuelve todo."))
         info.setWordWrap(True)
         info.setVisible(not renaming)
         body.addWidget(info)
@@ -223,8 +226,14 @@ class SaveAppearanceDialog(QDialog):
         buttons.addWidget(self.btn_save)
         body.addLayout(buttons)
         frame.addLayout(body)
-        self.name_edit.textChanged.connect(lambda t: self.btn_save.setEnabled(bool(t.strip())))
-        self.btn_save.setEnabled(bool(default_name.strip()))
+        self.name_edit.textChanged.connect(self._on_name_changed)
+        self._on_name_changed(default_name)
+
+    def _on_name_changed(self, text: str):
+        self.btn_save.setEnabled(bool(text.strip()))
+        if not self._renaming:
+            same = bool(self._current_id) and theme_io.slugify(text) == self._current_id
+            self.btn_save.setText(self.tr("Guardar") if same else self.tr("Crear tema"))
 
 
 class ThemeFromImageDialog(QDialog):
@@ -275,10 +284,22 @@ class ThemeFromImageDialog(QDialog):
         self.title_bar.btn_close.clicked.disconnect()
         self.title_bar.btn_close.clicked.connect(self.reject)
         frame.addWidget(self.title_bar)
-        root = QVBoxLayout()
-        root.setContentsMargins(16, 8, 16, 16)
+        # Título y botones siempre a la vista; lo del medio solo hace scroll si no cabe en la
+        # pantalla (ver _fit_to_screen).
+        self.body = QWidget()
+        self.body.setObjectName("themeFromImageBody")
+        self.body.setStyleSheet("QWidget#themeFromImageBody { background: transparent; }")
+        root = QVBoxLayout(self.body)
+        root.setContentsMargins(16, 8, 16, 8)
         root.setSpacing(14)
-        frame.addLayout(root)
+        self.body_scroll = QScrollArea()
+        self.body_scroll.setWidgetResizable(True)
+        self.body_scroll.setFrameShape(QFrame.NoFrame)
+        self.body_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.body_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self.body_scroll.setWidget(self.body)
+        self.body.installEventFilter(self)  # el contenido cambia de alto al elegir imagen
+        frame.addWidget(self.body_scroll)
 
         top = QHBoxLayout()
         self.thumb = QLabel()
@@ -353,7 +374,10 @@ class ThemeFromImageDialog(QDialog):
         set_button_variant(self.btn_create, "accent-solid")
         self.btn_create.clicked.connect(self._on_create)
         buttons.addWidget(self.btn_create)
-        root.addLayout(buttons)
+        buttons.setContentsMargins(16, 6, 16, 16)
+        buttons.setSpacing(8)
+        frame.addLayout(buttons)
+        self._buttons_layout = buttons
 
     # ── Imagen ──────────────────────────────────────────────────────────────
     def _elide_file_name(self):
@@ -362,9 +386,37 @@ class ThemeFromImageDialog(QDialog):
             self.file_label.setText(self.file_label.fontMetrics().elidedText(
                 self._file_name, Qt.ElideMiddle, self.file_label.width()))
 
+    def eventFilter(self, obj, event):
+        if obj is self.body and event.type() == QEvent.LayoutRequest and self.isVisible():
+            QTimer.singleShot(0, self._fit_to_screen)
+        return super().eventFilter(obj, event)
+
+    def _available_area(self) -> QRect:
+        screen = self.screen() or QApplication.primaryScreen()
+        return screen.availableGeometry()
+
+    def _fit_to_screen(self):
+        """Lo justo para el contenido; menos, con scroll, solo si no cabe en la pantalla."""
+        self.body.ensurePolished()
+        hint = self.body.sizeHint()
+        area = self._available_area()
+        chrome = self.title_bar.height() + self._buttons_layout.sizeHint().height() + 2
+        height = min(hint.height(), area.height() - chrome)
+        bar = self.body_scroll.verticalScrollBar().sizeHint().width() if height < hint.height() else 0
+        size = QSize(min(hint.width() + bar, area.width() - 2), max(120, height))
+        if size == self.body_scroll.size():
+            return
+        self.body_scroll.setFixedSize(size)
+        self.adjustSize()
+        # Si por crecer quedó fuera de la pantalla, adentro de nuevo.
+        x = max(area.left(), min(self.x(), area.right() - self.width() + 1))
+        y = max(area.top(), min(self.y(), area.bottom() - self.height() + 1))
+        self.move(x, y)
+
     def showEvent(self, event):
         super().showEvent(event)
         self._elide_file_name()  # recién aquí la letra es la definitiva
+        self._fit_to_screen()
 
     def _on_choose(self):
         path, _ = QFileDialog.getOpenFileName(self, self.tr("Elegir imagen"), os.path.expanduser("~"),

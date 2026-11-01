@@ -1123,7 +1123,7 @@ class EditingMediaTab(FreesoundMixin, PlaybackMixin, TreeListMixin, QWidget):
             QToolButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
-                border-radius: 8px;
+                border-radius: 7px;
                 color: {get_theme_token('texto_valor', '#cdd6f4')};
                 padding-left: 10px;
                 padding-right: 10px;

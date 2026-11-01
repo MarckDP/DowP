@@ -55,6 +55,7 @@ class AIPreviewPanel(QFrame):
         super().__init__(parent)
         self.setObjectName("aiPreviewPanel")
         self._path = ""
+        self._is_video = True
         self._duration = 0.0
         self._fps = 30.0
         self._trim = None  # (in, out) en segundos, o None = video entero
@@ -110,7 +111,7 @@ class AIPreviewPanel(QFrame):
         wave_layout.setSpacing(4)
         self.waveform = AudioWaveformWidget(self.wave_frame)
         self.waveform.setToolTip(self.tr(
-            "Clic para moverte por el video. Clic derecho y arrastra para marcar el tramo a "
+            "Clic para cambiar la posición de reproducción. Clic derecho y arrastra para marcar el tramo a "
             "procesar; un clic derecho sin arrastrar lo quita."))
         self.waveform.seek_requested.connect(self._on_seek_requested)
         self.waveform.lite_selection_changed.connect(self._on_lite_selection_changed)
@@ -208,7 +209,7 @@ class AIPreviewPanel(QFrame):
             QToolButton {{
                 background-color: {get_theme_token('fondo_elemento', '#2d2d2d')};
                 border: 1px solid {get_theme_token('borde_normal', '#2d2d2d')};
-                border-radius: 8px;
+                border-radius: 7px;
                 color: {get_theme_token('texto_valor', '#cdd6f4')};
                 padding-left: 10px;
                 padding-right: 10px;
@@ -246,6 +247,7 @@ class AIPreviewPanel(QFrame):
     def load_media(self, filepath, media_type, duration_sec, fps,
                    initial_in_sec=None, initial_out_sec=None, initial_audio_track_selection=None):
         self._path = filepath
+        self._is_video = media_type == "video"
         self._duration = float(duration_sec or 0.0)
         self._duration_exact = False
         self._fps = float(fps or 30.0)
@@ -423,7 +425,7 @@ class AIPreviewPanel(QFrame):
             self._fields["tramo"].setText(self.tr("{0} – {1} ({2} s)").format(
                 _format_seconds(start), _format_seconds(end), f"{length:.1f}"))
         else:
-            self._fields["tramo"].setText(self.tr("Video completo"))
+            self._fields["tramo"].setText(self.tr("Video completo") if self._is_video else self.tr("Audio completo"))
         # Estimado (duración × fps): un video con huecos al inicio puede tener menos.
         self._fields["fotogramas"].setText("≈ " + f"{int(round(length * self._fps)):,}".replace(",", "."))
 

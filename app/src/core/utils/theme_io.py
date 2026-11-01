@@ -219,6 +219,52 @@ def validate_theme(data: dict) -> dict:
     return {"valid": valid, "invalid": invalid, "unknown": unknown}
 
 
+# ── Limpiar lo que viene de afuera ──
+_FONT_NAME_RE = re.compile(r"^[\w][\w .+&'(),-]{0,99}$")
+
+
+def clean_font_name(value) -> str:
+    """El nombre de una fuente va dentro de la hoja de estilos: solo letras, números y poco más."""
+    return value if isinstance(value, str) and _FONT_NAME_RE.match(value) else ""
+
+
+def clean_text(value, limit: int) -> str:
+    """Texto para mostrar: sin marcado (una etiqueta de Qt lo interpretaría) ni caracteres de control."""
+    if not isinstance(value, str):
+        return ""
+    return "".join(c for c in value if c not in "<>" and c.isprintable()).strip()[:limit]
+
+
+def clean_theme_data(data: dict, report: dict) -> dict:
+    """Solo lo que un tema puede traer, con valores válidos. Lo demás no llega al disco."""
+    clean = {"colores": {k: v for k, v in (data.get("colores") or {}).items() if k not in report["invalid"]}
+             if isinstance(data.get("colores"), dict) else {}}
+    meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+    clean["meta"] = {"nombre": clean_text(meta.get("nombre"), 60), "autor": clean_text(meta.get("autor"), 60),
+                     "version": clean_text(meta.get("version"), 20) or "1.0", "formato": 2}
+    shapes = data.get("formas") if isinstance(data.get("formas"), dict) else {}
+
+    def valid_number(key, value):
+        low, high = TL.SHAPE_LIMITS[key]
+        return not isinstance(value, bool) and isinstance(value, (int, float)) and low <= value <= high
+    formas = {k: v for k, v in shapes.items() if k in TL.SHAPE_LIMITS and valid_number(k, v)}
+    if formas:
+        clean["formas"] = formas
+    typography = data.get("tipografia") if isinstance(data.get("tipografia"), dict) else {}
+    tipografia = {}
+    size = typography.get("tamano", typography.get("tamaño"))
+    if valid_number("tamano_fuente", size):
+        tipografia["tamano"] = size
+    family = clean_font_name(typography.get("familia") or data.get("fuente") or data.get("font_family"))
+    if family:
+        tipografia["familia"] = family
+    if tipografia:
+        clean["tipografia"] = tipografia
+    if data.get("basado_en") in builtin_theme_ids():
+        clean["basado_en"] = data["basado_en"]
+    return clean
+
+
 # ── Importar ──────────────────────────────────────────────────────────────────
 def read_theme_file(path: str) -> tuple:
     """Lee y prepara un tema para importarlo. Devuelve (theme_id, datos, informe).
@@ -251,7 +297,10 @@ def read_theme_file(path: str) -> tuple:
     if report["valid"] == 0 and not has_shapes:
         raise ThemeImportError(QCoreApplication.translate("ThemeIO", "El tema no tiene ningún color válido."))
 
-    name = (data.get("meta") or {}).get("nombre") if isinstance(data.get("meta"), dict) else None
+    data = clean_theme_data(data, report)
+    name = data["meta"]["nombre"]
+    if not name:
+        data["meta"]["nombre"] = stem[:60]
     theme_id = slugify(stem)
     if theme_id in builtin_theme_ids():
         theme_id = f"{theme_id}_usuario"

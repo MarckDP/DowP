@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal, QRect
 from PySide6.QtGui import QPainter, QColor, QFont, QPen, QPainterPath, QFontDatabase
-from gui.styles import get_theme_token, glass_fill
+from gui.styles import get_theme_token, glass_fill, theme_radius
 
 class QueueTriggerBar(QWidget):
     """
@@ -55,7 +55,7 @@ class QueueTriggerBar(QWidget):
         
         # Crear path con bordes redondeados solo a la derecha
         path = QPainterPath()
-        r = 6  # radio del redondeado
+        r = theme_radius(6)  # radio del redondeado
         w = self.width()
         h = self.height()
         

@@ -7,7 +7,7 @@ name: Build macOS arm64 (manual)
 # SOLO arm64 (Apple Silicon): es el unico build de macOS que el maintainer no
 # puede producir en su propia maquina. El x64 se compila en una VM local.
 #
-# Con "publish" activado (por defecto), ademas de compilar:
+# Con "publish" activado (viene apagado), ademas de compilar:
 #   1. publica los chunks de macos-arm64 en el release v<APP_VERSION> con
 #      tools/updater/publish.py (crea el release si no existe; si ya existe,
 #      agrega/reemplaza solo la plataforma macos-arm64 del manifiesto),
@@ -27,7 +27,14 @@ on:
       publish:
         description: "Publicar chunks de macos-arm64 y subir el .dmg al release (si no, solo compila)"
         type: boolean
-        default: true
+        default: false
+      tipo:
+        description: "Tipo de release, si no existe aun. Una version -beta.N siempre es prerelease"
+        type: choice
+        options:
+          - prerelease
+          - estable
+        default: prerelease
 
 permissions:
   contents: write
@@ -86,6 +93,22 @@ jobs:
           path: app/dist/DowP-${{ steps.appver.outputs.version }}-arm64-app.zip
           retention-days: 5
 
+      # Despues de subir el artifact, y sin hacer fallar la corrida: el build ya esta
+      # disponible aunque esta prueba falle, y aqui se ve el motivo. No impide publicar.
+      - name: Prueba de arranque (sin pantalla, 25 s)
+        continue-on-error: true
+        run: |
+          QT_QPA_PLATFORM=offscreen app/dist/DowP.app/Contents/MacOS/DowP &
+          PID=$!
+          sleep 25
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Sigue abierto a los 25 s: arranca."
+            kill "$PID"
+          else
+            wait "$PID"; echo "Se cerro solo, codigo $?"
+            exit 1
+          fi
+
       - name: Escribir la clave privada de firma
         if: ${{ inputs.publish }}
         env:
@@ -103,12 +126,16 @@ jobs:
         if: ${{ inputs.publish }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TIPO: ${{ inputs.tipo }}
         run: |
+          FLAG=""
+          if [ "$TIPO" = "prerelease" ]; then FLAG="--prerelease"; fi
           python tools/updater/publish.py \
             --dist app/dist/DowP.app \
             --platform macos-arm64 \
             --repo "${{ github.repository }}" \
-            --private-key tools/updater/secrets/private_key.pem
+            --private-key tools/updater/secrets/private_key.pem \
+            $FLAG
 
       - name: Borrar la clave privada del runner
         if: ${{ always() }}

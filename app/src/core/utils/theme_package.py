@@ -7,7 +7,7 @@
 
 Un paquete puede venir de cualquiera, así que al importarlo nada se usa tal cual: lo que no esté
 en esa lista exacta rechaza el paquete, los tamaños se miden leyendo (lo que declara el zip puede
-mentir), las imágenes se decodifican y se guardan de nuevo, y los valores se validan. DowP nunca
+mentir), de las imágenes solo pasan los píxeles, y los valores se validan. DowP nunca
 ejecuta nada de lo que hay dentro. Una vez instalado, el archivo original se puede borrar."""
 import io
 import json
@@ -37,12 +37,14 @@ MAX_ENTRIES = 16
 MAX_JSON_BYTES = 1024 * 1024
 MAX_IMAGE_BYTES = 80 * 1024 * 1024
 MAX_FONT_BYTES = 30 * 1024 * 1024
+# Lo que entrega DowP al exportar: un paquete para compartir. Importar sigue admitiendo más.
+SHARE_LIMIT_BYTES = 20 * 1024 * 1024
+# (calidad, lado máximo del fondo). Primero la calidad, que casi no se nota; la resolución al final.
+_SHARE_STEPS = ((None, None), (bg.IMAGE_QUALITY, None), (85, None), (75, None), (75, 2560), (75, 1920))
 
 _ENTRY_RE = re.compile(r"^(manifest\.json|tema\.json|imagenes/[a-z0-9_]{1,40}\.(png|jpg|jpeg|webp)"
                        r"|fuentes/[A-Za-z0-9_-]{1,80}\.(ttf|otf))$")
 _FONT_MAGIC = (b"\x00\x01\x00\x00", b"OTTO", b"true")
-_TOP_LEVEL = ("meta", "colores", "formas", "tipografia", "apariencia")
-_CHECKED_THEME_IDS = {appearance_store.PREVIOUS_ID}
 
 
 def _tr(text: str) -> str:
@@ -51,6 +53,14 @@ def _tr(text: str) -> str:
 
 def _reject(text: str):
     raise theme_io.ThemeImportError(text)
+
+
+class PackageTooLarge(OSError):
+    """Ni comprimiendo las imágenes cabe en SHARE_LIMIT_BYTES: lo que ocupa son las fuentes."""
+
+    def __init__(self, fonts_bytes: int):
+        super().__init__(_tr("El paquete no cabe en el límite de tamaño."))
+        self.fonts_bytes = fonts_bytes
 
 
 @dataclass
@@ -86,24 +96,55 @@ def export_colors_only(theme_id: str, dest: str):
         json.dump({"meta": full["meta"], "colores": full["colores"]}, f, ensure_ascii=False, indent=2)
 
 
-def export_package(theme_id: str, dest: str):
-    data = theme_io.build_export(theme_id)
-    appearance = appearance_store.capture()
-    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
+def _image_for_package(place: str, source: str, quality, side) -> tuple[bytes, str]:
+    """quality None: la copia tal cual si respeta los tamaños, para no comprimirla otra vez."""
+    with Image.open(source) as im:
+        limit = min(side or bg.max_side(place), bg.max_side(place))
+        if quality is None and max(im.size) <= limit:
+            with open(source, "rb") as f:
+                return f.read(), os.path.splitext(source)[1].lower()
+        frame = bg.prepare_frame(im, limit)
+    return bg.encode_frame(frame, quality or bg.IMAGE_QUALITY)
+
+
+def _build_package(data: dict, appearance: dict, sources: dict, fonts: dict, quality, side) -> bytes:
+    data, appearance = dict(data), dict(appearance, places={p: dict(s) for p, s in appearance["places"].items()})
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("manifest.json", json.dumps({"tipo": PACKAGE_TYPE, "formato": PACKAGE_FORMAT}))
-        for place, settings in appearance["places"].items():
-            source = bg.image_path(place)
-            file_name = place + os.path.splitext(source)[1].lower()
-            zf.write(source, f"imagenes/{file_name}")
-            settings["file"] = file_name
-        family = (data.get("tipografia") or {}).get("familia", "")
-        if is_user_font(family):
-            source = get_font_file_path(family)
-            stem = re.sub(r"[^A-Za-z0-9_-]+", "_", os.path.splitext(os.path.basename(source))[0])[:80] or "fuente"
-            zf.write(source, f"fuentes/{stem}{os.path.splitext(source)[1].lower()}")
+        for place, source in sources.items():
+            content, extension = _image_for_package(place, source, quality, side)
+            file_name = place + extension
+            zf.writestr(f"imagenes/{file_name}", content)
+            appearance["places"][place]["file"] = file_name
+        for name, content in fonts.items():
+            zf.writestr(f"fuentes/{name}", content)
         data["apariencia"] = appearance
         zf.writestr("tema.json", json.dumps(data, ensure_ascii=False, indent=2))
-    logger.info(f"Temas: paquete de '{theme_id}' exportado a {dest}")
+    return out.getvalue()
+
+
+def export_package(theme_id: str, dest: str, with_fonts: bool = True) -> int:
+    """Escribe un paquete que no pasa de SHARE_LIMIT_BYTES y devuelve cuánto pesa. Tus imágenes y
+    tu tema no cambian: lo que se comprime es lo que va en el paquete."""
+    data = theme_io.build_export(theme_id)
+    appearance = appearance_store.capture()
+    sources = {place: bg.image_path(place) for place in appearance["places"]}
+    fonts = {}
+    family = (data.get("tipografia") or {}).get("familia", "")
+    if with_fonts and is_user_font(family):
+        source = get_font_file_path(family)
+        stem = re.sub(r"[^A-Za-z0-9_-]+", "_", os.path.splitext(os.path.basename(source))[0])[:80]
+        with open(source, "rb") as f:
+            fonts[f"{stem}{os.path.splitext(source)[1].lower()}"] = f.read()
+    for quality, side in _SHARE_STEPS:
+        package = _build_package(data, appearance, sources, fonts, quality, side)
+        if len(package) <= SHARE_LIMIT_BYTES:
+            with open(dest, "wb") as f:
+                f.write(package)
+            logger.info(f"Temas: paquete de '{theme_id}' exportado a {dest} ({len(package)} bytes, calidad {quality}, lado {side})")
+            return len(package)
+    raise PackageTooLarge(sum(len(c) for c in fonts.values()))
 
 
 # ── Importar ────────────────────────────────────────────────────────────────
@@ -116,20 +157,93 @@ def _read_entry(zf: zipfile.ZipFile, info: zipfile.ZipInfo, limit: int) -> bytes
     return content
 
 
+def _clean_jpeg(content: bytes) -> bytes | None:
+    """El JPEG sin metadatos ni nada tras la imagen, sin tocar sus píxeles. None si no se puede
+    asegurar. Se conservan JFIF y Adobe, que indican cómo interpretar los colores."""
+    if content[:2] != b"\xff\xd8":
+        return None
+    out, pos = bytearray(b"\xff\xd8"), 2
+    while True:
+        if content[pos:pos + 1] != b"\xff" or pos + 4 > len(content):
+            return None
+        marker = content[pos + 1]
+        length = int.from_bytes(content[pos + 2:pos + 4], "big")
+        if length < 2 or pos + 2 + length > len(content):
+            return None
+        if marker == 0xDA:  # los datos de la imagen: terminan en el primer EOI, y ahí debe acabar
+            end = content.find(b"\xff\xd9", pos)
+            return bytes(out + content[pos:end + 2]) if end != -1 and end + 2 == len(content) else None
+        keep = marker in (0xE0, 0xEE) or not (0xE0 <= marker <= 0xEF or marker == 0xFE)
+        if keep:
+            out += content[pos:pos + 2 + length]
+        pos += 2 + length
+
+
+def _clean_webp(content: bytes) -> bytes | None:
+    """Igual para WebP: solo los bloques de la imagen. None si trae algo más, o animación."""
+    if content[:4] != b"RIFF" or content[8:12] != b"WEBP" or int.from_bytes(content[4:8], "little") + 8 != len(content):
+        return None
+    chunks, pos = [], 12
+    while pos < len(content):
+        kind, size = content[pos:pos + 4], int.from_bytes(content[pos + 4:pos + 8], "little")
+        stop = pos + 8 + size + (size & 1)
+        if pos + 8 > len(content) or stop > len(content):
+            return None
+        if kind in (b"VP8 ", b"VP8L", b"VP8X", b"ALPH"):
+            chunks.append([kind, content[pos + 8:pos + 8 + size]])
+        elif kind not in (b"EXIF", b"XMP ", b"ICCP"):
+            return None
+        pos = stop
+    body = bytearray()
+    for kind, data in chunks:
+        if kind == b"VP8X":  # sin los avisos de metadatos que ya no están
+            data = bytes([data[0] & 0b00010000]) + data[1:]
+        body += kind + len(data).to_bytes(4, "little") + data + (b"\x00" if len(data) & 1 else b"")
+    return b"RIFF" + (len(body) + 4).to_bytes(4, "little") + b"WEBP" + bytes(body)
+
+
+def _already_clean(content: bytes, side: int) -> tuple | None:
+    """(contenido, extensión) sin comprimir otra vez, si la imagen ya cumple las reglas: cada vuelta
+    le quitaría calidad. Comprueba que se decodifica entera; cualquier duda devuelve None."""
+    with Image.open(io.BytesIO(content)) as im:
+        kind = im.format
+        rotated = im.getexif().get(0x0112, 1) != 1
+        animated = getattr(im, "is_animated", False)
+        if rotated or animated or max(im.size) > side or im.mode not in ("RGB", "L", "RGBA"):
+            return None
+    if kind == "JPEG":
+        clean, extension = _clean_jpeg(content), ".jpg"
+    elif kind == "WEBP":
+        clean, extension = _clean_webp(content), ".webp"
+    else:
+        return None
+    if clean is None:
+        return None
+    with Image.open(io.BytesIO(clean)) as im:
+        if im.format != kind:
+            return None
+        im.load()
+    return clean, extension
+
+
 def _clean_image(name: str, content: bytes) -> tuple:
-    """Decodifica de verdad y vuelve a guardar: lo que viniera escondido en el archivo no pasa."""
+    """Solo pasan los píxeles: lo que viniera escondido en el archivo se queda fuera. Lo que ya
+    cumple las reglas se limpia sin comprimirlo otra vez; lo demás se decodifica y se guarda."""
+    stem = os.path.splitext(name)[0]
+    side = bg.max_side(stem)
     try:
         with Image.open(io.BytesIO(content)) as im:
             if im.format not in ("PNG", "JPEG", "WEBP"):
                 raise ValueError(im.format)
-            im.seek(0)
-            has_alpha = im.mode in ("RGBA", "LA", "PA") or (im.mode == "P" and "transparency" in im.info)
-            frame = im.convert("RGBA" if has_alpha else "RGB")
-            out = io.BytesIO()
-            frame.save(out, "PNG" if has_alpha else "JPEG", quality=92)
+        kept = _already_clean(content, side)
+        if kept:
+            return stem + kept[1], kept[0]
+        with Image.open(io.BytesIO(content)) as im:
+            frame = bg.prepare_frame(im, side)
+        clean, extension = bg.encode_frame(frame)
     except Exception:  # archivo corrupto, disfrazado, o tamaño desmedido: Pillow lanza muchas cosas
         _reject(_tr("Una imagen del paquete no es válida."))
-    return os.path.splitext(name)[0] + (".png" if has_alpha else ".jpg"), out.getvalue()
+    return stem + extension, clean
 
 
 def _check_font(content: bytes):
@@ -154,9 +268,10 @@ def _clean_appearance(raw, images: dict, renamed: dict) -> dict | None:
     family = raw.get("font_family")
     clean = {"panel_opacity": number("panel_opacity", bg.MIN_PANEL_OPACITY, 100, 100),
              "previews_transparent": raw.get("previews_transparent") is True,
+             "preview_checker": raw.get("preview_checker") is not False,
              "radius_override": number("radius_override", 0, 14, None),
              "font_size_override": max(8, min(22, size)) if isinstance(size, int) and not isinstance(size, bool) else None,
-             "font_family": family[:100] if isinstance(family, str) else None,
+             "font_family": theme_io.clean_font_name(family) or None,
              "places": {}}
     places = raw.get("places") if isinstance(raw.get("places"), dict) else {}
     for place in bg.PLACES:
@@ -168,7 +283,7 @@ def _clean_appearance(raw, images: dict, renamed: dict) -> dict | None:
             continue
         name = settings.get("name")
         clean["places"][place] = {
-            "file": file_name, "name": os.path.basename(name)[:200] if isinstance(name, str) else file_name,
+            "file": file_name, "name": theme_io.clean_text(os.path.basename(name), 200) if isinstance(name, str) else file_name,
             "opacity": _percent(settings.get("opacity")),
             "fit": settings.get("fit") if settings.get("fit") in bg.FITS else bg.FIT_FILL,
             "align": settings.get("align") if settings.get("align") in bg.ALIGNS else "center-center",
@@ -230,22 +345,20 @@ def read_package(path: str) -> PackageContents:
     except zipfile.BadZipFile:
         _reject(_tr("El archivo no es un paquete de tema válido."))
 
-    data = {k: data[k] for k in _TOP_LEVEL if k in data}
     report = theme_io.validate_theme(data)
     if report["valid"] == 0:
         _reject(_tr("El tema no tiene ningún color válido."))
-    data["colores"] = {k: v for k, v in data["colores"].items() if k not in report["invalid"]}
-    appearance = _clean_appearance(data.pop("apariencia", None), images, renamed)
+    raw_appearance = data.get("apariencia")
+    data = theme_io.clean_theme_data(data, report)
+    data.pop("basado_en", None)  # un paquete trae sus colores completos
+    appearance = _clean_appearance(raw_appearance, images, renamed)
     if appearance:
         data["apariencia"] = appearance
-    meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
     stem = os.path.splitext(os.path.basename(path))[0]
-    name = meta["nombre"] if isinstance(meta.get("nombre"), str) and meta["nombre"].strip() else stem
-    name = name.strip()[:60]
-    data["meta"] = {"nombre": name, "autor": str(meta.get("autor", ""))[:60], "version": str(meta.get("version", "1.0"))[:10],
-                    "formato": 2}
+    name = data["meta"]["nombre"] or theme_io.clean_text(stem, 60)
+    data["meta"]["nombre"] = name
     theme_id = theme_io.slugify(name)
-    if theme_id in theme_io.builtin_theme_ids() or theme_id in _CHECKED_THEME_IDS:
+    if theme_id in theme_io.builtin_theme_ids():
         theme_id = f"{theme_id}_importado"
     return PackageContents(theme_id, name, data, report, images, fonts)
 

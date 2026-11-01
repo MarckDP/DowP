@@ -72,8 +72,8 @@ editor.
 | Sistema | Archivo | Estado |
 |---|---|---|
 | Windows 10/11 (64 bits) | `DowP_Setup_<versión>.exe` | ✅ Disponible |
-| macOS con Apple Silicon (M1, M2…) | `DowP-<versión>-arm64.dmg` | 🧪 Beta, con pocas pruebas |
-| macOS con Intel | — | ⏳ Pronto |
+| macOS 14 o posterior con Apple Silicon (M1, M2…) | `DowP-<versión>-arm64.dmg` | 🧪 Beta, con pocas pruebas |
+| macOS 14 o posterior con Intel | — | ⏳ Pronto |
 | Linux | — | Algún día |
 
 Descárgalo desde la [página de DowP](https://marckdp.github.io/DowP/) o desde
@@ -82,6 +82,8 @@ después DowP se actualiza solo.
 
 **Windows:** el instalador no pide permisos de administrador; DowP se instala en tu perfil de
 usuario.
+
+**macOS 13 o anterior:** no es compatible, porque PySide6 6.12 pide macOS 14 como mínimo.
 
 **macOS:** DowP no está notarizado por Apple, así que la primera vez macOS lo bloquea. Ábrelo
 desde *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente*, o desde la Terminal:
@@ -181,7 +183,7 @@ DowP is free software released under the [GPL-3.0-or-later](LICENSE) license. Yo
 
 The interface is available in Spanish, English and Brazilian Portuguese.
 [Download it here](https://marckdp.github.io/DowP/). Windows 10/11 and Apple Silicon Macs (beta)
-are supported; Intel Macs are coming soon.
+are supported; Intel Macs are coming soon. macOS 14 or later is required.
 
 </details>
 

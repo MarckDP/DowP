@@ -6,8 +6,10 @@ y la ventana de "Créditos y licencias" (gui/dialogs/about_dialogs.py). La pági
 web (docs/creditos.html) repite este contenido a mano: si cambias algo aquí,
 cámbialo también allí.
 
-Las licencias se comprobaron el 2026-09-28 en cada fuente (metadatos del paquete
-instalado, API de GitHub o de Hugging Face). Los textos van con
+Las licencias se comprobaron en cada fuente (metadatos del paquete instalado, API de
+GitHub o de Hugging Face) el 2026-09-28; Silero, NVIDIA, las conversiones ONNX y la
+extensión de cookies, el 2026-10-31. Los textos completos de lo que va dentro de la app
+están en assets/licenses/ (los genera un script local, fuera del repo). Los textos van con
 QCoreApplication.translate("Credits", ...) donde se muestran, no aquí: esto son
 solo datos, así lupdate los encuentra en un único lugar -- ver QT_TRANSLATE_NOOP.
 """
@@ -17,6 +19,7 @@ from PySide6.QtCore import QT_TRANSLATE_NOOP
 AUTHOR_X_URL = "https://x.com/MarcklaX"
 PROJECT_GITHUB_URL = "https://github.com/MarckDP/DowP"
 PROJECT_WEBSITE_URL = "https://marckdp.github.io/DowP/"
+THEMES_GALLERY_URL = "https://marckdp.github.io/DowP/temas.html"
 KOFI_URL = "https://ko-fi.com/marckdbm"
 
 # Binance Pay: el QR va dentro de la app (assets), nunca descargado, para que no
@@ -24,6 +27,7 @@ KOFI_URL = "https://ko-fi.com/marckdbm"
 # comprobarlo o pagar sin escanear.
 BINANCE_UID = "345789454"
 BINANCE_QR_RELPATH = ("assets", "images", "donate", "binance_pay_qr.png")
+LICENSES_RELPATH = ("assets", "licenses", "THIRD_PARTY_LICENSES.txt")
 
 # ── Agradecimientos (orden pedido: la comunidad, Cry y después el resto) ─────
 # (nombre, aporte, enlace o "")
@@ -56,11 +60,12 @@ THIRD_PARTY = [
         ("Deno", QT_TRANSLATE_NOOP("Credits", "Resuelve los retos de JavaScript de YouTube"), "MIT", "https://github.com/denoland/deno"),
         ("bgutil-ytdlp-pot-provider-rs", QT_TRANSLATE_NOOP("Credits", "Tokens PO para YouTube"), "GPL-3.0", "https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs"),
         ("yt-dlp-getpot-wpc", QT_TRANSLATE_NOOP("Credits", "Tokens PO desde el navegador"), "MIT", "https://github.com/coletdjnz/yt-dlp-getpot-wpc"),
+        ("Get cookies.txt LOCALLY", QT_TRANSLATE_NOOP("Credits", "Extensión recomendada para exportar cookies (se instala aparte)"), "MIT", "https://github.com/kairi003/Get-cookies.txt-LOCALLY"),
         ("curl_cffi", "", "MIT", "https://github.com/lexiforest/curl_cffi"),
         ("Requests", "", "Apache-2.0", "https://github.com/psf/requests"),
     ]),
     (_MM, [
-        ("FFmpeg", QT_TRANSLATE_NOOP("Credits", "Conversión, recorte y recodificación (compilaciones GPL de gyan.dev y BtbN)"), "GPL-3.0", "https://ffmpeg.org"),
+        ("FFmpeg", QT_TRANSLATE_NOOP("Credits", "Conversión, recorte y recodificación (compilaciones de gyan.dev, BtbN, Martin Riedl y evermeet)"), "GPL-3.0", "https://ffmpeg.org"),
         ("mutagen", QT_TRANSLATE_NOOP("Credits", "Metadatos de audio"), "GPL-2.0-or-later", "https://github.com/quodlibet/mutagen"),
     ]),
     (_IMG, [
@@ -79,6 +84,8 @@ THIRD_PARTY = [
     (_AI, [
         ("whisper.cpp", QT_TRANSLATE_NOOP("Credits", "Transcripción local (motor opcional)"), "MIT", "https://github.com/ggml-org/whisper.cpp"),
         ("OpenAI Whisper", QT_TRANSLATE_NOOP("Credits", "Modelos de reconocimiento de voz"), "MIT", "https://github.com/openai/whisper"),
+        ("Silero VAD", QT_TRANSLATE_NOOP("Credits", "Detecta la voz al transcribir"), "MIT", "https://github.com/snakers4/silero-vad"),
+        ("NVIDIA CUDA", QT_TRANSLATE_NOOP("Credits", "Acelera whisper.cpp en GPU NVIDIA (paquete opcional)"), QT_TRANSLATE_NOOP("Credits", "Licencia de NVIDIA"), "https://docs.nvidia.com/cuda/eula/"),
         ("ONNX Runtime", QT_TRANSLATE_NOOP("Credits", "Ejecuta los modelos de IA"), "MIT", "https://github.com/microsoft/onnxruntime"),
         ("NumPy", "", "BSD-3-Clause", "https://github.com/numpy/numpy"),
         ("rembg", QT_TRANSLATE_NOOP("Credits", "Modelos U²-Net e IS-Net para quitar fondos"), "MIT", "https://github.com/danielgatis/rembg"),
@@ -89,6 +96,7 @@ THIRD_PARTY = [
         ("Distill-Any-Depth", QT_TRANSLATE_NOOP("Credits", "Mapas de profundidad"), "MIT", "https://github.com/Westlake-AGI-Lab/Distill-Any-Depth"),
         ("MoGe-2", QT_TRANSLATE_NOOP("Credits", "Mapas de normales"), "MIT", "https://github.com/microsoft/MoGe"),
         ("DeepBump", QT_TRANSLATE_NOOP("Credits", "Mapas de normales"), "GPL-3.0", "https://github.com/HugoTini/DeepBump"),
+        ("FuryTMP, OS-Software, Xenova, onnx-community", QT_TRANSLATE_NOOP("Credits", "Conversiones a ONNX de varios de estos modelos"), QT_TRANSLATE_NOOP("Credits", "La del modelo original"), "https://huggingface.co/onnx-community"),
         ("Real-ESRGAN", QT_TRANSLATE_NOOP("Credits", "Reescalado"), "BSD-3-Clause", "https://github.com/xinntao/Real-ESRGAN"),
         ("Upscayl NCNN", QT_TRANSLATE_NOOP("Credits", "Reescalado"), "AGPL-3.0", "https://github.com/upscayl/upscayl-ncnn"),
         ("waifu2x / SRMD / RealSR ncnn", QT_TRANSLATE_NOOP("Credits", "Reescalado (por nihui)"), "MIT", "https://github.com/nihui/waifu2x-ncnn-vulkan"),

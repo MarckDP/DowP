@@ -201,6 +201,14 @@ class CreditsDialog(_FramelessDialog):
         scroll.setWidget(body)
         self.content_layout.addWidget(scroll, 1)
 
+        from PySide6.QtCore import QUrl
+        from core.utils.paths import get_src_dir
+        licenses = QUrl.fromLocalFile(os.path.join(get_src_dir(), *credits.LICENSES_RELPATH)).toString()
+        self.licenses_link = make_link_label(
+            QCoreApplication.translate("Credits", "Ver los textos completos de las licencias"), licenses,
+            f"color: {text_main}; font-size: 12px;")
+        self.content_layout.addWidget(self.licenses_link)
+
         self.add_close_row(QCoreApplication.translate("Credits", "Cerrar"))
 
 

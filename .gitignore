@@ -84,7 +84,6 @@ PRUEBAS_PENDIENTES.md
 # Excepciones de archivos Markdown que SI queremos versionar
 !app/src/gui/themes/TEMAS.md
 !README.md
-!docs/TRANSCRIPCION.md
 !importer_adobe/src/MACOS.md
 !importer_vegas/README.md
 
@@ -97,3 +96,6 @@ importer_vegas/src/bin/
 
 # Tests: solo para desarrollo local (no se usan al compilar ni en los workflows).
 app/tests/
+
+# Genera src/assets/licenses/THIRD_PARTY_LICENSES.txt, que sí se versiona: herramienta local.
+app/tools/generate_third_party_licenses.py

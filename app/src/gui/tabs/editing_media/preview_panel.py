@@ -17,7 +17,7 @@ from gui.styles import (
     apply_player_play_button_style,
     apply_player_loop_button_style,
     apply_edit_subclip_button_style,
-    create_checkerboard_pixmap, glass_checker_colors,
+    create_checkerboard_pixmap, glass_checker_colors, glass_preview_fill,
 )
 from gui.tabs.editing_media.editing_media_icons import get_colored_svg_icon
 from gui.widgets.background_canvas import hide_with_preview_image, install_preview_backdrop
@@ -69,7 +69,8 @@ class _PreviewVideoView(QGraphicsView):
             # Colores de la cuadrícula del tema (ajedrez_c1/c2), leídos al pintar
             colors = glass_checker_colors(self, get_theme_token('ajedrez_c1', '#2a2a2a'),
                                           get_theme_token('ajedrez_c2', '#1e1e1e'))
-            if colors is None:  # "Transparentar vistas previas"
+            if colors is None:  # "Mostrar cuadrícula de transparencia" apagada
+                painter.fillRect(rect, glass_preview_fill(self, get_theme_token('fondo_principal', '#0a0a0a')))
                 painter.restore()
                 return
             color_a, color_b = colors
@@ -918,12 +919,19 @@ class PreviewContainerWidget(QFrame):
             self.empty_state_widget.setVisible(False)
         if self.video_widget:
             self.video_widget.setVisible(False)
+        # Queda cargado y en pausa: al recorrer una lista no debe saltar el sonido.
+        if self.media_player:
+            try:
+                self.media_player.setSource(QUrl.fromLocalFile(path))
+            except Exception as e:
+                logger.error(f"PreviewPanel: Error cargando audio: {e}")
+            self._on_playback_state_changed(self.media_player.playbackState())  # el botón, en Play
         if hasattr(self, "controls_widget"):
-            self.controls_widget.setVisible(False)
+            self.controls_widget.setVisible(bool(self.media_player))
         self.placeholder_label.setVisible(True)
         self.placeholder_label.setPixmap(QPixmap())
         name = os.path.basename(path)
-        self.placeholder_label.setText(self.tr("🎵 [ Detalle de Audio ]\n\n{0}").format(name))
+        self.placeholder_label.setText(self.tr("[ Detalle de Audio ]\n\n{0}").format(name))
         set_themed_style(self.placeholder_label, lambda: f"color: {get_theme_token('acento_audio', '#f5c2e7')}; font-weight: bold; font-size: 13px;")
 
     # Métodos de Control del Reproductor de Video

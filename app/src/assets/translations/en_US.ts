@@ -4,84 +4,89 @@
 <context>
     <name>AIPreviewPanel</name>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="93"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="94"/>
         <source>Recorte preciso: marca uno o varios tramos; cada tramo entra a la cola por separado.</source>
         <translation>Precise trim: mark one or more segments; each segment is added to the queue separately.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="113"/>
-        <source>Clic para moverte por el video. Clic derecho y arrastra para marcar el tramo a procesar; un clic derecho sin arrastrar lo quita.</source>
-        <translation>Click to move through the video. Right-click and drag to mark the segment to process; a right-click without dragging removes it.</translation>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="114"/>
+        <source>Clic para cambiar la posición de reproducción. Clic derecho y arrastra para marcar el tramo a procesar; un clic derecho sin arrastrar lo quita.</source>
+        <translation>Click to change the playback position. Right-click and drag to mark the segment to process; a right-click without dragging removes it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="118"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="119"/>
         <source>Clic derecho y arrastra para marcar un tramo · Tijera para cortes precisos</source>
         <translation>Right-click and drag to mark a segment · Scissors for precise cuts</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="139"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="140"/>
         <source>Información Técnica</source>
         <translation>Technical Information</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="150"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="151"/>
         <source>Nombre:</source>
         <translation>Name:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="151"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="152"/>
         <source>Resolución:</source>
         <translation>Resolution:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="152"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="153"/>
         <source>FPS:</source>
         <translation>FPS:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="153"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="154"/>
         <source>Duración:</source>
         <translation>Duration:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="154"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="155"/>
         <source>Códec Video:</source>
         <translation>Video Codec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="155"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="156"/>
         <source>Códec Audio:</source>
         <translation>Audio Codec:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="156"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="157"/>
         <source>Tramo:</source>
         <translation>Segment:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="157"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="158"/>
         <source>Fotogramas:</source>
         <translation>Frames:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="158"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="159"/>
         <source>Salida:</source>
         <translation>Output:</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="196"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="197"/>
         <source>Abrir en Explorador</source>
         <translation>Open in Explorer</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="423"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="425"/>
         <source>{0} – {1} ({2} s)</source>
         <translation>{0} – {1} ({2} s)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="426"/>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="428"/>
         <source>Video completo</source>
         <translation>Full video</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/ai_tools/ai_preview_panel.py" line="428"/>
+        <source>Audio completo</source>
+        <translation>Full audio</translation>
     </message>
 </context>
 <context>
@@ -1878,211 +1883,227 @@ Do you want to continue?</translation>
 <context>
     <name>AppearancePage</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="47"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="79"/>
         <source>Apariencia</source>
         <translation>Appearance</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="133"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="160"/>
         <source>Modo</source>
         <translation>Mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="138"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="165"/>
         <source>Oscuro</source>
         <translation>Dark</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="139"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="166"/>
         <source>Claro</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="140"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="167"/>
         <source>Según el sistema</source>
         <translation>Follow system</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="160"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="190"/>
         <source>Tipografía / Fuente</source>
         <translation>Typography / Font</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="168"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="198"/>
         <source>Abrir carpeta de fuentes personalizadas (%APPDATA%/DowP2/fonts)</source>
         <translation>Open the custom fonts folder (%APPDATA%/DowP2/fonts)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="179"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="209"/>
         <source>Tamaño de texto (requiere reinicio para ver todo)</source>
         <translation>Text size (requires restart to apply completely)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="277"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="305"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1059"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
         <source>Aplicar</source>
         <translation>Apply</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="196"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="226"/>
         <source>⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados.</source>
         <translation>⚠️ Sizes larger than 18px may cause some text and buttons to look clipped.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="129"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="156"/>
         <source>Colores</source>
         <translation>Colors</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="210"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="240"/>
         <source>Redondez</source>
         <translation>Roundness</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="215"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="245"/>
         <source>Qué tan redondeadas son las esquinas de botones, campos, menús y paneles.</source>
         <translation>How rounded the corners of buttons, fields, menus and panels are.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="219"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="249"/>
         <source>Según el tema</source>
         <translation>Follow theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="239"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="269"/>
         <source>Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza.</source>
         <translation>If something didn&apos;t change its look, restarting DowP will update it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="242"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="272"/>
         <source>Reiniciar ahora</source>
         <translation>Restart now</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="699"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="838"/>
         <source>Se guardó en:
 {0}</source>
         <translation>Saved to:
 {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="853"/>
-        <source>Tienes cambios sin aplicar</source>
-        <translation>You have unapplied changes</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="272"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="300"/>
         <source>Descartar</source>
         <translation>Discard</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="66"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="107"/>
         <source>Crear desde imagen</source>
         <translation>Create from image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="71"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="112"/>
         <source>Importar</source>
         <translation>Import</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="76"/>
-        <source>Seleccionar</source>
-        <translation>Select</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="79"/>
-        <source>Marcar varios temas para eliminarlos juntos</source>
-        <translation>Mark several themes to delete them together</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="258"/>
-        <source>Guardar</source>
-        <translation>Save</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="263"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="294"/>
         <source>Exportar</source>
         <translation>Export</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="502"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="506"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1104"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="576"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="580"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="599"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="661"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1397"/>
         <source>Imagen de fondo</source>
         <translation>Background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="377"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="410"/>
         <source>Fondo general</source>
         <translation>Main background</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="156"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="83"/>
+        <source>Abre la galería en tu navegador. Descarga un tema y usa Importar.</source>
+        <translation>Opens the gallery in your browser. Download a theme and use Import.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="186"/>
         <source>Texto</source>
         <translation>Text</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="205"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="235"/>
         <source>Interfaz</source>
         <translation>Interface</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="378"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="288"/>
+        <source>Guardar como…</source>
+        <translation>Save as…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="291"/>
+        <source>Guardar lo que ves en este tema o en uno nuevo</source>
+        <translation>Save what you see in this theme or in a new one</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="389"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="503"/>
+        <source>Relleno y cuadrícula semitransparentes: tu fondo se ve a través. Apagada, son sólidos.</source>
+        <translation>Semi-transparent fill and grid: your background shows through. When off, they are solid.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="395"/>
+        <source>Muestra las zonas transparentes de una imagen sobre una cuadrícula. Apagada, se ven sobre el relleno.</source>
+        <translation>Shows transparent areas of an image over a grid. When off, they appear over the fill.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="397"/>
+        <source>Mostrar cuadrícula de transparencia</source>
+        <translation>Show transparency grid</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="411"/>
         <source>Vistas previas vacías</source>
         <translation>Empty previews</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="380"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="413"/>
         <source>Lugar</source>
         <translation>Place</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="384"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="417"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1089"/>
         <source>Elegir…</source>
         <translation>Choose…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="388"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="421"/>
         <source>Quitar</source>
         <translation>Remove</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="392"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="425"/>
         <source>Imagen</source>
         <translation>Image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="401"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="433"/>
         <source>Opacidad de la imagen</source>
         <translation>Image opacity</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="405"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="437"/>
         <source>Rellenar</source>
         <translation>Fill</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="405"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="437"/>
         <source>Ajustar</source>
         <translation>Fit</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="406"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
         <source>Estirar</source>
         <translation>Stretch</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="406"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
         <source>Tamaño original</source>
         <translation>Original size</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="407"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="439"/>
         <source>Mosaico</source>
         <translation>Tile</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="410"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="442"/>
         <source>Rellenar: cubre todo sin deformar; recorta lo que sobra.
 Ajustar: la imagen entera siempre visible.
 Estirar: cubre todo deformando la imagen.
@@ -2095,302 +2116,324 @@ Original size: no scaling; ideal for a character or a logo.
 Tile: repeats the image.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="416"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="448"/>
         <source>Ajuste</source>
         <translation>Fit mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="420"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
         <source>Arriba</source>
         <translation>Top</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="420"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="424"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="456"/>
         <source>Centro</source>
         <translation>Center</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="420"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
         <source>Abajo</source>
         <translation>Bottom</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="421"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
         <source>izquierda</source>
         <translation>left</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="421"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
         <source>centro</source>
         <translation>center</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="421"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
         <source>derecha</source>
         <translation>right</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="426"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="458"/>
         <source>Qué parte queda a la vista al recortar, o dónde se ubica la imagen.</source>
         <translation>Which part stays visible when cropping, or where the image is placed.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="428"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="460"/>
         <source>Posición</source>
         <translation>Position</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="432"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="464"/>
         <source>Desenfocar la imagen</source>
         <translation>Blur the image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="355"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="469"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="383"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="501"/>
         <source>Cuánto tapan los paneles a la imagen. El texto, los botones y los campos siguen sólidos.</source>
         <translation>How much the panels cover the image. Text, buttons and fields stay solid.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="357"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="385"/>
         <source>Opacidad de los paneles</source>
         <translation>Panel opacity</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="361"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="470"/>
-        <source>Sin relleno ni cuadrícula: lo único sólido es la imagen o el video.
-Las zonas transparentes de una imagen se mezclan con el fondo y ya no se distinguen.</source>
-        <translation>No fill or checkerboard: only the image or video itself is solid.
-Transparent areas of an image blend with the background and can no longer be told apart.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="364"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="391"/>
         <source>Transparentar vistas previas</source>
         <translation>Transparent previews</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="443"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="474"/>
         <source>Ninguna</source>
         <translation>None</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="493"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="567"/>
         <source>Elegir imagen de fondo</source>
         <translation>Choose background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="370"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="494"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="403"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="568"/>
         <source>Imágenes</source>
         <translation>Images</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="473"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="505"/>
         <source>Necesita una imagen de fondo general</source>
         <translation>Needs a general background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="503"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1104"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="577"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="599"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="662"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1397"/>
         <source>No se pudo abrir la imagen: {0}</source>
         <translation>Couldn&apos;t open the image: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="507"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="581"/>
         <source>Las imágenes animadas todavía no se admiten como fondo: se usa su primer fotograma.</source>
         <translation>Animated images aren&apos;t supported as backgrounds yet: their first frame is used.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="993"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1285"/>
         <source>Temas de DowP</source>
         <translation>DowP themes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="994"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1286"/>
         <source>Mis temas</source>
         <translation>My themes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="995"/>
-        <source>Respaldo automático</source>
-        <translation>Automatic backup</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1030"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1320"/>
         <source>No se pudo duplicar el tema</source>
         <translation>The theme could not be duplicated</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1056"/>
-        <source>Eliminar ({0})</source>
-        <translation>Delete ({0})</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1065"/>
-        <source>Eliminar temas</source>
-        <translation>Delete themes</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1066"/>
-        <source>¿Enviar {0} temas a la Papelera?</source>
-        <translation>Send {0} themes to the Recycle Bin?</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="92"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="120"/>
         <source>Abrir carpeta de temas</source>
         <translation>Open themes folder</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="571"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="883"/>
         <source>{0} (sin aplicar)</source>
         <translation>{0} (not applied)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="596"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="609"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="638"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="645"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="732"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="745"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="774"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="781"/>
         <source>Importar tema</source>
         <translation>Import theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="596"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="732"/>
         <source>Temas de DowP (*.json *.dthmp)</source>
         <translation>DowP themes (*.json *.dthmp)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="646"/>
-        <source>Este tema trae sus imágenes y ajustes. ¿Usarlos también?
-
-Lo que tienes ahora se guarda como «Apariencia anterior».</source>
-        <translation>This theme includes its images and settings. Use them too?
-
-What you have now is saved as “Previous appearance”.</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="656"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="791"/>
         <source>Se importó el tema «{0}» y ya está aplicado. Ya puedes borrar el archivo original.</source>
         <translation>Theme “{0}” was imported and applied. You can now delete the original file.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="681"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="815"/>
         <source>Paquetes de tema de DowP (*.dthmp)</source>
         <translation>DowP theme packages (*.dthmp)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="682"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="816"/>
         <source>Temas de DowP (*.json)</source>
         <translation>DowP themes (*.json)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="605"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="616"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="634"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="652"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="741"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="752"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="770"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="787"/>
         <source>No se pudo importar el tema</source>
         <translation>Couldn&apos;t import the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="610"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="639"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="959"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="746"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="775"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1256"/>
         <source>Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?</source>
         <translation>You already have a theme called “{0}”. Do you want to replace it?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="619"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="755"/>
         <source>Se importó el tema «{0}» y ya está aplicado.</source>
         <translation>The theme “{0}” was imported and is now applied.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="621"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="757"/>
         <source>Era un tema de DowP 1: se convirtió al formato nuevo. Lo que no tiene equivalente se toma del tema DowP.</source>
         <translation>It was a DowP 1 theme: it was converted to the new format. Anything without an equivalent is taken from the DowP theme.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="625"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="761"/>
         <source>Se ignoraron {0} colores no válidos: {1}</source>
         <translation>{0} invalid colors were ignored: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="627"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="655"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="763"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="790"/>
         <source>Tema importado</source>
         <translation>Theme imported</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="684"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="782"/>
+        <source>Este tema trae sus imágenes y ajustes. ¿Usarlos también?</source>
+        <translation>This theme includes its images and settings. Use them too?</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="818"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="847"/>
         <source>Exportar tema</source>
         <translation>Export theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="697"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="829"/>
+        <source>Se guardó en:
+{0}
+
+Pesa {1:.1f} MB.</source>
+        <translation>Saved to:
+{0}
+
+It weighs {1:.1f} MB.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="836"/>
         <source>No se pudo exportar el tema</source>
         <translation>Couldn&apos;t export the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="699"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="828"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="838"/>
         <source>Tema exportado</source>
         <translation>Theme exported</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1076"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="81"/>
+        <source>Temas de la comunidad</source>
+        <translation>Community themes</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="848"/>
+        <source>El paquete no cabe en {0} MB: la fuente ocupa {1:.1f} MB.
+
+¿Exportarlo sin la fuente? Quien lo importe verá la letra predeterminada.</source>
+        <translation>The package doesn&apos;t fit in {0} MB: the font takes {1:.1f} MB.
+
+Export it without the font? Whoever imports it will see the default font.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1061"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <source>Aplicar y crear tema</source>
+        <translation>Apply and create theme</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1063"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <source>Aplicar y guardar</source>
+        <translation>Apply and save</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1064"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <source>Aplicar y guardar como</source>
+        <translation>Apply and save as</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1089"/>
+        <source>Comprimiendo…</source>
+        <translation>Compressing…</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1102"/>
+        <source>Colores del modo claro: el modo oscuro conserva los suyos.</source>
+        <translation>Light mode colors: dark mode keeps its own.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1103"/>
+        <source>Colores del modo oscuro: el modo claro conserva los suyos.</source>
+        <translation>Dark mode colors: light mode keeps its own.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1234"/>
+        <source>Guardar como</source>
+        <translation>Save as</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1246"/>
+        <source>{0} personalizado</source>
+        <translation>{0} custom</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1355"/>
         <source>No se pudo eliminar el tema</source>
         <translation>Couldn&apos;t delete the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="730"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="892"/>
         <source>Este tema tiene un solo modo</source>
         <translation>This theme has only one mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="736"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="898"/>
         <source>Por defecto del tema</source>
         <translation>Theme default</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="772"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="938"/>
         <source>No se pudo reiniciar</source>
         <translation>Could not restart</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="773"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="939"/>
         <source>Cierra y vuelve a abrir DowP a mano para aplicar el tema por completo.</source>
         <translation>Close and reopen DowP manually to fully apply the theme.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="857"/>
-        <source>Guardar colores, imágenes, opacidades, letra y redondez</source>
-        <translation>Save colors, images, opacities, font and roundness</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="858"/>
-        <source>Aplica o descarta los cambios para guardar</source>
-        <translation>Apply or discard the changes to save</translation>
-    </message>
-    <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="859"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1093"/>
         <source>Exportar el tema actual</source>
         <translation>Export the current theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="860"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1094"/>
         <source>Aplica o descarta los cambios del tema para exportarlo</source>
         <translation>Apply or discard the theme changes to export it</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="965"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1234"/>
         <source>No se pudo guardar: {0}</source>
         <translation>Could not save: {0}</translation>
-    </message>
-</context>
-<context>
-    <name>AppearanceStore</name>
-    <message>
-        <location filename="../../core/utils/appearance_store.py" line="92"/>
-        <source>Apariencia anterior</source>
-        <translation>Previous appearance</translation>
     </message>
 </context>
 <context>
@@ -3752,232 +3795,262 @@ This is the safest and most reliable method.</translation>
 <context>
     <name>Credits</name>
     <message>
-        <location filename="../../core/credits.py" line="31"/>
+        <location filename="../../core/credits.py" line="35"/>
         <source>Servidor de Buisco Editor</source>
         <translation>Buisco Editor server</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="32"/>
+        <location filename="../../core/credits.py" line="36"/>
         <source>La comunidad: sujetos de prueba en cada versión</source>
         <translation>The community: test subjects for every release</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="34"/>
+        <location filename="../../core/credits.py" line="38"/>
         <source>Por un apoyo enorme al proyecto</source>
         <translation>For huge support to the project</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="35"/>
+        <location filename="../../core/credits.py" line="39"/>
         <source>Ideas y reporte de errores</source>
         <translation>Ideas and bug reports</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="36"/>
+        <location filename="../../core/credits.py" line="40"/>
         <source>Pruebas y comentarios</source>
         <translation>Testing and feedback</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="37"/>
+        <location filename="../../core/credits.py" line="41"/>
         <source>Hizo posible DowP en Mac</source>
         <translation>Made DowP possible on Mac</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="39"/>
+        <location filename="../../core/credits.py" line="43"/>
         <source>Ideas y apoyo moral</source>
         <translation>Ideas and moral support</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="40"/>
+        <location filename="../../core/credits.py" line="44"/>
         <source>Ideas y pruebas</source>
         <translation>Ideas and testing</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="45"/>
+        <location filename="../../core/credits.py" line="49"/>
         <source>Descargas</source>
         <translation>Downloads</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="46"/>
+        <location filename="../../core/credits.py" line="50"/>
         <source>Video y audio</source>
         <translation>Video and audio</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="47"/>
+        <location filename="../../core/credits.py" line="51"/>
         <source>Imagen y documentos</source>
         <translation>Images and documents</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="48"/>
+        <location filename="../../core/credits.py" line="52"/>
         <source>Inteligencia artificial</source>
         <translation>Artificial intelligence</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="49"/>
+        <location filename="../../core/credits.py" line="53"/>
         <source>Interfaz y sistema</source>
         <translation>Interface and system</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="50"/>
+        <location filename="../../core/credits.py" line="54"/>
         <source>Panel para Adobe</source>
         <translation>Adobe panel</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="51"/>
+        <location filename="../../core/credits.py" line="55"/>
         <source>Sonidos</source>
         <translation>Sounds</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="55"/>
+        <location filename="../../core/credits.py" line="59"/>
         <source>Motor de descargas</source>
         <translation>Download engine</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="56"/>
+        <location filename="../../core/credits.py" line="60"/>
         <source>Resuelve los retos de JavaScript de YouTube</source>
         <translation>Solves YouTube&apos;s JavaScript challenges</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="57"/>
+        <location filename="../../core/credits.py" line="61"/>
         <source>Tokens PO para YouTube</source>
         <translation>PO tokens for YouTube</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="58"/>
+        <location filename="../../core/credits.py" line="62"/>
         <source>Tokens PO desde el navegador</source>
         <translation>PO tokens from the browser</translation>
     </message>
     <message>
         <location filename="../../core/credits.py" line="63"/>
-        <source>Conversión, recorte y recodificación (compilaciones GPL de gyan.dev y BtbN)</source>
-        <translation>Conversion, trimming and re-encoding (GPL builds by gyan.dev and BtbN)</translation>
+        <source>Extensión recomendada para exportar cookies (se instala aparte)</source>
+        <translation>Recommended extension to export cookies (installed separately)</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="64"/>
+        <location filename="../../core/credits.py" line="68"/>
+        <source>Conversión, recorte y recodificación (compilaciones de gyan.dev, BtbN, Martin Riedl y evermeet)</source>
+        <translation>Conversion, trimming and recoding (builds by gyan.dev, BtbN, Martin Riedl and evermeet)</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="69"/>
         <source>Metadatos de audio</source>
         <translation>Audio metadata</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="76"/>
+        <location filename="../../core/credits.py" line="81"/>
         <source>Vectorizar a SVG</source>
         <translation>Vectorize to SVG</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="77"/>
+        <location filename="../../core/credits.py" line="82"/>
         <source>PDF y PostScript (se descarga aparte)</source>
         <translation>PDF and PostScript (downloaded separately)</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="80"/>
+        <location filename="../../core/credits.py" line="85"/>
         <source>Transcripción local (motor opcional)</source>
         <translation>Local transcription (optional engine)</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="81"/>
+        <location filename="../../core/credits.py" line="86"/>
         <source>Modelos de reconocimiento de voz</source>
         <translation>Speech recognition models</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="82"/>
+        <location filename="../../core/credits.py" line="87"/>
+        <source>Detecta la voz al transcribir</source>
+        <translation>Detects speech when transcribing</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="88"/>
+        <source>Acelera whisper.cpp en GPU NVIDIA (paquete opcional)</source>
+        <translation>Speeds up whisper.cpp on NVIDIA GPUs (optional package)</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="88"/>
+        <source>Licencia de NVIDIA</source>
+        <translation>NVIDIA license</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="89"/>
         <source>Ejecuta los modelos de IA</source>
         <translation>Runs the AI models</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="84"/>
+        <location filename="../../core/credits.py" line="91"/>
         <source>Modelos U²-Net e IS-Net para quitar fondos</source>
         <translation>U²-Net and IS-Net models for background removal</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="85"/>
-        <location filename="../../core/credits.py" line="86"/>
-        <location filename="../../core/credits.py" line="87"/>
+        <location filename="../../core/credits.py" line="92"/>
+        <location filename="../../core/credits.py" line="93"/>
+        <location filename="../../core/credits.py" line="94"/>
         <source>Quitar fondos</source>
         <translation>Background removal</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="87"/>
+        <location filename="../../core/credits.py" line="94"/>
         <source>Licencia de Bria AI, uso no comercial</source>
         <translation>Bria AI license, non-commercial use</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="88"/>
-        <location filename="../../core/credits.py" line="89"/>
+        <location filename="../../core/credits.py" line="95"/>
+        <location filename="../../core/credits.py" line="96"/>
         <source>Mapas de profundidad</source>
         <translation>Depth maps</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="88"/>
+        <location filename="../../core/credits.py" line="95"/>
         <source>Apache-2.0; algunos modelos, CC BY-NC 4.0</source>
         <translation>Apache-2.0; some models, CC BY-NC 4.0</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="90"/>
-        <location filename="../../core/credits.py" line="91"/>
+        <location filename="../../core/credits.py" line="97"/>
+        <location filename="../../core/credits.py" line="98"/>
         <source>Mapas de normales</source>
         <translation>Normal maps</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="92"/>
-        <location filename="../../core/credits.py" line="93"/>
+        <location filename="../../core/credits.py" line="99"/>
+        <source>Conversiones a ONNX de varios de estos modelos</source>
+        <translation>ONNX conversions of several of these models</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="99"/>
+        <source>La del modelo original</source>
+        <translation>Same as the original model</translation>
+    </message>
+    <message>
+        <location filename="../../core/credits.py" line="100"/>
+        <location filename="../../core/credits.py" line="101"/>
         <source>Reescalado</source>
         <translation>Upscaling</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="94"/>
+        <location filename="../../core/credits.py" line="102"/>
         <source>Reescalado (por nihui)</source>
         <translation>Upscaling (by nihui)</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="97"/>
+        <location filename="../../core/credits.py" line="105"/>
         <source>Interfaz</source>
         <translation>Interface</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="98"/>
+        <location filename="../../core/credits.py" line="106"/>
         <source>Íconos (Google)</source>
         <translation>Icons (Google)</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="100"/>
+        <location filename="../../core/credits.py" line="108"/>
         <source>Tipografías</source>
         <translation>Typefaces</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="101"/>
+        <location filename="../../core/credits.py" line="109"/>
         <source>Conexión con los editores</source>
         <translation>Connection to the editors</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="103"/>
+        <location filename="../../core/credits.py" line="111"/>
         <source>Compresión</source>
         <translation>Compression</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="104"/>
+        <location filename="../../core/credits.py" line="112"/>
         <source>Firma de las actualizaciones</source>
         <translation>Update signing</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="106"/>
+        <location filename="../../core/credits.py" line="114"/>
         <source>Empaquetado de la app</source>
         <translation>App packaging</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="106"/>
+        <location filename="../../core/credits.py" line="114"/>
         <source>GPL-2.0-or-later con excepción</source>
         <translation>GPL-2.0-or-later with exception</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="110"/>
+        <location filename="../../core/credits.py" line="118"/>
         <source>Licencia de Adobe</source>
         <translation>Adobe license</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="113"/>
+        <location filename="../../core/credits.py" line="121"/>
         <source>Sonido de éxito</source>
         <translation>Success sound</translation>
     </message>
     <message>
-        <location filename="../../core/credits.py" line="114"/>
+        <location filename="../../core/credits.py" line="122"/>
         <source>Sonido de error</source>
         <translation>Error sound</translation>
     </message>
@@ -3992,39 +4065,44 @@ This is the safest and most reliable method.</translation>
         <translation>DowP is free software (GPL-3.0 license) and exists thanks to these open source projects. Thanks to everyone who makes them possible.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="204"/>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="251"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="208"/>
+        <source>Ver los textos completos de las licencias</source>
+        <translation>View the full license texts</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="212"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="259"/>
         <source>Cerrar</source>
         <translation>Close</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="209"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="217"/>
         <source>Otras formas de apoyar</source>
         <translation>Other ways to support</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="227"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="235"/>
         <source>Binance ID (UID): {0}</source>
         <translation>Binance ID (UID): {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="231"/>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="256"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="239"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="264"/>
         <source>Copiar</source>
         <translation>Copy</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="237"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="245"/>
         <source>Solo desde la app de Binance (Binance Pay): escanea el código o envía al UID. Comprueba que el UID coincide antes de enviar.</source>
         <translation>Only from the Binance app (Binance Pay): scan the code or send to the UID. Check that the UID matches before sending.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="246"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="254"/>
         <source>¡Gracias por apoyar DowP!</source>
         <translation>Thank you for supporting DowP!</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/about_dialogs.py" line="255"/>
+        <location filename="../../gui/dialogs/about_dialogs.py" line="263"/>
         <source>¡Copiado!</source>
         <translation>Copied!</translation>
     </message>
@@ -10930,24 +11008,24 @@ You can download it again whenever you want.</translation>
 <context>
     <name>PreviewContainerWidget</name>
     <message>
-        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="167"/>
+        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="168"/>
         <source>Vista Previa</source>
         <translation>Preview</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="172"/>
+        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="173"/>
         <source>Selecciona un archivo multimedia de la lista
 para reproducirlo o ver su detalle</source>
         <translation>Select a media file from the list
 to play it or view its details</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="526"/>
+        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="527"/>
         <source>Generando vista previa (imagen muy pesada)...</source>
         <translation>Generating preview (very heavy image)...</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="912"/>
+        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="913"/>
         <source>▶ [ Previsualización de Video ]
 
 {0}</source>
@@ -10956,11 +11034,11 @@ to play it or view its details</translation>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="926"/>
-        <source>🎵 [ Detalle de Audio ]
+        <location filename="../../gui/tabs/editing_media/preview_panel.py" line="934"/>
+        <source>[ Detalle de Audio ]
 
 {0}</source>
-        <translation>🎵 [ Audio Details ]
+        <translation>[ Audio Detail ]
 
 {0}</translation>
     </message>
@@ -12202,34 +12280,40 @@ You can download it again whenever you want.</translation>
 <context>
     <name>SaveAppearanceDialog</name>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="180"/>
-        <source>Guardar apariencia</source>
-        <translation>Save appearance</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="180"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="183"/>
         <source>Renombrar tema</source>
         <translation>Rename theme</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="206"/>
-        <source>Guarda colores, imágenes, opacidades, letra y redondez. Al elegir este tema en el selector, vuelve todo.</source>
-        <translation>Saves colors, images, opacities, font and roundness. Choosing this theme in the selector brings it all back.</translation>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="183"/>
+        <source>Guardar como</source>
+        <translation>Save as</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="212"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="209"/>
+        <source>Guarda colores, imágenes, opacidades, letra y redondez. Al elegir este tema en la galería, vuelve todo.</source>
+        <translation>Saves colors, images, opacities, font and roundness. Choosing this theme in the gallery brings everything back.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="215"/>
         <source>Nombre</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="216"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="219"/>
         <source>Cancelar</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="220"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="223"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="236"/>
         <source>Guardar</source>
         <translation>Save</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="236"/>
+        <source>Crear tema</source>
+        <translation>Create theme</translation>
     </message>
 </context>
 <context>
@@ -13796,102 +13880,102 @@ Turn it off to get the subtitle exactly as YouTube delivers it.</translation>
 <context>
     <name>ThemeFromImageDialog</name>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="236"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="245"/>
         <source>Crear tema desde una imagen</source>
         <translation>Create theme from an image</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="289"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="310"/>
         <source>Elige una imagen para empezar.</source>
         <translation>Choose an image to get started.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="292"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="313"/>
         <source>Elegir imagen…</source>
         <translation>Choose image…</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="309"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="330"/>
         <source>Neutro</source>
         <translation>Neutral</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="309"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="330"/>
         <source>Teñido</source>
         <translation>Tinted</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="310"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="331"/>
         <source>Suave</source>
         <translation>Soft</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="310"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="331"/>
         <source>Dos colores</source>
         <translation>Two colors</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="311"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="332"/>
         <source>Invertido</source>
         <translation>Inverted</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="321"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="342"/>
         <source>Color de acento</source>
         <translation>Accent color</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="326"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="347"/>
         <source>Elegir otro color si el de la imagen no te convence</source>
         <translation>Choose another color if the one from the image doesn&apos;t convince you</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="329"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="350"/>
         <source>El de la imagen</source>
         <translation>From the image</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="337"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="358"/>
         <source>Nombre del tema</source>
         <translation>Theme name</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="343"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="364"/>
         <source>Usar también esta imagen de fondo</source>
         <translation>Also use this image as background</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="348"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="369"/>
         <source>Cancelar</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="352"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="373"/>
         <source>Crear</source>
         <translation>Create</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="370"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="422"/>
         <source>Elegir imagen</source>
         <translation>Choose image</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="371"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="423"/>
         <source>Imágenes</source>
         <translation>Images</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="379"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="431"/>
         <source>No se pudo leer la imagen</source>
         <translation>The image could not be read</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="389"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="441"/>
         <source>Esta imagen casi no tiene color: se usa el acento de DowP. Puedes elegir otro abajo.</source>
         <translation>This image has almost no color, so DowP&apos;s accent is used. You can choose another one below.</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="438"/>
+        <location filename="../../gui/dialogs/theme_from_image_dialog.py" line="490"/>
         <source>Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?</source>
         <translation>You already have a theme named “{0}”. Do you want to replace it?</translation>
     </message>
@@ -13899,32 +13983,33 @@ Turn it off to get the subtitle exactly as YouTube delivers it.</translation>
 <context>
     <name>ThemeGallery</name>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="255"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="235"/>
         <source>Aplicar</source>
         <translation>Apply</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="256"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="240"/>
         <source>Exportar…</source>
         <translation>Export…</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="259"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="243"/>
         <source>Aplica este tema para exportarlo</source>
         <translation>Apply this theme to export it</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="261"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="245"/>
         <source>Duplicar</source>
         <translation>Duplicate</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="263"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="247"/>
         <source>Renombrar…</source>
         <translation>Rename…</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_gallery.py" line="265"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="237"/>
+        <location filename="../../gui/widgets/theme_gallery.py" line="249"/>
         <source>Eliminar</source>
         <translation>Delete</translation>
     </message>
@@ -13932,47 +14017,47 @@ Turn it off to get the subtitle exactly as YouTube delivers it.</translation>
 <context>
     <name>ThemeIO</name>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="228"/>
+        <location filename="../../core/utils/theme_io.py" line="274"/>
         <source>El archivo es demasiado grande para ser un tema.</source>
         <translation>The file is too large to be a theme.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="234"/>
+        <location filename="../../core/utils/theme_io.py" line="280"/>
         <source>No se pudo leer el archivo: {0}</source>
         <translation>Couldn&apos;t read the file: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="236"/>
+        <location filename="../../core/utils/theme_io.py" line="282"/>
         <source>El archivo no es un JSON válido (línea {0}, columna {1}).</source>
         <translation>The file is not valid JSON (line {0}, column {1}).</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="238"/>
+        <location filename="../../core/utils/theme_io.py" line="284"/>
         <source>El archivo no contiene un tema.</source>
         <translation>The file doesn&apos;t contain a theme.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="246"/>
+        <location filename="../../core/utils/theme_io.py" line="292"/>
         <source>El archivo no parece un tema de DowP: no tiene «colores», «formas» ni «tipografia».</source>
         <translation>The file doesn&apos;t look like a DowP theme: it has no “colores”, “formas” or “tipografia”.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="252"/>
+        <location filename="../../core/utils/theme_io.py" line="298"/>
         <source>El tema no tiene ningún color válido.</source>
         <translation>The theme has no valid colors.</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="280"/>
+        <location filename="../../core/utils/theme_io.py" line="329"/>
         <source>personalizado</source>
         <translation>custom</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="341"/>
+        <location filename="../../core/utils/theme_io.py" line="390"/>
         <source>No se pudo enviar a la Papelera: {0}</source>
         <translation>Could not send to the Recycle Bin: {0}</translation>
     </message>
     <message>
-        <location filename="../../core/utils/theme_io.py" line="362"/>
+        <location filename="../../core/utils/theme_io.py" line="411"/>
         <source>copia</source>
         <translation>copy</translation>
     </message>
@@ -14001,63 +14086,63 @@ Turn it off to get the subtitle exactly as YouTube delivers it.</translation>
 <context>
     <name>ThemePreview</name>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="102"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="165"/>
         <source>Pestaña</source>
         <translation>Tab</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="102"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="165"/>
         <source>Otra</source>
         <translation>Other</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="102"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="165"/>
         <source>Más</source>
         <translation>More</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="111"/>
-        <location filename="../../gui/widgets/theme_preview.py" line="120"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="176"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="185"/>
         <source>Aplicar</source>
         <translation>Apply</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="114"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="179"/>
         <source>Texto de ejemplo</source>
         <translation>Sample text</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="125"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="190"/>
         <source>Seleccionado</source>
         <translation>Selected</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="126"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="191"/>
         <source>Texto secundario</source>
         <translation>Secondary text</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="131"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="196"/>
         <source>Menú</source>
         <translation>Menu</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="139"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="204"/>
         <source>Botón</source>
         <translation>Button</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="142"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="207"/>
         <source>Apagado</source>
         <translation>Disabled</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="147"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="212"/>
         <source>Acento</source>
         <translation>Accent</translation>
     </message>
     <message>
-        <location filename="../../gui/widgets/theme_preview.py" line="165"/>
+        <location filename="../../gui/widgets/theme_preview.py" line="230"/>
         <source>Elemento de una lista</source>
         <translation>List item</translation>
     </message>
@@ -16323,8 +16408,8 @@ only needed if you&apos;re going to export to that format.</translation>
     </message>
     <message>
         <location filename="../../core/updater/whats_new_content.py" line="54"/>
-        <source>Guarda colores, imágenes, opacidades, letra y redondez en un tema, y vuelve a todo eligiéndolo en la galería. Exporta el tema completo, solo sus colores o un paquete .dthmp con sus imágenes y fuentes. Si algo va a reemplazar tu aspecto, DowP guarda antes una copia como Apariencia anterior.</source>
-        <translation>Save colors, images, opacities, font and roundness in a theme, and get everything back by choosing it in the gallery. Export the full theme, only its colors or a .dthmp package with its images and fonts. If something is about to replace your look, DowP first saves a copy as Previous appearance.</translation>
+        <source>Guarda colores, imágenes, opacidades, letra y redondez en un tema, y vuelve a todo eligiéndolo en la galería. Exporta el tema completo, solo sus colores o un paquete .dthmp con sus imágenes y fuentes. Aplicar guarda todo en tu tema y Guardar como crea otro con el nombre que elijas.</source>
+        <translation>Save colors, images, opacities, font and roundness in a theme, and get everything back by choosing it in the gallery. Export the full theme, only its colors or a .dthmp package with its images and fonts. Apply saves everything in your theme, and Save as creates another with the name you choose.</translation>
     </message>
     <message>
         <location filename="../../core/updater/whats_new_content.py" line="57"/>
@@ -20571,12 +20656,12 @@ Click &apos;...&apos; to select the executable manually.</translation>
 <context>
     <name>styles</name>
     <message>
-        <location filename="../../gui/styles.py" line="1675"/>
+        <location filename="../../gui/styles.py" line="1683"/>
         <source>Editar / Recortar Subclips (In/Out) — hay subclips guardados</source>
         <translation>Edit / Trim Subclips (In/Out) — there are saved subclips</translation>
     </message>
     <message>
-        <location filename="../../gui/styles.py" line="1692"/>
+        <location filename="../../gui/styles.py" line="1700"/>
         <source>Editar / Recortar Subclips (In/Out)</source>
         <translation>Edit / Trim Subclips (In/Out)</translation>
     </message>

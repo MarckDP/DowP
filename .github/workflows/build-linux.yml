@@ -1,13 +1,11 @@
-name: Build Linux (solo compilar, manual)
+name: Build Linux x64 (manual)
 
-# Compila DowP para Linux x64 y lo deja como artifact descargable. NADA MAS: no
-# publica chunks, no toca manifest.json ni sube nada a un release.
+# Compila DowP para Linux x64 y lo deja como artifact descargable. Si se marca
+# "publish", y solo si pasa la prueba de arranque, publica ademas los chunks de
+# linux-x64 y sube el .tar.gz al release.
 #
-# A proposito, sin forma de publicar aunque se quiera:
-#   - permisos de solo lectura (el GITHUB_TOKEN no puede escribir en el repo),
-#   - no lee el secret UPDATER_PRIVATE_KEY.
-# Linux nunca se ha probado en una maquina real: publicarlo ofreceria
-# actualizaciones a una plataforma que nadie ha abierto.
+# "publish" viene apagado: Linux nunca se ha probado en una maquina real, y publicar
+# ofrece actualizaciones a quien ya lo tenga instalado.
 #
 # ubuntu-22.04 y no latest: un binario de PyInstaller necesita una glibc igual o
 # mas nueva que la de donde se compilo, asi que compilar en una base vieja lo deja
@@ -18,12 +16,26 @@ name: Build Linux (solo compilar, manual)
 #   tar xzf DowP-*.tar.gz && ./DowP/DowP
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publicar chunks de linux-x64 y subir el .tar.gz al release (si no, solo compila)"
+        type: boolean
+        default: false
+      tipo:
+        description: "Tipo de release, si no existe aun. Una version -beta.N siempre es prerelease"
+        type: choice
+        options:
+          - prerelease
+          - estable
+        default: prerelease
 
 permissions:
-  contents: read
+  contents: write
 
+# El MISMO grupo que los workflows de Mac: se encolan entre si en vez de pisarse el
+# manifiesto.
 concurrency:
-  group: build-linux-${{ github.ref }}
+  group: publish-macos
   cancel-in-progress: false
 
 jobs:
@@ -81,6 +93,7 @@ jobs:
       # Despues de subir, y sin hacer fallar la corrida: el build ya esta disponible
       # aunque esta prueba falle, y aqui se ve el motivo (modulo o libreria faltante).
       - name: Prueba de arranque (sin pantalla, 25 s)
+        id: arranque
         continue-on-error: true
         run: |
           QT_QPA_PLATFORM=offscreen ./app/dist/DowP/DowP &
@@ -93,3 +106,52 @@ jobs:
             wait "$PID"; echo "Se cerro solo, codigo $?"
             exit 1
           fi
+
+      - name: Escribir la clave privada de firma
+        if: ${{ inputs.publish && steps.arranque.outcome == 'success' }}
+        env:
+          UPDATER_PRIVATE_KEY: ${{ secrets.UPDATER_PRIVATE_KEY }}
+        run: |
+          if [ -z "$UPDATER_PRIVATE_KEY" ]; then
+            echo "Falta el secret UPDATER_PRIVATE_KEY (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          mkdir -p tools/updater/secrets
+          printf '%s\n' "$UPDATER_PRIVATE_KEY" > tools/updater/secrets/private_key.pem
+          chmod 600 tools/updater/secrets/private_key.pem
+
+      - name: Publicar chunks de linux-x64
+        if: ${{ inputs.publish && steps.arranque.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TIPO: ${{ inputs.tipo }}
+        run: |
+          FLAG=""
+          if [ "$TIPO" = "prerelease" ]; then FLAG="--prerelease"; fi
+          python tools/updater/publish.py \
+            --dist app/dist/DowP \
+            --platform linux-x64 \
+            --repo "${{ github.repository }}" \
+            --private-key tools/updater/secrets/private_key.pem \
+            $FLAG
+
+      - name: Borrar la clave privada del runner
+        if: ${{ always() }}
+        run: rm -f tools/updater/secrets/private_key.pem
+
+      - name: Subir el .tar.gz al release
+        if: ${{ inputs.publish && steps.arranque.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(cd app && python -c "import sys; sys.path.insert(0,'src'); from core.version import APP_VERSION; print(APP_VERSION)")
+          cp "app/dist/${{ steps.name.outputs.base }}.tar.gz" "app/dist/DowP-$VERSION-linux-x64.tar.gz"
+          gh release upload "v$VERSION" "app/dist/DowP-$VERSION-linux-x64.tar.gz" \
+            --clobber --repo "${{ github.repository }}"
+
+      - name: Comprobar el manifiesto publicado
+        if: ${{ inputs.publish && steps.arranque.outcome == 'success' }}
+        run: |
+          VERSION=$(cd app && python -c "import sys; sys.path.insert(0,'src'); from core.version import APP_VERSION; print(APP_VERSION)")
+          curl -sL "https://github.com/${{ github.repository }}/releases/download/v$VERSION/manifest.json" \
+            | python -c "import json,sys; m=json.load(sys.stdin); p=sorted(m['platforms']); print(m['app_version'], p); sys.exit(0 if 'linux-x64' in p else 1)"

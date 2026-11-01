@@ -84,6 +84,18 @@ def check_private_key_matches_client(private_key_path: str) -> None:
         sys.exit(1)
 
 
+def check_release_kind(release: dict | None, prerelease: bool) -> str | None:
+    """Agregar una plataforma a un release ya creado no cambia su tipo. Si se pidio
+    prerelease y el release es estable, el build de prueba le llegaria a todos: se
+    devuelve el error. Al reves no hay riesgo: sigue siendo prerelease."""
+    if release is None:
+        return None
+    if prerelease and not release.get("prerelease"):
+        return (f"{release.get('tag_name')} ya existe como release estable: esto le llegaria a "
+                "todos. Usa otra version, o publica como estable a proposito.")
+    return None
+
+
 def read_version_module() -> dict:
     """Ejecuta version.py aislado, igual que build_cross_platform.py -- ese archivo
     no tiene imports a proposito para poder leerse asi desde herramientas externas."""
@@ -279,6 +291,13 @@ def main():
 
     if not args.dry_run:
         current_release = gh.get_release_by_tag(args.repo, tag, token)
+        kind_error = check_release_kind(current_release, args.prerelease)
+        if kind_error:
+            print(f"ERROR: {kind_error}")
+            sys.exit(1)
+        if current_release and current_release.get("prerelease") and not args.prerelease:
+            print(f"Aviso: {tag} ya existe como prerelease y sigue siendolo. Para volverlo "
+                  f"estable: gh release edit {tag} --prerelease=false")
         current_manifest = fetch_manifest_json(args.repo, current_release, token)
 
         prev_release = gh.get_latest_release(args.repo, token)

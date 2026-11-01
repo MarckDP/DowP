@@ -5,7 +5,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter
 from PySide6.QtWidgets import QWidget
 
 from core.utils import background_images as bg
-from gui.widgets.background_canvas import background_notifier
+from gui.widgets.background_canvas import _load_image, target_rect
 
 
 class ThemePreview(QWidget):
@@ -16,23 +16,24 @@ class ThemePreview(QWidget):
         self._family = ""
         self._font_px = 13
         self._panel_alpha = None
-        self._image = (None, None)  # (ruta, QPixmap)
-        self._image_override = None
-        self.setMinimumSize(280, 148)
-        background_notifier().changed.connect(self._on_background_changed)
+        self._sources = {}  # (ruta, desenfoque) -> (ancho original, alto original, QPixmap reducido)
+        self._general = None
+        self._previews = None
+        self._transparent = False
+        self._checker = True
+        self.setMinimumSize(210, 148)
 
-    def set_draft(self, tokens: dict, shapes: dict, family: str, panel_alpha, image: str | None = None):
-        """panel_alpha: opacidad de los paneles (0-1), o None si van sólidos. image: la imagen
-        de fondo elegida y aún sin aplicar; sin ella, la actual."""
-        self._image_override = image
+    def set_draft(self, tokens: dict, shapes: dict, family: str, panel_alpha, general=None, previews=None,
+                  transparent: bool = False, checker: bool = True):
+        """panel_alpha: opacidad de los paneles (0-1), o None si van sólidos. general y previews:
+        (ruta, ajustes) de lo que se verá al aplicar en cada lugar, o None si no hay imagen.
+        transparent y checker: las opciones de las vistas previas."""
+        self._general, self._previews = general, previews
+        self._transparent, self._checker = transparent, checker
         self._tokens, self._shapes, self._family = tokens, shapes, family
         self._font_px = shapes.get("tamano_fuente", 13)
         self._panel_alpha = panel_alpha
         self.update()
-
-    def _on_background_changed(self, place: str):
-        if place == bg.PLACE_GENERAL:
-            self.update()
 
     def _c(self, key: str, fallback="#808080", alpha=None) -> QColor:
         color = QColor(self._tokens.get(key, fallback))
@@ -42,21 +43,46 @@ class ThemePreview(QWidget):
             color.setAlphaF(alpha)
         return color
 
+    def _source(self, path: str, blur: bool):
+        key = (path, blur)
+        if key not in self._sources:
+            image = _load_image(path, blur)
+            if image.isNull():
+                self._sources[key] = None
+            else:
+                # Reducida: se repinta con cada control que se mueve.
+                small = image.scaled(900, 900, Qt.KeepAspectRatio, Qt.SmoothTransformation) \
+                    if max(image.width(), image.height()) > 900 else image
+                ratio = image.devicePixelRatioF()
+                self._sources[key] = (image.width() / ratio, image.height() / ratio, QPixmap.fromImage(small))
+            while len(self._sources) > 4:
+                self._sources.pop(next(iter(self._sources)))
+        return self._sources[key]
+
+    def _draw_image(self, p: QPainter, area: QRectF, image):
+        """Como en la app: con su opacidad, ajuste, posición y desenfoque."""
+        path, settings = image
+        source = self._source(path, bool(settings.get("blur")))
+        if source is None:
+            return
+        width, height, pix = source
+        fit = settings.get("fit", bg.FIT_FILL)
+        p.save()
+        p.setClipRect(area, Qt.IntersectClip)
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        p.setOpacity(settings.get("opacity", 100) / 100.0)
+        if fit == bg.FIT_TILE:
+            p.drawTiledPixmap(area.toRect(), pix)
+        else:
+            rect = target_rect(width, height, area.width(), area.height(), fit, settings.get("align", "center-center"))
+            rect.translate(area.topLeft())
+            p.drawPixmap(rect, pix, QRectF(pix.rect()))
+        p.restore()
+
     def _background(self, p: QPainter, area: QRectF):
         p.fillRect(area, self._c("fondo_principal"))
-        path = self._image_override or bg.image_path(bg.PLACE_GENERAL)
-        if not path:
-            return
-        if self._image[0] != path:
-            self._image = (path, QPixmap(path))
-        pix = self._image[1]
-        if pix.isNull():
-            return
-        scaled = pix.scaled(area.size().toSize(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
-        p.save()
-        p.setOpacity(bg.get_place(bg.PLACE_GENERAL)["opacity"] / 100.0)
-        p.drawPixmap(area.topLeft(), scaled, QRectF(0, 0, area.width(), area.height()))
-        p.restore()
+        if self._general:
+            self._draw_image(p, area, self._general)
 
     def _rounded(self, p: QPainter, rect: QRectF, radius, fill, border=None):
         p.setPen(QPen(border, 1) if border is not None else Qt.NoPen)
@@ -88,6 +114,43 @@ class ThemePreview(QWidget):
         panel = frame.adjusted(10, 10, -10, -10)
         self._rounded(p, panel, big, self._c("fondo_secundario", alpha=panel_alpha), self._c("borde_normal"))
         inner = panel.adjusted(10, 8, -10, -8)
+        # Una vista previa a la derecha de los controles: arriba con un medio (la cuadrícula y un
+        # Play) y abajo vacía (como un panel, con su imagen).
+        box = QRectF(inner.right() - inner.width() * 0.34, inner.top(), inner.width() * 0.34, inner.height())
+        box_alpha = panel_alpha if self._transparent else 1.0
+        box_inner = box.adjusted(1, 1, -1, -1)
+        media = QRectF(box_inner.left(), box_inner.top(), box_inner.width(), box_inner.height() / 2)
+        empty = QRectF(box_inner.left(), media.bottom(), box_inner.width(), box_inner.height() / 2)
+        box_clip = QPainterPath()
+        box_clip.addRoundedRect(box, radius, radius)
+        p.save()
+        p.setClipPath(box_clip, Qt.IntersectClip)
+        p.fillRect(media, self._c("fondo_principal", alpha=box_alpha))
+        p.fillRect(empty, self._c("fondo_principal", alpha=panel_alpha))
+        p.restore()
+        if self._checker:
+            p.save()
+            p.setClipRect(media, Qt.IntersectClip)
+            size = 8
+            for row in range(int(media.height() // size) + 1):
+                for col in range(int(media.width() // size) + 1):
+                    key, fallback = ("ajedrez_c1", "#2a2a2a") if (row + col) % 2 == 0 else ("ajedrez_c2", "#181818")
+                    p.fillRect(QRectF(media.left() + col * size, media.top() + row * size, size, size),
+                               self._c(key, fallback, box_alpha))
+            p.restore()
+        center = media.center()
+        side = min(media.width(), media.height()) * 0.17
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(0, 0, 0, 150))
+        p.drawEllipse(center, side * 1.5, side * 1.5)
+        p.setBrush(QColor("#ffffff"))
+        p.drawPolygon(QPolygonF([QPointF(center.x() - side * 0.5, center.y() - side * 0.75),
+                                 QPointF(center.x() - side * 0.5, center.y() + side * 0.75),
+                                 QPointF(center.x() + side * 0.8, center.y())]))
+        if self._previews:
+            self._draw_image(p, empty, self._previews)
+        self._rounded(p, box, radius, Qt.NoBrush, self._c("borde_campo", "#333333"))
+        inner.setRight(box.left() - 8)
 
         metrics = QFontMetrics(font)
         gap = 6
@@ -101,6 +164,8 @@ class ThemePreview(QWidget):
             x = inner.left()
             for i, label in enumerate((self.tr("Pestaña"), self.tr("Otra"), self.tr("Más"))):
                 w = metrics.horizontalAdvance(label) + 18
+                if x + w > inner.right():  # en poco ancho, las que quepan
+                    break
                 rect = QRectF(x, y, w, row_h)
                 if i == 0:
                     p.fillRect(QRectF(x, y + row_h - 2, w, 2), self._c("acento_primario"))
@@ -108,7 +173,7 @@ class ThemePreview(QWidget):
                 x += w + 4
 
         def field_and_button(y):
-            button_w = max(90, metrics.horizontalAdvance(self.tr("Aplicar")) + 26)
+            button_w = min(max(90, metrics.horizontalAdvance(self.tr("Aplicar")) + 26), inner.width() * 0.45)
             field = QRectF(inner.left(), y, inner.width() - button_w - gap, row_h)
             self._rounded(p, field, radius, self._c("fondo_campo", "#1a1a1a", control_alpha), self._c("borde_campo", "#333333"))
             text(field.adjusted(8, 0, -8, 0), "texto_principal", self.tr("Texto de ejemplo"))

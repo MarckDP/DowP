@@ -563,7 +563,9 @@ class _CheckerboardFrame(QFrame):
         if self._show_checkerboard:
             colors = glass_checker_colors(self, get_theme_token('ajedrez_c1', '#2a2a2a'),
                                           get_theme_token('ajedrez_c2', '#181818'))
-            if colors is not None:  # None: "Transparentar vistas previas"
+            if colors is None:  # "Mostrar cuadrícula de transparencia" apagada
+                painter.fillRect(rect, glass_preview_fill(self, get_theme_token('fondo_principal', '#0a0a0a')))
+            else:
                 color_a, color_b = colors
                 size = self.SQUARE
                 cols = int(rect.width() // size) + 2
@@ -573,11 +575,9 @@ class _CheckerboardFrame(QFrame):
                         color = color_a if (row + col) % 2 == 0 else color_b
                         painter.fillRect(col * size, row * size, size, size, color)
         else:
-            # Sin medio (o solo audio): con imagen de fondo, translúcido como un panel.
-            bg_dark = get_theme_token('fondo_principal', '#0a0a0a')
-            fill = glass_preview_fill(self, bg_dark)
-            if fill is not None:
-                painter.fillRect(rect, fill)
+            # Sin medio (o solo audio): como cualquier panel, sea cual sea "Transparentar vistas
+            # previas", que es para cuando hay un medio.
+            painter.fillRect(rect, glass_fill(self, get_theme_token('fondo_principal', '#0a0a0a')))
 
         painter.setClipping(False)
         painter.setRenderHint(QPainter.Antialiasing, True)

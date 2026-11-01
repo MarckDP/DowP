@@ -51,7 +51,7 @@ def get_whats_new_items(version: str) -> list:
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Guarda y comparte tu apariencia"),
-                QCoreApplication.translate("WhatsNewContent", "Guarda colores, imágenes, opacidades, letra y redondez en un tema, y vuelve a todo eligiéndolo en la galería. Exporta el tema completo, solo sus colores o un paquete .dthmp con sus imágenes y fuentes. Si algo va a reemplazar tu aspecto, DowP guarda antes una copia como Apariencia anterior."),
+                QCoreApplication.translate("WhatsNewContent", "Guarda colores, imágenes, opacidades, letra y redondez en un tema, y vuelve a todo eligiéndolo en la galería. Exporta el tema completo, solo sus colores o un paquete .dthmp con sus imágenes y fuentes. Aplicar guarda todo en tu tema y Guardar como crea otro con el nombre que elijas."),
             ),
             (
                 QCoreApplication.translate("WhatsNewContent", "Imagen de fondo"),

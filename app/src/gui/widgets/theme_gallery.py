@@ -24,7 +24,7 @@ class ThemeCard(QWidget):
         self._tokens = tokens
         self._image = QPixmap(image).scaled(CARD_WIDTH, CARD_HEIGHT, Qt.KeepAspectRatioByExpanding,
                                             Qt.SmoothTransformation) if image else None
-        self.draft = self.saved = self.picking = self.picked = False
+        self.draft = self.saved = False
         self.deletable = deletable
         self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
         self.setCursor(Qt.PointingHandCursor)
@@ -42,10 +42,8 @@ class ThemeCard(QWidget):
                                           "QPushButton:hover { background-color: rgba(200, 40, 40, 220); }")
             self.btn_delete.clicked.connect(lambda: self.delete_clicked.emit(self.theme_id))
 
-    def set_marks(self, draft: bool, saved: bool, picking: bool, picked: bool):
-        self.draft, self.saved, self.picking, self.picked = draft, saved, picking, picked
-        if self.btn_delete:
-            self.btn_delete.setVisible(not picking)
+    def set_marks(self, draft: bool, saved: bool):
+        self.draft, self.saved = draft, saved
         self.update()
 
     def mouseReleaseEvent(self, event):
@@ -97,11 +95,6 @@ class ThemeCard(QWidget):
         p.setPen(QColor(get_theme_token("texto_principal", "#e0e0e0")))
         text = QFontMetrics(font).elidedText(self.name, Qt.ElideRight, int(frame.width() - 10))
         p.drawText(name_rect, Qt.AlignCenter, text)
-        if self.picking:
-            box = QRectF(frame.right() - 22, frame.top() + 5, 16, 16)
-            p.setPen(QPen(QColor("#ffffff"), 1))
-            p.setBrush(QColor(get_theme_token("acento_primario", "#B9E640")) if self.picked else QColor(0, 0, 0, 150))
-            p.drawRoundedRect(box, 4, 4)
         token, width = ("acento_primario", 2) if self.draft else ("texto_secundario", 2) if self.saved else ("borde_sutil", 1)
         p.setPen(QPen(QColor(get_theme_token(token, "#333333")), width))
         p.setBrush(Qt.NoBrush)
@@ -113,17 +106,15 @@ class ThemeGallery(QWidget):
     selected = Signal(str)
     delete_requested = Signal(list)
     action_requested = Signal(str, str)  # (accion, id)
-    picking_changed = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._signature = None
         self._cards = {}
         self._headers = []
-        self._picking = False
-        self._picked = set()
         self._draft = self._saved = None
         self._columns = 0
+        self.unsaved_ids = ()  # borradores: aún sin archivo, solo se pueden aplicar o eliminar
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         self.scroll = QScrollArea()
@@ -142,6 +133,7 @@ class ThemeGallery(QWidget):
         self.grid.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.scroll.setWidget(self.content)
         root.addWidget(self.scroll)
+        self.set_minimum_columns(3)
 
     def set_themes(self, items: list, tokens_for, image_for, deletable_for, draft: str, saved: str, force=False):
         """items: [(id, nombre, grupo)]. Se reconstruye solo si cambió la lista o el modo."""
@@ -166,12 +158,11 @@ class ThemeGallery(QWidget):
             header.setParent(None)
             header.deleteLater()
         self._cards, self._headers = {}, []
-        self._picked &= {i[0] for i in items}
         self._groups = {}
         for theme_id, name, group in items:
             self._groups.setdefault(group, []).append(theme_id)
             card = ThemeCard(theme_id, name, tokens_for(theme_id), image_for(theme_id), deletable_for(theme_id), self.content)
-            card.clicked.connect(self._on_card_clicked)
+            card.clicked.connect(self.selected)
             card.delete_clicked.connect(lambda t: self.delete_requested.emit([t]))
             card.menu_requested.connect(self._show_menu)
             self._cards[theme_id] = card
@@ -213,6 +204,13 @@ class ThemeGallery(QWidget):
         self.content.setMinimumHeight(height)
         self.content.resize(self.scroll.viewport().width(), max(height, self.scroll.viewport().height()))
 
+    def width_for_columns(self, columns: int) -> int:
+        # 20: el sitio de la barra (ver _fitting_columns).
+        return columns * CARD_WIDTH + (columns - 1) * self.grid.spacing() + 20 + self.grid.contentsMargins().right()
+
+    def set_minimum_columns(self, columns: int):
+        self.setMinimumWidth(self.width_for_columns(columns))
+
     def _fitting_columns(self) -> int:
         margins = self.grid.contentsMargins()
         spacing = self.grid.spacing()
@@ -229,30 +227,16 @@ class ThemeGallery(QWidget):
 
     def _update_marks(self):
         for theme_id, card in self._cards.items():
-            card.set_marks(theme_id == self._draft, theme_id == self._saved, self._picking, theme_id in self._picked)
-
-    def _on_card_clicked(self, theme_id: str):
-        if not self._picking:
-            self.selected.emit(theme_id)
-            return
-        if self._cards[theme_id].deletable:
-            self._picked ^= {theme_id}
-            self._update_marks()
-            self.picking_changed.emit(len(self._picked))
-
-    def set_picking(self, picking: bool):
-        self._picking = picking
-        self._picked = set()
-        self._update_marks()
-        self.picking_changed.emit(0)
-
-    def picked(self) -> list:
-        return sorted(self._picked)
+            card.set_marks(theme_id == self._draft, theme_id == self._saved)
 
     def _show_menu(self, theme_id: str, position):
         card = self._cards[theme_id]
         menu = QMenu(self)
         menu.addAction(self.tr("Aplicar"), lambda: self.action_requested.emit("apply", theme_id))
+        if theme_id in self.unsaved_ids:
+            menu.addAction(self.tr("Eliminar"), lambda: self.delete_requested.emit([theme_id]))
+            menu.exec(position)
+            return
         export = menu.addAction(self.tr("Exportar…"), lambda: self.action_requested.emit("export", theme_id))
         export.setEnabled(theme_id == self._saved and theme_id == self._draft)
         if not export.isEnabled():

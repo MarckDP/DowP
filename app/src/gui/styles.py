@@ -258,13 +258,18 @@ def _scaled_radius(px: float, shapes: dict) -> float:
         return px
     if px <= 4:
         return px * shapes["radio_chico"] / d["radio_chico"]
+    # Qt dibuja esquinas rectas si el radio pasa de la mitad del alto. Los controles chicos miden
+    # desde unos 20 px, y los de 11 y 12 ya son píldoras: no pueden crecer más.
     if px <= 7:
-        return px * shapes["radio"] / d["radio"]
-    if px in (8, 11, 12, 16):
+        return min(px * shapes["radio"] / d["radio"], MAX_CONTROL_RADIUS)
+    if px in (11, 12):
+        return min(px * shapes["radio_grande"] / d["radio_grande"], px)
+    if px in (8, 16):
         return px * shapes["radio_grande"] / d["radio_grande"]
     return px
 
 
+MAX_CONTROL_RADIUS = 10
 _SIZE_RE = re.compile(r"(?:^|[;{\s])(?:min-|max-)?(?:width|height)\s*:\s*(\d+)px")
 _BLOCK_RE = re.compile(r"\{[^{}]*\}")
 
@@ -693,24 +698,25 @@ def glass_previews_transparent(widget) -> bool:
 
 
 def glass_preview_fill(widget, color):
-    """Relleno alrededor del medio en una vista previa: el color translúcido como un
-    panel, o None (no pintar nada) con "Transparentar vistas previas"."""
-    return None if glass_previews_transparent(widget) else glass_fill(widget, color)
+    """Relleno alrededor del medio en una vista previa: sólido, o translúcido como un panel con
+    "Transparentar vistas previas"."""
+    from PySide6.QtGui import QColor
+    return glass_fill(widget, color) if glass_previews_transparent(widget) else QColor(color)
 
 
 def glass_checker_colors(widget, color_a, color_b):
-    """Los dos colores de la cuadrícula de transparencia para `widget`: translúcidos con
-    imagen de fondo (nunca menos que _GLASS_CHECKER_FLOOR), tal cual sin imagen, o None
-    con "Transparentar vistas previas"."""
+    """Los dos colores de la cuadrícula de transparencia para `widget`: sólidos, translúcidos
+    con "Transparentar vistas previas" (nunca menos que _GLASS_CHECKER_FLOOR), o None si está
+    apagada "Mostrar cuadrícula de transparencia"."""
     from PySide6.QtGui import QColor
-    a, b = QColor(color_a), QColor(color_b)
-    if widget is None or _cached_glass_alpha() is None or not _inside_glass_area(widget):
-        return a, b
-    if glass_previews_transparent(widget):
+    from core.utils.background_images import get_preview_checker
+    if widget is not None and not get_preview_checker():
         return None
-    f = max(_cached_glass_alpha(), _GLASS_CHECKER_FLOOR)
-    a.setAlpha(round(255 * f))
-    b.setAlpha(round(255 * f))
+    a, b = QColor(color_a), QColor(color_b)
+    if glass_previews_transparent(widget):
+        f = max(_cached_glass_alpha(), _GLASS_CHECKER_FLOOR)
+        a.setAlpha(round(255 * f))
+        b.setAlpha(round(255 * f))
     return a, b
 
 
@@ -1365,7 +1371,9 @@ def load_stylesheet(theme_name: str = None, font_family: str = None, tokens: dic
         return ""
 
     # 3. Inyectar tipografía activa
-    active_font = font_family or get_active_font_family(theme_name)
+    # Va dentro de la hoja: un nombre con comillas o llaves podría salirse de ella.
+    from core.utils.theme_io import clean_font_name
+    active_font = clean_font_name(font_family or get_active_font_family(theme_name)) or system_ui_family()
     tokens["fuente_principal"] = active_font
     tokens["fuente_sistema"] = system_ui_family()
 
@@ -1751,8 +1759,8 @@ def create_checkerboard_pixmap(width: int, height: int, square_size: int = 10, w
     """
     Genera una cuadrícula de transparencia (patrón de ajedrez) para diferenciar fondos transparentes.
     Utiliza los tokens de color del tema activo ('ajedrez_c1', 'ajedrez_c2').
-    `widget`: quién la va a mostrar. Con imagen de fondo sale translúcida, o vacía con
-    "Transparentar vistas previas" (ver glass_checker_colors).
+    `widget`: quién la va a mostrar. Translúcida con "Transparentar vistas previas", o vacía
+    con la cuadrícula apagada (ver glass_checker_colors).
     """
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QPixmap, QPainter
