@@ -216,6 +216,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// ── Un tema de la comunidad en la columna lateral ─────────────────────────
+// Sin galería o sin temas, la ventana se queda solo con su texto y su enlace.
+document.addEventListener('DOMContentLoaded', () => {
+    const GALERIA = "https://marckdp.github.io/dowp-temas/";
+    fetch(`${GALERIA}temas.json`, { cache: "no-cache" })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((temas) => {
+            if (!Array.isArray(temas) || !temas.length) return;
+            const tema = temas[Math.floor(Math.random() * temas.length)];
+            const id = encodeURIComponent(tema.id);
+            const img = document.getElementById('temas-lateral-img');
+            img.src = `${GALERIA}temas/${id}/vista.jpg`;
+            document.getElementById('temas-lateral-nombre').textContent = tema.nombre;
+            const link = document.getElementById('temas-lateral-tema');
+            link.href = `temas.html#tema=${id}`;
+            link.hidden = false;
+        })
+        .catch(() => {});
+});
+
 // ── Contador de descargas (misma respuesta de GitHub) ─────────────────────
 // Suma las descargas de los instaladores (.exe/.dmg) de todos los releases.
 // Si la API falla o se agota el cupo, el contador se queda en "------".
@@ -249,14 +269,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const caption = document.getElementById('viewer-caption');
     const title = document.getElementById('viewer-title');
 
-    document.querySelectorAll('.shot').forEach((shot) => {
+    const shots = [...document.querySelectorAll('.shot')];
+    let current = 0;
+
+    function showShot(index) {
+        current = (index + shots.length) % shots.length;
+        const shot = shots[current];
+        img.src = shot.dataset.src;
+        img.alt = shot.querySelector('img').alt;
+        caption.textContent = shot.dataset.caption || '';
+        title.textContent = `${shot.querySelector('span').textContent} (${current + 1}/${shots.length})`;
+        // La siguiente queda en caché: el cambio se siente inmediato.
+        new Image().src = shots[(current + 1) % shots.length].dataset.src;
+    }
+
+    shots.forEach((shot, index) => {
         shot.addEventListener('click', () => {
-            img.src = shot.dataset.src;
-            img.alt = shot.querySelector('img').alt;
-            caption.textContent = shot.dataset.caption || '';
-            title.textContent = shot.querySelector('span').textContent;
+            showShot(index);
             viewer.showModal();
         });
+    });
+
+    document.getElementById('viewer-prev').addEventListener('click', () => showShot(current - 1));
+    document.getElementById('viewer-next').addEventListener('click', () => showShot(current + 1));
+    viewer.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') showShot(current - 1);
+        if (e.key === 'ArrowRight') showShot(current + 1);
+    });
+
+    // En móvil, deslizar con el dedo.
+    let touchStart = null;
+    img.addEventListener('touchstart', (e) => { touchStart = e.changedTouches[0].clientX; }, { passive: true });
+    img.addEventListener('touchend', (e) => {
+        if (touchStart === null) return;
+        const distance = e.changedTouches[0].clientX - touchStart;
+        touchStart = null;
+        if (Math.abs(distance) > 50) showShot(current + (distance < 0 ? 1 : -1));
     });
 
     document.getElementById('viewer-close').addEventListener('click', () => viewer.close());

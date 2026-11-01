@@ -393,29 +393,12 @@ pre {
 .under-construction { color: var(--warn); }
 
 /* ── Temas ─────────────────────────────────────────────────────────── */
-.temas-tarjeta-portada {
-    margin: 26px 0 0 auto;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 14px;
-    text-align: center;
-    text-decoration: none;
-    color: var(--text);
-    background: var(--panel-2);
-    border: 2px solid;
-    border-color: var(--lime) var(--deep) var(--deep) var(--lime);
-    box-shadow: 4px 4px 0 #03280f;
-}
-.temas-tarjeta-portada strong {
-    font-family: "Silkscreen", monospace;
-    font-size: 18px;
-    font-weight: 400;
-    color: var(--lime);
-}
-.temas-tarjeta-portada span { font-size: 18px; }
-.temas-tarjeta-portada:hover { background: var(--panel); color: var(--lime); }
+.temas-lateral a { display: block; }
+.temas-lateral a[hidden] { display: none; }
+.temas-lateral img { display: block; width: 100%; height: auto; border: 1px solid var(--deep); }
+.temas-lateral a:hover img { border-color: var(--lime); }
+.temas-lateral span { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.ticker a { color: inherit; }
 
 .temas-pestanas { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
 .temas-pestana {
@@ -562,6 +545,24 @@ pre {
 .viewer::backdrop { background: rgba(0, 0, 0, .8); }
 
 .viewer img { max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid #000; }
+.viewer-foto { position: relative; }
+.viewer-flecha {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font: inherit;
+    font-size: 22px;
+    line-height: 1;
+    padding: 14px 10px;
+    color: var(--ink);
+    background: var(--lime);
+    border: 2px solid var(--deep);
+    cursor: pointer;
+    opacity: .85;
+}
+.viewer-flecha:hover, .viewer-flecha:focus-visible { opacity: 1; }
+.viewer-anterior { left: 6px; }
+.viewer-siguiente { right: 6px; }
 
 .win-close {
     font: inherit;
@@ -776,7 +777,6 @@ pre {
         order: 3;
     }
     .masthead { gap: 14px; padding-top: 20px; flex-wrap: wrap; }
-    .temas-tarjeta-portada { margin: 0; width: 100%; }
     /* En móvil el subtítulo ocupa dos líneas: el logo se alinea solo con el título. */
     .masthead-logo { width: var(--title-size); height: var(--title-size); }
     .masthead-sub { font-size: 19px; line-height: 22px; }

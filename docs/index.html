@@ -44,16 +44,12 @@
         <div class="lang-selector">
             <a href="#" data-lang="es">ES</a> | <a href="#" data-lang="en">EN</a> | <a href="#" data-lang="pt">PT</a>
         </div>
-        <a href="temas.html" class="temas-tarjeta-portada">
-            <strong data-i18n="temas_card_title">★ TEMAS ★</strong>
-            <span data-i18n="temas_card_text">descarga o comparte el tuyo »</span>
-        </a>
     </header>
 
     <div class="ticker" aria-label="Novedades">
         <div class="ticker-track">
-            <span data-i18n="ticker_text">★ ¡DowP <span class="js-version">...</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
-            <span aria-hidden="true" data-i18n="ticker_text">★ ¡DowP <span class="js-version">...</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★</span>
+            <span data-i18n="ticker_text">★ ¡DowP <span class="js-version">...</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★ <a href="temas.html">temas de la comunidad</a> ★</span>
+            <span aria-hidden="true" data-i18n="ticker_text">★ ¡DowP <span class="js-version">...</span> YA SALIÓ! ★ interfaz nueva ★ modo rápido ★ buscador integrado ★ IA para imagen y video ★ ahora en inglés y portugués ★ se actualiza solo ★ <a href="temas.html">temas de la comunidad</a> ★</span>
         </div>
     </div>
 
@@ -74,6 +70,18 @@
                     <li><a href="https://github.com/MarckDP/DowP" target="_blank" rel="noopener">» GitHub ↗</a></li>
                 </ul>
             </nav>
+
+            <section class="win">
+                <div class="win-bar"><span data-i18n="temas_side_title">Temas</span></div>
+                <div class="win-body center temas-lateral">
+                    <a id="temas-lateral-tema" href="temas.html" hidden>
+                        <img id="temas-lateral-img" alt="" width="640" height="360">
+                        <span id="temas-lateral-nombre"></span>
+                    </a>
+                    <p class="tiny" data-i18n="temas_side_text">Cambia el aspecto de DowP con temas de la comunidad.</p>
+                    <a href="temas.html" data-i18n="temas_side_all">Ver todos »</a>
+                </div>
+            </section>
 
             <section class="win">
                 <div class="win-bar"><span data-i18n="counter_title">Contador</span></div>
@@ -319,7 +327,11 @@
                 <button class="win-close" id="viewer-close" aria-label="Cerrar">×</button>
             </div>
             <div class="win-body center">
-                <img id="viewer-img" src="" alt="">
+                <div class="viewer-foto">
+                    <button type="button" class="viewer-flecha viewer-anterior" id="viewer-prev" aria-label="Captura anterior">◀</button>
+                    <img id="viewer-img" src="" alt="">
+                    <button type="button" class="viewer-flecha viewer-siguiente" id="viewer-next" aria-label="Captura siguiente">▶</button>
+                </div>
                 <p id="viewer-caption" class="small"></p>
             </div>
         </div>

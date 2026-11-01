@@ -22,7 +22,7 @@ const translations = {
         "masthead_sub": "download · organize · <span class=\"nowrap\">process · <span class=\"blink\">_</span></span>",
         
         // Ticker
-        "ticker_text": "★ DowP <span class=\"js-version\">...</span> IS OUT! ★ new interface ★ quick mode ★ integrated search ★ AI for image and video ★ now in english and portuguese ★ self-updating ★",
+        "ticker_text": "★ DowP <span class=\"js-version\">...</span> IS OUT! ★ new interface ★ quick mode ★ integrated search ★ AI for image and video ★ now in english and portuguese ★ self-updating ★ <a href=\"temas.html\">community themes</a> ★",
         
         // Stats & Support
         "counter_title": "Counter",
@@ -153,8 +153,9 @@ const translations = {
         "temas_includes_preview": "empty preview image",
         "temas_includes_colors": "Colors only.",
         "nav_themes": "» Themes",
-        "temas_card_title": "★ THEMES ★",
-        "temas_card_text": "download or share yours »",
+        "temas_side_title": "Themes",
+        "temas_side_text": "Change how DowP looks with community themes.",
+        "temas_side_all": "See all »",
         "temas_sub": "themes · community · <span class=\"nowrap\">share · <span class=\"blink\">_</span></span>",
         "temas_gallery_title": "Community themes",
         "temas_gallery_intro": "Download a theme and import it in DowP: <strong>Settings → Appearance → Import</strong>.",
@@ -209,7 +210,7 @@ const translations = {
         "masthead_sub": "baixa · organiza · <span class=\"nowrap\">processa · <span class=\"blink\">_</span></span>",
         
         // Ticker
-        "ticker_text": "★ DowP <span class=\"js-version\">...</span> JÁ SAIU! ★ interface nova ★ modo rápido ★ busca integrada ★ IA para imagem e vídeo ★ agora em inglês e português ★ atualiza sozinho ★",
+        "ticker_text": "★ DowP <span class=\"js-version\">...</span> JÁ SAIU! ★ interface nova ★ modo rápido ★ busca integrada ★ IA para imagem e vídeo ★ agora em inglês e português ★ atualiza sozinho ★ <a href=\"temas.html\">temas da comunidade</a> ★",
         
         // Stats & Support
         "counter_title": "Contador",
@@ -340,8 +341,9 @@ const translations = {
         "temas_includes_preview": "imagem de prévia vazia",
         "temas_includes_colors": "Somente cores.",
         "nav_themes": "» Temas",
-        "temas_card_title": "★ TEMAS ★",
-        "temas_card_text": "baixe ou compartilhe o seu »",
+        "temas_side_title": "Temas",
+        "temas_side_text": "Mude a aparência do DowP com temas da comunidade.",
+        "temas_side_all": "Ver todos »",
         "temas_sub": "temas · comunidade · <span class=\"nowrap\">compartilhe · <span class=\"blink\">_</span></span>",
         "temas_gallery_title": "Temas da comunidade",
         "temas_gallery_intro": "Baixe um tema e importe no DowP: <strong>Configurações → Aparência → Importar</strong>.",
