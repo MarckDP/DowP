@@ -15,7 +15,9 @@ import sys
 import time
 
 from core.logger.logger_manager import logger
-from core.updater.journal import STATUS_DONE, STATUS_ROLLED_BACK, journal_path, read_journal
+from core.updater.journal import STATUS_DONE, STATUS_ROLLED_BACK, clear_journal, journal_path, read_journal
+from core.updater.update_checker import version_key
+from core.version import APP_VERSION
 
 HELPER_NAME_WINDOWS = "DowP_Updater.exe"
 HELPER_NAME_POSIX = "DowP_Updater"
@@ -169,6 +171,13 @@ def resume_pending_swap_at(state_dir: str, install_dir: str) -> bool:
     instalacion falso sin necesitar un build congelado real."""
     journal = read_journal(state_dir)
     if journal is None or journal.get("status") in (STATUS_DONE, STATUS_ROLLED_BACK):
+        return False
+
+    # Si ya se instalo una version posterior con el instalador, aplicar esto la bajaria.
+    target = journal.get("target_version")
+    if target and version_key(APP_VERSION) > version_key(target):
+        logger.warning(f"Updater: se descarta un swap a medias hacia {target}: ya esta instalada la {APP_VERSION}.")
+        clear_journal(state_dir)
         return False
 
     logger.warning("Updater: se encontro un swap sin terminar (corte a mitad de camino) -- reanudando.")

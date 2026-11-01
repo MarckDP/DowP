@@ -1883,227 +1883,227 @@ Do you want to continue?</translation>
 <context>
     <name>AppearancePage</name>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="79"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="80"/>
         <source>Apariencia</source>
         <translation>Appearance</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="160"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="161"/>
         <source>Modo</source>
         <translation>Mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="165"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="166"/>
         <source>Oscuro</source>
         <translation>Dark</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="166"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="167"/>
         <source>Claro</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="167"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="168"/>
         <source>Según el sistema</source>
         <translation>Follow system</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="190"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="191"/>
         <source>Tipografía / Fuente</source>
         <translation>Typography / Font</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="198"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="199"/>
         <source>Abrir carpeta de fuentes personalizadas (%APPDATA%/DowP2/fonts)</source>
         <translation>Open the custom fonts folder (%APPDATA%/DowP2/fonts)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="209"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="210"/>
         <source>Tamaño de texto (requiere reinicio para ver todo)</source>
         <translation>Text size (requires restart to apply completely)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="305"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1059"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="306"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1060"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1076"/>
         <source>Aplicar</source>
         <translation>Apply</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="226"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="227"/>
         <source>⚠️ Tamaños mayores a 18px pueden causar que algunos textos y botones se vean cortados.</source>
         <translation>⚠️ Sizes larger than 18px may cause some text and buttons to look clipped.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="156"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="157"/>
         <source>Colores</source>
         <translation>Colors</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="240"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="241"/>
         <source>Redondez</source>
         <translation>Roundness</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="245"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="246"/>
         <source>Qué tan redondeadas son las esquinas de botones, campos, menús y paneles.</source>
         <translation>How rounded the corners of buttons, fields, menus and panels are.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="249"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="250"/>
         <source>Según el tema</source>
         <translation>Follow theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="269"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="270"/>
         <source>Si alguna parte no cambió de aspecto, reiniciar DowP la actualiza.</source>
         <translation>If something didn&apos;t change its look, restarting DowP will update it.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="272"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="273"/>
         <source>Reiniciar ahora</source>
         <translation>Restart now</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="838"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="839"/>
         <source>Se guardó en:
 {0}</source>
         <translation>Saved to:
 {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="300"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="301"/>
         <source>Descartar</source>
         <translation>Discard</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="107"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="108"/>
         <source>Crear desde imagen</source>
         <translation>Create from image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="112"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="113"/>
         <source>Importar</source>
         <translation>Import</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="294"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="295"/>
         <source>Exportar</source>
         <translation>Export</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="576"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="580"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="599"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="661"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1397"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="577"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="581"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="600"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="662"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1398"/>
         <source>Imagen de fondo</source>
         <translation>Background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="410"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="411"/>
         <source>Fondo general</source>
         <translation>Main background</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="83"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="84"/>
         <source>Abre la galería en tu navegador. Descarga un tema y usa Importar.</source>
         <translation>Opens the gallery in your browser. Download a theme and use Import.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="186"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="187"/>
         <source>Texto</source>
         <translation>Text</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="235"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="236"/>
         <source>Interfaz</source>
         <translation>Interface</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="288"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="289"/>
         <source>Guardar como…</source>
         <translation>Save as…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="291"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="292"/>
         <source>Guardar lo que ves en este tema o en uno nuevo</source>
         <translation>Save what you see in this theme or in a new one</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="389"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="503"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="390"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="504"/>
         <source>Relleno y cuadrícula semitransparentes: tu fondo se ve a través. Apagada, son sólidos.</source>
         <translation>Semi-transparent fill and grid: your background shows through. When off, they are solid.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="395"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="396"/>
         <source>Muestra las zonas transparentes de una imagen sobre una cuadrícula. Apagada, se ven sobre el relleno.</source>
         <translation>Shows transparent areas of an image over a grid. When off, they appear over the fill.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="397"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="398"/>
         <source>Mostrar cuadrícula de transparencia</source>
         <translation>Show transparency grid</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="411"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="412"/>
         <source>Vistas previas vacías</source>
         <translation>Empty previews</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="413"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="414"/>
         <source>Lugar</source>
         <translation>Place</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="417"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1089"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="418"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1090"/>
         <source>Elegir…</source>
         <translation>Choose…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="421"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="422"/>
         <source>Quitar</source>
         <translation>Remove</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="425"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="426"/>
         <source>Imagen</source>
         <translation>Image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="433"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="434"/>
         <source>Opacidad de la imagen</source>
         <translation>Image opacity</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="437"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
         <source>Rellenar</source>
         <translation>Fill</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="437"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
         <source>Ajustar</source>
         <translation>Fit</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="439"/>
         <source>Estirar</source>
         <translation>Stretch</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="438"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="439"/>
         <source>Tamaño original</source>
         <translation>Original size</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="439"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="440"/>
         <source>Mosaico</source>
         <translation>Tile</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="442"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="443"/>
         <source>Rellenar: cubre todo sin deformar; recorta lo que sobra.
 Ajustar: la imagen entera siempre visible.
 Estirar: cubre todo deformando la imagen.
@@ -2116,208 +2116,208 @@ Original size: no scaling; ideal for a character or a logo.
 Tile: repeats the image.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="448"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="449"/>
         <source>Ajuste</source>
         <translation>Fit mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
         <source>Arriba</source>
         <translation>Top</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="456"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="457"/>
         <source>Centro</source>
         <translation>Center</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="452"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
         <source>Abajo</source>
         <translation>Bottom</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="454"/>
         <source>izquierda</source>
         <translation>left</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="454"/>
         <source>centro</source>
         <translation>center</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="453"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="454"/>
         <source>derecha</source>
         <translation>right</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="458"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="459"/>
         <source>Qué parte queda a la vista al recortar, o dónde se ubica la imagen.</source>
         <translation>Which part stays visible when cropping, or where the image is placed.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="460"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="461"/>
         <source>Posición</source>
         <translation>Position</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="464"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="465"/>
         <source>Desenfocar la imagen</source>
         <translation>Blur the image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="383"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="501"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="384"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="502"/>
         <source>Cuánto tapan los paneles a la imagen. El texto, los botones y los campos siguen sólidos.</source>
         <translation>How much the panels cover the image. Text, buttons and fields stay solid.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="385"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="386"/>
         <source>Opacidad de los paneles</source>
         <translation>Panel opacity</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="391"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="392"/>
         <source>Transparentar vistas previas</source>
         <translation>Transparent previews</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="474"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="475"/>
         <source>Ninguna</source>
         <translation>None</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="567"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="568"/>
         <source>Elegir imagen de fondo</source>
         <translation>Choose background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="403"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="568"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="404"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="569"/>
         <source>Imágenes</source>
         <translation>Images</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="505"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="506"/>
         <source>Necesita una imagen de fondo general</source>
         <translation>Needs a general background image</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="577"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="599"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="662"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1397"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="578"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="600"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="663"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1398"/>
         <source>No se pudo abrir la imagen: {0}</source>
         <translation>Couldn&apos;t open the image: {0}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="581"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="582"/>
         <source>Las imágenes animadas todavía no se admiten como fondo: se usa su primer fotograma.</source>
         <translation>Animated images aren&apos;t supported as backgrounds yet: their first frame is used.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1285"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1286"/>
         <source>Temas de DowP</source>
         <translation>DowP themes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1286"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1287"/>
         <source>Mis temas</source>
         <translation>My themes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1320"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1321"/>
         <source>No se pudo duplicar el tema</source>
         <translation>The theme could not be duplicated</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="120"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="121"/>
         <source>Abrir carpeta de temas</source>
         <translation>Open themes folder</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="883"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="884"/>
         <source>{0} (sin aplicar)</source>
         <translation>{0} (not applied)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="732"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="745"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="774"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="781"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="733"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="746"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="775"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="782"/>
         <source>Importar tema</source>
         <translation>Import theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="732"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="733"/>
         <source>Temas de DowP (*.json *.dthmp)</source>
         <translation>DowP themes (*.json *.dthmp)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="791"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="792"/>
         <source>Se importó el tema «{0}» y ya está aplicado. Ya puedes borrar el archivo original.</source>
         <translation>Theme “{0}” was imported and applied. You can now delete the original file.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="815"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="816"/>
         <source>Paquetes de tema de DowP (*.dthmp)</source>
         <translation>DowP theme packages (*.dthmp)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="816"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="817"/>
         <source>Temas de DowP (*.json)</source>
         <translation>DowP themes (*.json)</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="741"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="752"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="770"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="787"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="742"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="753"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="771"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="788"/>
         <source>No se pudo importar el tema</source>
         <translation>Couldn&apos;t import the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="746"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="775"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1256"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="747"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="776"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1257"/>
         <source>Ya tienes un tema llamado «{0}». ¿Quieres reemplazarlo?</source>
         <translation>You already have a theme called “{0}”. Do you want to replace it?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="755"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="756"/>
         <source>Se importó el tema «{0}» y ya está aplicado.</source>
         <translation>The theme “{0}” was imported and is now applied.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="757"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="758"/>
         <source>Era un tema de DowP 1: se convirtió al formato nuevo. Lo que no tiene equivalente se toma del tema DowP.</source>
         <translation>It was a DowP 1 theme: it was converted to the new format. Anything without an equivalent is taken from the DowP theme.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="761"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="762"/>
         <source>Se ignoraron {0} colores no válidos: {1}</source>
         <translation>{0} invalid colors were ignored: {1}</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="763"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="790"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="764"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="791"/>
         <source>Tema importado</source>
         <translation>Theme imported</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="782"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="783"/>
         <source>Este tema trae sus imágenes y ajustes. ¿Usarlos también?</source>
         <translation>This theme includes its images and settings. Use them too?</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="818"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="847"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="819"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="848"/>
         <source>Exportar tema</source>
         <translation>Export theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="829"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="830"/>
         <source>Se guardó en:
 {0}
 
@@ -2328,23 +2328,23 @@ Pesa {1:.1f} MB.</source>
 It weighs {1:.1f} MB.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="836"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="837"/>
         <source>No se pudo exportar el tema</source>
         <translation>Couldn&apos;t export the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="828"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="838"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="829"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="839"/>
         <source>Tema exportado</source>
         <translation>Theme exported</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="81"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="82"/>
         <source>Temas de la comunidad</source>
         <translation>Community themes</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="848"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="849"/>
         <source>El paquete no cabe en {0} MB: la fuente ocupa {1:.1f} MB.
 
 ¿Exportarlo sin la fuente? Quien lo importe verá la letra predeterminada.</source>
@@ -2353,85 +2353,85 @@ It weighs {1:.1f} MB.</translation>
 Export it without the font? Whoever imports it will see the default font.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1061"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1062"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1076"/>
         <source>Aplicar y crear tema</source>
         <translation>Apply and create theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1063"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1064"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1076"/>
         <source>Aplicar y guardar</source>
         <translation>Apply and save</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1064"/>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1075"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1065"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1076"/>
         <source>Aplicar y guardar como</source>
         <translation>Apply and save as</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1089"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1090"/>
         <source>Comprimiendo…</source>
         <translation>Compressing…</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1102"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1103"/>
         <source>Colores del modo claro: el modo oscuro conserva los suyos.</source>
         <translation>Light mode colors: dark mode keeps its own.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1103"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1104"/>
         <source>Colores del modo oscuro: el modo claro conserva los suyos.</source>
         <translation>Dark mode colors: light mode keeps its own.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1234"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1235"/>
         <source>Guardar como</source>
         <translation>Save as</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1246"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1247"/>
         <source>{0} personalizado</source>
         <translation>{0} custom</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1355"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1356"/>
         <source>No se pudo eliminar el tema</source>
         <translation>Couldn&apos;t delete the theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="892"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="893"/>
         <source>Este tema tiene un solo modo</source>
         <translation>This theme has only one mode</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="898"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="899"/>
         <source>Por defecto del tema</source>
         <translation>Theme default</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="938"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="939"/>
         <source>No se pudo reiniciar</source>
         <translation>Could not restart</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="939"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="940"/>
         <source>Cierra y vuelve a abrir DowP a mano para aplicar el tema por completo.</source>
         <translation>Close and reopen DowP manually to fully apply the theme.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1093"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1094"/>
         <source>Exportar el tema actual</source>
         <translation>Export the current theme</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1094"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1095"/>
         <source>Aplica o descarta los cambios del tema para exportarlo</source>
         <translation>Apply or discard the theme changes to export it</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1234"/>
+        <location filename="../../gui/tabs/settings/pages/appearance_page.py" line="1235"/>
         <source>No se pudo guardar: {0}</source>
         <translation>Could not save: {0}</translation>
     </message>
@@ -12473,6 +12473,8 @@ You can download it again whenever you want.</translation>
     </message>
     <message>
         <location filename="../../gui/tabs/settings/settings_view.py" line="335"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="405"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="421"/>
         <source>Descargar instalador</source>
         <translation>Download installer</translation>
     </message>
@@ -12482,9 +12484,44 @@ You can download it again whenever you want.</translation>
         <translation>This version can&apos;t update itself: download and install the new version from the releases page.</translation>
     </message>
     <message>
-        <location filename="../../gui/tabs/settings/settings_view.py" line="345"/>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="347"/>
         <source>Actualizar</source>
         <translation>Update</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="407"/>
+        <source>La actualización automática no funcionó: descarga la versión completa e instálala.</source>
+        <translation>The automatic update did not work: download the full version and install it.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="416"/>
+        <source>No se pudo actualizar</source>
+        <translation>Could not update</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="418"/>
+        <source>No se pudo completar la actualización. Puedes reintentarla o descargar el instalador completo de la nueva versión.</source>
+        <translation>The update could not be completed. You can try again or download the full installer of the new version.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="422"/>
+        <source>Reintentar más tarde</source>
+        <translation>Try again later</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="464"/>
+        <source>Se abrirá el instalador. Cierra DowP y arrastra DowP a Aplicaciones para reemplazarlo.</source>
+        <translation>The installer will open. Close DowP and drag DowP to Applications to replace it.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="466"/>
+        <source>Se abrirá la carpeta con la descarga. Cierra DowP y extrae el archivo sobre tu instalación.</source>
+        <translation>The folder with the download will open. Close DowP and extract the file over your installation.</translation>
+    </message>
+    <message>
+        <location filename="../../gui/tabs/settings/settings_view.py" line="467"/>
+        <source>Instalador descargado</source>
+        <translation>Installer downloaded</translation>
     </message>
 </context>
 <context>

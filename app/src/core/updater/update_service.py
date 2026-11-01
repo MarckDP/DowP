@@ -50,6 +50,28 @@ class UpdateCheckWorker(QThread):
         self.finished.emit(info if info.available else None)
 
 
+class InstallerDownloadWorker(QThread):
+    """Baja el instalador completo cuando la actualizacion por chunks no se puede usar."""
+    progress = Signal(int, int)
+    finished = Signal(str, str)  # ruta del instalador (vacia si fallo), mensaje de error
+
+    def __init__(self, update_info: UpdateInfo, dest_dir: str, parent=None):
+        super().__init__(parent)
+        self.update_info = update_info
+        self.dest_dir = dest_dir
+
+    def run(self):
+        from core.updater.installer_fallback import download_installer, find_installer
+        try:
+            asset = find_installer(UPDATE_REPO, self.update_info.remote_version, self.update_info.platform_key)
+            path = download_installer(asset, self.dest_dir, progress_callback=self.progress.emit)
+        except Exception as e:
+            logger.error(f"Updater: fallo descargando el instalador: {e}")
+            self.finished.emit("", str(e))
+            return
+        self.finished.emit(path, "")
+
+
 class UpdateDownloadWorker(QThread):
     """Descarga (download_update, pieza 2) los archivos de un UpdateInfo ya
     detectado. progress emite (bytes completados, bytes totales) en bytes de

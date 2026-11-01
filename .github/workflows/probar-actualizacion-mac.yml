@@ -1,0 +1,66 @@
+name: Probar actualizacion en Mac arm64 (manual)
+
+# Instala el .dmg de una version ya publicada y la actualiza a la ultima estable, con
+# el codigo de cliente de esa version y su DowP_Updater real. Sin permisos de escritura
+# ni secretos: no publica nada, se puede lanzar las veces que haga falta.
+# Si falla, el log de DowP queda como artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: "Version instalada de partida"
+        type: string
+        default: "1.9.3"
+
+permissions:
+  contents: read
+
+jobs:
+  probar:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DESDE: ${{ inputs.desde }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.desde }}
+          path: cliente
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar lo que necesita el codigo de cliente
+        run: pip install PySide6-Essentials requests zstandard pycryptodomex
+
+      - name: Instalar el .dmg de partida
+        run: |
+          curl -fsSL -o inicial.dmg "https://github.com/${{ github.repository }}/releases/download/v$DESDE/DowP-$DESDE-arm64.dmg"
+          hdiutil attach inicial.dmg -nobrowse -mountpoint /tmp/dowp_inicial
+          ditto /tmp/dowp_inicial/DowP.app /Applications/DowP.app
+          hdiutil detach /tmp/dowp_inicial
+          codesign --verify --deep --strict /Applications/DowP.app
+
+      - name: Actualizar y comprobar
+        run: |
+          python tools/updater/probar_actualizacion_mac.py \
+            --app /Applications/DowP.app \
+            --client-src cliente/app/src \
+            --report "$RUNNER_TEMP/informe"
+
+      - name: Guardar el log de DowP
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/informe"
+          cp -R "$HOME/Library/Application Support/DowP2/logs" "$RUNNER_TEMP/informe/" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: informe-actualizacion-${{ inputs.desde }}
+          path: ${{ runner.temp }}/informe
+          retention-days: 7

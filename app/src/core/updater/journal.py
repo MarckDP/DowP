@@ -65,6 +65,8 @@ def build_journal(update_info, install_dir: str, staging_dir: str, state_dir: st
         "status": STATUS_PENDING,
         "install_dir": install_dir,
         "relaunch_exe": relaunch_exe,
+        # Para saber si este journal sigue siendo aplicable (ver launcher y settings_view).
+        "target_version": update_info.remote_version,
         # Para que el helper pueda vaciar el staging tras confirmar el swap (ver
         # swap_executor.purge_staging).
         "staging_dir": staging_dir,

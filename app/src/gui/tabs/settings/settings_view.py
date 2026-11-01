@@ -2,12 +2,12 @@ import os
 import sys
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                                 QStackedWidget, QButtonGroup, QPushButton, QFrame, QApplication)
-from PySide6.QtCore import Qt, Signal, QUrl
+                                 QStackedWidget, QButtonGroup, QPushButton, QFrame, QApplication, QMessageBox)
+from PySide6.QtCore import Qt, Signal, QStandardPaths, QUrl
 from PySide6.QtGui import QDesktopServices
 from core.utils.i18n import logger
 
-from core.updater.update_service import UpdateCheckWorker, UpdateDownloadWorker
+from core.updater.update_service import InstallerDownloadWorker, UpdateCheckWorker, UpdateDownloadWorker
 from core.version import UPDATE_REPO, get_display_version
 from gui.widgets.circular_progress import CircularProgress
 
@@ -340,6 +340,8 @@ class SettingsTab(QWidget):
             self._apply_update_button_style(gradient=True)
             self.version_label.setText(f"{update_info.current_version} - <b><i>{update_info.remote_version}</i></b>")
             self.update_status_changed.emit(True)
+        elif self._previous_swap_failed(update_info):
+            self._offer_installer(update_info)
         else:
             self._update_state = "available"
             self.update_button.setText(self.tr("Actualizar"))
@@ -352,7 +354,7 @@ class SettingsTab(QWidget):
         if self._update_state == "available":
             self.start_update_download()
         elif self._update_state == "full_install":
-            QDesktopServices.openUrl(QUrl(f"https://github.com/{UPDATE_REPO}/releases"))
+            self.start_installer_download()
         elif self._update_state == "idle":
             self.start_update_check()
         # "checking"/"downloading": el boton esta deshabilitado u oculto, no deberia poder llegar aqui
@@ -383,8 +385,91 @@ class SettingsTab(QWidget):
             self._update_state = "available"
             self.update_progress.hide()
             self.update_button.show()
+            self._ask_installer_after_failure()
             return
         self._apply_update()
+
+    def _previous_swap_failed(self, update_info) -> bool:
+        """El ultimo intento hacia esta misma version se deshizo: repetirlo fallaria igual."""
+        from core.updater import journal as journal_mod
+        from core.utils.paths import get_updater_state_dir
+        try:
+            journal = journal_mod.read_journal(get_updater_state_dir())
+        except (OSError, ValueError):
+            return False
+        return bool(journal and journal.get("status") == journal_mod.STATUS_ROLLED_BACK
+                    and journal.get("target_version") == update_info.remote_version)
+
+    def _offer_installer(self, update_info):
+        self._update_state = "full_install"
+        self.update_button.setText(self.tr("Descargar instalador"))
+        self.update_button.setToolTip(self.tr(
+            "La actualización automática no funcionó: descarga la versión completa e instálala."
+        ))
+        self._apply_update_button_style(gradient=True)
+        self.version_label.setText(f"{update_info.current_version} - <b><i>{update_info.remote_version}</i></b>")
+        self.update_status_changed.emit(True)
+
+    def _ask_installer_after_failure(self):
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle(self.tr("No se pudo actualizar"))
+        box.setText(self.tr(
+            "No se pudo completar la actualización. Puedes reintentarla o descargar el "
+            "instalador completo de la nueva versión."
+        ))
+        download = box.addButton(self.tr("Descargar instalador"), QMessageBox.AcceptRole)
+        box.addButton(self.tr("Reintentar más tarde"), QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is download:
+            self.start_installer_download()
+
+    def start_installer_download(self):
+        if self._update_info is None:
+            QDesktopServices.openUrl(QUrl(f"https://github.com/{UPDATE_REPO}/releases"))
+            return
+        self._state_before_installer = self._update_state
+        self._update_state = "downloading"
+        self.update_button.hide()
+        self.update_progress.setValue(0)
+        self.update_progress.show()
+        downloads = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation) or os.path.expanduser("~")
+        self._installer_worker = InstallerDownloadWorker(self._update_info, downloads)
+        self._installer_worker.progress.connect(self._on_download_progress)
+        self._installer_worker.finished.connect(self._on_installer_finished)
+        self._installer_worker.start()
+
+    def _on_installer_finished(self, path: str, error_message: str):
+        from core.updater.installer_fallback import open_installer
+
+        self._update_state = self._state_before_installer
+        self.update_progress.hide()
+        self.update_button.show()
+        if not path:
+            # Ultimo recurso: la pagina de descargas siempre esta disponible.
+            QDesktopServices.openUrl(QUrl(f"https://github.com/{UPDATE_REPO}/releases"))
+            return
+
+        if sys.platform == "win32":
+            try:
+                open_installer(path)
+            except OSError as e:
+                logger.error(f"Updater: no se pudo abrir el instalador: {e}")
+                QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
+                return
+            QApplication.instance().quit()  # para que el instalador pueda reemplazar los archivos
+            return
+
+        if sys.platform == "darwin":
+            text = self.tr("Se abrirá el instalador. Cierra DowP y arrastra DowP a Aplicaciones para reemplazarlo.")
+        else:
+            text = self.tr("Se abrirá la carpeta con la descarga. Cierra DowP y extrae el archivo sobre tu instalación.")
+        QMessageBox.information(self, self.tr("Instalador descargado"), text)
+        try:
+            open_installer(path)
+        except OSError as e:
+            logger.error(f"Updater: no se pudo abrir el instalador: {e}")
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
 
     def _apply_update(self):
         """Descarga verificada -- construye el journal, se lo entrega al helper
