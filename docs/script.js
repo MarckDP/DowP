@@ -165,14 +165,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (urlWindows) linkWin.href = urlWindows;
     if (urlMacSilicon) linkSilicon.href = urlMacSilicon;
-    // Las tarjetas sin probar solo aparecen si esa versión trae su archivo.
+    // Estas tarjetas solo aparecen si esa versión trae su archivo.
     if (urlMacIntel) {
         linkIntel.href = urlMacIntel;
-        document.getElementById('tarjeta-mac-intel').hidden = false;
+        linkIntel.hidden = false;
     }
     if (urlLinux) {
         linkLinux.href = urlLinux;
-        document.getElementById('tarjeta-linux').hidden = false;
+        linkLinux.hidden = false;
     }
 
     // Configurar botón principal

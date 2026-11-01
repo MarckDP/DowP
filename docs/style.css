@@ -279,7 +279,6 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
 
 .cards {
     display: flex;
-    align-items: flex-start;
     gap: 10px;
     justify-content: center;
     flex-wrap: wrap;
@@ -295,10 +294,7 @@ img.pixel, .masthead-logo { image-rendering: pixelated; }
     padding: 4px 12px;
 }
 .card span { color: var(--muted); }
-.card-aviso { display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 240px; }
-.card-aviso[hidden] { display: none; }
 .dl-aviso { margin: 6px 0 0; font-size: 17px; line-height: 1.15; color: var(--warn); }
-.card-aviso .dl-aviso { margin: 0; }
 .dl-aviso[hidden] { display: none; }
 .card:hover { color: var(--ink); background: var(--lime); }
 .card:hover span { color: var(--deep); }
